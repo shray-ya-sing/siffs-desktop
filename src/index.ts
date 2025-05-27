@@ -16,7 +16,10 @@ const createWindow = (): void => {
     height: 600,
     width: 800,
     webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      nodeIntegration: true,  // Enable Node.js integration
+      contextIsolation: false, // Required for require to work in renderer
+      webSecurity: false,     // Only for development
+      webviewTag: true,      // If you're using webviews
     },
   });
 
