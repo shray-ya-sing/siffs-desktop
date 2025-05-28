@@ -119,11 +119,7 @@ export function Sidebar() {
                 className="h-10 w-10 rounded-full flex items-center justify-center bg-blue-600/30 backdrop-blur-sm border border-[#ffffff0f] shadow-[0_0_15px_rgba(59,130,246,0.3)] cursor-pointer overflow-hidden" 
                 onClick={() => navigate('/')}
               >
-                <img 
-                  src="/assets/cori-logo.svg" 
-                  alt="Cori Logo" 
-                  className="h-6 w-6 object-contain"
-                />
+                <TechBookmarkIcon />
               </div>
             </div>
           </TooltipTrigger>
