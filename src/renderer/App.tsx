@@ -7,6 +7,7 @@ import { NotFound } from './pages/NotFound';
 import AppLoading from './components/loading/AppLoading';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
+import { default as VerifyEmail } from './pages/auth/VerifyEmail';
 import AuthCallbackPage from './pages/auth/AuthCallbackPage';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -78,6 +79,7 @@ function AppRouter() {
             } />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/signup" element={<SignupPage />} />
+            <Route path="/auth/verify-email" element={<VerifyEmail />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
