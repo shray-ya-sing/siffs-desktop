@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for 3D effect -->
+    <linearGradient id="cGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1629" />
+      <stop offset="50%" stop-color="#0f2040" />
+      <stop offset="100%" stop-color="#102a4c" />
+    </linearGradient>
+
+    <!-- Inner shadow gradient -->
+    <linearGradient id="innerShadow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.1)" />
+      <stop offset="100%" stop-color="rgba(0,0,0,0.2)" />
+    </linearGradient>
+
+    <!-- Filter for glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+      <feMerge>
+        <feMergeNode in="coloredBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Main C shape with thick stroke -->
+  <path
+    d="M 85 20 A 40 40 0 1 0 85 100"
+    fill="none"
+    stroke="url(#cGradient)"
+    stroke-width="16"
+    stroke-linecap="round"
+    filter="url(#glow)"
+    style="filter: url(#dropShadow);"
+  />
+
+  <!-- Highlight for 3D effect -->
+  <path
+    d="M 85 20 A 40 40 0 1 0 85 100"
+    fill="none"
+    stroke="url(#innerShadow)"
+    stroke-width="2"
+    stroke-linecap="round"
+    opacity="0.6"
+  />
+
+  <!-- Additional inner glow -->
+  <path
+    d="M 83 22 A 38 38 0 1 0 83 98"
+    fill="none"
+    stroke="rgba(255,255,255,0.1)"
+    stroke-width="1"
+    stroke-linecap="round"
+  />
+</svg>
