@@ -13,8 +13,10 @@ if (require('electron-squirrel-startup')) {
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    height: 600,
+    height: 1280,
     width: 800,
+    minWidth: 1024,
+    minHeight: 768,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,  // Disable Node.js integration
@@ -26,6 +28,7 @@ const createWindow = (): void => {
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  mainWindow.maximize();
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
