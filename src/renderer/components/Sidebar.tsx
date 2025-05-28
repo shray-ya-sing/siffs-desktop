@@ -104,9 +104,37 @@ export function Sidebar() {
     navigate(href);
   };
 
-  const handleSignOut = () => {
-    document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    navigate('/auth/login');
+  const handleSignOut = async () => {
+    try {
+      // Sign out from Supabase if available
+      const electron = window.electron as any; // Type assertion to bypass TypeScript error
+      if (electron?.ipcRenderer) {
+        try {
+          await electron.ipcRenderer.invoke('auth:sign-out');
+        } catch (e) {
+          console.warn('Could not send sign-out via IPC, continuing with local cleanup', e);
+        }
+      }
+      
+      // Clear local storage
+      localStorage.clear();
+      
+      // Clear cookies
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      
+      // Clear session storage
+      sessionStorage.clear();
+      
+      // Redirect to login page
+      navigate('/auth/login');
+      
+      // Force reload to ensure clean state
+      window.location.reload();
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Still navigate to login page on error
+      navigate('/auth/login');
+    }
   };
 
   return (
