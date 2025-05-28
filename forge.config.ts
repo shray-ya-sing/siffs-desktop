@@ -15,6 +15,8 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: './src/assets/icons/icon.ico',
+    // Pass environment variables to the packaged app
+    extraResource: ['.env'],
   },
   rebuildConfig: {},
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],

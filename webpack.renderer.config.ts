@@ -1,9 +1,29 @@
 import type { Configuration, RuleSetRule } from 'webpack';
-
 import { rules } from './webpack.rules';
 import { plugins } from './webpack.plugins';
-import path from 'path';
+import * as path from 'path';
+import * as webpack from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
+import { fileURLToPath } from 'url';
+import * as process from 'process';
+import * as dotenv from 'dotenv';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+const envPath = path.resolve(__dirname, '.env');
+let envVars = {};
+try {
+  const result = dotenv.config({ path: envPath });
+  envVars = result.parsed || {};
+} catch (error) {
+  console.warn('Failed to load .env file:', error);
+}
+
+// Merge with process.env
+const mergedEnv = { ...process.env, ...envVars };
 
 // Remove the CSS rule that's causing issues
 const cssRuleIndex = rules.findIndex(rule => 
@@ -56,28 +76,73 @@ export const rendererConfig: Configuration = {
     rules: rules as RuleSetRule[],
   },
   plugins: [
-    ...plugins, // Your existing plugins
+    ...plugins,
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: path.resolve(__dirname, 'src/assets/icons'),
-          to: 'assets/icons',
-          globOptions: {
-            ignore: ['**/*.svg'],
-          },
+          from: path.resolve(__dirname, 'src/assets'),
+          to: 'assets',
         },
       ],
     }),
+    new webpack.DefinePlugin({
+      'process.env': JSON.stringify({
+        NODE_ENV: mergedEnv.NODE_ENV || 'development',
+        REACT_APP_SUPABASE_URL: mergedEnv.REACT_APP_SUPABASE_URL || '',
+        REACT_APP_SUPABASE_ANON_KEY: mergedEnv.REACT_APP_SUPABASE_ANON_KEY || ''
+      })
+    })
   ],
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
+    fallback: {
+      // Disable all Node.js core modules in the renderer process
+      path: false,
+      os: false,
+      crypto: false,
+      fs: false,
+      stream: false,
+      util: false,
+      buffer: false,
+      vm: false,
+      http: false,
+      https: false,
+      url: false,
+      assert: false
+    },
+    alias: {
+      // Add any other aliases needed for your application
+      react: path.resolve(__dirname, 'node_modules/react')
+    },
+    modules: [
+      'node_modules',
+      path.resolve(__dirname, 'node_modules')
+    ]
   },
-  // Add these new configurations
+  // Node.js configuration
   node: {
     __dirname: false,
     __filename: false,
+    global: true,
   },
+  // Exclude Node.js core modules and native modules
   externals: {
-    // Add any native modules you're using
+    'path': 'commonjs path',
+    'os': 'commonjs os',
+    'crypto': 'commonjs crypto',
+    'fs': 'commonjs fs',
+    'stream': 'commonjs stream',
+    'util': 'commonjs util',
+    'buffer': 'commonjs buffer',
+    'vm': 'commonjs vm',
+    'http': 'commonjs http',
+    'https': 'commonjs https',
+    'url': 'commonjs url',
+    'assert': 'commonjs assert',
+    'electron': 'commonjs electron'
+  },
+  // Configure global variables
+  output: {
+    globalObject: 'this',
   },
 };

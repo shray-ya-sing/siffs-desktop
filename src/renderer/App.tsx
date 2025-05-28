@@ -64,7 +64,6 @@ function AppRouter() {
     <>
       <Toaster />
       <div className="flex h-screen bg-[#0a0f1a] text-gray-200 font-sans font-thin overflow-hidden">
-        {user && <Sidebar />}
         <div className="flex-1 flex flex-col overflow-hidden">
           <Routes>
             <Route path="/" element={

@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "types": ["node"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -16,8 +17,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "outDir": "dist"
+    "outDir": "dist",
+    "typeRoots": [
+      "./node_modules/@types"
+    ]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "webpack.*.ts"],
   "exclude": ["node_modules", "dist", "out"]
 }
