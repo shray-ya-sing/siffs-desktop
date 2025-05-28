@@ -55,6 +55,7 @@ export default function AppLoading({ onComplete }: AppLoadingProps) {
 
   useEffect(() => {
     const checkServices = async () => {
+      const startTime = Date.now();
       try {
         setStatus(prev => ({
           ...prev,
@@ -65,7 +66,7 @@ export default function AppLoading({ onComplete }: AppLoadingProps) {
         setProgress(10);
 
         // Simulate service checks
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 10000 - (Date.now() - startTime)));
         
         // In a real app, you would check actual services here
         const mockResult: HealthCheckResult = {
@@ -89,7 +90,7 @@ export default function AppLoading({ onComplete }: AppLoadingProps) {
           // Call onComplete when loading is done
           if (onComplete) {
             // Small delay to show the completion state
-            setTimeout(onComplete, 500);
+            setTimeout(onComplete, 1000);
           }
           // You can navigate to your main app here
           // For example: history.push('/dashboard');
