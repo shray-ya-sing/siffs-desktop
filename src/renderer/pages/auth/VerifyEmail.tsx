@@ -1,12 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { LocationWithState } from '../../types/auth';
+import { motion } from 'framer-motion';
+import { Mail, ArrowLeft, Check, AlertCircle, RotateCw } from 'lucide-react';
+
+interface LocationState {
+  email?: string;
+  from?: {
+    pathname: string;
+  };
+}
 
 export default function VerifyEmailPage() {
-  const location = useLocation();
+  const location = useLocation() as LocationWithState;
   const navigate = useNavigate();
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState('');
   
   // Get the email from the navigation state or default to empty string
-  const email = (location.state as { email?: string })?.email || '';
+  const email = location.state?.email || '';
   
   // If no email is provided, redirect to signup
   useEffect(() => {
@@ -15,76 +28,145 @@ export default function VerifyEmailPage() {
     }
   }, [email, navigate]);
   
-  const handleResendEmail = () => {
-    // TODO: Implement resend verification email logic
-    console.log('Resending verification email to:', email);
-    // Show a success message
-    alert(`Verification email resent to ${email}`);
+  const handleResendEmail = async () => {
+    if (isResending) return;
+    
+    setIsResending(true);
+    setResendError('');
+    
+    try {
+      // TODO: Implement actual resend verification email logic
+      console.log('Resending verification email to:', email);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to resend verification email:', err);
+      setResendError('Failed to resend verification email. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-b from-gray-900 to-gray-800">
-      <div className="w-full max-w-md space-y-6 rounded-xl bg-gray-800/50 p-8 shadow-lg backdrop-blur-sm border border-gray-700/50">
-        <div className="space-y-4 text-center">
-          <h1 className="text-2xl font-bold text-white">Check Your Email</h1>
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-[#0a0f1a] via-[#141b31] to-[#1a2035]">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md space-y-6 rounded-2xl bg-white/5 backdrop-blur-lg p-8 shadow-2xl border border-white/10 hover:border-white/20 transition-all duration-300"
+      >
+        <div className="space-y-6 text-center">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 15 }}
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 shadow-lg"
+          >
+            <Mail className="h-10 w-10 text-white" strokeWidth={1.5} />
+          </motion.div>
           
-          <div className="space-y-6">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/10">
-              <svg
-                className="h-8 w-8 text-blue-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
-                />
-              </svg>
+          <motion.div 
+            className="space-y-3"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h1 className="text-2xl font-bold text-white">Verify your email</h1>
+            
+            <p className="text-white/80">
+              We've sent a verification link to
+            </p>
+            
+            <div className="font-medium text-blue-300 break-all px-4 py-2 bg-white/5 rounded-lg">
+              {email}
             </div>
             
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold text-white">Verify your email address</h2>
-              
-              <p className="text-gray-300">
-                We've sent a confirmation email to:
-              </p>
-              
-              <div className="font-medium text-blue-300">
-                {email}
-              </div>
-              
-              <p className="text-gray-400 text-sm">
-                Please check your inbox and click the verification link to complete your sign up.
-              </p>
-            </div>
-            
-            <div className="pt-2 space-y-4">
+            <p className="text-sm text-white/60">
+              Check your email and click the verification link to complete your sign up.
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="pt-2 space-y-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="space-y-3">
               <button
                 type="button"
                 onClick={handleResendEmail}
-                className="w-full py-2 px-4 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                disabled={isResending || resendSuccess}
+                className={`w-full py-2.5 px-4 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                  isResending || resendSuccess
+                    ? 'text-blue-400/70 cursor-not-allowed'
+                    : 'text-blue-400 hover:text-blue-300 hover:bg-white/5'
+                }`}
               >
-                Didn't receive the email? <span className="underline">Resend verification</span>
+                {isResending ? (
+                  <>
+                    <RotateCw className="h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : resendSuccess ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Email sent!
+                  </>
+                ) : (
+                  <>
+                    <RotateCw className="h-4 w-4" />
+                    Resend verification email
+                  </>
+                )}
               </button>
               
-              <div className="pt-2 border-t border-gray-700">
-                <Link 
-                  to="/auth/login" 
-                  className="text-sm font-medium text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-1"
+              {resendError && (
+                <div className="flex items-start p-2.5 text-sm rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+                  <AlertCircle className="h-4 w-4 mr-1.5 mt-0.5 flex-shrink-0" />
+                  <span>{resendError}</span>
+                </div>
+              )}
+              
+              {resendSuccess && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginTop: '0.5rem' }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  className="overflow-hidden"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  Back to login
-                </Link>
-              </div>
+                  <div className="flex items-center p-2.5 text-sm rounded-lg bg-green-500/10 border border-green-500/30 text-green-400">
+                    <Check className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                    Verification email sent successfully!
+                  </div>
+                </motion.div>
+              )}
             </div>
-          </div>
+            
+            <div className="pt-2 border-t border-white/5">
+              <Link 
+                to="/auth/login" 
+                className="text-sm font-medium text-white/60 hover:text-white transition-colors flex items-center justify-center gap-1.5 group"
+                state={{ from: location.state?.from }}
+              >
+                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                Back to login
+              </Link>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
+      
+      <motion.div 
+        className="mt-8 text-center text-sm text-white/40"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <p>Didn't receive the email? Check your spam folder or try again.</p>
+      </motion.div>
     </div>
   );
 }

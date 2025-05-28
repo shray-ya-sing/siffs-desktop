@@ -1,11 +1,13 @@
-import React, { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, FormEvent, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { AuthLocationState, LocationWithState } from '../../types/auth';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Label } from '../../components/ui/label';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { useAuth } from '../../providers/AuthProvider';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -43,71 +45,177 @@ export default function LoginPage() {
     }
   };
 
+  interface LocationState {
+    from?: {
+      pathname: string;
+    };
+  }
+
+  const location = useLocation() as LocationWithState;
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <AuthLayout>
-      <form onSubmit={handleSubmit} className="space-y-6 w-full">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white text-center">Welcome back</h2>
-          <p className="text-sm text-white/70 text-center">
-            Enter your email and password to sign in
-          </p>
-        </div>
-
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/30 text-destructive p-3 rounded-md text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-white/80">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-              required
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/30"
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-white/80">Password</Label>
-              <Link to="/auth/forgot-password" className="text-sm text-blue-400 hover:underline">
-                Forgot password?
-              </Link>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="login-form"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+          className="w-full"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6 w-full">
+            <div className="space-y-2 text-center">
+              <motion.h2 
+                className="text-3xl font-bold text-white"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                Welcome back
+              </motion.h2>
+              <motion.p 
+                className="text-sm text-white/70"
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                Enter your email and password to sign in
+              </motion.p>
             </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              required
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/30"
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </Button>
-        </div>
 
-        <div className="text-center text-sm text-white/60">
-          Don't have an account?{' '}
-          <Link to="/auth/signup" className="text-blue-400 hover:underline">
-            Sign up
-          </Link>
-        </div>
-      </form>
+            <AnimatePresence>
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginBottom: '1rem' }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex items-start p-3 text-sm rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+                    <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="space-y-5">
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Label htmlFor="email" className="text-sm font-medium text-white/80">Email</Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-white/40" />
+                  </div>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                    required
+                    className="w-full pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 
+                             focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
+                             transition-all duration-200 rounded-lg h-11"
+                  />
+                </div>
+              </motion.div>
+
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium text-white/80">Password</Label>
+                  <Link 
+                    to="/auth/forgot-password" 
+                    className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                    state={{ from: (location.state as any)?.from }}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-white/40" />
+                  </div>
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 
+                             focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
+                             transition-all duration-200 rounded-lg h-11"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/40 hover:text-white/70 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Button 
+                  type="submit" 
+                  className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 
+                           hover:from-blue-500 hover:to-blue-400 text-white font-medium
+                           shadow-lg hover:shadow-blue-500/20 transition-all duration-300
+                           transform hover:-translate-y-0.5"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </motion.div>
+            </div>
+
+            <motion.div 
+              className="text-center text-sm text-white/60"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              Don't have an account?{' '}
+              <Link 
+                to="/auth/signup" 
+                className="font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                state={{ from: location.state?.from }}
+              >
+                Sign up
+              </Link>
+            </motion.div>
+          </form>
+        </motion.div>
+      </AnimatePresence>
     </AuthLayout>
   );
 }
