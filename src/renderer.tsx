@@ -29,7 +29,7 @@
 
 import React from 'react';
 import { createRoot, Root } from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { App } from './renderer/App';
 import './index.css';
 import './renderer/styles/globals.css';
@@ -50,11 +50,11 @@ if (container) {
   
   root.render(
     <React.StrictMode>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/*" element={<App />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </React.StrictMode>
   );
 }
