@@ -2,21 +2,19 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 
-declare global {
-  interface Window {
-    electronAPI: {
-      log: {
-        info: (message: string) => void;
-      };
-    };
-  }
-}
+// The Window interface is already defined in global.d.ts
 
 export function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    window.electronAPI?.log.info('Home page loaded');
+    // Safe access to the log method with optional chaining
+    const electron = (window as any).electron;
+    if (electron?.log?.info) {
+      electron.log.info('Home page loaded');
+    } else {
+      console.log('Home page loaded (fallback log)');
+    }
   }, []);
 
   return (
