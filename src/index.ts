@@ -18,8 +18,8 @@ const createWindow = (): void => {
     webPreferences: {
       nodeIntegration: true,  // Enable Node.js integration
       contextIsolation: false, // Required for require to work in renderer
-      webSecurity: false,     // Only for development
       webviewTag: true,      // If you're using webviews
+      webSecurity: process.env.NODE_ENV === 'development' ? false : true, // Disable web security in development
     },
   });
 
