@@ -73,14 +73,22 @@ export default function LoginPage() {
       const { error } = await signIn(formData.email, formData.password);
       
       if (error) {
-        throw error;
+        // Handle specific Supabase error codes
+        if (error.status === 400) {
+          setError('Invalid email or password. Please try again.');
+        } else if (error.status === 429) {
+          setError('Too many attempts. Please try again later.');
+        } else {
+          setError('An error occurred. Please try again.');
+        }
+        return;
       }
       
       // On successful login, redirect to the intended page or home
       navigate(from, { replace: true });
     } catch (error) {
-      console.error('Login error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to sign in. Please check your credentials and try again.');
+      // Silently handle the error without logging to console
+      setError('An error occurred during sign in. Please try again.');
     } finally {
       setIsLoading(false);
     }

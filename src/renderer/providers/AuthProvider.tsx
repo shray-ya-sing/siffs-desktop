@@ -29,7 +29,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Listen for auth state changes
       const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event);
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('Auth state changed:', event);
+        }
         setSession(session);
         setUser(session?.user ?? null);
       });
@@ -38,7 +40,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscription?.unsubscribe();
       };
     } catch (error) {
-      console.error('Error setting up auth listener:', error);
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Auth listener warning:', error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -51,19 +56,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [setupAuthListener]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     try {
-      const client = await getSupabase();
-      const { data, error } = await client.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      if (error) {
+        // Handle specific error cases
+        if (error.status === 400) {
+          error.message = 'Invalid email or password';
+        } else if (error.status === 429) {
+          error.message = 'Too many attempts. Please try again later.';
+        }
+      }
+      
       return { data, error };
     } catch (error) {
-      console.error('Sign in error:', error);
-      return { data: null, error };
+      // Don't log to console, just return a clean error
+      return { 
+        data: null, 
+        error: { 
+          message: 'Failed to sign in. Please try again later.',
+          status: 500
+        } 
+      };
     }
-  };
+  }, []);
 
   const signUp = async (email: string, password: string) => {
     try {
@@ -82,15 +102,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
-      const client = await getSupabase();
-      await client.auth.signOut();
+      await supabase.auth.signOut();
     } catch (error) {
-      console.error('Sign out error:', error);
+      // Silently handle sign out errors
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Sign out warning:', error);
+      }
       throw error;
     }
-  };
+  }, []);
 
   const value = {
     user,
