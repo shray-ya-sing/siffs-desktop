@@ -8,12 +8,12 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "make:win": "electron-forge make --platform=win32",  
-    "make:mac": "electron-forge make --platform=darwin", 
-    "make:linux": "electron-forge make --platform=linux", 
+    "make:win": "electron-forge make --platform=win32",
+    "make:mac": "electron-forge make --platform=darwin",
+    "make:linux": "electron-forge make --platform=linux",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "clean": "rimraf out" 
+    "clean": "rimraf out"
   },
   "keywords": [],
   "author": {
@@ -62,9 +62,17 @@
     "webpack-merge": "^6.0.1"
   },
   "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-navigation-menu": "^1.2.13",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tooltip": "^1.2.7",
+    "clsx": "^2.1.1",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^6.3.0"
+    "react-router-dom": "^6.3.0",
+    "tailwind-merge": "^3.3.0"
   }
 }
