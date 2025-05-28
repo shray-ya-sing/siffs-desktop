@@ -2,6 +2,8 @@ import type { Configuration, RuleSetRule } from 'webpack';
 
 import { rules } from './webpack.rules';
 import { plugins } from './webpack.plugins';
+import path from 'path';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 
 // Remove the CSS rule that's causing issues
 const cssRuleIndex = rules.findIndex(rule => 
@@ -40,6 +42,11 @@ rules.push(
         ]
       }
     }
+  },
+  // Add support for images
+  {
+    test: /\.(png|jpe?g|gif)$/i,
+    type: 'asset/resource',
   }
 );
 
@@ -48,7 +55,20 @@ export const rendererConfig: Configuration = {
   module: {
     rules: rules as RuleSetRule[],
   },
-  plugins,
+  plugins: [
+    ...plugins, // Your existing plugins
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, 'src/assets/icons'),
+          to: 'assets/icons',
+          globOptions: {
+            ignore: ['**/*.svg'],
+          },
+        },
+      ],
+    }),
+  ],
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
   },
