@@ -61,7 +61,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'sans-serif'],
-        quantico: ['Quantico', 'sans-serif'], // If you're using Quantico font
+        quantico: ['Quantico', 'sans-serif'], 
       },
     },
   },

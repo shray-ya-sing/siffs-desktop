@@ -1,9 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Quantico:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Rest of your CSS */
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Quantico', sans-serif;
 }
 
 @layer utilities {
