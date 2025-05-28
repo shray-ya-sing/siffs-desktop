@@ -39,8 +39,8 @@ export default function SignupPage() {
         throw error;
       }
       
-      // On successful signup, redirect to login with success message
-      navigate('/auth/login', { state: { message: 'Account created successfully! Please check your email to verify your account.' } });
+      // On successful signup, redirect to verify email page
+      navigate('/auth/verify-email', { state: { email } });
     } catch (error) {
       console.error('Signup error:', error);
       setError(error instanceof Error ? error.message : 'Failed to create account. Please try again.');
