@@ -1,11 +1,14 @@
 import { app, BrowserWindow, session, ipcMain } from 'electron';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { spawn, execSync } from 'child_process';
+import * as fs from 'fs';
 
 // Load environment variables from .env file
 const envPath = path.join(__dirname, '../../.env');
 console.log('Loading environment variables from:', envPath);
 dotenv.config({ path: envPath });
+let pythonProcess: any = null;
 
 // Debug: Log loaded environment variables
 console.log('Environment variables loaded:', {
@@ -40,6 +43,83 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+/**
+ * Starts the python server
+ */
+function startPythonServer() {
+  const isDev = process.env.NODE_ENV === 'development';
+  const pythonPath = isDev 
+    ? path.join(__dirname, '../../src/python-server/venv/Scripts/python.exe')
+    : path.join(process.resourcesPath, 'python', 'python-server.exe');
+
+  console.log('Python server path:', pythonPath);
+  
+  if (!fs.existsSync(pythonPath)) {
+    console.error('Python server executable not found at:', pythonPath);
+    return;
+  }
+
+  const serverPath = isDev
+    ? path.join(__dirname, '../../src/python-server/app.py') // Directly run the script using the py interpreter
+    : path.join(process.resourcesPath, 'wsgi.py');
+
+  if (isDev){
+    // if dev, need to run the server .py script with the py interpreter installed in the venv
+    pythonProcess = spawn(pythonPath, [serverPath], {
+      stdio: 'pipe',
+      shell: true,
+      env: {
+        ...process.env,  // Keep existing env vars
+        FLASK_ENV: 'development',
+        FLASK_DEBUG: '1'
+      }
+    });
+  }else{
+    // check platform
+    const runFlask = {
+      darwin: `open -gj "${pythonPath}}" --args`,
+      linux: `${pythonPath}`,
+      win32: `start ${pythonPath}`,
+      aix: '',
+      sunos: '',
+      cygwin: '',
+      freebsd: '',
+      openbsd: '',
+      android: '',
+      haiku: '',
+      netbsd: '',      
+    }[process.platform];
+
+    // if prod, only need to run the .exe file which has an interpreter packaged with pyinstaller
+    pythonProcess = spawn(`${runFlask}`, {
+      stdio: 'pipe',
+      shell: true,
+      env: {
+        ...process.env,  // Keep existing env vars
+        FLASK_ENV: 'production',
+        FLASK_DEBUG: '1'
+      }
+    });
+  }
+
+  
+
+  pythonProcess.stdout.on('data', (data: Buffer) => {
+    console.log(`Python Server: ${data}`);
+  });
+
+  pythonProcess.stderr.on('data', (data: Buffer) => {
+    console.error(`Python Server Error: ${data}`);
+  });
+
+  pythonProcess.on('close', (code: number) => {
+    console.log(`Python server process exited with code ${code}`);
+  });
+}
+
+/**
+ * Creates the main electron browser window
+ */
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -61,14 +141,21 @@ const createWindow = (): void => {
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.maximize();
+  // temporary -- remove for prod
+  mainWindow.webContents.openDevTools();
 
-  // Open the DevTools only in dev environment
-  if (process.env.NODE_ENV === 'development') {
+  // Add this back for prod -- don't want dev tools menu opening in prod
+  /**
+   * if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }
+   */
+  
 };
 
-// IPC handler to get environment variables
+/**
+ * IPC handler to get environment variables
+ */
 ipcMain.handle('get-env', (event, key: string) => {
   if (ALLOWED_ENV_KEYS.includes(key)) {
     return process.env[key];
@@ -77,9 +164,11 @@ ipcMain.handle('get-env', (event, key: string) => {
   return null;
 });
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+/**
+ * This method will be called when Electron has finished
+ * initialization and is ready to create browser windows.
+ * Some APIs can only be used after this event occurs.
+ */
 app.whenReady().then(() => {
   // Set Content Security Policy
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -101,16 +190,27 @@ app.whenReady().then(() => {
     });
   });
 
+  // Start Python server
+  startPythonServer();
+
   // Clear cache before creating window
   session.defaultSession.clearCache().then(() => {
     createWindow();
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+/**
+ * Quit when all windows are closed, except on macOS. There, it's common
+ * for applications and their menu bar to stay active until the user quits
+ * explicitly with Cmd + Q.
+ */
 app.on('window-all-closed', () => {
+  // Stop Python server
+  if (pythonProcess) {
+    console.log('Stopping Python server...');
+    pythonProcess.kill();
+  }
+  // Quit the electron app
   if (process.platform !== 'darwin') {
     app.quit();
   }
