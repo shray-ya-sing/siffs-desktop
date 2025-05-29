@@ -230,6 +230,48 @@ app.whenReady().then(() => {
   });
 });
 
+function cleanupPythonProcess() {
+  if (!pythonProcess) return;
+
+  console.log('🛑 Attempting to clean up Python process...');
+  
+  try {
+    if (process.platform === 'win32') {
+      // On Windows, we need to kill the entire process tree
+      const { exec } = require('child_process');
+      const pid = pythonProcess.pid;
+      
+      // This command will kill the process and all its children
+      exec(`taskkill /F /T /PID ${pid}`, (error: Error) => {
+        if (error) {
+          console.error('❌ Failed to kill Python process tree:', error.message);
+        } else {
+          console.log('✅ Successfully killed Python process tree');
+        }
+      });
+    } else {
+      // On Unix-like systems
+      process.kill(-pythonProcess.pid, 'SIGTERM'); // Negative PID kills the process group
+      console.log('✅ Sent SIGTERM to Python process group');
+    }
+  } catch (error) {
+    console.error('❌ Error during Python process cleanup:', error);
+  } finally {
+    pythonProcess = null;
+  }
+}
+
+app.on('before-quit', (event) => {
+  console.log('🔄 App is quitting, cleaning up Python process...');
+  cleanupPythonProcess();
+  
+  // If you need to wait for cleanup to complete before quitting:
+  // event.preventDefault();
+  // cleanupPythonProcess().then(() => {
+  //   app.quit();
+  // });
+});
+
 /**
  * Quit when all windows are closed, except on macOS. There, it's common
  * for applications and their menu bar to stay active until the user quits
@@ -237,10 +279,8 @@ app.whenReady().then(() => {
  */
 app.on('window-all-closed', () => {
   // Stop Python server
-  if (pythonProcess) {
-    console.log('Stopping Python server...');
-    pythonProcess.kill();
-  }
+  console.log('🚪 All windows closed, cleaning up...');
+  cleanupPythonProcess();
   // Quit the electron app
   if (process.platform !== 'darwin') {
     app.quit();
@@ -255,5 +295,17 @@ app.on('activate', () => {
   }
 });
 
+// Add signal handlers for graceful shutdown
+process.on('SIGINT', () => {
+  console.log('🛑 Received SIGINT, cleaning up...');
+  cleanupPythonProcess();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('🛑 Received SIGTERM, cleaning up...');
+  cleanupPythonProcess();
+  process.exit(0);
+});
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
