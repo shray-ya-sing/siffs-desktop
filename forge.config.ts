@@ -10,13 +10,18 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+import { buildPython } from './src/scripts/build-py';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: './src/assets/icons/icon.ico',
     // Pass environment variables to the packaged app
-    extraResource: ['.env'],
+    extraResource: [
+      '.env',
+      'resources/python/python-server${process.platform === "win32" ? ".exe" : ""}',
+      'resources/wsgi.py'
+    ],
   },
   rebuildConfig: {},
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
