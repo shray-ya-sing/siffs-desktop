@@ -3,6 +3,27 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { spawn, execSync } from 'child_process';
 import * as fs from 'fs';
+import log from 'electron-log';
+
+//---------------------------------LOGGING CONFIG------------------------------------------------------
+// Configure electron-log - add this before any other code
+log.transports.file.level = 'silly';  // Log everything in production
+log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB max log file size
+log.transports.console.level = 'info'; // Only show info and above in console
+
+// Override console methods to use electron-log
+Object.assign(console, {
+  log: log.log,
+  warn: log.warn,
+  error: log.error,
+  debug: log.debug,
+  info: log.info,
+  verbose: log.verbose,
+  silly: log.silly,
+});
+
+// Log the log file path - helpful for debugging
+console.log('Log file location:', log.transports.file.getFile().path);
 
 // Load environment variables from .env file
 const envPath = path.join(__dirname, '../../.env');
@@ -10,6 +31,7 @@ console.log('Loading environment variables from:', envPath);
 dotenv.config({ path: envPath });
 let pythonProcess: any = null;
 
+//---------------------------------MAIN PROCESS STARTS HERE------------------------------------------------------
 // Debug: Log loaded environment variables
 console.log('Environment variables loaded:', {
   SUPABASE_URL: process.env.REACT_APP_SUPABASE_URL ? '***' : 'NOT FOUND',
@@ -46,76 +68,85 @@ if (require('electron-squirrel-startup')) {
 /**
  * Starts the python server
  */
+
 function startPythonServer() {
   const isDev = process.env.NODE_ENV === 'development';
   const pythonPath = isDev 
-    ? path.join(__dirname, '../../src/python-server/venv/Scripts/python.exe')
-    : path.join(process.resourcesPath, 'python', 'python-server.exe');
+    ? path.join(__dirname, '../../src/python-server/venv/Scripts/python.exe') // Relies on venv to be init and active
+    : path.join(process.resourcesPath, 'python-server.exe');
 
-  console.log('Python server path:', pythonPath);
+  console.log('🔍 Python server path:', pythonPath);
   
   if (!fs.existsSync(pythonPath)) {
-    console.error('Python server executable not found at:', pythonPath);
+    console.error('❌ Python server executable not found at:', pythonPath);
     return;
   }
 
   const serverPath = isDev
-    ? path.join(__dirname, '../../src/python-server/app.py') // Directly run the script using the py interpreter
+    ? path.join(__dirname, '../../src/python-server/app.py')
     : path.join(process.resourcesPath, 'wsgi.py');
 
-  if (isDev){
-    // if dev, need to run the server .py script with the py interpreter installed in the venv
-    pythonProcess = spawn(pythonPath, [serverPath], {
-      stdio: 'pipe',
-      shell: true,
-      env: {
-        ...process.env,  // Keep existing env vars
-        FLASK_ENV: 'development',
-        FLASK_DEBUG: '1'
-      }
-    });
-  }else{
-    // check platform
-    const runFlask = {
-      darwin: `open -gj "${pythonPath}}" --args`,
-      linux: `${pythonPath}`,
-      win32: `start ${pythonPath}`,
-      aix: '',
-      sunos: '',
-      cygwin: '',
-      freebsd: '',
-      openbsd: '',
-      android: '',
-      haiku: '',
-      netbsd: '',      
-    }[process.platform];
+  console.log(`🚀 Starting Python server in ${isDev ? 'development' : 'production'} mode...`);
 
-    // if prod, only need to run the .exe file which has an interpreter packaged with pyinstaller
-    pythonProcess = spawn(`${runFlask}`, {
-      stdio: 'pipe',
-      shell: true,
-      env: {
-        ...process.env,  // Keep existing env vars
-        FLASK_ENV: 'production',
-        FLASK_DEBUG: '1'
+  try {
+    if (isDev) {
+      console.log('🔧 Development mode: Running with Python interpreter');
+      pythonProcess = spawn(pythonPath, [serverPath], {
+        stdio: ['pipe', 'pipe', 'pipe'],  // Explicitly set stdin, stdout, stderr
+        shell: true,
+        env: {
+          ...process.env,
+          FLASK_ENV: 'development',
+          FLASK_DEBUG: '1'
+        }
+      });
+    } else {
+      console.log('🏭 Production mode: Running python as standalone executable');
+      // On Windows, we don't need 'start' in production as we want to capture output
+      const command = process.platform === 'win32' ? pythonPath : `"${pythonPath}"`;
+      
+      pythonProcess = spawn(command, [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: true,
+        env: {
+          ...process.env,
+          FLASK_ENV: 'production',
+          FLASK_DEBUG: '1'
+        }
+      });
+    }
+
+    // Log process events
+    pythonProcess.on('error', (error: Error) => {
+      console.error('❌ Failed to start Python server:', error.message);
+    });
+
+    pythonProcess.on('exit', (code: number, signal: NodeJS.Signals) => {
+      if (code === 0) {
+        console.log('ℹ️ Python server exited normally');
+      } else if (code) {
+        console.error(`❌ Python server exited with code ${code}`);
+      } else {
+        console.error(`❌ Python server was killed by signal ${signal}`);
       }
     });
+
+    // Log stdout and stderr
+    pythonProcess.stdout?.on('data', (data: Buffer) => {
+      console.log(`🐍 [Python] ${data.toString().trim()}`);
+    });
+
+    pythonProcess.stderr?.on('data', (data: Buffer) => {
+      console.error(`🐍 [Python Error] ${data.toString().trim()}`);
+    });
+
+    console.log('✅ Python server process started with PID:', pythonProcess.pid);
+
+  } catch (error) {
+    console.error('❌ Error starting Python server:', error);
   }
-
-  
-
-  pythonProcess.stdout.on('data', (data: Buffer) => {
-    console.log(`Python Server: ${data}`);
-  });
-
-  pythonProcess.stderr.on('data', (data: Buffer) => {
-    console.error(`Python Server Error: ${data}`);
-  });
-
-  pythonProcess.on('close', (code: number) => {
-    console.log(`Python server process exited with code ${code}`);
-  });
 }
+
 
 /**
  * Creates the main electron browser window
