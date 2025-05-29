@@ -62,8 +62,10 @@ const createWindow = (): void => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.maximize();
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // Open the DevTools only in dev environment
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
+  }
 };
 
 // IPC handler to get environment variables
