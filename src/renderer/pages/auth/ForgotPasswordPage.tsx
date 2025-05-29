@@ -1,6 +1,6 @@
 // src/renderer/pages/auth/ForgotPasswordPage.tsx
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation , useNavigate} from 'react-router-dom';
 import { LocationWithState } from '../../types/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '../../components/ui/input';
@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Label } from '../../components/ui/label';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { Loader2, Mail, ArrowLeft, Check, AlertCircle } from 'lucide-react';
-
+import { supabase } from '../../lib/supabase';
 
 
 export default function ForgotPasswordPage() {
@@ -17,6 +17,7 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const location = useLocation() as LocationWithState;
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,15 +29,46 @@ export default function ForgotPasswordPage() {
     
     setIsLoading(true);
     setError('');
+    setMessage('');
     
     try {
-      // TODO: Call your password reset API here
-      // Example: await resetPassword(email);
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+  
+      if (error) {
+        // Don't reveal if the email exists or not for security
+        console.error('Password reset error:', error);
+        setMessage(`If an account exists with ${email}, you will receive a password reset link.`);
+        // Still navigate but pass the error state
+        navigate('/auth/reset-email-sent', { 
+          state: { 
+            email,
+            error: 'Failed to send reset email. Please try again.' 
+          } 
+        });
+        return;
+      }
+
+      // Navigate to the reset email sent page with the email
+      navigate('/auth/reset-email-sent', { 
+        state: { email } 
+      });
+  
+      // Show success message even if we don't reveal if the email exists
       setMessage(`If an account exists with ${email}, you will receive a password reset link.`);
     } catch (err) {
       console.error('Error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send reset link. Please try again.');
+      // Generic error message to avoid leaking information
+      setMessage(`If an account exists with ${email}, you will receive a password reset link.`);
+      // Navigate even on error but pass the error state
+      navigate('/auth/reset-email-sent', { 
+        state: { 
+          email,
+          error: 'An unexpected error occurred. Please try again.' 
+        } 
+      });
+    
     } finally {
       setIsLoading(false);
     }

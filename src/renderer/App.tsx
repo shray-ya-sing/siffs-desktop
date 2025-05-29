@@ -14,6 +14,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Toaster } from './components/ui/toaster';
 import { useToast } from './components/ui/use-toast';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordEmailSent from './pages/auth/ResetPasswordEmailSent';
 
 // Extend the Location interface to include state
 type LocationState = {
@@ -84,6 +85,10 @@ function AppRouter() {
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/404" element={<NotFound />} />
             <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+            <Route 
+              path="/auth/reset-email-sent" 
+              element={<ResetPasswordEmailSent />} 
+            />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </div>
