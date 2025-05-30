@@ -12,7 +12,8 @@ export type EventType =
   | 'generating' 
   | 'executing' 
   | 'reviewing' 
-  | 'info';
+  | 'info'
+  | 'error';
 
 export interface EventCardProps {
   type: EventType;
@@ -57,6 +58,10 @@ const typeStyles = {
   info: {
     badge: 'bg-gray-600/40 text-gray-300/90',
     card: 'border-gray-500/20'
+  },
+  error: {
+    badge: 'bg-red-600/40 text-red-300/90',
+    card: 'border-red-500/20'
   }
 };
 

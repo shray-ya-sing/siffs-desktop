@@ -1,58 +1,31 @@
 // src/renderer/components/tools/model-audit/ModelAudit.tsx
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { MessageInput } from '../../conversation/MessageInput';
-import { ConversationHistory } from '../../conversation/ConversationHistory';
-import { Message, MessageGroup} from '../../../types/message';
+import { Message } from '../../../types/message';
+import { EventCard, EventType } from '../../events/EventCard';
+import apiService from '../../../services/pythonApiService';
 
 export const ModelAudit: React.FC = () => {
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
 
   // State
+  const [systemEvents, setSystemEvents] = useState<{id: string, type: EventType, message: string}[]>([]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [attachedFiles, setAttachedFiles] = useState({
-    images: [] as File[],
-    documents: [] as File[],
-  });
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Group messages by time proximity
-  const groupMessages = useCallback((msgs: Message[]): MessageGroup[] => {
-    if (msgs.length === 0) return [];
-    
-    const groups: MessageGroup[] = [];
-    let currentGroup: Message[] = [msgs[0]];
-
-    for (let i = 1; i < msgs.length; i++) {
-      const prevTime = new Date(msgs[i - 1].timestamp).getTime();
-      const currTime = new Date(msgs[i].timestamp).getTime();
-      
-      if (currTime - prevTime < 5 * 60 * 1000) { // 5 minutes
-        currentGroup.push(msgs[i]);
-      } else {
-        groups.push([...currentGroup]);
-        currentGroup = [msgs[i]];
-      }
-    }
-
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup);
-    }
-
-    return groups;
+  const addSystemEvent = useCallback((message: string, type: EventType = 'info') => {
+    const id = `event-${Date.now()}`;
+    setSystemEvents(prev => [...prev, { id, type, message }]);
+    return id;
   }, []);
 
-  const messageGroups = groupMessages(messages);
-
   // Handle sending a message
-  const handleSendMessage = useCallback(() => {
-    if ((!input.trim() && attachedFiles.images.length === 0 && attachedFiles.documents.length === 0) || isTyping) {
-      return;
-    }
-
+  const handleSendMessage = useCallback(async () => {
+    if (!input.trim() || isProcessing) return;
+  
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -60,30 +33,35 @@ export const ModelAudit: React.FC = () => {
       role: 'user',
       timestamp: Date.now().toString(),
     };
-
+  
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    
-    // Simulate typing
-    setIsTyping(true);
-    
-    // Simulate response after a delay
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "This is a simulated response. In a real implementation, this would come from your AI service.",
-        role: 'assistant',
-        timestamp: Date.now().toString(),
-        thinkingTime: 2 // seconds
-      };
+    setIsProcessing(true);
+  
+    // Add initial system event
+    addSystemEvent('Starting model audit...', 'info');
+  
+    try {
+      // Show loading state
+      const loadingId = addSystemEvent('Processing request...', 'extracting');
+  
+      // Call the mock API
+      await apiService.mockApiCall(
+        true, // success
+        10000, // 10 second delay
+        { result: 'success', step: 1 }
+      );
       
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsTyping(false);
+      // Add completion event
+      addSystemEvent('Model audit completed successfully', 'completed');
       
-      // Status updates are no longer used in the UI
-      
-    }, 2000);
-  }, [input, attachedFiles, isTyping]);
+    } catch (error) {
+      // Add error event
+      addSystemEvent('Model audit failed', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [input, isProcessing, addSystemEvent]);
 
   // Handle key down in textarea
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -93,81 +71,60 @@ export const ModelAudit: React.FC = () => {
     }
   }, [handleSendMessage]);
 
-  // Handle file attachment
-  const handleAttachment = useCallback((type: 'general' | 'image' | 'file') => {
-    // Create a file input element
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.multiple = true;
-    input.accept = type === 'image' ? 'image/*' : type === 'file' ? '.xlsx,.xls,.csv' : '*';
-    
-    input.onchange = (e) => {
-      const files = Array.from((e.target as HTMLInputElement).files || []);
-      if (files.length === 0) return;
-      
-      if (type === 'image') {
-        setAttachedFiles(prev => ({
-          ...prev,
-          images: [...prev.images, ...files]
-        }));
-      } else {
-        setAttachedFiles(prev => ({
-          ...prev,
-          documents: [...prev.documents, ...files]
-        }));
-      }
-    };
-    
-    input.click();
-  }, []);
-
-  // Handle file removal
-  const handleRemoveFile = useCallback((type: 'image' | 'document', index: number) => {
-    if (type === 'image') {
-      setAttachedFiles(prev => ({
-        ...prev,
-        images: prev.images.filter((_, i) => i !== index)
-      }));
-    } else {
-      setAttachedFiles(prev => ({
-        ...prev,
-        documents: prev.documents.filter((_, i) => i !== index)
-      }));
-    }
-  }, []);
-
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages or events change
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages, systemEvents]);
 
   return (
     <div className="flex flex-col h-full">
-        <div className="p-4 border-t border-gray-700/50 bg-[#0f1117]/50 backdrop-blur-sm">
+      <div className="p-4 border-t border-gray-700/50 bg-[#0f1117]/50 backdrop-blur-sm">
         <MessageInput
-          input={input}
-          setInput={setInput}
-          handleKeyDown={handleKeyDown}
-          handleSendClick={handleSendMessage}
-          handleAttachment={handleAttachment}
-          isTyping={isTyping}
-          textareaRef={textareaRef}
-          attachedFiles={attachedFiles}
-          onRemoveFile={handleRemoveFile}
+            input={input}
+            setInput={setInput}
+            handleKeyDown={handleKeyDown}
+            handleSendClick={handleSendMessage}
+            handleAttachment={() => {}} // Empty handler since we're not using attachments
+            isTyping={isProcessing}
+            textareaRef={textareaRef}
+            attachedFiles={{ images: [], documents: [] }} // Empty files object
+            onRemoveFile={() => {}} // Empty handler since we're not using file removal
         />
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <ConversationHistory
-          messages={messages}
-          messageGroups={messageGroups}
-          isTyping={isTyping}
-          activeTypingIndex={isTyping ? messages.length : null}
-          displayedText={{}}
-          scrollAreaRef={scrollAreaRef}
-          messageEndRef={messageEndRef}
-        />
-      </div>  
+        <div className="p-4 space-y-4">
+          {messages.map((message) => (
+            <div 
+              key={message.id}
+              className={`p-3 rounded-lg ${
+                message.role === 'user' 
+                  ? 'bg-blue-500/10 ml-auto max-w-3/4' 
+                  : 'bg-gray-700/30 mr-auto max-w-3/4'
+              }`}
+            >
+              <div className="text-sm text-gray-200">
+                {message.content}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                {new Date(parseInt(message.timestamp)).toLocaleTimeString()}
+              </div>
+            </div>
+          ))}
+
+            {systemEvents.map((event) => (
+            <EventCard
+                key={event.id}
+                type={event.type}
+                message={event.message}
+                className="w-full"
+                showBadge={true}
+            />
+            ))}
+
+          <div ref={messageEndRef} />
+        </div>
+      </div>
     </div>
   );
 };

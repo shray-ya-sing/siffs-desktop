@@ -109,6 +109,36 @@ const apiService = {
       config?: AxiosRequestConfig
     ): Promise<R> {
       return apiClient.delete<T, R>(url, config);
+    },
+
+    /**
+   * Mock API call with configurable delay
+   * @param success Whether the mock call should succeed or fail
+   * @param delayMs Delay in milliseconds (default: 10000ms)
+   * @param mockData Optional mock data to return on success
+   */
+    mockApiCall<T = any>(
+      success: boolean = true,
+      delayMs: number = 10000,
+      mockData?: T
+    ): Promise<{ data: T; status: number }> {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (success) {
+            resolve({
+              data: mockData || { message: 'Mock API call successful' } as any,
+              status: 200
+            });
+          } else {
+            reject({
+              response: {
+                data: { error: 'Mock API call failed' },
+                status: 500
+              }
+            });
+          }
+        }, delayMs);
+      });
     }
   };
   
