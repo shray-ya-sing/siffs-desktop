@@ -7,7 +7,7 @@ import axios, {
     InternalAxiosRequestConfig,
     AxiosRequestHeaders
   } from 'axios';
-import { env } from 'process';
+
   
   // Define response types
   interface HealthCheckResponse {
@@ -23,7 +23,7 @@ import { env } from 'process';
 
   const baseURL = isDev 
       ? 'http://127.0.0.1:3001/api'
-       : 'http://127.0.0.1:5001/api';
+      : 'http://127.0.0.1:5001/api';
   
   
   // Create a custom axios instance with default config
