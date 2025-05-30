@@ -19,6 +19,13 @@ import axios, {
     message: string;
   }
 
+  interface ExcelMetadataResponse {
+    status: string;
+    markdown: string;
+    metadata: any; // Consider defining a more specific type for metadata if possible
+    temp_file?: string;
+  }
+
   const isDev = process.env.NODE_ENV === 'development';
 
   const baseURL = isDev 
@@ -75,6 +82,13 @@ const apiService = {
     // Example endpoint
     getExample(): Promise<AxiosResponse<ExampleResponse>> {
       return apiClient.get<ExampleResponse>('/example');
+    },
+
+    // New Excel metadata extraction endpoint
+    extractExcelMetadata(filePath: string): Promise<AxiosResponse<ExcelMetadataResponse>> {
+      return apiClient.post<ExcelMetadataResponse>('/excel/extract-metadata', {
+        filePath
+      });
     },
   
     // Generic GET request
