@@ -16,6 +16,7 @@ import { useToast } from './components/ui/use-toast';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordEmailSent from './pages/auth/ResetPasswordEmailSent';
 import { ModelAuditPage } from './pages/tools/ModelAuditPage';
+import AuthLoading from './components/loading/AuthLoading';
 
 // Extend the Location interface to include state
 type LocationState = {
@@ -48,8 +49,8 @@ function AppRouter() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <AppLoading />
+      <div className="flex items-center justify-center min-h-screen">
+        <AuthLoading />
       </div>
     );
   }
