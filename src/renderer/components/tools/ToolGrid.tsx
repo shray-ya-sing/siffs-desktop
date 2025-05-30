@@ -1,6 +1,7 @@
 // src/renderer/components/tools/ToolGrid.tsx
 import { Tool } from "../../lib/integrationTools"
 import ToolCard from "./ToolCard"
+import { useNavigate } from "react-router-dom"
 
 interface ToolGridProps {
   tools: Tool[]
@@ -8,6 +9,8 @@ interface ToolGridProps {
 }
 
 export default function ToolGrid({ tools = [], className = "" }: ToolGridProps) {
+  const navigate = useNavigate();
+  
   if (!tools || tools.length === 0) {
     return <div className="text-gray-400">No tools available</div>
   }
@@ -19,8 +22,10 @@ export default function ToolGrid({ tools = [], className = "" }: ToolGridProps) 
           key={tool.id} 
           tool={tool}
           onStart={() => {
-            // Handle start action for this specific tool
-            console.log(`Starting ${tool.name}`);
+            if (tool.id === 'model-audit') {
+              navigate('/tools/model-audit');
+            }
+            // Add other tool routes here as needed
           }} 
         />
       ))}
