@@ -1,6 +1,6 @@
 // src/renderer/components/tools/model-audit/ModelAudit.tsx
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { MessageInput } from './MessageInput';
+import { MessageInput } from '../../conversation/MessageInput';
 import { ConversationHistory } from '../../conversation/ConversationHistory';
 import { Message, MessageGroup} from '../../../types/message';
 
@@ -143,19 +143,7 @@ export const ModelAudit: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-hidden">
-        <ConversationHistory
-          messages={messages}
-          messageGroups={messageGroups}
-          isTyping={isTyping}
-          activeTypingIndex={isTyping ? messages.length : null}
-          displayedText={{}}
-          scrollAreaRef={scrollAreaRef}
-          messageEndRef={messageEndRef}
-        />
-      </div>
-      
-      <div className="p-4 border-t border-gray-700/50 bg-[#0f1117]/50 backdrop-blur-sm">
+        <div className="p-4 border-t border-gray-700/50 bg-[#0f1117]/50 backdrop-blur-sm">
         <MessageInput
           input={input}
           setInput={setInput}
@@ -168,6 +156,18 @@ export const ModelAudit: React.FC = () => {
           onRemoveFile={handleRemoveFile}
         />
       </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <ConversationHistory
+          messages={messages}
+          messageGroups={messageGroups}
+          isTyping={isTyping}
+          activeTypingIndex={isTyping ? messages.length : null}
+          displayedText={{}}
+          scrollAreaRef={scrollAreaRef}
+          messageEndRef={messageEndRef}
+        />
+      </div>  
     </div>
   );
 };

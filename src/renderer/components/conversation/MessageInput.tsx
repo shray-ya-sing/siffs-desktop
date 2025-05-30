@@ -1,15 +1,15 @@
 "use client"
 
 import React, { useEffect } from "react"
-import { Button } from "../../ui/button"
-import { Textarea } from "../../ui/textarea"
+import { Button } from "../ui/button"
+import { Textarea } from "../ui/textarea"
 import {
   TechArrowUpIcon,
   TechAttachmentIcon,
   TechImageIcon,
   TechFileIcon,
   TechXIcon, // Using our new X icon for close
-} from "../../tech-icons/TechIcons"
+} from "../tech-icons/TechIcons"
 
 interface MessageInputProps {
   input: string;
