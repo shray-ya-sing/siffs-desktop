@@ -13,7 +13,6 @@ export const ModelAudit: React.FC = () => {
   // State
   const [systemEvents, setSystemEvents] = useState<{id: string, type: EventType, message: string}[]>([]);
   const [filePath, setFilePath] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,11 +50,7 @@ export const ModelAudit: React.FC = () => {
       const loadingId = addSystemEvent('Getting the data from your file...', 'extracting');
   
       // Call the mock API
-      await apiService.mockApiCall(
-        true, // success
-        10000, // 10 second delay
-        { result: 'success', step: 1 }
-      );
+      await apiService.extractExcelMetadata(filePath);
       
       // Add completion event
       addSystemEvent('Data extracted successfully', 'completed');
