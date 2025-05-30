@@ -17,7 +17,7 @@ export const ModelAudit: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const addSystemEvent = useCallback((message: string, type: EventType = 'info') => {
-    const id = `event-${Date.now()}`;
+    const id = `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setSystemEvents(prev => [...prev, { id, type, message }]);
     return id;
   }, []);
@@ -36,14 +36,13 @@ export const ModelAudit: React.FC = () => {
   
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsProcessing(true);
-  
+    setIsProcessing(true);  
     // Add initial system event
     addSystemEvent('Starting model audit...', 'info');
   
     try {
       // Show loading state
-      const loadingId = addSystemEvent('Processing request...', 'extracting');
+      const loadingId = addSystemEvent('Getting the data from your file...', 'extracting');
   
       // Call the mock API
       await apiService.mockApiCall(
@@ -53,14 +52,35 @@ export const ModelAudit: React.FC = () => {
       );
       
       // Add completion event
-      addSystemEvent('Model audit completed successfully', 'completed');
+      addSystemEvent('Data extracted successfully', 'completed');
       
     } catch (error) {
       // Add error event
-      addSystemEvent('Model audit failed', 'error');
+      addSystemEvent('Failed to extract data from your file', 'error');
     } finally {
       setIsProcessing(false);
     }
+    try {
+        setIsProcessing(true); 
+        // Show loading state
+        const loadingId = addSystemEvent('Analyzing your file...', 'reviewing');
+    
+        // Call the mock API
+        await apiService.mockApiCall(
+          true, // success
+          10000, // 10 second delay
+          { result: 'success', step: 1 }
+        );
+        
+        // Add completion event
+        addSystemEvent('Analyzed file successfully', 'completed');
+        
+      } catch (error) {
+        // Add error event
+        addSystemEvent('Failed to analyze file', 'error');
+      } finally {
+        setIsProcessing(false);
+      }
   }, [input, isProcessing, addSystemEvent]);
 
   // Handle key down in textarea
@@ -112,13 +132,14 @@ export const ModelAudit: React.FC = () => {
             </div>
           ))}
 
-            {systemEvents.map((event) => (
+            {systemEvents.map((event, index) => (
             <EventCard
                 key={event.id}
                 type={event.type}
                 message={event.message}
                 className="w-full"
                 showBadge={true}
+                isStreaming={index === systemEvents.length - 1 && isProcessing}
             />
             ))}
 

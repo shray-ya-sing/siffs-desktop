@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
-
+import { Loader2 } from 'lucide-react';
 // Types of events
 export type EventType = 
   | 'extracting' 
@@ -22,6 +22,7 @@ export interface EventCardProps {
   showBadge?: boolean;
   isStreaming?: boolean;
   timestamp?: number;
+  isActive?: boolean;
 }
 
 const typeStyles = {
@@ -98,12 +99,16 @@ export function EventCard({
           )}
         >
           {message}
-          {timestamp && (
-            <span className="text-gray-400 text-2xs ml-2">
-              {new Date(timestamp).toLocaleTimeString()}
-            </span>
-          )}
-        </span>
+          </span>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {isStreaming && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+            {timestamp && (
+                <span className="text-gray-400 text-2xs whitespace-nowrap">
+                {new Date(timestamp).toLocaleTimeString()}
+                </span>
+            )}
+        </div>
       </div>
     </Card>
   );
