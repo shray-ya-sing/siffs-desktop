@@ -22,7 +22,7 @@ export default function ToolGrid({ tools = [], className = "" }: ToolGridProps) 
           key={tool.id} 
           tool={tool}
           onStart={() => {
-            if (tool.id === 'model-audit') {
+            if (tool.id === 'excel-model-audit') {
               navigate('/tools/model-audit');
             }
             // Add other tool routes here as needed
