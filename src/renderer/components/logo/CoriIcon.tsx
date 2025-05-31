@@ -1,0 +1,28 @@
+export default function CoriIcon() {
+    return (
+      <svg 
+        viewBox="0 0 121.91 121.91" 
+        width="32" 
+        height="32" 
+        className="text-white"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Outer circle ring */}
+        <path
+          className="fill-current"
+          d="M60.95,0C27.29,0,0,27.29,0,60.95s27.29,60.96,60.95,60.96,60.96-27.29,60.96-60.96S94.62,0,60.95,0ZM60.95,110.23c-27.21,0-49.28-22.06-49.28-49.28S33.74,11.67,60.95,11.67s49.28,22.07,49.28,49.28-22.06,49.28-49.28,49.28Z"
+        />
+  
+        {/* Center circle */}
+        <circle className="fill-current" cx="60.95" cy="60.95" r="10.73" />
+  
+        {/* Curved progress stroke */}
+        <path
+          className="fill-none stroke-current stroke-[13px]"
+          strokeLinecap="round"
+          strokeMiterlimit="10"
+          d="M82.54,82.54c-5.53,5.53-13.16,8.94-21.59,8.94-16.86,0-30.53-13.67-30.53-30.53s13.67-30.53,30.53-30.53"
+        />
+      </svg>
+    );
+  }
