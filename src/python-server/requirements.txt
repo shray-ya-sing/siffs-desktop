@@ -1,6 +1,9 @@
-flask==2.0.1
+flask[async]
 flask-cors==3.0.10
 waitress==2.0.0
 werkzeug==2.0.3  # Specific version compatible with Flask 2.0.1
 pyinstaller==6.13.0  # For building the Python executable
 python-dotenv==1.1.0  # For loading environment variables
+xlwings==0.33.15  # For excel file interaction
+anthropic>=0.3.0  # Specify a minimum version
+asgiref==3.8.1
