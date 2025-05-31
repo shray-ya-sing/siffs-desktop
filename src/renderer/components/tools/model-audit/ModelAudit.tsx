@@ -198,7 +198,7 @@ export const ModelAudit: React.FC = () => {
               message={event.message}
               className="w-full"
               showBadge={true}
-              isStreaming={index === systemEvents.length - 1 && isStreaming}
+              isStreaming={index === systemEvents.length - 1 && isProcessing}
             />
             {event.message === 'Analyzing your file...' && analysisResult && (
               <div className="px-4 py-2 bg-gray-800/50 border-l-4 border-blue-500">
