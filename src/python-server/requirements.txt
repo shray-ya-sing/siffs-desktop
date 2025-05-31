@@ -7,3 +7,7 @@ python-dotenv==1.1.0  # For loading environment variables
 xlwings==0.33.15  # For excel file interaction
 anthropic>=0.3.0  # Specify a minimum version
 asgiref==3.8.1
+uvicorn==0.34.1
+fastapi==0.115.12
+pydantic>=1.8.0
+python-multipart

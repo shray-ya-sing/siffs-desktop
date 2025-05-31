@@ -48,6 +48,9 @@ function buildPython() {
         '--hidden-import=anthropic',
         '--hidden-import=openpyxl',
         '--hidden-import=asgiref',
+        '--hidden-import=uvicorn',
+        '--hidden-import=fastapi',
+        '--hidden-import=pydantic',
         // Add the python-server directory to the path
         '--paths', pythonDir,
         // Collect all Flask components
@@ -56,18 +59,27 @@ function buildPython() {
         '--collect-all', 'waitress',
         '--collect-data=xlwings',
         '--collect-data=anthropic',
+        '--collect-all', 'fastapi',
+        '--collect-all', 'uvicorn',
+        '--collect-all', 'pydantic',
+        '--collect-all', 'pydantic_core',
+        '--collect-all', 'anyio',
+        '--collect-all', 'starlette',
+        '--collect-all', 'httpcore',
+        '--collect-all', 'httpx',
         '--collect-all', 'openpyxl',
         '--collect-all', 'asgiref',
         '--name=python-server',        
         // Add all Python files in the python-server directory
         '--add-data', `${path.join(pythonDir, 'app.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'wsgi.py')}${path.delimiter}.`,
+        '--add-data', `${path.join(pythonDir, 'asgi.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, '__init__.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, '*.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'excel')}${path.delimiter}excel`,
         // Entry point for prod server
         '--onefile',
-        path.join(pythonDir, 'wsgi.py')
+        path.join(pythonDir, 'asgi.py')
     ];
 
     console.log('Running: pyinstaller', pyInstallerArgs.join(' '));
@@ -94,9 +106,14 @@ function buildPython() {
     // Copy wsgi.py to resources
     const wsgiSource = path.join(__dirname, '../python-server/wsgi.py');
     const wsgiDest = path.join(__dirname, '../../resources/wsgi.py');
-
     fs.copyFileSync(wsgiSource, wsgiDest);
     console.log(`Copied wsgi.py to ${wsgiDest}`);
+
+    // Copy asgi.py to resources
+    const asgiSource = path.join(__dirname, '../python-server/asgi.py');
+    const asgiDest = path.join(__dirname, '../../resources/asgi.py');
+    fs.copyFileSync(asgiSource, asgiDest);
+    console.log(`Copied asgi.py to ${asgiDest}`);   
 
     // Copy the env file to the package resources
     // Update the .env copy section to be non-blocking
