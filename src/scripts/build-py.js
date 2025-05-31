@@ -44,18 +44,29 @@ function buildPython() {
         '--hidden-import=flask.app',
         '--hidden-import=python_dotenv',
         '--hidden-import=waitress',
+        '--hidden-import=xlwings',
+        '--hidden-import=anthropic',
+        '--hidden-import=openpyxl',
+        '--hidden-import=asgiref',
         // Add the python-server directory to the path
         '--paths', pythonDir,
         // Collect all Flask components
         '--collect-all', 'flask',
         '--collect-all', 'python_dotenv',
         '--collect-all', 'waitress',
-        '--name=python-server',
-        '--onefile',
+        '--collect-data=xlwings',
+        '--collect-data=anthropic',
+        '--collect-all', 'openpyxl',
+        '--collect-all', 'asgiref',
+        '--name=python-server',        
         // Add all Python files in the python-server directory
         '--add-data', `${path.join(pythonDir, 'app.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'wsgi.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, '__init__.py')}${path.delimiter}.`,
+        '--add-data', `${path.join(pythonDir, '*.py')}${path.delimiter}.`,
+        '--add-data', `${path.join(pythonDir, 'excel')}${path.delimiter}excel`,
+        // Entry point for prod server
+        '--onefile',
         path.join(pythonDir, 'wsgi.py')
     ];
 
