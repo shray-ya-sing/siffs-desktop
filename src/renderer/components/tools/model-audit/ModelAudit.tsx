@@ -9,12 +9,18 @@ import apiService from '../../../services/pythonApiService';
 export const ModelAudit: React.FC = () => {
   // Refs
   const messageEndRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<() => void>(null);
 
   // State
   const [systemEvents, setSystemEvents] = useState<{id: string, type: EventType, message: string}[]>([]);
   const [filePath, setFilePath] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [analysisResult, setAnalysisResult] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingComplete, setStreamingComplete] = useState(false);
+  const [metadata, setMetadata] = useState('');
+  let markdown = '';
 
   // Add system event
   const addSystemEvent = useCallback((message: string, type: EventType = 'info') => {
@@ -29,6 +35,24 @@ export const ModelAudit: React.FC = () => {
   const validateFilePath = (path: string): boolean => {
     return path.trim().toLowerCase().endsWith('.xlsx');
   };
+
+  // Function to handle the typewriter effect
+  const typeWriter = useCallback((text: string, speed: number, onComplete?: () => void) => {
+    let i = 0;
+    setAnalysisResult('');
+
+    const typing = () => {
+      if (i < text.length) {
+        setAnalysisResult(prev => prev + text.charAt(i));
+        i++;
+        setTimeout(typing, speed);
+      } else if (onComplete) {
+        onComplete();
+      }
+    };
+
+    typing();
+  }, []);
 
   // Handle sending a message
   const handleSendMessage = useCallback(async () => {
@@ -50,11 +74,23 @@ export const ModelAudit: React.FC = () => {
       const loadingId = addSystemEvent('Getting the data from your file...', 'extracting');
   
       // Call the mock API
-      await apiService.extractExcelMetadata(filePath);
-      
-      // Add completion event
-      addSystemEvent('Data extracted successfully', 'completed');
-      
+      const metadataResponse = await apiService.extractExcelMetadata(filePath);
+      // Check that markdown returned is non empty
+      if (metadataResponse.data.markdown.trim() === '') {
+        addSystemEvent('Failed to extract data from your file', 'error');
+        return;
+      }
+      setMetadata(metadataResponse.data.markdown);
+      markdown = metadataResponse.data.markdown;
+
+      if (metadataResponse.data.status === 'success') {
+        // Add completion event
+        addSystemEvent('Data extracted successfully', 'completed');
+      }
+      else{
+        addSystemEvent('Failed to extract data from your file', 'error');
+      }   
+
     } catch (error) {
       // Add error event
       addSystemEvent('Failed to extract data from your file', 'error');
@@ -63,26 +99,64 @@ export const ModelAudit: React.FC = () => {
     }
     try {
         setIsProcessing(true); 
+        setIsStreaming(true);
+        setStreamingComplete(false);
+        setAnalysisResult('');
         // Show loading state
         const loadingId = addSystemEvent('Analyzing your file...', 'reviewing');
+
+        // Create a variable to store the full analysis text
+        let fullAnalysis = '';
     
-        // Call the mock API
-        await apiService.mockApiCall(
-          true, // success
-          10000, // 10 second delay
-          { result: 'success', step: 1 }
+        // Call the analyze API
+        const { cancel } = apiService.analyzeExcelMetadata(
+          markdown, // or your metadata object
+          (chunk, isDone) => {
+            if (isDone) {
+              setStreamingComplete(true);
+              setIsStreaming(false);
+              // Add completion event after a small delay
+              setTimeout(() => {
+                addSystemEvent('Analyzed file successfully', 'completed');
+              }, 500);
+              return;
+            }
+            
+            // Append the new chunk to the full analysis
+            fullAnalysis += chunk;
+            
+            // Update the typewriter with the full text so far
+            // This will make it look like it's typing out the full response
+            typeWriter(fullAnalysis, 10);
+          },
+          (error) => {
+            console.error('Analysis error:', error);
+            addSystemEvent(`Analysis error: ${error}`, 'error');
+            setIsStreaming(false);
+            setStreamingComplete(true);
+          }
         );
+
+        // Store the cancel function in case we need to abort
         
-        // Add completion event
-        addSystemEvent('Analyzed file successfully', 'completed');
-        
+        cancelRef.current = cancel;
+
+        // Clean up on unmount
+        return () => {
+          if (cancelRef.current) {
+            cancelRef.current();
+          }
+        };
+
       } catch (error) {
-        // Add error event
+        console.error('Error during analysis:', error);
         addSystemEvent('Failed to analyze file', 'error');
+        setIsStreaming(false);
+        setStreamingComplete(true);
       } finally {
         setIsProcessing(false);
       }
-  }, [filePath, isProcessing, addSystemEvent]);
+    }, [filePath, isProcessing, addSystemEvent]);
 
   // Handle key down in textarea
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -117,16 +191,27 @@ export const ModelAudit: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-            {systemEvents.map((event, index) => (
+        {systemEvents.map((event, index) => (
+          <React.Fragment key={event.id}>
             <EventCard
-                key={event.id}
-                type={event.type}
-                message={event.message}
-                className="w-full"
-                showBadge={true}
-                isStreaming={index === systemEvents.length - 1 && isProcessing}
+              type={event.type}
+              message={event.message}
+              className="w-full"
+              showBadge={true}
+              isStreaming={index === systemEvents.length - 1 && isStreaming}
             />
-            ))}
+            {event.message === 'Analyzing your file...' && analysisResult && (
+              <div className="px-4 py-2 bg-gray-800/50 border-l-4 border-blue-500">
+                <div className="whitespace-pre-wrap text-sm text-gray-200">
+                  {analysisResult}
+                  {isStreaming && !streamingComplete && (
+                    <span className="ml-1 inline-block w-2 h-4 bg-blue-500 animate-pulse"></span>
+                  )}
+                </div>
+              </div>
+            )}
+          </React.Fragment>
+      ))}            
       </div>
     </div>
   );

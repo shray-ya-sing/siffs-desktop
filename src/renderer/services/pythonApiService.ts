@@ -26,6 +26,12 @@ import axios, {
     temp_file?: string;
   }
 
+  // Add this interface near your other interfaces
+  interface StreamChunk {
+    chunk?: string;
+    error?: string;
+  }
+
   const isDev = process.env.NODE_ENV === 'development';
 
   const baseURL = isDev 
@@ -39,7 +45,7 @@ import axios, {
     headers: {
       'Content-Type': 'application/json',
     } as AxiosRequestHeaders,
-    withCredentials: true,
+    withCredentials: false,
   });
   
   // Request interceptor for API calls
@@ -84,11 +90,116 @@ const apiService = {
       return apiClient.get<ExampleResponse>('/example');
     },
 
-    // New Excel metadata extraction endpoint
+    /**
+     * Extracts metadata from an Excel file.
+     * @param filePath The path to the Excel file.
+     * @returns A promise that resolves to the extracted metadata.
+     */
     extractExcelMetadata(filePath: string): Promise<AxiosResponse<ExcelMetadataResponse>> {
       return apiClient.post<ExcelMetadataResponse>('/excel/extract-metadata', {
         filePath
       });
+    },
+
+    /**
+     * Analyzes metadata from an Excel file using LLM.
+     * @param metadata The metadata to analyze.
+     * @param onChunk A callback function to receive chunks of the analysis result.
+     * @param onError A callback function to receive error messages.
+     * @param model The LLM model to use (default: 'claude-sonnet-4-20250514').
+     * @param temperature The sampling temperature (default: 0.3).
+     * @returns An object with a cancel function to abort the analysis.
+     */
+    analyzeExcelMetadata(
+      metadata: any,  // or a more specific type if available
+      onChunk: (chunk: string, isDone: boolean) => void,
+      onError: (error: string) => void,
+      model: string = 'claude-sonnet-4-20250514',
+      temperature: number = 0.3
+    ): { cancel: () => void } {
+      const controller = new AbortController();
+      const signal = controller.signal;
+      
+      // Start the fetch request
+      fetch(`${baseURL}/excel/analyze-metadata`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          metadata,
+          model,
+          temperature
+        }),
+        signal
+      })
+      .then(async response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+    
+        // Handle the stream
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('No reader available');
+        }
+    
+        const decoder = new TextDecoder();
+        let buffer = '';
+    
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            onChunk('', true); // Signal completion
+            break;
+          }
+    
+          // Decode the chunk and process it
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+    
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim();
+              
+              // Check for completion signal
+              if (data === '[DONE]') {
+                onChunk('', true);
+                return;
+              }
+    
+              try {
+                const parsed: StreamChunk = JSON.parse(data);
+                if (parsed.error) {
+                  onError(parsed.error);
+                  return;
+                } else if (parsed.chunk) {
+                  onChunk(parsed.chunk, false);
+                }
+              } catch (e) {
+                console.error('Error parsing chunk:', e);
+                onError('Error parsing server response');
+                return;
+              }
+            }
+          }
+        }
+      })
+      .catch(error => {
+        if (error.name !== 'AbortError') {
+          console.error('Error in analyzeExcelMetadata:', error);
+          onError(error.message || 'Failed to analyze metadata');
+        }
+      });
+    
+      // Return a cancel function
+      return {
+        cancel: () => {
+          controller.abort();
+        }
+      };
     },
   
     // Generic GET request
