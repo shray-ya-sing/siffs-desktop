@@ -1,8 +1,10 @@
 import os
 import json
 import traceback
+import re
 from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime
+from collections import defaultdict
 
 # Handle import errors gracefully
 try:
@@ -21,10 +23,172 @@ except ImportError:
     XLWINGS_AVAILABLE = False
     print("Warning: xlwings not available - display values will not be extracted")
 
+class ExcelDependencyExtractor:
+    """Helper class for extracting cell dependencies from Excel formulas"""
+    
+    def __init__(self):
+        self.dependency_map = defaultdict(set)  # cell -> cells it depends on
+        self.dependent_map = defaultdict(set)   # cell -> cells that depend on it
+    
+    def column_string_to_number(self, col_str):
+        """Convert column string (A, B, ..., AA, AB, etc.) to number"""
+        num = 0
+        for char in col_str:
+            num = num * 26 + (ord(char.upper()) - ord('A') + 1)
+        return num
+    
+    def number_to_column_string(self, col_num):
+        """Convert column number to string (1->A, 2->B, ..., 27->AA, etc.)"""
+        result = ""
+        while col_num > 0:
+            col_num -= 1
+            result = chr(col_num % 26 + ord('A')) + result
+            col_num //= 26
+        return result
+    
+    def parse_cell_address(self, cell_ref):
+        """Parse cell address like 'A1', '$A$1', 'A$1', '$A1' into (column, row)"""
+        clean_ref = cell_ref.replace('$', '')
+        match = re.match(r'^([A-Z]+)(\d+)$', clean_ref.upper())
+        if match:
+            col_str, row_str = match.groups()
+            col_num = self.column_string_to_number(col_str)
+            row_num = int(row_str)
+            return col_num, row_num
+        return None, None
+    
+    def extract_ranges_and_expand(self, formula, current_sheet):
+        """Extract cell ranges (with colons) and expand them to individual cells"""
+        if not formula or not formula.startswith('='):
+            return set(), formula
+        
+        expanded_cells = set()
+        modified_formula = formula
+        
+        # Pattern to match ranges with optional sheet references
+        range_pattern = r"(?:(?:'([^']+)'|([^'!\s(),\+\-\*/]+))!)?(\$?[A-Z]+\$?\d+):(\$?[A-Z]+\$?\d+)"
+        
+        range_matches = re.finditer(range_pattern, formula.upper())
+        
+        for match in range_matches:
+            quoted_sheet, unquoted_sheet, start_cell, end_cell = match.groups()
+            sheet_name = quoted_sheet or unquoted_sheet or current_sheet
+            
+            start_col, start_row = self.parse_cell_address(start_cell)
+            end_col, end_row = self.parse_cell_address(end_cell)
+            
+            if None in (start_col, start_row, end_col, end_row):
+                continue
+            
+            # Ensure start <= end
+            if start_col > end_col:
+                start_col, end_col = end_col, start_col
+            if start_row > end_row:
+                start_row, end_row = end_row, start_row
+            
+            # Limit range expansion to prevent memory issues
+            max_cells = 10000  # Adjust as needed
+            range_size = (end_row - start_row + 1) * (end_col - start_col + 1)
+            
+            if range_size > max_cells:
+                print(f"Warning: Range {start_cell}:{end_cell} too large ({range_size} cells), skipping expansion")
+                continue
+            
+            # Expand the range
+            for row in range(start_row, end_row + 1):
+                for col in range(start_col, end_col + 1):
+                    col_str = self.number_to_column_string(col)
+                    cell_addr = f"{sheet_name}!{col_str}{row}"
+                    expanded_cells.add(cell_addr)
+            
+            # Remove this range from the formula
+            full_range = match.group(0)
+            modified_formula = modified_formula.replace(full_range, f"__RANGE_PLACEHOLDER_{len(expanded_cells)}__", 1)
+        
+        return expanded_cells, modified_formula
+    
+    def extract_individual_cells(self, formula, current_sheet):
+        """Extract individual cell references (not ranges) from formula"""
+        if not formula or not formula.startswith('='):
+            return set()
+        
+        individual_cells = set()
+        cell_pattern = r"(?:(?:'([^']+)'|([^'!\s(),\+\-\*/]+))!)?(\$?[A-Z]+\$?\d+)(?!:)"
+        
+        cell_matches = re.finditer(cell_pattern, formula.upper())
+        
+        for match in cell_matches:
+            quoted_sheet, unquoted_sheet, cell_ref = match.groups()
+            sheet_name = quoted_sheet or unquoted_sheet or current_sheet
+            
+            col, row = self.parse_cell_address(cell_ref)
+            if col is not None and row is not None:
+                cell_addr = f"{sheet_name}!{self.number_to_column_string(col)}{row}"
+                individual_cells.add(cell_addr)
+        
+        return individual_cells
+    
+    def extract_all_cell_references(self, formula, current_sheet):
+        """Extract all cell references from formula: ranges + individual cells"""
+        if not formula or not formula.startswith('='):
+            return set()
+        
+        all_references = set()
+        
+        try:
+            # Extract and expand ranges
+            range_cells, modified_formula = self.extract_ranges_and_expand(formula, current_sheet)
+            all_references.update(range_cells)
+            
+            # Extract individual cells
+            individual_cells = self.extract_individual_cells(modified_formula, current_sheet)
+            all_references.update(individual_cells)
+        except Exception as e:
+            print(f"Warning: Error extracting references from formula '{formula}': {str(e)}")
+        
+        return all_references
+    
+    def build_dependency_maps(self, all_cells_metadata):
+        """Build complete dependency maps from all cell metadata"""
+        print("Building dependency maps...")
+        
+        # Reset maps
+        self.dependency_map.clear()
+        self.dependent_map.clear()
+        
+        formula_count = 0
+        total_dependencies = 0
+        
+        for cell_address, cell_data in all_cells_metadata.items():
+            formula = cell_data.get('formula')
+            if not formula:
+                continue
+            
+            formula_count += 1
+            sheet_name = cell_data.get('sheet', cell_address.split('!')[0] if '!' in cell_address else 'Sheet1')
+            
+            # Extract all cell references
+            try:
+                precedents = self.extract_all_cell_references(formula, sheet_name)
+                
+                # Build bidirectional mapping
+                for precedent in precedents:
+                    self.dependency_map[cell_address].add(precedent)
+                    self.dependent_map[precedent].add(cell_address)
+                
+                total_dependencies += len(precedents)
+                
+            except Exception as e:
+                print(f"Warning: Error processing dependencies for {cell_address}: {str(e)}")
+                continue
+        
+        print(f"Built dependency maps for {formula_count} formula cells with {total_dependencies} total dependencies")
+        return self.dependency_map, self.dependent_map
+
 class ExcelMetadataExtractor:
     def __init__(self, workbook_path: Optional[str] = None):
         """
-        Initialize the metadata extractor with enhanced error handling.
+        Initialize the metadata extractor with enhanced error handling and dependency extraction.
         
         Args:
             workbook_path: Path to the Excel file (optional, can be set later)
@@ -36,6 +200,7 @@ class ExcelMetadataExtractor:
         self.workbook = None
         self.workbook_values = None
         self.xlwings_extractor = None
+        self.dependency_extractor = ExcelDependencyExtractor()
         self._initialize_xlwings()
         
         if workbook_path:
@@ -132,17 +297,19 @@ class ExcelMetadataExtractor:
         output_path: Optional[str] = None,
         max_rows_per_sheet: int = 100,
         max_cols_per_sheet: int = 50,
-        include_display_values: bool = False
+        include_display_values: bool = False,
+        include_dependencies: bool = True
     ) -> Tuple[Dict[str, Any], Dict[str, str]]:
         """
-        Extract metadata with comprehensive error handling.
+        Extract metadata with comprehensive error handling and dependency analysis.
         """
         try:
             # Get metadata using openpyxl
             metadata = self.extract_workbook_metadata_openpyxl(
                 workbook_path,
                 max_rows_per_sheet,
-                max_cols_per_sheet
+                max_cols_per_sheet,
+                include_dependencies
             )
             
             # Get display values if requested and xlwings is available
@@ -169,10 +336,11 @@ class ExcelMetadataExtractor:
         self,
         workbook_path: Optional[str] = None,
         max_rows_per_sheet: int = 100,
-        max_cols_per_sheet: int = 50
+        max_cols_per_sheet: int = 50,
+        include_dependencies: bool = True
     ) -> Dict[str, Any]:
         """
-        Extract metadata using openpyxl with comprehensive error handling.
+        Extract metadata using openpyxl with comprehensive error handling and dependency analysis.
         """
         try:
             if workbook_path or not self.workbook:
@@ -190,18 +358,26 @@ class ExcelMetadataExtractor:
                 "totalSheets": len(self.workbook.worksheets),
                 "sheetNames": [sheet.title for sheet in self.workbook.worksheets],
                 "themeColors": self._get_theme_colors(),
-                "sheets": []
+                "sheets": [],
+                "includeDependencies": include_dependencies
             }
+            
+            # First pass: Extract all cell metadata (without dependencies)
+            all_cells_metadata = {}
             
             # Extract metadata for each sheet
             for sheet in self.workbook.worksheets:
                 try:
-                    sheet_metadata = self._extract_sheet_metadata(
+                    sheet_metadata, sheet_cells = self._extract_sheet_metadata_with_cells(
                         sheet,
                         max_rows_per_sheet,
                         max_cols_per_sheet
                     )
                     workbook_metadata["sheets"].append(sheet_metadata)
+                    
+                    # Collect all cells for dependency analysis
+                    all_cells_metadata.update(sheet_cells)
+                    
                 except Exception as e:
                     error_msg = f"Error processing sheet '{sheet.title}': {str(e)}"
                     print(f"Warning: {error_msg}")
@@ -212,6 +388,28 @@ class ExcelMetadataExtractor:
                         "isEmpty": True
                     })
             
+            # Second pass: Build dependency relationships if requested
+            if include_dependencies and all_cells_metadata:
+                print("Building dependency relationships...")
+                try:
+                    dependency_map, dependent_map = self.dependency_extractor.build_dependency_maps(all_cells_metadata)
+                    
+                    # Third pass: Update all cells with dependency information
+                    self._update_cells_with_dependencies(
+                        workbook_metadata,
+                        all_cells_metadata,
+                        dependency_map,
+                        dependent_map
+                    )
+                    
+                    # Add dependency summary
+                    self._add_dependency_summary(workbook_metadata, dependency_map, dependent_map, all_cells_metadata)
+                    
+                except Exception as e:
+                    error_msg = f"Error building dependencies: {str(e)}"
+                    print(f"Warning: {error_msg}")
+                    workbook_metadata["dependencyError"] = error_msg
+            
             return workbook_metadata
             
         except Exception as e:
@@ -220,14 +418,14 @@ class ExcelMetadataExtractor:
             print(traceback.format_exc())
             raise RuntimeError(error_msg) from e
 
-    def _extract_sheet_metadata(
+    def _extract_sheet_metadata_with_cells(
         self,
         sheet,
         max_rows: int,
         max_cols: int
-    ) -> Dict[str, Any]:
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Extract metadata from a single sheet with comprehensive error handling.
+        Extract metadata from a single sheet and return both sheet metadata and cell dictionary.
         """
         sheet_metadata = {
             "name": sheet.title,
@@ -240,6 +438,8 @@ class ExcelMetadataExtractor:
             "namedRanges": []
         }
         
+        sheet_cells = {}  # For dependency analysis: {full_address: cell_metadata}
+        
         try:
             # Get actual dimensions
             actual_row_count = min(sheet.max_row or 0, 1048576)  # Excel max rows
@@ -248,7 +448,7 @@ class ExcelMetadataExtractor:
             # Check if sheet is empty
             if actual_row_count == 0 or actual_col_count == 0:
                 sheet_metadata["isEmpty"] = True
-                return sheet_metadata
+                return sheet_metadata, sheet_cells
                 
             sheet_metadata.update({
                 "isEmpty": False,
@@ -260,7 +460,7 @@ class ExcelMetadataExtractor:
             
             # Extract cell data
             try:
-                sheet_metadata["cellData"] = self._extract_cell_data(
+                sheet_metadata["cellData"], sheet_cells = self._extract_cell_data_with_addresses(
                     sheet,
                     sheet_metadata["extractedRowCount"],
                     sheet_metadata["extractedColumnCount"]
@@ -281,7 +481,7 @@ class ExcelMetadataExtractor:
 
             # TODO: Extract named ranges
             
-            return sheet_metadata
+            return sheet_metadata, sheet_cells
             
         except Exception as e:
             error_msg = f"Critical error extracting sheet '{sheet.title}': {str(e)}"
@@ -291,18 +491,19 @@ class ExcelMetadataExtractor:
                 "error": error_msg,
                 "isEmpty": True
             })
-            return sheet_metadata
+            return sheet_metadata, sheet_cells
 
-    def _extract_cell_data(
+    def _extract_cell_data_with_addresses(
         self,
         sheet,
         row_count: int,
         col_count: int
-    ) -> List[List[Dict[str, Any]]]:
+    ) -> Tuple[List[List[Dict[str, Any]]], Dict[str, Any]]:
         """
-        Extract cell data with comprehensive error handling.
+        Extract cell data and return both 2D array and address-keyed dictionary.
         """
         cell_data = []
+        cell_dict = {}  # For dependency analysis
         
         try:
             for row_idx in range(1, row_count + 1):
@@ -311,8 +512,14 @@ class ExcelMetadataExtractor:
                 for col_idx in range(1, col_count + 1):
                     try:
                         cell = sheet.cell(row=row_idx, column=col_idx)
-                        cell_metadata = self._extract_complete_cell_metadata(cell, row_idx, col_idx)
+                        cell_metadata = self._extract_complete_cell_metadata(cell, row_idx, col_idx, sheet.title)
                         row_data.append(cell_metadata)
+                        
+                        # Add to dictionary for dependency analysis if has content
+                        if cell_metadata.get('value') is not None or cell_metadata.get('formula'):
+                            full_address = f"{sheet.title}!{cell_metadata['address']}"
+                            cell_dict[full_address] = cell_metadata
+                            
                     except Exception as e:
                         print(f"Warning: Error processing cell ({row_idx},{col_idx}): {str(e)}")
                         row_data.append({
@@ -329,16 +536,17 @@ class ExcelMetadataExtractor:
             print(traceback.format_exc())
             raise
             
-        return cell_data
+        return cell_data, cell_dict
 
     def _extract_complete_cell_metadata(
         self,
         cell,
         row: int,
-        col: int
+        col: int,
+        sheet_name: str
     ) -> Dict[str, Any]:
         """
-        Extract complete cell metadata with comprehensive error handling.
+        Extract complete cell metadata including dependency placeholders.
         """
         try:
             # Handle EmptyCell objects
@@ -347,10 +555,18 @@ class ExcelMetadataExtractor:
                     "row": row,
                     "column": col,
                     "address": f"{get_column_letter(col)}{row}",
+                    "sheet": sheet_name,
                     "value": None,
                     "formula": None,
-                    "formatting": {}
+                    "formatting": {},
+                    # Dependency information (will be filled later)
+                    "directPrecedents": [],
+                    "directDependents": [],
+                    "precedentCount": 0,
+                    "dependentCount": 0,
+                    "totalConnections": 0
                 }
+                
             # Get corresponding cell from values workbook
             value_sheet = self.workbook_values[cell.parent.title]
             value_cell = value_sheet.cell(row=row, column=col)
@@ -359,9 +575,16 @@ class ExcelMetadataExtractor:
                 "row": row,
                 "column": col,
                 "address": f"{get_column_letter(col)}{row}",
+                "sheet": sheet_name,
                 "value": self._serialize_value(value_cell.value),
                 "formula": self._get_cell_formula(cell),
-                "formatting": self._extract_complete_cell_formatting(cell)
+                "formatting": self._extract_complete_cell_formatting(cell),
+                # Dependency information (will be filled later)
+                "directPrecedents": [],
+                "directDependents": [],
+                "precedentCount": 0,
+                "dependentCount": 0,
+                "totalConnections": 0
             }
             
             return cell_metadata
@@ -373,8 +596,93 @@ class ExcelMetadataExtractor:
                 "row": row,
                 "column": col,
                 "address": f"{get_column_letter(col)}{row}",
-                "error": str(e)
+                "sheet": sheet_name,
+                "error": str(e),
+                # Dependency information
+                "directPrecedents": [],
+                "directDependents": [],
+                "precedentCount": 0,
+                "dependentCount": 0,
+                "totalConnections": 0
             }
+
+    def _update_cells_with_dependencies(
+        self,
+        workbook_metadata: Dict[str, Any],
+        all_cells_metadata: Dict[str, Any],
+        dependency_map: Dict[str, set],
+        dependent_map: Dict[str, set]
+    ):
+        """Update all cells in workbook metadata with dependency information."""
+        print("Updating cells with dependency information...")
+        
+        for sheet_data in workbook_metadata["sheets"]:
+            if sheet_data.get("isEmpty") or "cellData" not in sheet_data:
+                continue
+                
+            sheet_name = sheet_data["name"]
+            
+            for row_data in sheet_data["cellData"]:
+                for cell_metadata in row_data:
+                    if "address" in cell_metadata:
+                        full_address = f"{sheet_name}!{cell_metadata['address']}"
+                        
+                        # Get dependency information
+                        precedents = dependency_map.get(full_address, set())
+                        dependents = dependent_map.get(full_address, set())
+                        
+                        # Update cell metadata
+                        cell_metadata.update({
+                            "directPrecedents": list(precedents),
+                            "directDependents": list(dependents),
+                            "precedentCount": len(precedents),
+                            "dependentCount": len(dependents),
+                            "totalConnections": len(precedents) + len(dependents)
+                        })
+
+    def _add_dependency_summary(
+        self,
+        workbook_metadata: Dict[str, Any],
+        dependency_map: Dict[str, set],
+        dependent_map: Dict[str, set],
+        all_cells_metadata: Dict[str, Any]
+    ):
+        """Add dependency summary to workbook metadata."""
+        
+        total_cells = len(all_cells_metadata)
+        formula_cells = sum(1 for data in all_cells_metadata.values() if data.get('formula'))
+        total_dependencies = sum(len(deps) for deps in dependency_map.values())
+        
+        # Find most connected cells
+        cell_connections = {}
+        for cell_addr in all_cells_metadata:
+            precedent_count = len(dependency_map.get(cell_addr, set()))
+            dependent_count = len(dependent_map.get(cell_addr, set()))
+            cell_connections[cell_addr] = precedent_count + dependent_count
+        
+        most_connected = sorted(cell_connections.items(), key=lambda x: x[1], reverse=True)[:10]
+        most_precedents = sorted(
+            [(cell, len(deps)) for cell, deps in dependency_map.items()],
+            key=lambda x: x[1], reverse=True
+        )[:10]
+        most_dependents = sorted(
+            [(cell, len(deps)) for cell, deps in dependent_map.items()],
+            key=lambda x: x[1], reverse=True
+        )[:10]
+        
+        # Add summary
+        workbook_metadata["dependencySummary"] = {
+            "totalCells": total_cells,
+            "formulaCells": formula_cells,
+            "valueCells": total_cells - formula_cells,
+            "totalDependencies": total_dependencies,
+            "avgDependenciesPerCell": total_dependencies / total_cells if total_cells > 0 else 0,
+            "mostConnectedCells": [{"cell": cell, "connections": count} for cell, count in most_connected if count > 0],
+            "mostComplexFormulas": [{"cell": cell, "precedents": count} for cell, count in most_precedents if count > 0],
+            "mostReferencedCells": [{"cell": cell, "dependents": count} for cell, count in most_dependents if count > 0]
+        }
+        
+        print(f"Added dependency summary: {total_dependencies} total dependencies across {formula_cells} formula cells")
 
     def _get_cell_formula(self, cell) -> Optional[str]:
         """Safely get cell formula."""
@@ -714,10 +1022,11 @@ class ExcelMetadataExtractor:
         output_path: Optional[str] = None,
         max_rows_per_sheet: int = 100,
         max_cols_per_sheet: int = 50,
+        include_dependencies: bool = True,
         **kwargs
     ) -> str:
         """
-        Extract metadata and return as JSON string with comprehensive error handling.
+        Extract metadata and return as JSON string with comprehensive error handling and dependencies.
         """
         try:
             # Extract metadata
@@ -725,6 +1034,7 @@ class ExcelMetadataExtractor:
                 workbook_path=workbook_path,
                 max_rows_per_sheet=max_rows_per_sheet,
                 max_cols_per_sheet=max_cols_per_sheet,
+                include_dependencies=include_dependencies,
                 **kwargs
             )
             
