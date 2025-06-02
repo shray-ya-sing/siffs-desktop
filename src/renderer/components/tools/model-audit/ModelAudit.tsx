@@ -65,7 +65,7 @@ export const ModelAudit: React.FC = () => {
   }, []);
 
   // Handle extraction phase
-  const handleExtraction = useCallback(async (): Promise<boolean> => {
+  const handleExtraction = useCallback(async (): Promise<{ chunks: string[], chunkInfo: ChunkInfo[] } | null> => {
     try {
       addSystemEvent('Getting the data from your file...', 'extracting');
       
@@ -74,20 +74,20 @@ export const ModelAudit: React.FC = () => {
       // Validate response
       if (metadataResponse.data.status !== 'success') {
         addSystemEvent('Failed to extract data from your file', 'error');
-        return false;
+        return null;
       }
 
       // Check that chunks were created
       if (!metadataResponse.data.chunks || metadataResponse.data.chunks.length === 0) {
         addSystemEvent('No data chunks created from your file', 'error');
-        return false;
+        return null;
       }
 
       // Check that chunks contain data
       const nonEmptyChunks = metadataResponse.data.chunks.filter(chunk => chunk.trim().length > 0);
       if (nonEmptyChunks.length === 0) {
         addSystemEvent('Failed to extract meaningful data from your file', 'error');
-        return false;
+        return null;
       }
 
       // Store the extracted data
@@ -107,19 +107,23 @@ export const ModelAudit: React.FC = () => {
         'completed'
       );
 
-      return true;
+      return { chunks: metadataResponse.data.chunks, chunkInfo: metadataResponse.data.chunk_info };
 
     } catch (error) {
       console.error('Extraction error:', error);
       addSystemEvent('Failed to extract data from your file', 'error');
-      return false;
+      return null;
     }
   }, [filePath, addSystemEvent]);
 
   // Handle analysis phase
-  const handleAnalysis = useCallback(async (): Promise<void> => {
-    if (chunks.length === 0) {
+  const handleAnalysis = useCallback(async (chunksToAnalyze: string[], chunkInfoToUse: ChunkInfo[]): Promise<void> => {
+    if (chunksToAnalyze.length === 0) {
       addSystemEvent('No chunks available for analysis', 'error');
+      addSystemEvent('Failed to analyze file', 'error');
+      setIsStreaming(false);
+      setStreamingComplete(true);
+      setIsProcessing(false);      
       return;
     }
 
@@ -129,9 +133,9 @@ export const ModelAudit: React.FC = () => {
       setAnalysisResult('');
 
       // Show analysis progress
-      const totalTokens = chunkInfo.reduce((sum, info) => sum + info.token_count, 0);
+      const totalTokens = chunkInfoToUse.reduce((sum, info) => sum + info.token_count, 0);
       addSystemEvent(
-        `Analyzing your file (${chunks.length} chunks, ${totalTokens.toLocaleString()} tokens)...`, 
+        `Analyzing your file (${chunksToAnalyze.length} chunks, ${totalTokens.toLocaleString()} tokens)...`, 
         'reviewing'
       );
 
@@ -141,7 +145,7 @@ export const ModelAudit: React.FC = () => {
       
       // Call the analyze chunks API
       const { cancel } = apiService.analyzeExcelChunks(
-        chunks,
+        chunksToAnalyze, // Use the parameter instead of state
         (chunk, isDone) => {
           if (isDone) {
             setStreamingComplete(true);
@@ -162,15 +166,15 @@ export const ModelAudit: React.FC = () => {
               // Track progress
               if (chunk.includes('--- ANALYZING CHUNK')) {
                 chunksProcessed++;
-                const progress = Math.round((chunksProcessed / chunks.length) * 100);
-                console.log(`Processing chunk ${chunksProcessed}/${chunks.length} (${progress}%)`);
+                const progress = Math.round((chunksProcessed / chunksToAnalyze.length) * 100);
+                console.log(`Processing chunk ${chunksProcessed}/${chunksToAnalyze.length} (${progress}%)`);
               }
             }
             
-            // Append chunk to analysis result
-            fullAnalysis += chunk;
-            setAnalysisResult(prev => prev + chunk);
-          }
+          // Append chunk to analysis result
+          fullAnalysis += chunk;
+          setAnalysisResult(prev => prev + chunk);
+        }
         },
         (error) => {
           console.error('Analysis error:', error);
@@ -191,7 +195,7 @@ export const ModelAudit: React.FC = () => {
       setStreamingComplete(true);
       setIsProcessing(false);
     }
-  }, [chunks, chunkInfo, addSystemEvent]);
+  }, [addSystemEvent]);
 
   // Main handler for the entire process
   const handleSendMessage = useCallback(async () => {
@@ -212,9 +216,9 @@ export const ModelAudit: React.FC = () => {
 
     try {
       // Phase 1: Extract data and create chunks
-      const extractionSuccess = await handleExtraction();
+      const extractionResult = await handleExtraction();
       
-      if (!extractionSuccess) {
+      if (!extractionResult) {
         setIsProcessing(false);
         return;
       }
@@ -222,8 +226,8 @@ export const ModelAudit: React.FC = () => {
       // Small delay to let the user see the extraction completion
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Phase 2: Analyze the chunks
-      await handleAnalysis();
+      // Phase 2: Analyze the chunks - pass the extracted data directly
+      await handleAnalysis(extractionResult.chunks, extractionResult.chunkInfo);
 
     } catch (error) {
       console.error('Error in handleSendMessage:', error);

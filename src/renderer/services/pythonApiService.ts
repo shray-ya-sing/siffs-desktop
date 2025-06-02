@@ -114,7 +114,7 @@ const apiService = {
   },
 
   /**
-   * Analyzes chunks from an Excel file using LLM.
+   * Analyzes chunks from an Excel file using LLM with rate limiting and conversation memory.
    * @param chunks Array of markdown chunks to analyze.
    * @param onChunk A callback function to receive chunks of the analysis result.
    * @param onError A callback function to receive error messages.
@@ -132,7 +132,7 @@ const apiService = {
     const controller = new AbortController();
     const signal = controller.signal;
     
-    console.log(`Starting analysis of ${chunks.length} chunks`);
+    console.log(`Starting analysis of ${chunks.length} chunks with rate limiting and conversation memory`);
     
     // Start the fetch request
     fetch(`${baseURL}/excel/analyze-chunks`, {
@@ -157,16 +157,16 @@ const apiService = {
       if (!contentType?.includes('text/event-stream') && !contentType?.includes('text/plain')) {
         console.warn('Unexpected content type:', contentType);
       }
-  
+
       // Handle the stream
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('No reader available');
       }
-  
+
       const decoder = new TextDecoder();
       let buffer = '';
-  
+
       while (true) {
         const { done, value } = await reader.read();
         
@@ -175,12 +175,12 @@ const apiService = {
           onChunk('', true); // Signal completion
           break;
         }
-  
+
         // Decode the chunk and process it
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
-  
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6).trim();
@@ -191,17 +191,41 @@ const apiService = {
               onChunk('', true);
               return;
             }
-  
+
             try {
-              const parsed: StreamChunk = JSON.parse(data);
+              const parsed = JSON.parse(data);
+              
+              // Handle different message types
               if (parsed.error) {
                 console.error('Server error:', parsed.error);
                 onError(parsed.error);
                 return;
-              } else if (parsed.chunk !== undefined) {
-                // Handle both string chunks and empty strings
+              } 
+              else if (parsed.chunk !== undefined) {
+                // Regular content chunks - pass to user
                 onChunk(parsed.chunk, false);
               }
+              else if (parsed.info !== undefined) {
+                // Info messages - log only
+                console.log('📊 Info:', parsed.info);
+              }
+              else if (parsed.rate_limit !== undefined) {
+                // Rate limit notifications - log only
+                console.log('⏳ Rate limit:', parsed.rate_limit);
+              }
+              else if (parsed.wait_update !== undefined) {
+                // Wait time updates - log only
+                console.log('⏱️ Wait update:', parsed.wait_update);
+              }
+              else if (parsed.complete !== undefined) {
+                // Completion message - log only
+                console.log('✅ Analysis complete:', parsed.complete);
+              }
+              else {
+                // Log any other message types for debugging
+                console.log('🔍 Unknown message type:', parsed);
+              }
+              
             } catch (e) {
               console.error('Error parsing chunk:', e, 'Data:', data);
               // Don't call onError for parsing errors of individual chunks
@@ -234,7 +258,7 @@ const apiService = {
         console.log('Analysis cancelled by user');
       }
     });
-  
+
     // Return a cancel function
     return {
       cancel: () => {
