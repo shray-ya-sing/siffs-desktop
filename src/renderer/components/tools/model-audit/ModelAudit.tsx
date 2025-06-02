@@ -1,39 +1,26 @@
 // src/renderer/components/tools/model-audit/ModelAudit.tsx
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { MessageInput } from '../../conversation/MessageInput';
-import { Message } from '../../../types/message';
 import { EventCard, EventType } from '../../events/EventCard';
 import { FilePathInput } from '../../conversation/FilePathInput';
-import apiService from '../../../services/pythonApiService';
-
-// Define types for better type safety
-interface ChunkInfo {
-  chunk_index: number;
-  token_count: number;
-  line_count: number;
-  character_count: number;
-  sheets: string[];
-  table_rows: number;
-  has_dependency_summary: boolean;
-  has_header: boolean;
-  token_efficiency: number;
-}
+import { ModelAuditService, ChunkInfo, ExtractionResult } from '../../../services/modelAuditService';
 
 export const ModelAudit: React.FC = () => {
   // Refs
   const messageEndRef = useRef<HTMLDivElement>(null);
-  const cancelRef = useRef<(() => void) | null>(null);
+  const modelAuditServiceRef = useRef<ModelAuditService | null>(null);
 
   // State
   const [systemEvents, setSystemEvents] = useState<{id: string, type: EventType, message: string}[]>([]);
   const [filePath, setFilePath] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [analysisResult, setAnalysisResult] = useState('');
+  
+  // Service state
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingComplete, setStreamingComplete] = useState(false);
   
-  // New state for chunks
+  // Data state
   const [chunks, setChunks] = useState<string[]>([]);
   const [chunkInfo, setChunkInfo] = useState<ChunkInfo[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
@@ -48,11 +35,6 @@ export const ModelAudit: React.FC = () => {
     return id;
   }, []);
 
-  // Validate file path
-  const validateFilePath = (path: string): boolean => {
-    return path.trim().toLowerCase().endsWith('.xlsx');
-  };
-
   // Clear previous results
   const clearResults = useCallback(() => {
     setChunks([]);
@@ -62,181 +44,69 @@ export const ModelAudit: React.FC = () => {
     setAnalysisResult('');
     setStreamingComplete(false);
     setError('');
+    setSystemEvents([]);
   }, []);
 
-  // Handle extraction phase
-  const handleExtraction = useCallback(async (): Promise<{ chunks: string[], chunkInfo: ChunkInfo[] } | null> => {
-    try {
-      addSystemEvent('Getting the data from your file...', 'extracting');
-      
-      const metadataResponse = await apiService.extractExcelMetadata(filePath);
-      
-      // Validate response
-      if (metadataResponse.data.status !== 'success') {
-        addSystemEvent('Failed to extract data from your file', 'error');
-        return null;
-      }
-
-      // Check that chunks were created
-      if (!metadataResponse.data.chunks || metadataResponse.data.chunks.length === 0) {
-        addSystemEvent('No data chunks created from your file', 'error');
-        return null;
-      }
-
-      // Check that chunks contain data
-      const nonEmptyChunks = metadataResponse.data.chunks.filter(chunk => chunk.trim().length > 0);
-      if (nonEmptyChunks.length === 0) {
-        addSystemEvent('Failed to extract meaningful data from your file', 'error');
-        return null;
-      }
-
-      // Store the extracted data
-      setChunks(metadataResponse.data.chunks);
-      setChunkInfo(metadataResponse.data.chunk_info || []);
-      setMetadata(metadataResponse.data.metadata);
-      setMarkdown(metadataResponse.data.markdown || '');
-
-      // Calculate statistics for user feedback
-      const totalTokens = metadataResponse.data.chunk_info?.reduce((sum, info) => sum + info.token_count, 0) || 0;
-      const sheetsFound = new Set(
-        metadataResponse.data.chunk_info?.flatMap(info => info.sheets) || []
-      ).size;
-
-      addSystemEvent(
-        `Data extracted successfully - ${metadataResponse.data.chunks.length} chunks created (${totalTokens.toLocaleString()} tokens, ${sheetsFound} sheets)`, 
-        'completed'
-      );
-
-      return { chunks: metadataResponse.data.chunks, chunkInfo: metadataResponse.data.chunk_info };
-
-    } catch (error) {
-      console.error('Extraction error:', error);
-      addSystemEvent('Failed to extract data from your file', 'error');
-      return null;
-    }
-  }, [filePath, addSystemEvent]);
-
-  // Handle analysis phase
-  const handleAnalysis = useCallback(async (chunksToAnalyze: string[], chunkInfoToUse: ChunkInfo[]): Promise<void> => {
-    if (chunksToAnalyze.length === 0) {
-      addSystemEvent('No chunks available for analysis', 'error');
-      addSystemEvent('Failed to analyze file', 'error');
-      setIsStreaming(false);
-      setStreamingComplete(true);
-      setIsProcessing(false);      
-      return;
-    }
-
-    try {
-      setIsStreaming(true);
-      setStreamingComplete(false);
-      setAnalysisResult('');
-
-      // Show analysis progress
-      const totalTokens = chunkInfoToUse.reduce((sum, info) => sum + info.token_count, 0);
-      addSystemEvent(
-        `Analyzing your file (${chunksToAnalyze.length} chunks, ${totalTokens.toLocaleString()} tokens)...`, 
-        'reviewing'
-      );
-
-      // Track analysis progress
-      let fullAnalysis = '';
-      let chunksProcessed = 0;
-      
-      // Call the analyze chunks API
-      const { cancel } = apiService.analyzeExcelChunks(
-        chunksToAnalyze, // Use the parameter instead of state
-        (chunk, isDone) => {
-          if (isDone) {
-            setStreamingComplete(true);
-            setIsStreaming(false);
-            setIsProcessing(false);
-            
-            // Add completion event after a small delay
-            setTimeout(() => {
-              addSystemEvent('Analysis completed successfully', 'completed');
-            }, 500);
-            return;
-          }
-          
-          // Handle chunk content
-          if (chunk) {
-            // Check if this is a chunk separator/header
-            if (chunk.includes('--- ANALYZING CHUNK') || chunk.includes('--- END OF CHUNK')) {
-              // Track progress
-              if (chunk.includes('--- ANALYZING CHUNK')) {
-                chunksProcessed++;
-                const progress = Math.round((chunksProcessed / chunksToAnalyze.length) * 100);
-                console.log(`Processing chunk ${chunksProcessed}/${chunksToAnalyze.length} (${progress}%)`);
-              }
-            }
-            
-          // Append chunk to analysis result
-          fullAnalysis += chunk;
-          setAnalysisResult(prev => prev + chunk);
-        }
+  // Initialize service with callbacks
+  const initializeService = useCallback(() => {
+    if (!modelAuditServiceRef.current) {
+      modelAuditServiceRef.current = new ModelAuditService({
+        onSystemEvent: (message: string, type: EventType) => {
+          addSystemEvent(message, type);
         },
-        (error) => {
-          console.error('Analysis error:', error);
-          addSystemEvent(`Analysis error: ${error}`, 'error');
-          setIsStreaming(false);
-          setStreamingComplete(true);
-          setIsProcessing(false);
+        onAnalysisChunk: (chunk: string, isDone: boolean) => {
+          if (!isDone && chunk) {
+            setAnalysisResult(prev => prev + chunk);
+          }
+        },
+        onAnalysisError: (error: string) => {
+          setError(error);
+        },
+        onProgressUpdate: (current: number, total: number) => {
+          const progress = Math.round((current / total) * 100);
+          console.log(`Progress: ${current}/${total} (${progress}%)`);
         }
-      );
-
-      // Store the cancel function
-      cancelRef.current = cancel;
-
-    } catch (error) {
-      console.error('Error during analysis:', error);
-      addSystemEvent('Failed to analyze file', 'error');
-      setIsStreaming(false);
-      setStreamingComplete(true);
-      setIsProcessing(false);
+      });
     }
+    return modelAuditServiceRef.current;
   }, [addSystemEvent]);
 
   // Main handler for the entire process
   const handleSendMessage = useCallback(async () => {
-    if (!filePath.trim() || isProcessing) return;
-
-    // Validate file path
-    if (!validateFilePath(filePath)) {
-      setError('File path must end with .xlsx. Don\'t include quotes around the file name.');
-      return;
-    }
-
-    // Clear previous results and errors
-    clearResults();
-    setIsProcessing(true);
-    
-    // Add initial system event
-    addSystemEvent('Starting model audit...', 'info');
+    if (!filePath.trim()) return;
 
     try {
-      // Phase 1: Extract data and create chunks
-      const extractionResult = await handleExtraction();
+      // Clear previous results and errors
+      clearResults();
+      setIsProcessing(true);
       
-      if (!extractionResult) {
-        setIsProcessing(false);
-        return;
+      const service = initializeService();
+      
+      // Start the audit process
+      const extractionResult = await service.startAudit(filePath);
+      
+      if (extractionResult) {
+        // Store the extracted data in component state
+        setChunks(extractionResult.chunks);
+        setChunkInfo(extractionResult.chunkInfo);
+        setMetadata(extractionResult.metadata);
+        setMarkdown(extractionResult.markdown);
       }
 
-      // Small delay to let the user see the extraction completion
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Update component state based on service state
+      setIsProcessing(service.isProcessing);
+      setIsStreaming(service.isStreaming);
+      setStreamingComplete(service.streamingComplete);
+      setAnalysisResult(service.analysisResult);
 
-      // Phase 2: Analyze the chunks - pass the extracted data directly
-      await handleAnalysis(extractionResult.chunks, extractionResult.chunkInfo);
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in handleSendMessage:', error);
-      addSystemEvent('Unexpected error during processing', 'error');
+      setError(error.message || 'An unexpected error occurred');
       setIsProcessing(false);
       setIsStreaming(false);
       setStreamingComplete(true);
     }
-  }, [filePath, isProcessing, clearResults, addSystemEvent, handleExtraction, handleAnalysis]);
+  }, [filePath, clearResults, initializeService]);
 
   // Handle key down in textarea
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -254,23 +124,36 @@ export const ModelAudit: React.FC = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (cancelRef.current) {
-        cancelRef.current();
-        cancelRef.current = null;
+      if (modelAuditServiceRef.current) {
+        modelAuditServiceRef.current.cancel();
       }
     };
   }, []);
 
   // Cancel current operation
   const handleCancel = useCallback(() => {
-    if (cancelRef.current) {
-      cancelRef.current();
-      cancelRef.current = null;
+    const service = modelAuditServiceRef.current;
+    if (service) {
+      service.cancel();
+      setIsProcessing(false);
+      setIsStreaming(false);
     }
-    setIsProcessing(false);
-    setIsStreaming(false);
-    addSystemEvent('Operation cancelled by user', 'info');
-  }, [addSystemEvent]);
+  }, []);
+
+  // Sync service state with component state periodically
+  useEffect(() => {
+    if (!modelAuditServiceRef.current) return;
+
+    const interval = setInterval(() => {
+      const service = modelAuditServiceRef.current!;
+      setIsProcessing(service.isProcessing);
+      setIsStreaming(service.isStreaming);
+      setStreamingComplete(service.streamingComplete);
+      setAnalysisResult(service.analysisResult);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
