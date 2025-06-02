@@ -1,29 +1,31 @@
 import xlwings as xw
 import json
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+import traceback
+import asyncio
+from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
 import os
 import sys
 from pathlib import Path
-
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
+# Then import the logging config
+from logging_config import setup_logging
+setup_logging()
+# Get logger for this module
+logger = logging.getLogger(__name__)
+# Add the current directory to path for imports
 current_dir = Path(__file__).parent.absolute()
 sys.path.append(str(current_dir))
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger('ExcelMetadataProcessor')
+
 
 class ExcelMetadataProcessor:
     """
     Python class for extracting comprehensive cell-based metadata from Excel workbooks 
-    and compressing it to LLM readable format.
+    and compressing it to LLM readable format with chunking support.
     """
     
     def __init__(self, workbook_path: Optional[str] = None):
@@ -38,13 +40,17 @@ class ExcelMetadataProcessor:
         self.compressor = None
         self.metadata = None
         self.display_values = None
+        self.chunker = None
+        self.max_tokens_per_chunk = 18000
         
         # Try to import required modules
         try:
             from extraction.excel_metadata_extractor import ExcelMetadataExtractor
             from compression.markdown_compressor import SpreadsheetMarkdownCompressor
+            from chunking.markdown_metadata_chunker import MarkdownMetadataChunker
             self.extractor = ExcelMetadataExtractor(workbook_path)
             self.compressor = SpreadsheetMarkdownCompressor(workbook_path)
+            self.chunker = MarkdownMetadataChunker(max_tokens=self.max_tokens_per_chunk)
             logger.info("Successfully initialized ExcelMetadataProcessor")
         except ImportError as e:
             logger.error(f"Failed to initialize required modules: {str(e)}")
@@ -53,16 +59,16 @@ class ExcelMetadataProcessor:
             logger.error(f"Unexpected error during initialization: {str(e)}")
             raise
 
-    def process_workbook(
+    async def process_workbook(
         self,
         workbook_path: Optional[str] = None,
         output_dir: Optional[str] = None,
         max_rows_per_sheet: int = 100,
         max_cols_per_sheet: int = 50,
         include_display_values: bool = False
-    ) -> Tuple[Dict[str, Any], str]:
+    ) -> Tuple[Dict[str, Any], str, List[str], List[Dict[str, Any]]]:
         """
-        Process the Excel workbook: extract metadata and compress to markdown.
+        Process the Excel workbook: extract metadata, compress to markdown, and chunk.
         
         Args:
             workbook_path: Path to the Excel file (if not provided during initialization)
@@ -72,7 +78,7 @@ class ExcelMetadataProcessor:
             include_display_values: Whether to include display values (requires xlwings)
             
         Returns:
-            Tuple of (metadata_dict, markdown_string)
+            Tuple of (metadata_dict, markdown_string, chunks_list, chunk_info_list)
         """
         try:
             # Update workbook path if provided
@@ -94,12 +100,15 @@ class ExcelMetadataProcessor:
             # Step 2: Compress to markdown
             markdown = self._compress_to_markdown()
             
-            # Step 3: Save outputs if output directory is provided
+            # Step 3: Chunk markdown
+            chunks, chunk_info = await self._chunk_markdown(markdown)
+            
+            # Step 4: Save outputs if output directory is provided
             if output_dir:
                 self._save_outputs(output_dir, markdown)
                 
             logger.info("Successfully processed workbook")
-            return self.metadata, markdown
+            return self.metadata, markdown, chunks, chunk_info
             
         except Exception as e:
             logger.error(f"Failed to process workbook: {str(e)}")
@@ -151,6 +160,25 @@ class ExcelMetadataProcessor:
             logger.error(f"Error during markdown compression: {str(e)}")
             raise
 
+    async def _chunk_markdown(self, markdown: str) -> Tuple[List[str], List[Dict[str, Any]]]:
+        """Chunk the markdown content into strings not exceeding 18K LLM tokens each."""
+        try:
+            logger.info("Chunking markdown content...")
+            
+            if not markdown:
+                raise ValueError("No markdown content to chunk")
+                
+            # Chunk the markdown content using the chunker instance
+            chunks = await self.chunker.chunk_metadata(markdown)
+            chunk_info = await self.chunker.get_chunk_info(chunks)
+            
+            logger.info(f"Successfully chunked markdown content into {len(chunks)} chunks")
+            return chunks, chunk_info
+            
+        except Exception as e:
+            logger.error(f"Error during markdown chunking: {str(e)}")
+            raise
+    
     def _save_outputs(self, output_dir: str, markdown: str) -> None:
         """Save the extracted metadata and markdown to files."""
         try:
@@ -178,12 +206,12 @@ class ExcelMetadataProcessor:
             raise
 
     @staticmethod
-    def process_file(
+    async def process_file(
         file_path: str,
         output_dir: Optional[str] = None,
         max_rows: int = 100,
         max_cols: int = 50
-    ) -> Tuple[Dict[str, Any], str]:
+    ) -> Tuple[Dict[str, Any], str, List[str], List[Dict[str, Any]]]:
         """
         Static method to process a single file.
         
@@ -194,11 +222,11 @@ class ExcelMetadataProcessor:
             max_cols: Maximum columns per sheet to process
             
         Returns:
-            Tuple of (metadata_dict, markdown_string)
+            Tuple of (metadata_dict, markdown_string, chunks_list, chunk_info_list)
         """
         try:
             processor = ExcelMetadataProcessor(file_path)
-            return processor.process_workbook(
+            return await processor.process_workbook(
                 output_dir=output_dir,
                 max_rows_per_sheet=max_rows,
                 max_cols_per_sheet=max_cols
@@ -207,12 +235,12 @@ class ExcelMetadataProcessor:
             logger.error(f"Error processing file {file_path}: {str(e)}")
             raise
 
-def main():
+async def main():
     """Command-line interface for the Excel metadata processor."""
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='Extract and compress Excel workbook metadata to markdown'
+        description='Extract and compress Excel workbook metadata to markdown with chunking'
     )
     parser.add_argument('file_path', help='Path to the Excel file')
     parser.add_argument('-o', '--output-dir', help='Output directory for results')
@@ -225,17 +253,18 @@ def main():
     
     try:
         processor = ExcelMetadataProcessor(args.file_path)
-        metadata, markdown = processor.process_workbook(
+        metadata, markdown, chunks, chunk_info = await processor.process_workbook(
             output_dir=args.output_dir,
             max_rows_per_sheet=args.max_rows,
             max_cols_per_sheet=args.max_cols
         )
         print(f"Successfully processed {args.file_path}")
         print(f"Extracted {len(metadata.get('sheets', []))} sheets")
+        print(f"Created {len(chunks)} chunks")
         
     except Exception as e:
         logger.error(f"Failed to process file: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
