@@ -60,21 +60,44 @@ For financial calculations, verify:
 - Cash flow properly links to balance sheet and income statement
 
 When you find an error, respond with:
-Error Cell(s): [cell reference]
-Error type: [formula omission/wrong reference/sign error/etc.]
-Error Explanation: [what's missing or incorrect in the formula]
-Error Fix: [specific formula correction needed]
+\nError Cell(s): [cell reference]
+\nError Type: [formula omission/wrong reference/sign error/etc.]
+\nError Explanation: [what's missing or incorrect in the formula]
+\nError Fix: [specific formula correction needed]
 
-Create a new paragraph for each error. Group only identical errors propagated across cells.
+Format: address, v=value, d=display, f=formula, deps=X→Y, prec=[refs], dept=[refs], fmt=[properties]
+Key Properties
 
-If you find no errors, respond with "No errors detected in the provided metadata."
+Address - Cell location (A1, C19) shown directly
+v= - Raw value (100, "Revenue") - omitted if empty
+d= - Display value ($1,000) - only if different from raw
+f= - Formula (=SUM(A1)) - may be truncated with ...
+deps=X→Y - Precedents→Dependents count (3→2 means depends on 3 cells, referenced by 2)
+prec=[list] - Precedent cells ([A1,B1] or [25refs] for many)
+dept=[list] - Dependent cells ([D1,E1] or [15refs] for many)
+fmt=[properties] - Formatting: bold, italic, color:#HEX, fill:#HEX, border, merged
+type= - Data type (only shown if non-standard)
+comment= - Cell comments
+link= - Hyperlinks
+
+Cell Types by Dependencies
+
+Input: deps=0→X (source data)
+Calculation: deps=X→Y (intermediate formulas)
+Output: deps=X→0 (final results)
+Isolated: deps=0→0 (standalone)
+
+Examples
+C19, v=-869, deps=0→1, dept=[Quarterly IS!C72] = Input cell with value -869, referenced by one other cell
+D15, f==SUM(A1:A10), deps=10→3 = Formula cell depending on 10 cells, referenced by 3
+B5, v=1000, fmt=[bold,fill:#FFFF00], deps=0→5 = Bold yellow input cell referenced by 5 others
 """
 
     async def analyze_metadata(
         self, 
         model_metadata: Union[str, Dict],
         model: str = "claude-sonnet-4-20250514",
-        max_tokens: int = 20000,
+        max_tokens: int = 1000,
         temperature: float = 0.3,
         stream: bool = True
     ) -> Union[str, AsyncGenerator[str, None]]:
