@@ -11,15 +11,8 @@ sys.path.append(str(project_root))
 
 from excel.metadata.analysis.llm_analyzer import LLMAnalyzer
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger('ExcelMetadataAnalyzer')
+# Get logger for this module
+logger = logging.getLogger(__name__)
 
 class ExcelMetadataAnalyzer:
     """
