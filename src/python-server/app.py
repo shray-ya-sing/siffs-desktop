@@ -5,10 +5,18 @@ from pydantic import BaseModel
 import os
 import sys
 import asyncio
-import json
+import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
+
+# Import and setup logging configuration
+from logging_config import setup_logging
+
+# Configure logging
+log_file = setup_logging()
+logger = logging.getLogger(__name__)
+logger.info(f"Application logging to file: {log_file}")
 
 # Get the project root directory (where .env is located)
 project_root = Path(__file__).parent.parent.parent.absolute()
@@ -30,12 +38,18 @@ class ExtractMetadataRequest(BaseModel):
     filePath: str
 
 class AnalyzeMetadataRequest(BaseModel):
-    metadata: str
+    chunks: List[str]  # Changed from metadata to chunks
     model: Optional[str] = "claude-sonnet-4-20250514"
     temperature: Optional[float] = 0.3
 
 # Create FastAPI app
 app = FastAPI()
+
+@app.on_event("startup")
+async def startup_event():
+    # Print all registered routes
+    for route in app.routes:
+        print(f"{route.methods} {route.path}")
 
 # Configure CORS
 app.add_middleware(
@@ -45,6 +59,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Incoming request: {request.method} {request.url}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
 
 # Simple health check endpoint
 @app.get("/api/health")
@@ -56,28 +77,44 @@ async def health_check():
 async def example_endpoint():
     return {"message": "Hello from FastAPI server!"}
 
-# Excel metadata extraction endpoint
+@app.get("/api/test-logging")
+async def test_logging():
+    # Test logging at different levels
+    logger.debug("This is a DEBUG message")
+    logger.info("This is an INFO message")
+    logger.warning("This is a WARNING message")
+    logger.error("This is an ERROR message")
+    return {"message": "Logging test complete"}
+
+# Excel metadata extraction endpoint - now returns chunks
 @app.post("/api/excel/extract-metadata")
 async def extract_metadata(request: ExtractMetadataRequest):
+    logger.info(f"Received request to process: {request.filePath}")
     try:
         processor = ExcelMetadataProcessor(workbook_path=request.filePath)
-        metadata, markdown = processor.process_workbook()
+        
+        # Process workbook and get chunks
+        result = await processor.process_workbook()
+        metadata, markdown, chunks, chunk_info = result
         
         return {
             "status": "success",
             "markdown": markdown,
-            "metadata": metadata
+            "metadata": metadata,
+            "chunks": chunks,
+            "chunk_info": chunk_info
         }
             
     except Exception as e:
+        logger.error(f"Error processing workbook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Analyze metadata with streaming response
-@app.post("/api/excel/analyze-metadata")
-async def analyze_metadata(request: AnalyzeMetadataRequest):
-    if not request.metadata:
+# Analyze chunks with streaming response
+@app.post("/api/excel/analyze-chunks")  # Changed endpoint name
+async def analyze_chunks(request: AnalyzeMetadataRequest):
+    if not request.chunks:
         async def error_stream():
-            yield "data: " + json.dumps({'error': 'No metadata provided'}) + "\n\n"
+            yield "data: " + json.dumps({'error': 'No chunks provided'}) + "\n\n"
             yield "data: [DONE]\n\n"
         
         return StreamingResponse(
@@ -94,16 +131,28 @@ async def analyze_metadata(request: AnalyzeMetadataRequest):
     
     async def event_generator():
         try:
-            stream = await analyzer.analyze_metadata(
-                model_metadata=request.metadata,
-                model=request.model,
-                temperature=request.temperature,
-                stream=True
-            )
-            
-            async for chunk in stream:
-                if chunk:
-                    yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+            # Process each chunk
+            for i, chunk in enumerate(request.chunks):
+                # Add chunk header information
+                chunk_header = f"\n--- ANALYZING CHUNK {i+1}/{len(request.chunks)} ---\n"
+                yield f"data: {json.dumps({'chunk': chunk_header})}\n\n"
+                
+                # Analyze this chunk
+                stream = await analyzer.analyze_metadata(
+                    model_metadata=chunk,
+                    model=request.model,
+                    temperature=request.temperature,
+                    stream=True
+                )
+                
+                async for chunk_response in stream:
+                    if chunk_response:
+                        yield f"data: {json.dumps({'chunk': chunk_response})}\n\n"
+                
+                # Add separator between chunks
+                if i < len(request.chunks) - 1:
+                    separator = f"\n\n--- END OF CHUNK {i+1} ---\n\n"
+                    yield f"data: {json.dumps({'chunk': separator})}\n\n"
             
             yield "data: [DONE]\n\n"
             
@@ -120,6 +169,8 @@ async def analyze_metadata(request: AnalyzeMetadataRequest):
             'X-Accel-Buffering': 'no'
         }
     )
+
+
 
 if __name__ == '__main__':
     import uvicorn
