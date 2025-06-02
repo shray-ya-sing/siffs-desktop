@@ -38,27 +38,13 @@ class SpreadsheetMarkdownCompressor:
 
         markdown_lines = []
         markdown_lines.append(f"# Workbook: {metadata.get('workbookName', '')}")
-        markdown_lines.append(f"Active Sheet: {metadata.get('activeSheet', '')}")
-        markdown_lines.append(f"Total Sheets: {metadata.get('totalSheets', 0)}")
-        
-        # Add dependency summary if available
-        if self.has_dependencies and 'dependencySummary' in metadata:
-            self._add_dependency_summary_section(markdown_lines, metadata['dependencySummary'])
-        
-        markdown_lines.append("")
+        markdown_lines.append(f"Active Sheet: {metadata.get('activeSheet', '')} | Total Sheets: {metadata.get('totalSheets', 0)}")
         
         for sheet in metadata.get("sheets", []):
             if sheet.get("isEmpty", True):
                 continue
                 
-            markdown_lines.append(f"## Sheet: {sheet.get('name', '')}")
-            markdown_lines.append(f"Dimensions: {sheet.get('rowCount', 0)} rows x {sheet.get('columnCount', 0)} columns")
-            
-            # Add sheet-level dependency statistics
-            if self.has_dependencies:
-                self._add_sheet_dependency_stats(markdown_lines, sheet)
-            
-            markdown_lines.append("")
+            markdown_lines.append(f"## Sheet: {sheet.get('name', '')} ({sheet.get('rowCount', 0)}x{sheet.get('columnCount', 0)})")
             
             # Create spreadsheet-style table
             cell_data = sheet.get("cellData", [])
@@ -86,31 +72,16 @@ class SpreadsheetMarkdownCompressor:
                     
                     markdown_lines.append("| " + " | ".join(row_cells) + " |")
             
-            # Add dependency highlights for this sheet
-            if self.has_dependencies:
-                self._add_sheet_dependency_highlights(markdown_lines, sheet)
-            
-            # Rest of the existing functionality
+            # Compress tables and named ranges into single lines
             tables = sheet.get("tables", [])
             if tables:
-                markdown_lines.append("")
-                markdown_lines.append("### Tables:")
-                for table in tables:
-                    table_name = table.get("tableName", table.get("name", ""))
-                    table_range = table.get("tableRange", table.get("range", ""))
-                    headers = table.get("headers", [])
-                    markdown_lines.append(f"- **{table_name}** ({table_range}): {', '.join(headers[:5])}")
+                table_list = [f"{table.get('tableName', table.get('name', ''))}({table.get('tableRange', table.get('range', ''))})" for table in tables]
+                markdown_lines.append(f"**Tables:** {', '.join(table_list)}")
             
             named_ranges = sheet.get("namedRanges", [])
             if named_ranges:
-                markdown_lines.append("")
-                markdown_lines.append("### Named Ranges:")
-                for nr in named_ranges:
-                    range_name = nr.get("rangeName", nr.get("name", ""))
-                    range_ref = nr.get("rangeReference", nr.get("value", ""))
-                    markdown_lines.append(f"- **{range_name}**: {range_ref}")
-            
-            markdown_lines.append("")
+                nr_list = [f"{nr.get('rangeName', nr.get('name', ''))}:{nr.get('rangeReference', nr.get('value', ''))}" for nr in named_ranges]
+                markdown_lines.append(f"**Named Ranges:** {', '.join(nr_list)}")
         
         markdown_string = "\n".join(markdown_lines)
 
@@ -120,148 +91,6 @@ class SpreadsheetMarkdownCompressor:
             print(f"Metadata saved to: {output_path}")
 
         return markdown_string
-
-    def _add_dependency_summary_section(self, markdown_lines: list, dependency_summary: Dict[str, Any]):
-        """Add workbook-level dependency summary section"""
-        markdown_lines.append("")
-        markdown_lines.append("## Dependency Analysis Summary")
-        markdown_lines.append(f"- **Total Cells:** {dependency_summary.get('totalCells', 0):,}")
-        markdown_lines.append(f"- **Formula Cells:** {dependency_summary.get('formulaCells', 0):,}")
-        markdown_lines.append(f"- **Value Cells:** {dependency_summary.get('valueCells', 0):,}")
-        markdown_lines.append(f"- **Total Dependencies:** {dependency_summary.get('totalDependencies', 0):,}")
-        
-        avg_deps = dependency_summary.get('avgDependenciesPerCell', 0)
-        markdown_lines.append(f"- **Average Dependencies per Cell:** {avg_deps:.2f}")
-        
-        # Most connected cells
-        most_connected = dependency_summary.get('mostConnectedCells', [])[:5]
-        if most_connected:
-            markdown_lines.append("")
-            markdown_lines.append("### Most Connected Cells:")
-            for item in most_connected:
-                cell_addr = item.get('cell', '')
-                connections = item.get('connections', 0)
-                markdown_lines.append(f"- **{cell_addr}**: {connections} total connections")
-        
-        # Most complex formulas
-        most_complex = dependency_summary.get('mostComplexFormulas', [])[:5]
-        if most_complex:
-            markdown_lines.append("")
-            markdown_lines.append("### Most Complex Formulas:")
-            for item in most_complex:
-                cell_addr = item.get('cell', '')
-                precedents = item.get('precedents', 0)
-                markdown_lines.append(f"- **{cell_addr}**: {precedents} precedents")
-        
-        # Most referenced cells
-        most_referenced = dependency_summary.get('mostReferencedCells', [])[:5]
-        if most_referenced:
-            markdown_lines.append("")
-            markdown_lines.append("### Most Referenced Cells:")
-            for item in most_referenced:
-                cell_addr = item.get('cell', '')
-                dependents = item.get('dependents', 0)
-                markdown_lines.append(f"- **{cell_addr}**: {dependents} dependents")
-
-    def _add_sheet_dependency_stats(self, markdown_lines: list, sheet: Dict[str, Any]):
-        """Add sheet-level dependency statistics"""
-        cell_data = sheet.get("cellData", [])
-        if not cell_data:
-            return
-        
-        # Calculate sheet-level stats
-        total_cells_with_deps = 0
-        total_precedents = 0
-        total_dependents = 0
-        max_precedents = 0
-        max_dependents = 0
-        
-        for row_data in cell_data:
-            for cell in row_data:
-                precedent_count = cell.get('precedentCount', 0)
-                dependent_count = cell.get('dependentCount', 0)
-                
-                if precedent_count > 0 or dependent_count > 0:
-                    total_cells_with_deps += 1
-                    total_precedents += precedent_count
-                    total_dependents += dependent_count
-                    max_precedents = max(max_precedents, precedent_count)
-                    max_dependents = max(max_dependents, dependent_count)
-        
-        if total_cells_with_deps > 0:
-            markdown_lines.append(f"**Dependencies:** {total_cells_with_deps} cells with connections, ")
-            markdown_lines.append(f"{total_precedents} total precedents, {total_dependents} total dependents")
-
-    def _add_sheet_dependency_highlights(self, markdown_lines: list, sheet: Dict[str, Any]):
-        """Add highlights of interesting dependency patterns in this sheet"""
-        cell_data = sheet.get("cellData", [])
-        if not cell_data:
-            return
-        
-        # Find cells with high connectivity
-        high_precedent_cells = []
-        high_dependent_cells = []
-        formula_chains = []
-        
-        for row_data in cell_data:
-            for cell in row_data:
-                precedent_count = cell.get('precedentCount', 0)
-                dependent_count = cell.get('dependentCount', 0)
-                address = cell.get('address', '')
-                formula = cell.get('formula', '')
-                
-                # High precedent cells (complex formulas)
-                if precedent_count >= 5:
-                    high_precedent_cells.append({
-                        'address': address,
-                        'precedents': precedent_count,
-                        'formula': formula[:50] + '...' if len(formula) > 50 else formula
-                    })
-                
-                # High dependent cells (key inputs)
-                if dependent_count >= 3:
-                    high_dependent_cells.append({
-                        'address': address,
-                        'dependents': dependent_count,
-                        'value': str(cell.get('value', ''))[:30]
-                    })
-                
-                # Formula chains (cells that both depend on others and are depended upon)
-                if precedent_count >= 2 and dependent_count >= 2:
-                    formula_chains.append({
-                        'address': address,
-                        'precedents': precedent_count,
-                        'dependents': dependent_count
-                    })
-        
-        # Sort and limit results
-        high_precedent_cells.sort(key=lambda x: x['precedents'], reverse=True)
-        high_dependent_cells.sort(key=lambda x: x['dependents'], reverse=True)
-        formula_chains.sort(key=lambda x: x['precedents'] + x['dependents'], reverse=True)
-        
-        # Add to markdown if any interesting patterns found
-        if high_precedent_cells[:3] or high_dependent_cells[:3] or formula_chains[:3]:
-            markdown_lines.append("")
-            markdown_lines.append("### Dependency Highlights:")
-            
-            if high_precedent_cells[:3]:
-                markdown_lines.append("**Complex Formulas:**")
-                for cell in high_precedent_cells[:3]:
-                    markdown_lines.append(f"- {cell['address']}: {cell['precedents']} precedents")
-                    if cell['formula']:
-                        markdown_lines.append(f"  Formula: `{cell['formula']}`")
-            
-            if high_dependent_cells[:3]:
-                markdown_lines.append("**Key Input Cells:**")
-                for cell in high_dependent_cells[:3]:
-                    markdown_lines.append(f"- {cell['address']}: {cell['dependents']} dependents")
-                    if cell['value']:
-                        markdown_lines.append(f"  Value: {cell['value']}")
-            
-            if formula_chains[:3]:
-                markdown_lines.append("**Calculation Chain Nodes:**")
-                for cell in formula_chains[:3]:
-                    markdown_lines.append(f"- {cell['address']}: {cell['precedents']} → {cell['dependents']}")
 
     def _format_cell_for_spreadsheet(self, cell: Dict[str, Any], display_value: Optional[str] = None) -> str:
         """
@@ -286,7 +115,7 @@ class SpreadsheetMarkdownCompressor:
                 Safely formatted value
             """
             if value is None:
-                return 'null'
+                return ''  # Empty instead of 'null'
             if not isinstance(value, str):
                 value = str(value)
             
@@ -304,7 +133,7 @@ class SpreadsheetMarkdownCompressor:
         def _format_dependency_list(dep_list: list, max_items: int = 3) -> str:
             """Format a list of dependencies for compact display"""
             if not dep_list:
-                return "none"
+                return ""
             
             # Show first few items, indicate if there are more
             displayed = dep_list[:max_items]
@@ -318,31 +147,29 @@ class SpreadsheetMarkdownCompressor:
         try:
             properties = []
             
-            # Cell location information (always first)
+            # Cell location information (always first) - use shortened format
             row = cell.get("row", "")
             col = cell.get("column", "")
             address = cell.get("address", f"{get_column_letter(col)}{row}" if col and row else "")
             
             if address:
-                properties.append(f'addr={_safe_format_value(address)}')
+                properties.append(f'{address}')  # Remove 'addr=' prefix
             
-            # Raw value (from openpyxl)
+            # Raw value - skip if null/empty
             raw_value = cell.get("value", "")
             if raw_value is not None and str(raw_value).strip():
-                properties.append(f'val={_safe_format_value(str(raw_value))}')
-            else:
-                properties.append('val=null')
+                properties.append(f'v={_safe_format_value(str(raw_value))}')  # Shortened 'val=' to 'v='
             
             # Display value (from xlwings) - only include if provided and different
             if display_value is not None and str(display_value) != str(raw_value):
-                properties.append(f'disp={_safe_format_value(display_value)}')
+                properties.append(f'd={_safe_format_value(display_value)}')  # Shortened 'disp=' to 'd='
             
             # Formula (if present)
             formula = cell.get("formula")
             if formula and formula.startswith("="):
                 # Truncate long formulas
                 formula_display = formula[:30] + "..." if len(formula) > 30 else formula
-                properties.append(f'form={_safe_format_value(formula_display)}')
+                properties.append(f'f={_safe_format_value(formula_display)}')  # Shortened 'form=' to 'f='
             
             # Dependency information (if dependencies are included)
             if self.has_dependencies:
@@ -358,18 +185,20 @@ class SpreadsheetMarkdownCompressor:
                     if precedent_count > 0 and precedent_count <= 5:
                         precedents = cell.get("directPrecedents", [])
                         precedents_str = _format_dependency_list(precedents, 3)
-                        properties.append(f'prec=[{precedents_str}]')
+                        if precedents_str:
+                            properties.append(f'prec=[{precedents_str}]')
                     elif precedent_count > 5:
                         properties.append(f'prec=[{precedent_count}refs]')
                     
                     if dependent_count > 0 and dependent_count <= 3:
                         dependents = cell.get("directDependents", [])
                         dependents_str = _format_dependency_list(dependents, 2)
-                        properties.append(f'dept=[{dependents_str}]')
+                        if dependents_str:
+                            properties.append(f'dept=[{dependents_str}]')
                     elif dependent_count > 3:
                         properties.append(f'dept=[{dependent_count}refs]')
             
-            # Significant formatting (only if present)
+            # Significant formatting (only if present) - Remove default/empty formatting
             formatting = cell.get("formatting", {})
             if self._has_significant_formatting(formatting):
                 format_parts = []
@@ -380,13 +209,15 @@ class SpreadsheetMarkdownCompressor:
                     format_parts.append("bold")
                 if font.get("italic"):
                     format_parts.append("italic")
-                if font.get("color") and font.get("color") not in [None, "auto", "#000000"]:
-                    format_parts.append(f"color:{font.get('color')}")
+                font_color = font.get("color")
+                if font_color and font_color not in [None, "auto", "#000000", "#00000000"]:  # Skip default/empty colors
+                    format_parts.append(f"color:{font_color}")
                 
-                # Fill formatting
+                # Fill formatting - Skip default/empty fills
                 fill = formatting.get("fill", {})
-                if fill.get("startColor") and fill.get("startColor") not in [None, "auto", "#FFFFFF"]:
-                    format_parts.append(f"fill:{fill.get('startColor')}")
+                fill_color = fill.get("startColor")
+                if fill_color and fill_color not in [None, "auto", "#FFFFFF", "#00000000", "FFFFFF"]:
+                    format_parts.append(f"fill:{fill_color}")
                 
                 # Borders
                 borders = formatting.get("borders", {})
@@ -410,9 +241,9 @@ class SpreadsheetMarkdownCompressor:
                 if format_parts:
                     properties.append(f'fmt=[{",".join(format_parts)}]')
             
-            # Data type (if not default)
+            # Data type (only if not default string)
             data_type = formatting.get("dataType", "") if formatting else ""
-            if data_type and data_type not in ["n", ""]:
+            if data_type and data_type not in ["n", "", "s"]:  # Skip default types
                 properties.append(f'type={data_type}')
             
             # Comments (if present)
@@ -427,7 +258,7 @@ class SpreadsheetMarkdownCompressor:
                 if hyperlink_target:
                     properties.append(f'link={_safe_format_value(hyperlink_target)}')
             
-            return ", ".join(properties)
+            return ", ".join(properties) if properties else ""
                 
         except Exception as e:
             return f"ERROR: {str(e)[:30]}"
@@ -468,20 +299,26 @@ class SpreadsheetMarkdownCompressor:
         return False
 
     def _has_significant_formatting(self, formatting: Dict[str, Any]) -> bool:
-        """Check if formatting is significant enough to include - comprehensive version"""
+        """Check if formatting is significant enough to include - filters out defaults/empty"""
         try:
             # Check font formatting
             font = formatting.get("font", {})
-            if (font.get("bold") or font.get("italic") or font.get("color") or 
+            if (font.get("bold") or font.get("italic") or 
                 font.get("underline") != "none" or font.get("strikethrough") or
                 font.get("vertAlign") or (font.get("size") and font.get("size") != 11) or
                 (font.get("name") and font.get("name") != "Calibri")):
                 return True
             
-            # Check fill formatting
+            # Check font color (skip defaults)
+            font_color = font.get("color")
+            if font_color and font_color not in [None, "auto", "#000000", "#00000000"]:
+                return True
+            
+            # Check fill formatting (skip defaults/empty)
             fill = formatting.get("fill", {})
-            if (fill.get("startColor") or fill.get("endColor") or 
-                fill.get("fillType") != "none" or fill.get("patternType")):
+            fill_color = fill.get("startColor")
+            if (fill_color and fill_color not in [None, "auto", "#FFFFFF", "#00000000", "FFFFFF"] or 
+                fill.get("endColor") or fill.get("fillType") != "none" or fill.get("patternType")):
                 return True
             
             # Check borders
@@ -511,9 +348,9 @@ class SpreadsheetMarkdownCompressor:
             if protection.get("locked") is False or protection.get("hidden"):
                 return True
             
-            # Check data type
+            # Check data type (skip defaults)
             data_type = formatting.get("dataType", "")
-            if data_type and data_type != "n":
+            if data_type and data_type not in ["n", "", "s"]:
                 return True
             
             # Check merged cells
@@ -532,38 +369,3 @@ class SpreadsheetMarkdownCompressor:
             return False
         except:
             return False
-
-    def _escape_special_chars(self, text: str) -> str:
-        """
-        Escape special characters that could interfere with markdown parsing.
-        
-        Args:
-            text: Text to escape
-            
-        Returns:
-            Escaped text safe for markdown
-        """
-        if not isinstance(text, str):
-            text = str(text)
-        
-        # Replace problematic characters
-        replacements = {
-            '#': '\\#',      # Markdown headers
-            '*': '\\*',      # Markdown bold/italic
-            '_': '\\_',      # Markdown italic/underline
-            '`': '\\`',      # Markdown code
-            '[': '\\[',      # Markdown links
-            ']': '\\]',      # Markdown links
-            '(': '\\(',      # Markdown links
-            ')': '\\)',      # Markdown links
-            '|': '\\|',      # Markdown tables
-            '$': '\\$',      # LaTeX math
-            '^': '\\^',      # Superscript
-            '~': '\\~',      # Subscript
-            '\\': '\\\\'     # Backslash
-        }
-        
-        for char, replacement in replacements.items():
-            text = text.replace(char, replacement)
-        
-        return text
