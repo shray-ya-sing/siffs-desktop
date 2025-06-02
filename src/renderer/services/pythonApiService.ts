@@ -137,6 +137,12 @@ const apiService = {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        // Verify content type
+        const contentType = response.headers.get('content-type');
+        if (!contentType?.includes('text/event-stream') && !contentType?.includes('text/plain')) {
+          console.warn('Unexpected content type:', contentType);
+        }
     
         // Handle the stream
         const reader = response.body?.getReader();
@@ -163,7 +169,7 @@ const apiService = {
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6).trim();
-              
+              console.warn('Parsed data line: ', data);
               // Check for completion signal
               if (data === '[DONE]') {
                 onChunk('', true);
@@ -176,12 +182,27 @@ const apiService = {
                   onError(parsed.error);
                   return;
                 } else if (parsed.chunk) {
+                  console.warn('Parsed chunk: ', parsed.chunk);
                   onChunk(parsed.chunk, false);
                 }
               } catch (e) {
                 console.error('Error parsing chunk:', e);
                 onError('Error parsing server response');
                 return;
+              }
+            }
+            // Handle non-SSE format (direct JSON)
+            else if (line.startsWith('{')) {
+              try {
+                const parsed: StreamChunk = JSON.parse(line);
+                if (parsed.error) {
+                  onError(parsed.error);
+                  return false;
+                } else if (parsed.chunk !== undefined) {
+                  onChunk(parsed.chunk, false);
+                }
+              } catch (e) {
+                console.error('Error parsing JSON line:', e, 'Raw line:', line);
               }
             }
           }

@@ -115,6 +115,7 @@ export const ModelAudit: React.FC = () => {
             if (isDone) {
               setStreamingComplete(true);
               setIsStreaming(false);
+              setIsProcessing(false);
               // Add completion event after a small delay
               setTimeout(() => {
                 addSystemEvent('Analyzed file successfully', 'completed');
@@ -127,13 +128,15 @@ export const ModelAudit: React.FC = () => {
             
             // Update the typewriter with the full text so far
             // This will make it look like it's typing out the full response
-            typeWriter(fullAnalysis, 10);
+            //typeWriter(fullAnalysis, 10);
+            setAnalysisResult(prev => prev + chunk);
           },
           (error) => {
             console.error('Analysis error:', error);
             addSystemEvent(`Analysis error: ${error}`, 'error');
             setIsStreaming(false);
             setStreamingComplete(true);
+            setIsProcessing(false);
           }
         );
 
@@ -170,6 +173,15 @@ export const ModelAudit: React.FC = () => {
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [systemEvents]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (cancelRef.current) {
+        cancelRef.current();
+      }
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
