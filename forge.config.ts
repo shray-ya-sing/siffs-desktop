@@ -20,7 +20,7 @@ const config: ForgeConfig = {
     extraResource: [
       '.env',
       'resources/python/python-server${process.platform === "win32" ? ".exe" : ""}',
-      'resources/wsgi.py'
+      'resources/asgi.py'
     ],
   },
   rebuildConfig: {},

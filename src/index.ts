@@ -84,7 +84,7 @@ function startPythonServer() {
 
   const serverPath = isDev
     ? path.join(__dirname, '../../src/python-server/app.py')
-    : path.join(process.resourcesPath, 'wsgi.py');
+    : path.join(process.resourcesPath, 'asgi.py');
 
   console.log(`🚀 Starting Python server in ${isDev ? 'development' : 'production'} mode...`);
 

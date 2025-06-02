@@ -16,9 +16,6 @@ from app import create_app
 from waitress import serve
 from dotenv import load_dotenv
 
-# Load environment variables if .env file exists
-load_dotenv()
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
