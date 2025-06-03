@@ -55,7 +55,7 @@ export class ModelAuditService {
   get streamingComplete() { return this.state.streamingComplete; }
   get analysisResult() { return this.state.analysisResult; }
 
-  // State setters with callback notifications
+  // State setters
   private setState(updates: Partial<ModelAuditState>) {
     this.state = { ...this.state, ...updates };
   }
@@ -65,53 +65,166 @@ export class ModelAuditService {
     return path.trim().toLowerCase().endsWith('.xlsx');
   }
 
-  // Handle extraction phase
-  private async handleExtraction(filePath: string): Promise<ExtractionResult | null> {
+  // Step 1: Extract raw metadata from Excel file
+  private async extractMetadata(filePath: string): Promise<{ metadata: any; displayValues: any } | null> {
     try {
-      this.callbacks.onSystemEvent('Getting the data from your file...', 'extracting');
+      this.callbacks.onSystemEvent('Step 1: Extracting data from Excel file...', 'extracting');
       
-      const metadataResponse = await apiService.extractExcelMetadata(filePath);
+      const extractResponse = await apiService.extractExcelMetadataRaw(filePath);
       
-      // Validate response
-      if (metadataResponse.data.status !== 'success') {
-        this.callbacks.onSystemEvent('Failed to extract data from your file', 'error');
+      if (extractResponse.data.status !== 'success') {
+        this.callbacks.onSystemEvent('Failed to extract data from Excel file', 'error');
         return null;
       }
 
-      // Check that chunks were created
-      if (!metadataResponse.data.chunks || metadataResponse.data.chunks.length === 0) {
-        this.callbacks.onSystemEvent('No data chunks created from your file', 'error');
+      const { metadata, display_values } = extractResponse.data;
+      
+      // Calculate basic statistics for user feedback
+      const sheetsCount = metadata?.sheets?.length || 0;
+      const totalCells = metadata?.sheets?.reduce((total: number, sheet: any) => {
+        return total + (sheet.cellData?.flat().length || 0);
+      }, 0) || 0;
+
+      this.callbacks.onSystemEvent(
+        `✓ Metadata extracted successfully - ${sheetsCount} sheets, ${totalCells.toLocaleString()} cells processed`, 
+        'completed'
+      );
+
+      return { metadata, displayValues: display_values };
+
+    } catch (error) {
+      console.error('Metadata extraction error:', error);
+      this.callbacks.onSystemEvent('Failed to extract data from Excel file', 'error');
+      return null;
+    }
+  }
+
+  // Step 2: Compress metadata to markdown
+  private async compressToMarkdown(metadata: any, displayValues: any): Promise<string | null> {
+    try {
+      this.callbacks.onSystemEvent('Step 2: Getting the rest of the data...', 'extracting');
+      
+      const compressResponse = await apiService.compressMetadataToMarkdown(metadata, displayValues);
+      
+      if (compressResponse.data.status !== 'success') {
+        this.callbacks.onSystemEvent('Failed to get the rest of the data', 'error');
         return null;
       }
 
-      // Check that chunks contain data
-      const nonEmptyChunks = metadataResponse.data.chunks.filter(chunk => chunk.trim().length > 0);
+      const { markdown } = compressResponse.data;
+      
+      // Calculate markdown statistics
+      const lineCount = markdown.split('\n').length;
+      const charCount = markdown.length;
+      const sizeKB = Math.round(charCount / 1024);
+
+      this.callbacks.onSystemEvent(
+        `✓ Markdown generated successfully - ${lineCount.toLocaleString()} lines, ${sizeKB}KB`, 
+        'completed'
+      );
+
+      return markdown;
+
+    } catch (error) {
+      console.error('Markdown compression error:', error);
+      this.callbacks.onSystemEvent('Failed to get the rest of the data', 'error');
+      return null;
+    }
+  }
+
+  // Step 3: Chunk markdown content
+  private async chunkMarkdown(markdown: string): Promise<{ chunks: string[]; chunkInfo: ChunkInfo[] } | null> {
+    try {
+      this.callbacks.onSystemEvent('Step 3: Organizing data for analysis...', 'extracting');
+      
+      const chunkResponse = await apiService.chunkMarkdownContent(markdown);
+      
+      if (chunkResponse.data.status !== 'success') {
+        this.callbacks.onSystemEvent('Failed to organize data for analysis', 'error');
+        return null;
+      }
+
+      const { chunks, chunk_info } = chunkResponse.data;
+
+      // Validate chunks
+      if (!chunks || chunks.length === 0) {
+        this.callbacks.onSystemEvent('Data wasn\'t organized correctly, failed to process', 'error');
+        return null;
+      }
+
+      // Check that chunks contain meaningful data
+      const nonEmptyChunks = chunks.filter(chunk => chunk.trim().length > 0);
       if (nonEmptyChunks.length === 0) {
-        this.callbacks.onSystemEvent('Failed to extract meaningful data from your file', 'error');
+        this.callbacks.onSystemEvent('Failed to organize data for analysis', 'error');
         return null;
       }
 
-      // Calculate statistics for user feedback
-      const totalTokens = metadataResponse.data.chunk_info?.reduce((sum, info) => sum + info.token_count, 0) || 0;
+      // Calculate chunk statistics
+      const totalTokens = chunk_info?.reduce((sum, info) => sum + info.token_count, 0) || 0;
+      const avgTokensPerChunk = Math.round(totalTokens / chunks.length);
       const sheetsFound = new Set(
-        metadataResponse.data.chunk_info?.flatMap(info => info.sheets) || []
+        chunk_info?.flatMap(info => info.sheets) || []
       ).size;
 
       this.callbacks.onSystemEvent(
-        `Data extracted successfully - ${metadataResponse.data.chunks.length} chunks created (${totalTokens.toLocaleString()} tokens, ${sheetsFound} sheets)`, 
+        `✓ Chunking completed - ${chunks.length} chunks created (${totalTokens.toLocaleString()} tokens, avg ${avgTokensPerChunk} per chunk, ${sheetsFound} sheets)`, 
+        'completed'
+      );
+
+      return { chunks, chunkInfo: chunk_info || [] };
+
+    } catch (error) {
+      console.error('Markdown chunking error:', error);
+      this.callbacks.onSystemEvent('Failed to organize data for analysis', 'error');
+      return null;
+    }
+  }
+
+  // Handle the complete extraction process using 3 steps
+  private async handleExtraction(filePath: string): Promise<ExtractionResult | null> {
+    try {
+      this.callbacks.onSystemEvent('Starting data extraction process...', 'info');
+
+      // Step 1: Extract metadata
+      const extractResult = await this.extractMetadata(filePath);
+      if (!extractResult) {
+        return null;
+      }
+
+      // Small delay for UI feedback
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Step 2: Compress to markdown
+      const markdown = await this.compressToMarkdown(extractResult.metadata, extractResult.displayValues);
+      if (!markdown) {
+        return null;
+      }
+
+      // Small delay for UI feedback
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Step 3: Chunk markdown
+      const chunkResult = await this.chunkMarkdown(markdown);
+      if (!chunkResult) {
+        return null;
+      }
+
+      // Final success message
+      this.callbacks.onSystemEvent(
+        `🎉 Data extraction completed successfully! Ready for analysis.`, 
         'completed'
       );
 
       return {
-        chunks: metadataResponse.data.chunks,
-        chunkInfo: metadataResponse.data.chunk_info || [],
-        metadata: metadataResponse.data.metadata,
-        markdown: metadataResponse.data.markdown || ''
+        chunks: chunkResult.chunks,
+        chunkInfo: chunkResult.chunkInfo,
+        metadata: extractResult.metadata,
+        markdown
       };
 
     } catch (error) {
-      console.error('Extraction error:', error);
-      this.callbacks.onSystemEvent('Failed to extract data from your file', 'error');
+      console.error('Extraction process error:', error);
+      this.callbacks.onSystemEvent('Data extraction process failed', 'error');
       return null;
     }
   }
@@ -119,7 +232,7 @@ export class ModelAuditService {
   // Handle analysis phase
   private async handleAnalysis(chunksToAnalyze: string[], chunkInfoToUse: ChunkInfo[]): Promise<void> {
     if (chunksToAnalyze.length === 0) {
-      this.callbacks.onSystemEvent('No chunks available for analysis', 'error');
+      this.callbacks.onSystemEvent('No data available for analysis', 'error');
       this.setState({
         isStreaming: false,
         streamingComplete: true,
@@ -236,7 +349,7 @@ export class ModelAuditService {
     this.callbacks.onSystemEvent('Starting model audit...', 'info');
 
     try {
-      // Phase 1: Extract data and create chunks
+      // Phase 1: Extract data using 3-step process
       const extractionResult = await this.handleExtraction(filePath);
       
       if (!extractionResult) {
@@ -245,9 +358,9 @@ export class ModelAuditService {
       }
 
       // Small delay to let the user see the extraction completion
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Phase 2: Analyze the chunks - pass the extracted data directly
+      // Phase 2: Analyze the chunks
       await this.handleAnalysis(extractionResult.chunks, extractionResult.chunkInfo);
 
       return extractionResult;

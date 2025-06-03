@@ -37,7 +37,33 @@ interface ExcelMetadataResponse {
   temp_file?: string;
 }
 
-// Add this interface near your other interfaces
+interface ExtractMetadataResponse {
+  status: string;
+  metadata: any;
+  display_values: any;
+}
+
+interface CompressMetadataResponse {
+  status: string;
+  markdown: string;
+}
+
+interface ChunkMetadataResponse {
+  status: string;
+  chunks: string[];
+  chunk_info: Array<{
+    chunk_index: number;
+    token_count: number;
+    line_count: number;
+    character_count: number;
+    sheets: string[];
+    table_rows: number;
+    has_dependency_summary: boolean;
+    has_header: boolean;
+    token_efficiency: number;
+  }>;
+}
+
 interface StreamChunk {
   chunk?: string;
   error?: string;
@@ -103,9 +129,64 @@ const apiService = {
   },
 
   /**
+   * Step 1: Extract raw metadata from Excel file
+   * @param filePath The path to the Excel file
+   * @param maxRowsPerSheet Maximum rows per sheet to process (default: 100)
+   * @param maxColsPerSheet Maximum columns per sheet to process (default: 50)
+   * @param includeDisplayValues Whether to include display values (default: false)
+   * @returns Promise with extracted metadata and display values
+   */
+  extractExcelMetadataRaw(
+    filePath: string,
+    maxRowsPerSheet: number = 100,
+    maxColsPerSheet: number = 50,
+    includeDisplayValues: boolean = false
+  ): Promise<AxiosResponse<ExtractMetadataResponse>> {
+    return apiClient.post<ExtractMetadataResponse>('/excel/extract-metadata', {
+      filePath,
+      max_rows_per_sheet: maxRowsPerSheet,
+      max_cols_per_sheet: maxColsPerSheet,
+      include_display_values: includeDisplayValues
+    });
+  },
+
+  /**
+   * Step 2: Compress metadata to markdown format
+   * @param metadata The extracted metadata object
+   * @param displayValues The display values object (optional)
+   * @returns Promise with compressed markdown string
+   */
+  compressMetadataToMarkdown(
+    metadata: any,
+    displayValues: any = {}
+  ): Promise<AxiosResponse<CompressMetadataResponse>> {
+    return apiClient.post<CompressMetadataResponse>('/excel/compress-metadata', {
+      metadata,
+      display_values: displayValues
+    });
+  },
+
+  /**
+   * Step 3: Chunk markdown content into LLM-ready pieces
+   * @param markdown The markdown string to chunk
+   * @param maxTokens Maximum tokens per chunk (default: 18000)
+   * @returns Promise with chunks array and chunk info
+   */
+  chunkMarkdownContent(
+    markdown: string,
+    maxTokens: number = 18000
+  ): Promise<AxiosResponse<ChunkMetadataResponse>> {
+    return apiClient.post<ChunkMetadataResponse>('/excel/chunk-metadata', {
+      markdown,
+      max_tokens: maxTokens
+    });
+  },
+
+  /**
    * Extracts metadata from an Excel file and returns chunks.
    * @param filePath The path to the Excel file.
    * @returns A promise that resolves to the extracted metadata and chunks.
+   * @deprecated Use extractExcelMetadataRaw, compressMetadataToMarkdown, and chunkMarkdownContent instead.
    */
   extractExcelMetadata(filePath: string): Promise<AxiosResponse<ExcelMetadataResponse>> {
     return apiClient.post<ExcelMetadataResponse>('/excel/extract-metadata', {
@@ -126,7 +207,7 @@ const apiService = {
     chunks: string[],
     onChunk: (chunk: string, isDone: boolean) => void,
     onError: (error: string) => void,
-    model: string = 'claude-sonnet-4-20250514',
+    model: string = 'claude-sonnet-4-20250514', // claude-sonnet-4-20250514 or claude-3-5-haiku-20241022
     temperature: number = 0.3
   ): { cancel: () => void } {
     const controller = new AbortController();
