@@ -283,7 +283,15 @@ export class ModelAuditService {
                 const progress = Math.round((chunksProcessed / chunksToAnalyze.length) * 100);
                 console.log(`Processing chunk ${chunksProcessed}/${chunksToAnalyze.length} (${progress}%)`);
                 this.callbacks.onProgressUpdate(chunksProcessed, chunksToAnalyze.length);
-              }
+              }              
+            }
+
+            if (chunk.includes('Analysis complete.')) {
+              this.setState({
+                streamingComplete: true,
+                isStreaming: false,
+                isProcessing: false
+              });
             }
             
             // Append chunk to analysis result
