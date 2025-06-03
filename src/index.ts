@@ -173,14 +173,13 @@ const createWindow = (): void => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.maximize();
   // temporary -- remove for prod
-  mainWindow.webContents.openDevTools();
+  //mainWindow.webContents.openDevTools();
 
   // Add this back for prod -- don't want dev tools menu opening in prod
-  /**
-   * if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }
-   */
+   
   
 };
 
