@@ -1,4 +1,4 @@
-import { AlertTriangle, MapPin, Bug, Lightbulb, Wrench } from "lucide-react"
+import { AlertTriangle, MapPin, Bug, Lightbulb, Wrench, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import Separator from "../../components/ui/separator"
@@ -8,22 +8,49 @@ interface ErrorCardProps {
   errorType: string
   errorExplanation: string
   errorFix: string
+  critical?: boolean
 }
 
-export default function ErrorCard({ errorCells, errorType, errorExplanation, errorFix }: ErrorCardProps) {
+export default function ErrorCard({
+  errorCells,
+  errorType,
+  errorExplanation,
+  errorFix,
+  critical = true,
+}: ErrorCardProps) {
+  const isCritical = critical
+
+  const cardStyles = isCritical ? "border-red-200 bg-red-50/50" : "border-yellow-200 bg-yellow-50/50"
+
+  const titleStyles = isCritical ? "text-red-800" : "text-yellow-800"
+
+  const iconColor = isCritical ? "text-red-600" : "text-yellow-600"
+
+  const badgeVariant = isCritical ? ("destructive" as const) : ("secondary" as const)
+
+  const badgeStyles = isCritical ? "" : "bg-yellow-100 text-yellow-800 border-yellow-300"
+
+  const fixSectionStyles = isCritical ? "bg-green-50 border-green-200" : "bg-blue-50 border-blue-200"
+
+  const fixTextStyles = isCritical ? "text-green-800" : "text-blue-800"
+
+  const fixDescriptionStyles = isCritical ? "text-green-900 bg-green-100" : "text-blue-900 bg-blue-100"
+
+  const fixIconColor = isCritical ? "text-green-600" : "text-blue-600"
+
   return (
-    <Card className="w-full max-w-2xl border-red-200 bg-red-50/50">
+    <Card className={`w-full max-w-2xl ${cardStyles}`}>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-red-800">
-          <AlertTriangle className="h-5 w-5" />
-          Formula Error Detected
+        <CardTitle className={`flex items-center gap-2 ${titleStyles}`}>
+          {isCritical ? <AlertTriangle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+          {isCritical ? "Critical Formula Error" : "Formula Warning"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-red-600" />
+          <MapPin className={`h-4 w-4 ${iconColor}`} />
           <span className="text-sm font-medium text-gray-700">Error Cell(s):</span>
-          <Badge variant="destructive" className="font-mono">
+          <Badge variant={badgeVariant} className={`font-mono ${badgeStyles}`}>
             {errorCells}
           </Badge>
         </div>
@@ -31,7 +58,7 @@ export default function ErrorCard({ errorCells, errorType, errorExplanation, err
         <Separator />
 
         <div className="flex items-start gap-2">
-          <Bug className="h-4 w-4 text-red-600 mt-0.5" />
+          <Bug className={`h-4 w-4 ${iconColor} mt-0.5`} />
           <div className="flex-1">
             <span className="text-sm font-medium text-gray-700">Error Type:</span>
             <p className="text-sm text-gray-900 mt-1">{errorType}</p>
@@ -46,11 +73,13 @@ export default function ErrorCard({ errorCells, errorType, errorExplanation, err
           </div>
         </div>
 
-        <div className="flex items-start gap-2 bg-green-50 p-3 rounded-lg border border-green-200">
-          <Wrench className="h-4 w-4 text-green-600 mt-0.5" />
+        <div className={`flex items-start gap-2 p-3 rounded-lg border ${fixSectionStyles}`}>
+          <Wrench className={`h-4 w-4 ${fixIconColor} mt-0.5`} />
           <div className="flex-1">
-            <span className="text-sm font-medium text-green-800">Error Fix:</span>
-            <p className="text-sm text-green-900 mt-1 font-mono bg-green-100 px-2 py-1 rounded">{errorFix}</p>
+            <span className={`text-sm font-medium ${fixTextStyles}`}>
+              {isCritical ? "Error Fix:" : "Suggested Fix:"}
+            </span>
+            <p className={`text-sm mt-1 font-mono px-2 py-1 rounded ${fixDescriptionStyles}`}>{errorFix}</p>
           </div>
         </div>
       </CardContent>
