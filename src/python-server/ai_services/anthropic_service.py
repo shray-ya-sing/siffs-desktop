@@ -30,7 +30,6 @@ class AnthropicService:
         self.client = anthropic.AsyncAnthropic(  # Changed to AsyncAnthropic
             api_key=api_key or os.environ.get("ANTHROPIC_API_KEY")
         )
-
     async def get_anthropic_chat_completion(
         self,
         system_prompt: str,
@@ -59,7 +58,13 @@ class AnthropicService:
                                 if hasattr(event.delta, 'text') and event.delta.text:
                                     yield event.delta.text
                             elif event.type == 'error':
-                                raise Exception(f"API Error: {event.error}")
+                                # Check if it's a rate limit error
+                                if "rate_limit" in str(event.error).lower() or "429" in str(event.error):
+                                    wait_time = 60  # Wait a minute before trying again
+                                    logger.warning(f"Rate limit hit, waiting {wait_time}s before retry {attempt + 1}")
+                                    await asyncio.sleep(wait_time)
+                                else:
+                                    raise Exception(f"API Error: {event.error}")
                 
                 return stream_generator()
             else:
