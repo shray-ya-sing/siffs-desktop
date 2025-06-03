@@ -55,7 +55,11 @@ export const ModelAudit: React.FC = () => {
           addSystemEvent(message, type);
         },
         onAnalysisChunk: (chunk: string, isDone: boolean) => {
-          if (!isDone && chunk) {
+          if (isDone) {
+            setStreamingComplete(true);
+            setIsStreaming(false);
+            setIsProcessing(false);
+          } else if (chunk) {
             setAnalysisResult(prev => prev + chunk);
           }
         },
