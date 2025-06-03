@@ -270,10 +270,6 @@ export class ModelAuditService {
               isProcessing: false
             });
             
-            // Add completion event after a small delay
-            setTimeout(() => {
-              this.callbacks.onSystemEvent('Analysis completed successfully', 'completed');
-            }, 500);
             return;
           }
           
