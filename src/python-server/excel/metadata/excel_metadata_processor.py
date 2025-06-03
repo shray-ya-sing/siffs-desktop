@@ -169,7 +169,7 @@ class ExcelMetadataProcessor:
                 raise ValueError("No markdown content to chunk")
                 
             # Chunk the markdown content using the chunker instance
-            chunks = await self.chunker.chunk_metadata(markdown, max_tokens=self.max_tokens_per_chunk)
+            chunks = await self.chunker.chunk_metadata(markdown)
             chunk_info = await self.chunker.get_chunk_info(chunks)
             
             logger.info(f"Successfully chunked markdown content into {len(chunks)} chunks")
