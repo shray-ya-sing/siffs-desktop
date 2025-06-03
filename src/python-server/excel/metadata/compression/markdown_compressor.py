@@ -12,7 +12,7 @@ class SpreadsheetMarkdownCompressor:
         self.has_display_values = False
         self.has_dependencies = False
 
-    def compress_to_markdown(self, metadata_tuple: Tuple[Dict[str, Any], Optional[Dict[str, str]]], output_path: Optional[str] = r'C:\Users\shrey\OneDrive\Desktop\cori outputs\appTest.txt') -> str:
+    def compress_to_markdown(self, metadata_tuple: Tuple[Dict[str, Any], Optional[Dict[str, str]]], output_path: Optional[str] = None) -> str:
         """
         Compress the metadata passed as arg into spreadsheet-style markdown for LLM analysis.
         
