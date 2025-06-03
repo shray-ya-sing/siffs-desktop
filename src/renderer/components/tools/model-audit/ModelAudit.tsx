@@ -187,7 +187,7 @@ export const ModelAudit: React.FC = () => {
           />
           
           {/* Cancel button when processing */}
-          {isProcessing && (
+          {isProcessing && isStreaming && !streamingComplete &&(
             <button
               onClick={handleCancel}
               className="px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition-colors"

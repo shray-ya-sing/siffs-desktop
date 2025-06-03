@@ -86,7 +86,7 @@ export class ModelAuditService {
       }, 0) || 0;
 
       this.callbacks.onSystemEvent(
-        `✓ Metadata extracted successfully - ${sheetsCount} sheets, ${totalCells.toLocaleString()} cells processed`, 
+        `✓ Cell data extracted successfully - ${sheetsCount} sheets, ${totalCells.toLocaleString()} cells processed`, 
         'completed'
       );
 
@@ -119,7 +119,7 @@ export class ModelAuditService {
       const sizeKB = Math.round(charCount / 1024);
 
       this.callbacks.onSystemEvent(
-        `✓ Markdown generated successfully - ${lineCount.toLocaleString()} lines, ${sizeKB}KB`, 
+        `✓ Dependency data extracted successfully`, 
         'completed'
       );
 
@@ -167,7 +167,7 @@ export class ModelAuditService {
       ).size;
 
       this.callbacks.onSystemEvent(
-        `✓ Chunking completed - ${chunks.length} chunks created (${totalTokens.toLocaleString()} tokens, avg ${avgTokensPerChunk} per chunk, ${sheetsFound} sheets)`, 
+        `✓ Organization completed - ${sheetsFound} sheets ready for analysis`, 
         'completed'
       );
 
@@ -251,7 +251,7 @@ export class ModelAuditService {
       // Show analysis progress
       const totalTokens = chunkInfoToUse.reduce((sum, info) => sum + info.token_count, 0);
       this.callbacks.onSystemEvent(
-        `Analyzing your file (${chunksToAnalyze.length} chunks, ${totalTokens.toLocaleString()} tokens)...`, 
+        `Analyzing your file...`, 
         'reviewing'
       );
 
