@@ -14,12 +14,13 @@ else:
     application_path = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, application_path)
 
-# Configure logging before importing app to ensure it's set up early
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Import and setup logging configuration first
+from logging_config import setup_logging
+
+# Configure logging
+log_file = setup_logging()
 logger = logging.getLogger(__name__)
+logger.info(f"ASGI application logging to file: {log_file}")
 
 # In production, load .env from the same directory as the executable
 if getattr(sys, 'frozen', False):
