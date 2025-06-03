@@ -207,7 +207,7 @@ async def extract_metadata(request: ExtractMetadataRequest):
 async def analyze_chunks(request: AnalyzeMetadataRequest):
     if not request.chunks:
         async def error_stream():
-            yield "data: " + json.dumps({'error': 'No chunks provided'}) + "\n\n"
+            yield "data: " + json.dumps({'error': 'No data provided'}) + "\n\n"
             yield "data: [DONE]\n\n"
         
         return StreamingResponse(
@@ -260,7 +260,9 @@ async def analyze_chunks(request: AnalyzeMetadataRequest):
             final_info = analyzer.get_conversation_info()
             final_msg = f"\nAnalysis complete. Total conversation: {final_info['conversation_tokens']} tokens, {final_info['message_count']} messages\n"
             logger.info(f"data: {json.dumps({'info': final_msg})}\n\n")
-            
+
+
+            yield f"data: {json.dumps({'chunk': 'Analysis complete.'})}\n\n"           
             yield "data: [DONE]\n\n"
             
         except Exception as e:
