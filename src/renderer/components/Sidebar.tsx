@@ -9,6 +9,7 @@ import {
 } from '../components/tech-icons/TechIcons';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import { useState } from 'react';
+import CoriIcon from './logo/CoriIcon';
 
 interface NavButtonProps {
   icon: React.ReactNode;
@@ -95,7 +96,6 @@ export function Sidebar() {
 
   const navItems = [
     { icon: <TechHomeIcon />, label: 'Dashboard', href: '/' },
-    { icon: <TechSpreadsheetIcon />, label: 'Excel', href: '/excel' },
     // Add more navigation items as needed
   ];
 
@@ -144,10 +144,10 @@ export function Sidebar() {
           <TooltipTrigger asChild>
             <div className="mb-6">
               <div 
-                className="h-10 w-10 rounded-full flex items-center justify-center bg-blue-600/30 backdrop-blur-sm border border-[#ffffff0f] shadow-[0_0_15px_rgba(59,130,246,0.3)] cursor-pointer overflow-hidden" 
+                className="h-10 w-10 rounded-full flex items-center justify-center cursor-pointer overflow-hidden bg-black" 
                 onClick={() => navigate('/')}
               >
-                <TechBookmarkIcon />
+                <CoriIcon />
               </div>
             </div>
           </TooltipTrigger>

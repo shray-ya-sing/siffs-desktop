@@ -1,12 +1,37 @@
 import { app, BrowserWindow, session, ipcMain } from 'electron';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { spawn, execSync } from 'child_process';
+import * as fs from 'fs';
+import log from 'electron-log';
+
+//---------------------------------LOGGING CONFIG------------------------------------------------------
+// Configure electron-log - add this before any other code
+log.transports.file.level = 'silly';  // Log everything in production
+log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB max log file size
+log.transports.console.level = 'info'; // Only show info and above in console
+
+// Override console methods to use electron-log
+Object.assign(console, {
+  log: log.log,
+  warn: log.warn,
+  error: log.error,
+  debug: log.debug,
+  info: log.info,
+  verbose: log.verbose,
+  silly: log.silly,
+});
+
+// Log the log file path - helpful for debugging
+console.log('Log file location:', log.transports.file.getFile().path);
 
 // Load environment variables from .env file
 const envPath = path.join(__dirname, '../../.env');
 console.log('Loading environment variables from:', envPath);
 dotenv.config({ path: envPath });
+let pythonProcess: any = null;
 
+//---------------------------------MAIN PROCESS STARTS HERE------------------------------------------------------
 // Debug: Log loaded environment variables
 console.log('Environment variables loaded:', {
   SUPABASE_URL: process.env.REACT_APP_SUPABASE_URL ? '***' : 'NOT FOUND',
@@ -40,6 +65,92 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+/**
+ * Starts the python server
+ */
+
+function startPythonServer() {
+  const isDev = process.env.NODE_ENV === 'development';
+  const pythonPath = isDev 
+    ? path.join(__dirname, '../../src/python-server/venv/Scripts/python.exe') // Relies on venv to be init and active
+    : path.join(process.resourcesPath, 'python-server.exe');
+
+  console.log('🔍 Python server path:', pythonPath);
+  
+  if (!fs.existsSync(pythonPath)) {
+    console.error('❌ Python server executable not found at:', pythonPath);
+    return;
+  }
+
+  const serverPath = isDev
+    ? path.join(__dirname, '../../src/python-server/app.py')
+    : path.join(process.resourcesPath, 'asgi.py');
+
+  console.log(`🚀 Starting Python server in ${isDev ? 'development' : 'production'} mode...`);
+
+  try {
+    if (isDev) {
+      console.log('🔧 Development mode: Running with Python interpreter');
+      pythonProcess = spawn(pythonPath, [serverPath], {
+        stdio: ['pipe', 'pipe', 'pipe'],  // Explicitly set stdin, stdout, stderr
+        shell: true,
+        env: {
+          ...process.env,
+          FLASK_ENV: 'development',
+          FLASK_DEBUG: '1'
+        }
+      });
+    } else {
+      console.log('🏭 Production mode: Running python as standalone executable');
+      // On Windows, we don't need 'start' in production as we want to capture output
+      const command = process.platform === 'win32' ? pythonPath : `"${pythonPath}"`;
+      
+      pythonProcess = spawn(command, [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: true,
+        env: {
+          ...process.env,
+          FLASK_ENV: 'production',
+          FLASK_DEBUG: '1'
+        }
+      });
+    }
+
+    // Log process events
+    pythonProcess.on('error', (error: Error) => {
+      console.error('❌ Failed to start Python server:', error.message);
+    });
+
+    pythonProcess.on('exit', (code: number, signal: NodeJS.Signals) => {
+      if (code === 0) {
+        console.log('ℹ️ Python server exited normally');
+      } else if (code) {
+        console.error(`❌ Python server exited with code ${code}`);
+      } else {
+        console.error(`❌ Python server was killed by signal ${signal}`);
+      }
+    });
+
+    // Log stdout and stderr
+    pythonProcess.stdout?.on('data', (data: Buffer) => {
+      console.log(`🐍 [Python] ${data.toString().trim()}`);
+    });
+
+    pythonProcess.stderr?.on('data', (data: Buffer) => {
+      console.error(`🐍 [Python Error] ${data.toString().trim()}`);
+    });
+
+    console.log('✅ Python server process started with PID:', pythonProcess.pid);
+
+  } catch (error) {
+    console.error('❌ Error starting Python server:', error);
+  }
+}
+
+
+/**
+ * Creates the main electron browser window
+ */
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -61,14 +172,21 @@ const createWindow = (): void => {
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.maximize();
+  // temporary -- remove for prod
+  mainWindow.webContents.openDevTools();
 
-  // Open the DevTools only in dev environment
-  if (process.env.NODE_ENV === 'development') {
+  // Add this back for prod -- don't want dev tools menu opening in prod
+  /**
+   * if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }
+   */
+  
 };
 
-// IPC handler to get environment variables
+/**
+ * IPC handler to get environment variables
+ */
 ipcMain.handle('get-env', (event, key: string) => {
   if (ALLOWED_ENV_KEYS.includes(key)) {
     return process.env[key];
@@ -77,15 +195,17 @@ ipcMain.handle('get-env', (event, key: string) => {
   return null;
 });
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+/**
+ * This method will be called when Electron has finished
+ * initialization and is ready to create browser windows.
+ * Some APIs can only be used after this event occurs.
+ */
 app.whenReady().then(() => {
   // Set Content Security Policy
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const csp = [
       "default-src 'self'",
-      "connect-src 'self' https://*.supabase.co https://otnlburbcvilvzgbjzqi.supabase.co",
+      "connect-src 'self' http://localhost:3001 http://127.0.0.1:3001 http://localhost:5001 http://127.0.0.1:5001 https://*.supabase.co https://otnlburbcvilvzgbjzqi.supabase.co",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
@@ -101,16 +221,67 @@ app.whenReady().then(() => {
     });
   });
 
+  // Start Python server
+  startPythonServer();
+
   // Clear cache before creating window
   session.defaultSession.clearCache().then(() => {
     createWindow();
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+function cleanupPythonProcess() {
+  if (!pythonProcess) return;
+
+  console.log('🛑 Attempting to clean up Python process...');
+  
+  try {
+    if (process.platform === 'win32') {
+      // On Windows, we need to kill the entire process tree
+      const { exec } = require('child_process');
+      const pid = pythonProcess.pid;
+      
+      // This command will kill the process and all its children
+      exec(`taskkill /F /T /PID ${pid}`, (error: Error) => {
+        if (error) {
+          console.error('❌ Failed to kill Python process tree:', error.message);
+        } else {
+          console.log('✅ Successfully killed Python process tree');
+        }
+      });
+    } else {
+      // On Unix-like systems
+      process.kill(-pythonProcess.pid, 'SIGTERM'); // Negative PID kills the process group
+      console.log('✅ Sent SIGTERM to Python process group');
+    }
+  } catch (error) {
+    console.error('❌ Error during Python process cleanup:', error);
+  } finally {
+    pythonProcess = null;
+  }
+}
+
+app.on('before-quit', (event) => {
+  console.log('🔄 App is quitting, cleaning up Python process...');
+  cleanupPythonProcess();
+  
+  // If you need to wait for cleanup to complete before quitting:
+  // event.preventDefault();
+  // cleanupPythonProcess().then(() => {
+  //   app.quit();
+  // });
+});
+
+/**
+ * Quit when all windows are closed, except on macOS. There, it's common
+ * for applications and their menu bar to stay active until the user quits
+ * explicitly with Cmd + Q.
+ */
 app.on('window-all-closed', () => {
+  // Stop Python server
+  console.log('🚪 All windows closed, cleaning up...');
+  cleanupPythonProcess();
+  // Quit the electron app
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -124,5 +295,17 @@ app.on('activate', () => {
   }
 });
 
+// Add signal handlers for graceful shutdown
+process.on('SIGINT', () => {
+  console.log('🛑 Received SIGINT, cleaning up...');
+  cleanupPythonProcess();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('🛑 Received SIGTERM, cleaning up...');
+  cleanupPythonProcess();
+  process.exit(0);
+});
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
