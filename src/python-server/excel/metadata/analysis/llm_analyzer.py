@@ -357,7 +357,7 @@ When you find an error, respond concisely with:
 \nError Fix: [specific formula correction needed]
 
 Create a new paragraph for each error. Group only identical errors propagated across cells.
-If you find no errors at all in the piece provided, respond concisely that there are no errors in that region.
+If you find no errors at all in the piece provided, don't generate any response, just return an empty string.
 Format: address, v=value, d=display, f=formula, deps=X→Y, prec=[refs], dept=[refs], fmt=[properties]
 Key Properties: Address - Cell location (A1, C19) shown directly, v= - Raw value (100, "Revenue") - omitted if empty, d= - Display value ($1,000) - only if different from raw, f= - Formula (=SUM(A1)) - may be truncated with ..., deps=X→Y - Precedents→Dependents count (3→2 means depends on 3 cells, referenced by 2), prec=[list] - Precedent cells ([A1,B1] or [25refs] for many), dept=[list] - Dependent cells ([D1,E1] or [15refs] for many), fmt=[properties] - Formatting: bold, italic, color:#HEX, fill:#HEX, border, merged, type= - Data type (only shown if non-standard), comment= - Cell comments, link= - Hyperlinks
 Cell Types by Dependencies: Input: deps=0→X (source data), Calculation: deps=X→Y (intermediate formulas), Output: deps=X→0 (final results), Isolated: deps=0→0 (standalone)"""
