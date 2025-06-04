@@ -18,6 +18,8 @@ import ResetPasswordEmailSent from './pages/auth/ResetPasswordEmailSent';
 import { ModelAuditPage } from './pages/tools/ModelAuditPage';
 import AuthLoading from './components/loading/AuthLoading';
 import ModelQAPage from './pages/tools/ModelQAPage';
+import ModelCreatePage from './pages/tools/ModelCreatePage';
+import ModelEditPage from './pages/tools/ModelEditPage';
 
 // Extend the Location interface to include state
 type LocationState = {
@@ -91,6 +93,8 @@ function AppRouter() {
             <Route path="/auth/reset-email-sent" element={<ResetPasswordEmailSent />} />
             <Route path="/tools/model-audit" element={<ModelAuditPage />} />
             <Route path="/tools/model-qa" element={<ModelQAPage />} />
+            <Route path="/tools/model-create" element={<ModelCreatePage />} />
+            <Route path="/tools/model-edit" element={<ModelEditPage />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </div>
