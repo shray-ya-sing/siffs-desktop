@@ -25,6 +25,9 @@ export default function ToolGrid({ tools = [], className = "" }: ToolGridProps) 
             if (tool.id === 'excel-model-audit') {
               navigate('/tools/model-audit');
             }
+            if (tool.id === 'excel-model-qa') {
+              navigate('/tools/model-qa');
+            }
             // Add other tool routes here as needed
           }} 
         />
