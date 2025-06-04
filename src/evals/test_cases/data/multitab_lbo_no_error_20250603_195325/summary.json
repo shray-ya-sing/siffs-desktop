@@ -1,0 +1,167 @@
+{
+  "file_path": "C:\\Users\\shrey\\OneDrive\\Desktop\\docs\\test\\multitab_lbo_no_error.xlsx",
+  "file_name": "multitab_lbo_no_error",
+  "timestamp": "20250603_195325",
+  "num_chunks": 11,
+  "chunk_info": [
+    {
+      "chunk_index": 1,
+      "token_count": 15752,
+      "line_count": 60,
+      "character_count": 44108,
+      "sheets": [
+        "Assumptions"
+      ],
+      "table_rows": 55,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8751111111111111
+    },
+    {
+      "chunk_index": 2,
+      "token_count": 15603,
+      "line_count": 43,
+      "character_count": 43690,
+      "sheets": [
+        "Income Statement"
+      ],
+      "table_rows": 38,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8668333333333333
+    },
+    {
+      "chunk_index": 3,
+      "token_count": 15890,
+      "line_count": 31,
+      "character_count": 44493,
+      "sheets": [],
+      "table_rows": 29,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8827777777777778
+    },
+    {
+      "chunk_index": 4,
+      "token_count": 15117,
+      "line_count": 34,
+      "character_count": 42329,
+      "sheets": [],
+      "table_rows": 32,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8398333333333333
+    },
+    {
+      "chunk_index": 5,
+      "token_count": 15407,
+      "line_count": 36,
+      "character_count": 43140,
+      "sheets": [
+        "Balance Sheet"
+      ],
+      "table_rows": 31,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8559444444444444
+    },
+    {
+      "chunk_index": 6,
+      "token_count": 15946,
+      "line_count": 51,
+      "character_count": 44651,
+      "sheets": [
+        "Cash Flow Statement"
+      ],
+      "table_rows": 46,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8858888888888888
+    },
+    {
+      "chunk_index": 7,
+      "token_count": 15974,
+      "line_count": 57,
+      "character_count": 44729,
+      "sheets": [],
+      "table_rows": 55,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8874444444444445
+    },
+    {
+      "chunk_index": 8,
+      "token_count": 17994,
+      "line_count": 96,
+      "character_count": 44986,
+      "sheets": [
+        "PPE Schedule",
+        "Debt Schedule",
+        "DCF"
+      ],
+      "table_rows": 85,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.9996666666666667
+    },
+    {
+      "chunk_index": 9,
+      "token_count": 15577,
+      "line_count": 109,
+      "character_count": 43618,
+      "sheets": [
+        "WSO Cover Page",
+        "LBO Modelling"
+      ],
+      "table_rows": 101,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8653888888888889
+    },
+    {
+      "chunk_index": 10,
+      "token_count": 16055,
+      "line_count": 122,
+      "character_count": 44954,
+      "sheets": [
+        "FCFE Valuation",
+        "PE Returns analysis"
+      ],
+      "table_rows": 114,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8919444444444444
+    },
+    {
+      "chunk_index": 11,
+      "token_count": 6990,
+      "line_count": 73,
+      "character_count": 19572,
+      "sheets": [
+        "WACC Calculation",
+        "Football Field",
+        "Charts"
+      ],
+      "table_rows": 62,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.3883333333333333
+    }
+  ],
+  "output_dir": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\multitab_lbo_no_error_20250603_195325",
+  "output_files": [
+    "complete_response.json",
+    "markdown.md",
+    "chunk_1.md",
+    "chunk_2.md",
+    "chunk_3.md",
+    "chunk_4.md",
+    "chunk_5.md",
+    "chunk_6.md",
+    "chunk_7.md",
+    "chunk_8.md",
+    "chunk_9.md",
+    "chunk_10.md",
+    "chunk_11.md"
+  ]
+}

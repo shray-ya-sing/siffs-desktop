@@ -1,0 +1,39 @@
+{
+  "file_path": "C:\\Users\\shrey\\OneDrive\\Desktop\\docs\\test\\single_tab_no_error.xlsx",
+  "file_name": "single_tab_no_error",
+  "timestamp": "20250603_194518",
+  "num_chunks": 2,
+  "chunk_info": [
+    {
+      "chunk_index": 1,
+      "token_count": 15850,
+      "line_count": 72,
+      "character_count": 44380,
+      "sheets": [
+        "Sheet1"
+      ],
+      "table_rows": 67,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8805555555555555
+    },
+    {
+      "chunk_index": 2,
+      "token_count": 8556,
+      "line_count": 35,
+      "character_count": 23958,
+      "sheets": [],
+      "table_rows": 33,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.47533333333333333
+    }
+  ],
+  "output_dir": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\single_tab_no_error_20250603_194518",
+  "output_files": [
+    "complete_response.json",
+    "markdown.md",
+    "chunk_1.md",
+    "chunk_2.md"
+  ]
+}
