@@ -85,6 +85,7 @@ async def log_requests(request: Request, call_next):
     logger.info(f"Response status: {response.status_code}")
     return response
 
+#------------------------------------ TEST ENDPOINTS---------------------------------------------
 # Simple health check endpoint
 @app.get("/api/health")
 async def health_check():
@@ -104,7 +105,7 @@ async def test_logging():
     logger.error("This is an ERROR message")
     return {"message": "Logging test complete"}
 
-
+#------------------------------------ METADATA EXTRACTION: SHARED---------------------------------------------
 # 1. Extract metadata endpoint - returns raw JSON metadata
 @app.post("/api/excel/extract-metadata")
 async def extract_metadata(request: ExtractMetadataRequest):
@@ -210,6 +211,7 @@ async def extract_metadata(request: ExtractMetadataRequest):
         logger.error(f"Error processing workbook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+#------------------------------------ METADATA ANALYSIS: AUDIT---------------------------------------------
 # Analyze chunks with streaming response and rate limiting
 @app.post("/api/excel/analyze-chunks")
 async def analyze_chunks(request: AnalyzeMetadataRequest):
@@ -312,6 +314,8 @@ async def get_conversation_info():
         logger.error(f"Error getting conversation info: {str(e)}")
         return {"error": str(e)}
 
+#------------------------------------ METADATA ANALYSIS: QA---------------------------------------------
+
 @app.post("/api/excel/qa")
 async def answer_question(request: QuestionRequest):
     """
@@ -358,6 +362,11 @@ async def answer_question(request: QuestionRequest):
         logger.error(f"Error in answer_question endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+#------------------------------------ EXCEL EDIT---------------------------------------------
+#-------------------------------------EXCEL CREATE-------------------------------------------
+
+#--------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     import uvicorn
     port = int(os.environ.get('PORT', 3001))
