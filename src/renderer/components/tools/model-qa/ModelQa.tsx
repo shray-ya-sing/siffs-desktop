@@ -1,10 +1,11 @@
 // src/renderer/components/tools/model-qa/ModelQA.tsx
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { MessageInput } from '../../conversation/MessageInput';
+import { SimpleMessageInput } from '../../conversation/SimpleMessageInput';
 import { ConversationHistory } from '../../conversation/ConversationHistory';
 import { FilePathInput } from '../../conversation/FilePathInput';
 import { ModelQAService } from '../../../services/modelQaService';
 import { Message } from '../../../types/message';
+import { ToolInstructions } from '../ToolInstructions';
 
 export const ModelQA: React.FC = () => {
   // Refs
@@ -21,6 +22,7 @@ export const ModelQA: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState('');
+  const [isFilePathSubmitted, setIsFilePathSubmitted] = useState(false);
 
   // Initialize service with callbacks
   const initializeService = useCallback(() => {
@@ -52,6 +54,7 @@ export const ModelQA: React.FC = () => {
   const handleFilePathSubmit = useCallback(() => {
     if (!filePath.trim()) return;
     setError(''); // Clear any previous errors
+    setIsFilePathSubmitted(true);
   }, [filePath]);
 
   // Handle key down in file path input
@@ -120,8 +123,18 @@ export const ModelQA: React.FC = () => {
     };
   }, []);
 
+  // Reset file path submission state when file path is cleared
+  useEffect(() => {
+    if (!filePath.trim()) {
+      setIsFilePathSubmitted(false);
+    }
+  }, [filePath]);
+
   return (
     <div className="flex flex-col h-full">
+      <div className="px-4 pt-4">
+        <ToolInstructions toolId="excel-model-qa" />
+      </div>
       <div className="flex-1 overflow-hidden">
         <ConversationHistory
           messages={messages}
@@ -150,19 +163,16 @@ export const ModelQA: React.FC = () => {
             handleKeyDown={handleFilePathKeyDown}
             handleSubmit={handleFilePathSubmit}
             isProcessing={isProcessing}
+            isSubmitted={isFilePathSubmitted}
             inputRef={fileInputRef}
             className="w-full"
           />
 
-          <MessageInput
+          <SimpleMessageInput
             input={input}
             setInput={setInput}
             handleKeyDown={handleKeyDown}
             handleSendClick={handleSendMessage}
-            handleAttachment={(type) => {
-              // Handle file attachments if needed
-              console.log(`Attaching ${type}`);
-            }}
             isTyping={isTyping || isProcessing}
             textareaRef={textareaRef}
             className="w-full"
