@@ -1,11 +1,23 @@
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Set
-import re
-import json
-from pathlib import Path
+import aiohttp
 import asyncio
-from datetime import datetime
+import json
 import logging
+import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import List, Dict, Optional, Set, Tuple, Union
+import os
+import sys
+from pathlib import Path
+
+# Add the python-server directory to Python path
+project_root = Path(__file__).parent.parent.absolute()
+python_server_dir = project_root / "python-server"
+sys.path.append(str(python_server_dir))
+
+# Now import the OpenAIService
+from ai_services.openai_service import OpenAIService
 
 # Configure logging
 logging.basicConfig(
@@ -16,38 +28,13 @@ logging.basicConfig(
 logger = logging.getLogger('Evaluator')
 
 @dataclass
-class ErrorCase:
-    """Represents a single error case with expected error details."""
-    test_case_id: str
-    tab_name: str
-    cell_reference: str
-    error_type: str
-    error_description: str
-    metadata_snippet: str
-    expected_response: str
-    severity: str = "critical"  # critical or non-critical
-    
-    def to_dict(self) -> dict:
-        return {
-            'test_case_id': self.test_case_id,
-            'tab_name': self.tab_name,
-            'cell_reference': self.cell_reference,
-            'error_type': self.error_type,
-            'error_description': self.error_description,
-            'severity': self.severity,
-            'metadata_snippet': self.metadata_snippet,
-            'expected_response': self.expected_response
-        }
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> 'ErrorCase':
-        return cls(**data)
-
-@dataclass
 class EvaluationResult:
     """Stores the results of evaluating a single test case."""
     test_case_id: str
     passed: bool
+    score: float
+    reasoning: str
+    criteria_scores: Dict[str, float]
     detected_error_types: Set[str] = field(default_factory=set)
     detected_cells: Set[str] = field(default_factory=set)
     false_positives: Set[str] = field(default_factory=set)
@@ -59,6 +46,9 @@ class EvaluationResult:
         return {
             'test_case_id': self.test_case_id,
             'passed': self.passed,
+            'score': self.score,
+            'reasoning': self.reasoning,
+            'criteria_scores': self.criteria_scores,
             'detected_error_types': list(self.detected_error_types),
             'detected_cells': list(self.detected_cells),
             'false_positives': list(self.false_positives),
@@ -69,258 +59,181 @@ class EvaluationResult:
 
 class ErrorEvaluator:
     """
-    Evaluates Claude's ability to detect and identify errors in Excel metadata.
+    Evaluates model's ability to detect and identify errors in Excel metadata.
     """
     
-    def __init__(self, output_dir: str = "eval_results"):
+    def __init__(self, 
+                output_dir: str = "eval_results",
+                api_base_url: str = "http://localhost:3001",
+                openai_api_key: Optional[str] = None):
         """
-        Initialize the evaluator with an output directory for results.
+        Initialize the evaluator.
         
         Args:
             output_dir: Directory to store evaluation results
+            api_base_url: Base URL of the API server
+            openai_api_key: OpenAI API key for evaluation
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True, parents=True)
+        self.api_base_url = api_base_url
+        self.openai_service = OpenAIService(api_key=openai_api_key)
         
-        # Regular expressions for parsing Claude's responses
-        self.cell_ref_pattern = re.compile(
-            r'(?i)Error Cell\(s\):[\s\n]*(?:\[([^\]]+)\][,\s]*)*([A-Z]+[0-9]+(?:\s*,\s*[A-Z]+[0-9]+)*)',
-            re.IGNORECASE | re.DOTALL
-        )
-        self.error_type_pattern = re.compile(
-            r'(?i)Error Type:[\s\n]*([^\n]+)',
-            re.IGNORECASE
-        )
-    
-    def _parse_error_response(self, response: str) -> Tuple[Set[str], Set[str]]:
-        """
-        Parse Claude's response to extract detected errors and cells.
+    async def _call_analyze_endpoint(self, chunk: str) -> str:
+        """Call the analyze-chunks endpoint and collect the full response."""
+        url = f"{self.api_base_url}/api/excel/analyze-chunks"
+        payload = {
+            "chunks": [chunk],
+            "model": "claude-sonnet-4-20250514",
+            "temperature": 0.2,
+            "max_tokens": 8000
+        }
         
-        Args:
-            response: Raw response text from Claude
-            
-        Returns:
-            Tuple of (detected_error_types, detected_cells)
-        """
-        error_types = set()
-        cells = set()
-        
-        # Extract error types
-        error_type_matches = self.error_type_pattern.findall(response)
-        for match in error_type_matches:
-            error_types.add(match.strip().lower())
-        
-        # Extract cell references
-        cell_matches = self.cell_ref_pattern.findall(response)
-        for tab_match, cell_refs in cell_matches:
-            tab_name = tab_match.strip() if tab_match else ""
-            for cell_ref in cell_refs.split(','):
-                cell_ref = cell_ref.strip()
-                if tab_name:
-                    cells.add(f"{tab_name.upper()}!{cell_ref.upper()}")
-                else:
-                    cells.add(cell_ref.upper())
-        
-        return error_types, cells
-    
-    def _calculate_metrics(
-        self, 
-        test_case: ErrorCase, 
-        detected_error_types: Set[str], 
-        detected_cells: Set[str]
-    ) -> EvaluationResult:
-        """
-        Calculate evaluation metrics for a test case.
-        
-        Args:
-            test_case: The test case being evaluated
-            detected_error_types: Set of error types detected by Claude
-            detected_cells: Set of cell references detected by Claude
-            
-        Returns:
-            EvaluationResult with metrics
-        """
-        expected_cell = f"{test_case.tab_name.upper()}!{test_case.cell_reference.upper()}"
-        expected_error_type = test_case.error_type.lower()
-        
-        # Check if the error was detected
-        error_detected = expected_error_type in detected_error_types
-        cell_detected = expected_cell in detected_cells
-        
-        # Calculate false positives/negatives
-        false_positives = detected_cells - {expected_cell}
-        false_negatives = set() if (error_detected and cell_detected) else {expected_cell}
-        
-        # Determine if the test passed
-        passed = error_detected and cell_detected and not false_positives
-        
-        return EvaluationResult(
-            test_case_id=test_case.test_case_id,
-            passed=passed,
-            detected_error_types=detected_error_types,
-            detected_cells=detected_cells,
-            false_positives=false_positives,
-            false_negatives=false_negatives
-        )
-    
-    async def evaluate_single_case(
-        self,
-        test_case: ErrorCase,
-        llm_analyzer
-    ) -> EvaluationResult:
-        """
-        Evaluate a single test case by running it through the LLM analyzer.
-        
-        Args:
-            test_case: The test case to evaluate
-            llm_analyzer: Initialized LLMAnalyzer instance
-            
-        Returns:
-            EvaluationResult with the test results
-        """
         try:
-            # Get response from Claude
-            response = await llm_analyzer.analyze_metadata(
-                model_metadata=test_case.metadata_snippet,
-                stream=False
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload) as response:
+                    if response.status != 200:
+                        error = await response.text()
+                        raise Exception(f"API error: {error}")
+                    
+                    # Collect all chunks of the response
+                    full_response = []
+                    async for line in response.content:
+                        if line.startswith(b'data: '):
+                            data = line[6:].strip()
+                            if data == b'[DONE]':
+                                break
+                            try:
+                                json_data = json.loads(data)
+                                if 'chunk' in json_data:
+                                    full_response.append(json_data['chunk'])
+                            except json.JSONDecodeError:
+                                continue
+                    
+                    return ''.join(full_response)
+        except Exception as e:
+            logger.error(f"Error calling analyze endpoint: {str(e)}")
+            raise
+
+    async def _process_chunk(self, chunk_path: Path, ga_path: Path) -> Dict:
+        """Process a single chunk and its golden answer."""
+        # Create output directories
+        llm_response_dir = chunk_path.parent / "llm_response"
+        eval_result_dir = chunk_path.parent / "llm_response" / "evaluation_result"
+        llm_response_dir.mkdir(exist_ok=True)
+        eval_result_dir.mkdir(exist_ok=True)
+        
+        # Generate output filenames
+        chunk_name = chunk_path.stem
+        output_file = llm_response_dir / f"{chunk_name}_response.txt"
+        eval_file = eval_result_dir / f"{chunk_name}_eval.json"
+        
+        try:
+            # Read the chunk content
+            with open(chunk_path, 'r', encoding='utf-8') as f:
+                chunk_content = f.read()
+            
+            # Get LLM response
+            llm_response = await self._call_analyze_endpoint(chunk_content)
+            
+            # Save LLM response
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(llm_response)
+            
+            # Read golden answer
+            with open(ga_path, 'r', encoding='utf-8') as f:
+                golden_answer = f.read()
+            
+            # Evaluate response
+            eval_result = await self.openai_service.evaluate_response(
+                model_response=llm_response,
+                golden_answer=golden_answer
             )
             
-            if not response:
-                return EvaluationResult(
-                    test_case_id=test_case.test_case_id,
-                    passed=False,
-                    error="Empty response from LLM"
-                )
+            # Save evaluation result
+            with open(eval_file, 'w', encoding='utf-8') as f:
+                json.dump(eval_result, f, indent=2)
             
-            # Parse the response
-            detected_error_types, detected_cells = self._parse_error_response(response)
-            
-            # Calculate metrics
-            result = self._calculate_metrics(
-                test_case=test_case,
-                detected_error_types=detected_error_types,
-                detected_cells=detected_cells
-            )
-            result.response_text = response
-            
-            return result
+            return {
+                'chunk': chunk_name,
+                'success': True,
+                'score': eval_result.get('score', 0.0),
+                'eval_file': str(eval_file)
+            }
             
         except Exception as e:
-            logger.error(f"Error evaluating test case {test_case.test_case_id}: {str(e)}")
-            return EvaluationResult(
-                test_case_id=test_case.test_case_id,
-                passed=False,
-                error=str(e)
-            )
-    
-    async def run_evaluation(
-        self,
-        test_cases: List[ErrorCase],
-        llm_analyzer,
-        batch_size: int = 5,
-        save_results: bool = True
-    ) -> dict:
+            logger.error(f"Error processing {chunk_path}: {str(e)}")
+            return {
+                'chunk': chunk_name,
+                'success': False,
+                'error': str(e)
+            }
+
+    async def run_evaluation(self, test_cases_dir: str, batch_size: int = 3) -> dict:
         """
-        Run evaluation on multiple test cases.
+        Run evaluation on all test cases in the directory.
         
         Args:
-            test_cases: List of ErrorCase instances to evaluate
-            llm_analyzer: Initialized LLMAnalyzer instance
-            batch_size: Number of test cases to process in parallel
-            save_results: Whether to save results to a file
+            test_cases_dir: Directory containing test case directories
+            batch_size: Number of chunks to process in parallel
             
         Returns:
             Dictionary with evaluation summary
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        test_cases_dir = Path(test_cases_dir)
         results = []
         
-        # Process test cases in batches
-        for i in range(0, len(test_cases), batch_size):
-            batch = test_cases[i:i + batch_size]
-            logger.info(f"Processing batch {i//batch_size + 1}/{(len(test_cases)-1)//batch_size + 1}")
-            
-            # Run batch in parallel
-            batch_results = await asyncio.gather(*[
-                self.evaluate_single_case(test_case, llm_analyzer)
-                for test_case in batch
-            ])
-            
-            results.extend(batch_results)
-            
-            # Small delay between batches to avoid rate limiting
-            if i + batch_size < len(test_cases):
-                await asyncio.sleep(1)
+        # Find all test case directories
+        test_case_dirs = [d for d in test_cases_dir.iterdir() if d.is_dir()]
         
-        # Calculate summary statistics
-        passed = sum(1 for r in results if r.passed)
-        total = len(results)
-        accuracy = (passed / total) * 100 if total > 0 else 0
-        
-        # Count errors by type
-        error_type_counts = {}
-        for case in test_cases:
-            error_type = case.error_type.lower()
-            error_type_counts[error_type] = error_type_counts.get(error_type, 0) + 1
-        
-        # Count detected errors by type
-        detected_error_type_counts = {}
-        for result in results:
-            for error_type in result.detected_error_types:
-                detected_error_type_counts[error_type] = detected_error_type_counts.get(error_type, 0) + 1
-        
-        # Calculate precision and recall for each error type
-        error_type_metrics = {}
-        for error_type, count in error_type_counts.items():
-            true_positives = sum(
-                1 for r in results 
-                if error_type in r.detected_error_types and 
-                any(case.error_type.lower() == error_type 
-                    for case in test_cases 
-                    if case.test_case_id == r.test_case_id)
-            )
-            false_positives = sum(
-                1 for r in results 
-                if error_type in r.detected_error_types and 
-                all(case.error_type.lower() != error_type 
-                    for case in test_cases 
-                    if case.test_case_id == r.test_case_id)
-            )
-            false_negatives = sum(
-                1 for case in test_cases 
-                if case.error_type.lower() == error_type and
-                all(error_type not in r.detected_error_types 
-                    for r in results 
-                    if r.test_case_id == case.test_case_id)
-            )
+        for test_case_dir in test_case_dirs:
+            logger.info(f"Processing test case: {test_case_dir.name}")
             
-            precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
-            recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
-            f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+            # Find all chunk files
+            chunk_files = list(test_case_dir.glob("chunk_*.md"))
+            ga_files = list((test_case_dir / "ga").glob("chunk*_ga.md"))
             
-            error_type_metrics[error_type] = {
-                'precision': precision,
-                'recall': recall,
-                'f1': f1,
-                'support': count
-            }
+            # Process chunks in batches
+            for i in range(0, len(chunk_files), batch_size):
+                batch_chunks = chunk_files[i:i + batch_size]
+                
+                # Process batch in parallel
+                batch_tasks = []
+                for chunk_file in batch_chunks:
+                    chunk_num = chunk_file.stem.split('_')[-1]
+                    ga_file = test_case_dir / "ga" / f"chunk{chunk_num}_ga.md"
+                    
+                    if ga_file.exists():
+                        batch_tasks.append(self._process_chunk(chunk_file, ga_file))
+                    else:
+                        logger.warning(f"Golden answer not found for {chunk_file}")
+                
+                # Wait for batch to complete
+                batch_results = await asyncio.gather(*batch_tasks)
+                results.extend(batch_results)
+                
+                # Log progress
+                processed = i + len(batch_chunks)
+                logger.info(f"Processed {processed}/{len(chunk_files)} chunks in {test_case_dir.name}")
         
-        # Prepare summary
+        # Generate summary
+        successful = sum(1 for r in results if r.get('success', False))
+        scores = [r.get('score', 0) for r in results if 'score' in r]
+        avg_score = sum(scores) / len(scores) if scores else 0
+        
         summary = {
-            'timestamp': timestamp,
-            'total_test_cases': total,
-            'passed': passed,
-            'failed': total - passed,
-            'accuracy': accuracy,
-            'error_type_metrics': error_type_metrics,
-            'results': [r.to_dict() for r in results]
+            'timestamp': datetime.now().isoformat(),
+            'total_chunks': len(results),
+            'successful': successful,
+            'failed': len(results) - successful,
+            'average_score': avg_score,
+            'results': results
         }
         
-        # Save results to file
-        if save_results:
-            output_file = self.output_dir / f"evaluation_{timestamp}.json"
-            with open(output_file, 'w') as f:
-                json.dump(summary, f, indent=2)
-            logger.info(f"Evaluation results saved to {output_file}")
+        # Save summary
+        summary_file = self.output_dir / f"evaluation_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            json.dump(summary, f, indent=2)
         
+        logger.info(f"Evaluation complete. Results saved to {summary_file}")
         return summary

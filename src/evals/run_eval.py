@@ -1,33 +1,42 @@
 import asyncio
-import json
+import os
 from pathlib import Path
-from evaluator import ErrorEvaluator, ErrorCase
-from llm_analyzer import LLMAnalyzer  # Your existing analyzer
-
-async def load_test_cases(directory: str = "test_cases") -> list[ErrorCase]:
-    cases = []
-    for file in Path(directory).glob("*.json"):
-        with open(file) as f:
-            cases.extend(ErrorCase.from_dict(case) for case in json.load(f))
-    return cases
+from evaluator import ErrorEvaluator
 
 async def main():
-    # Initialize components
-    evaluator = ErrorEvaluator(output_dir="eval_results")
-    llm_analyzer = LLMAnalyzer()  # Your existing analyzer
+    # Get the base directory (src/evals)
+    base_dir = Path(__file__).parent
+    test_cases_dir = base_dir / "test_cases" / "data"
     
-    # Load test cases
-    test_cases = await load_test_cases("test_cases")
-    print(f"Loaded {len(test_cases)} test cases")
+    # Get OpenAI API key from environment variable
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable not set")
     
-    # Run evaluation
+    # Initialize the evaluator
+    evaluator = ErrorEvaluator(
+        output_dir=base_dir / "eval_results",
+        api_base_url="http://localhost:3001",  # Update if your API is on a different URL
+        openai_api_key=openai_api_key
+    )
+    
+    print(f"Starting evaluation of test cases in: {test_cases_dir}")
+    
+    # Run evaluation on all test cases
     results = await evaluator.run_evaluation(
-        test_cases=test_cases,
-        llm_analyzer=llm_analyzer,
+        test_cases_dir=str(test_cases_dir),
         batch_size=3  # Adjust based on rate limits
     )
     
-    print(f"Evaluation complete. Accuracy: {results['accuracy']:.1f}%")
+    print(f"\nEvaluation complete!")
+    print(f"Total chunks processed: {results['total_chunks']}")
+    print(f"Successful evaluations: {results['successful']}")
+    print(f"Failed evaluations: {results['failed']}")
+    print(f"Average score: {results['average_score']:.2f}")
+    
+    # Save the summary path for reference
+    summary_file = Path(evaluator.output_dir) / f"evaluation_summary_*.json"
+    print(f"\nDetailed results saved to: {summary_file}")
 
 if __name__ == "__main__":
     asyncio.run(main())
