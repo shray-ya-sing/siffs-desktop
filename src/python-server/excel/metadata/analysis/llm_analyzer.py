@@ -218,7 +218,8 @@ class LLMAnalyzer:
             
             # Check rate limit and wait if necessary
             if not self._can_make_request(total_request_tokens, model):
-                wait_time = self._time_until_available(total_request_tokens, model)
+                #wait_time = self._time_until_available(total_request_tokens, model)
+                wait_time = 60.0
                 logger.info(f"Rate limit reached. Waiting {wait_time:.1f} seconds...")
                 
                 if stream:
@@ -318,11 +319,18 @@ You will be provided metadata from a single excel file in pieces. You may not ha
 5) Mathematical correctness of formula used
 
 Focus on these error patterns:
+
+(1)Logical Formula Errors: 
 - Formula exclusion errors: Missing terms in SUM ranges or calculations that should include specific rows (e.g., revenue missing a product segment)
 - Formula inclusion errors: Including extraneous items that should be excluded
+(2)Mathematical Formula Errors:
 - Sign errors: Missing negative signs for expenses or tax impacts
-- Reference errors: Linking to wrong cells or wrong sections
+(3)Incorrect Cell References:
+- Reference errors: logically and mathematically correct formula but linking to wrong cells or wrong sections
+(4)Dependency Errors:
 - Dependency chain errors: Propagation of errors through dependent cells
+(5)Incorrect Function Error:
+- Logically Incorrect Function: Using inappropriate Excel functions for calculations, such as using NPV instead of XNPV for uneven cash flows, or AVERAGE instead of SUM where SUM is appropriate.
 
 For financial calculations, verify:
 - Gross profit = Revenue - COGS (not missing components)
@@ -345,8 +353,16 @@ For formatting mistakes (non-critical errors):
 - Cell text color coding protocol followed correctly: consensus protocol is usually red for links to other excel workbooks, black for calculations, green for formulas linking to other tabs, blue for hardcoded assumptions,  purple or pink for links to FactSet, CAPIQ, Bloomberg and other data vendors
 - These are non critial errors and should be deprioritized over critical errors
 
-For differences in formulae from surrounding cells: be careful. A break in the pattern is not always an error. Sometimes figures in a row are hardcoded for most years and driven off assumptions with formulae for otheryears. The only way to determine if this is wrong is to look at the cells being linked to and understand from their spatial data whether they logically make sense to link, or are simply a linking error.
-
+COMMON FINANCIAL MODEL PRACTICES TO BE AWARE OF (don't mistake these as errors): 
+1) In a projection schedule, Cells in years that are not needed in the projection are left blank and filled with grey / grey adjacent color
+2) Cell text is color coded based on type of data (hardcode, calculation)
+3) Some cells in a projection schedule are hardcoded, while others are linked with formulas to drive off certain assumptions or drivers
+4) Growth rates are hardcoded underneath the cell and the cells of the projected line are linked to the growth rate row to drive off it
+5) Pattern breaking cells are linked to other cells, which contain assumptions or drivers. So while items in the row for some years could be hardcoded, other years' data could be assumed or projected off an assumption
+6) Cells with hardcodes and assumptions have a yellow fill color
+7) Cells with grey fill color are intended to be left blank
+8) Cells with  
+For differences in formulae from surrounding cells: be careful. A break in the pattern is not always an error. Sometimes figures in a row are hardcoded for most years and driven off assumptions with formulae for other years. The only way to determine if this is wrong is to look at the cells being linked to and understand from their spatial data whether they logically make sense to link, or are simply a linking error.
 For circular references: be careful. A circular reference is not always an error. Sometimes a cell is linked to another cell that is linked to the first cell. This is a common pattern in Excel models. The only way to determine if this is wrong is to look at the cells being linked to and understand from their spatial data whether they logically make sense to link, or are simply a linking error. A circular reference means that the dependecies of a cell are influencing the precedent of the cell, creating a circular relationship. 
 Circular references are common in interest expense / cash flow / debt balance calculations, where average debt balance uses the current year debt balance to drive interest expense, which influences cash flow, which influences the current year debt payment and debt balance.
 
