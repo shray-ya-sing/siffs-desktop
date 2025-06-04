@@ -262,7 +262,7 @@ async def analyze_chunks(request: AnalyzeMetadataRequest):
             logger.info(f"data: {json.dumps({'info': final_msg})}\n\n")
 
 
-            yield f"data: {json.dumps({'chunk': 'Analysis complete.'})}\n\n"           
+            yield f"data: {json.dumps({'chunk': '\nAnalysis complete.'})}\n\n"           
             yield "data: [DONE]\n\n"
             
         except Exception as e:
