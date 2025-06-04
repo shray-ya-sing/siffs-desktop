@@ -1,0 +1,8 @@
+Error Cell(s): comprehensive income, E55
+
+Error Type: Mathematical Formula Error
+
+Error Explanation: The cash and cash equivalents calculation is mathematically incorrect. Cell E55 shows $1,565 but should equal cash, cash equivalents and restricted cash end of year (E53: $3,477) minus restricted cash (E54: $1,912), which equals $1,565. However, the restricted cash amount of $1,912 in E54 appears disproportionately large compared to prior years ($13 and $19), suggesting a potential data entry error that propagates to the final cash calculation.
+
+Error Fix: Verify the restricted cash amount in E54 is correct, as it represents a 100x increase from the previous year which seems unrealistic and affects the final cash balance calculation.
+Analysis complete.

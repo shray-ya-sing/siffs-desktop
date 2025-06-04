@@ -1,0 +1,16 @@
+Error Cell(s): Quarterly IS, G15
+
+Error Type: Formula omission error
+
+Error Explanation: The gross profit formula in cell G15 only references revenue (G12) and excludes cost of revenue (G14). This breaks the standard gross profit calculation pattern used consistently in all other quarters.
+
+Error Fix: Change formula from "=G12" to "=G12+G14" to properly calculate gross profit as revenue minus cost of revenue.
+
+Error Cell(s): Quarterly IS, J24
+
+Error Type: Formula inclusion error
+
+Error Explanation: The total operating expenses formula incorrectly includes cost of revenue (J14) which should not be part of operating expenses. Cost of revenue is already used in the gross profit calculation and including it again double-counts this expense.
+
+Error Fix: Change formula from "=SUM(J18:J20)+J14" to "=SUM(J18:J20)" to exclude cost of revenue from operating expenses calculation.
+Analysis complete.

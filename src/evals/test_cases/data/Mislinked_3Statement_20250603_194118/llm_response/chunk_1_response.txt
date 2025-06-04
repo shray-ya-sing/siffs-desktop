@@ -1,0 +1,24 @@
+Error Cell(s): comprehensive income!G9
+
+Error Type: Incorrect cell reference
+
+Error Explanation: The comprehensive income statement is linking to the wrong cell from the operations sheet. Cell G9 is linking to operations!G21 (Net income before income taxes = 1861), but it should be linking to operations!G23 (Net income = 1267) to properly show net income in the comprehensive income statement.
+
+Error Fix: Change formula from =operations!G21 to =operations!G23
+
+Error Cell(s): comprehensive income!M9
+
+Error Type: Incorrect cell reference
+
+Error Explanation: Cell M9 is linking to operations!H22 (Income tax expense = 455), but it should be linking to operations!H23 (Net income = 1056) to properly show net income in the comprehensive income statement for 2020.
+
+Error Fix: Change formula from =operations!H22 to =operations!H23
+
+Error Cell(s): comprehensive income!S9
+
+Error Type: Incorrect cell reference
+
+Error Explanation: Cell S9 is linking to operations!I23 (Net income = 1420), but based on the pattern and the fact that this appears to be the 2019 column, it should be linking to operations!G23 (Net income = 1267) for consistency with the year structure.
+
+Error Fix: Change formula from =operations!I23 to =operations!G23
+Analysis complete.
