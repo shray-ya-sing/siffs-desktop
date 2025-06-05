@@ -138,3 +138,7 @@ src/python-server/api/routes/excel/qa.py
 # Specific database file
 excel_embeddings.db
 
+# FAISS index files
+/faiss_indices/
+*.faiss
+*.pkl
