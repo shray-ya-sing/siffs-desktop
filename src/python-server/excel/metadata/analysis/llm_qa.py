@@ -35,8 +35,8 @@ class ModelLimits:
 
 class LLMQA:
     """
-    A class for performing question answering about Excel model metadata using LLM models.
-    Specialized in answering questions about financial model structure and content.
+    A class for performing question answering about Excel model data using retrieved chunks.
+    Analyzes markdown-formatted chunks from FAISS search results.
     """
     
     MODEL_LIMITS = {
@@ -161,31 +161,101 @@ class LLMQA:
         self.conversation_messages.append({"role": role, "content": content})
         self.conversation_tokens += token_count
 
-    async def answer_question(
+    def _compose_chunks_context(self, search_results: List[Dict[str, Any]]) -> str:
+        """
+        Compose multiple markdown chunks into a coherent context for the LLM.
+        
+        Args:
+            search_results: List of search results with 'markdown', 'score', and 'metadata'
+            
+        Returns:
+            Composed markdown context string
+        """
+        if not search_results:
+            return "No relevant data found."
+        
+        composed_parts = []
+        
+        # Add header
+        composed_parts.append("## Retrieved Excel Data Chunks")
+        composed_parts.append(f"*Found {len(search_results)} relevant sections from the workbook(s)*")
+        composed_parts.append("")
+        
+        # Add each chunk with context
+        for i, result in enumerate(search_results, 1):
+            # Extract metadata
+            metadata = result.get('metadata', {})
+            workbook = metadata.get('workbook', result.get('workbook_name', 'Unknown'))
+            sheet = metadata.get('sheet', metadata.get('worksheet', 'Unknown'))
+            rows = f"{metadata.get('start_row', '?')}-{metadata.get('end_row', '?')}"
+            score = result.get('score', 0)
+            
+            # Add chunk header
+            composed_parts.append(f"### Chunk {i} (Relevance: {score:.2f})")
+            composed_parts.append(f"**Source:** {workbook} / {sheet} (Rows {rows})")
+            composed_parts.append("")
+            
+            # Add the markdown content
+            markdown_content = result.get('markdown', '')
+            if markdown_content:
+                composed_parts.append(markdown_content)
+            else:
+                composed_parts.append("*No content available for this chunk*")
+            
+            # Add separator between chunks
+            if i < len(search_results):
+                composed_parts.append("")
+                composed_parts.append("---")
+                composed_parts.append("")
+        
+        return "\n".join(composed_parts)
+
+    async def answer_question_from_chunks(
         self, 
-        metadata: str,
+        search_results: List[Dict[str, Any]],
         question: str,
         model: str = "claude-sonnet-4-20250514",
         max_tokens: int = 2000,
         temperature: float = 0.3,
-        stream: bool = True
+        stream: bool = True,
+        include_sources: bool = True
     ) -> Union[str, AsyncGenerator[str, None]]:
         """
-        Answer questions about Excel model metadata using an LLM with rate limiting and conversation memory.
+        Answer questions based on retrieved Excel chunks.
+        
+        Args:
+            search_results: List of search results from FAISSChunkRetriever
+            question: User's question
+            model: LLM model to use
+            max_tokens: Maximum tokens in response
+            temperature: LLM temperature
+            stream: Whether to stream the response
+            include_sources: Whether to ask LLM to cite chunk numbers
+            
+        Returns:
+            Answer string or async generator for streaming
         """
         # Check if we need to reset conversation due to context limit
         if self._should_reset_conversation(model):
             self._reset_conversation()
         
-        system_prompt = self._get_qa_system_prompt()
+        system_prompt = self._get_chunk_qa_system_prompt(include_sources)
         
-        # Format the user's question with metadata
-        user_message = (
-            f"Excel Model Metadata:\n\n{metadata}\n\n"
-            f"Question: {question}\n\n"
-            "Please provide a clear and concise answer based on the Excel model metadata above. "
-            "If the information is not available in the metadata, please state that explicitly."
-        )
+        # Compose chunks into context
+        chunks_context = self._compose_chunks_context(search_results)
+        
+        # Format the user's question with the composed chunks
+        user_message = f"""{chunks_context}
+
+## Question
+{question}
+
+Please analyze the Excel data chunks above and provide a clear, accurate answer to the question. """
+        
+        if include_sources:
+            user_message += "When referencing specific information, indicate which chunk number it comes from."
+        else:
+            user_message += "Focus on synthesizing the information across all relevant chunks."
         
         try:
             # Use cached/approximate token counting to avoid blocking
@@ -294,34 +364,69 @@ class LLMQA:
             raise
 
     @staticmethod
-    def _get_qa_system_prompt() -> str:
-        """Returns the system prompt for general question answering about Excel models."""
-        return """You are an expert financial modeler with deep expertise in Excel models, financial statements, and business analysis. Your task is to answer questions about Excel model metadata clearly and concisely.
+    def _get_chunk_qa_system_prompt(include_sources: bool = True) -> str:
+        """Returns the system prompt for answering questions based on retrieved chunks."""
+        base_prompt = """You are an expert financial modeler analyzing Excel workbook data. You've been provided with relevant chunks of data from Excel workbooks in markdown table format.
 
-When responding:
-1. Be precise and to the point
-2. Reference specific cells, sheets, or ranges when relevant
-3. If a question is unclear or ambiguous, ask for clarification
-4. If the information is not in the provided metadata, say so explicitly
-5. For calculations, show the formula and explain the logic
-6. Format your response in clear, readable markdown
-7. Use bullet points or numbered lists when appropriate
-8. Highlight important values or conclusions with **bold** text
+The data format includes:
+- Spreadsheet-style tables with row numbers and column letters
+- Cell properties: v=value, f=formula, deps=dependencies, fmt=formatting
+- Tables and named ranges where applicable
+- Each chunk represents a specific section of a worksheet
 
-You'll be provided with Excel metadata in this format:
-- Address: Cell location (e.g., A1, C19)
-- v=: Raw value (e.g., 100, "Revenue")
-- d=: Display value (e.g., $1,000) - only if different from raw
-- f=: Formula (e.g., =SUM(A1:A10)) - may be truncated
-- deps=X→Y: Precedents→Dependents count
-- prec=[refs]: List of precedent cells
-- dept=[refs]: List of dependent cells
-- fmt=[properties]: Formatting information
+When analyzing the data:
+1. Focus on the specific information in the provided chunks
+2. Look for patterns, calculations, and relationships across cells
+3. Pay attention to formulas and dependencies between cells
+4. Consider the context provided by adjacent cells
+5. If information seems incomplete, mention what additional data might be helpful
 
-Cell types:
-- Input: deps=0→X (source data)
-- Calculation: deps=X→Y (intermediate formulas)
-- Output: deps=X→0 (final results)
-- Isolated: deps=0→0 (standalone)
+Response guidelines:
+- Be precise and reference specific cells when relevant
+- Explain calculations and formulas clearly
+- Use markdown formatting for clarity
+- If the chunks don't contain enough information to fully answer the question, say so
+- Highlight important findings with **bold** text
+"""
+        
+        if include_sources:
+            base_prompt += """
+- When referencing specific data, indicate which chunk number it comes from (e.g., "In Chunk 2, cell B5...")
+- If you synthesize information from multiple chunks, mention all relevant chunk numbers
+"""
+        
+        return base_prompt
 
-Focus on providing clear, actionable insights based on the metadata provided. If you need to make assumptions, state them explicitly."""
+    # Backward compatibility method
+    async def answer_question(
+        self, 
+        metadata: str,
+        question: str,
+        model: str = "claude-sonnet-4-20250514",
+        max_tokens: int = 2000,
+        temperature: float = 0.3,
+        stream: bool = True
+    ) -> Union[str, AsyncGenerator[str, None]]:
+        """
+        Legacy method for backward compatibility.
+        Converts single metadata string to chunk format.
+        """
+        # Create a single chunk from the metadata
+        search_results = [{
+            'markdown': metadata,
+            'score': 1.0,
+            'metadata': {
+                'workbook': 'Legacy Format',
+                'sheet': 'Unknown'
+            }
+        }]
+        
+        return await self.answer_question_from_chunks(
+            search_results=search_results,
+            question=question,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=stream,
+            include_sources=False
+        )
