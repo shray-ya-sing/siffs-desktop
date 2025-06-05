@@ -18,8 +18,8 @@ const config: ForgeConfig = {
     icon: './src/assets/icons/icon.ico',
     // Pass environment variables to the packaged app
     extraResource: [
-      '.env',
-      'resources/python/python-server${process.platform === "win32" ? ".exe" : ""}',
+      '.env',      
+      'resources/python/python-server',
       'resources/asgi.py'
     ],
   },
