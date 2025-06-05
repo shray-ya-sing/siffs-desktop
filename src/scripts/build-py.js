@@ -1,4 +1,17 @@
-
+// Build script to create a single-file Python executable for the server
+//
+// Usage: node build-py.js
+// IMPORTANT NOTE: always run this script from the ROOT directory of the project, otherwise path resolution will fail and the script will not run successfully
+// 
+// This script will build a single-file Python executable for the server
+// and place it in the resources directory.
+// The script will clean up existing build and dist directories if they exist
+//
+// Dependencies: 
+// - cross-spawn
+// - path
+// - fs-extra
+// - os
 const spawn = require('cross-spawn');
 const path = require('path');
 const fs = require('fs-extra');
@@ -39,6 +52,8 @@ function buildPython() {
         '--distpath', distDir,
         '--workpath', buildDir,
         '--specpath', buildDir,
+        // Hooks
+        '--additional-hooks-dir', pythonDir,
         // Add all hidden imports
         '--hidden-import=flask_cors',
         '--hidden-import=flask.app',
@@ -52,6 +67,11 @@ function buildPython() {
         '--hidden-import=fastapi',
         '--hidden-import=pydantic',
         '--hidden-import=numpy',
+        '--hidden-import=tqdm',
+        '--hidden-import=requests',
+        '--hidden-import=packaging',
+        '--hidden-import=filelock',
+        '--hidden-import=huggingface_hub',
         '--hidden-import=pandas',
         '--hidden-import=sqlalchemy',
         '--hidden-import=faiss_cpu',
@@ -61,6 +81,30 @@ function buildPython() {
         '--hidden-import=sklearn',
         '--hidden-import=transformers',
         '--hidden-import=tokenizers',
+        '--hidden-import=torch',
+        '--hidden-import=regex._regex',
+        // copy metadata needed by transformers lib
+        '--copy-metadata', 'regex',
+        '--copy-metadata', 'requests',
+        '--copy-metadata', 'packaging',
+        '--copy-metadata', 'filelock',
+        '--copy-metadata', 'numpy',
+        '--copy-metadata', 'tokenizers',
+        '--copy-metadata', 'tqdm',
+        '--copy-metadata', 'huggingface_hub',
+        '--copy-metadata', 'safetensors',
+        '--copy-metadata', 'pyyaml',
+        '--copy-metadata', 'transformers',
+        '--copy-metadata', 'sentence_transformers',
+        '--copy-metadata', 'torch',
+        '--copy-metadata', 'scikit-learn',
+        '--copy-metadata', 'scipy',
+        '--copy-metadata', 'joblib',
+        '--copy-metadata', 'threadpoolctl',
+        '--copy-metadata', 'certifi',
+        '--copy-metadata', 'charset_normalizer',
+        '--copy-metadata', 'idna',
+        '--copy-metadata', 'urllib3',    
         // Add the python-server directory to the path
         '--paths', pythonDir,
         // Collect all Flask components
@@ -84,11 +128,15 @@ function buildPython() {
         '--collect-all', 'sqlalchemy',
         '--collect-all', 'faiss_cpu',
         '--collect-all', 'sentence_transformers',
-        '--collect-all', 'httpcore',
-        '--collect-all', 'httpx',
         '--collect-all', 'sklearn',
         '--collect-all', 'transformers',
         '--collect-all', 'tokenizers',
+        '--collect-all', 'torch',
+        '--collect-all', 'tqdm',
+        '--collect-all', 'requests',
+        '--collect-all', 'packaging',
+        '--collect-all', 'filelock',
+        '--collect-all', 'huggingface_hub',
         '--name=python-server',        
         // Add all Python files in the python-server directory
         '--add-data', `${path.join(pythonDir, 'app.py')}${path.delimiter}.`,
@@ -103,7 +151,7 @@ function buildPython() {
         '--add-data', `${path.join(pythonDir, 'core')}${path.delimiter}core`,
         '--add-data', `${path.join(pythonDir, 'vectors')}${path.delimiter}vectors`,
         // Entry point for prod server
-        '--onefile',
+        '--onedir',
         path.join(pythonDir, 'asgi.py')
     ];
 
