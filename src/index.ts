@@ -96,7 +96,7 @@ function startPythonServer() {
   
   const pythonPath = isDev 
     ? path.join(__dirname, '../../src/python-server/venv/Scripts/python.exe') // Relies on venv to be init and active
-    : path.join(process.resourcesPath, 'python', 'python-server','python-server.exe');
+    : path.join(process.resourcesPath, 'python-server','python-server.exe');
 
   console.log('🔍 Python server path:', pythonPath);
   
