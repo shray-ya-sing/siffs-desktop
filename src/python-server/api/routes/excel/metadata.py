@@ -109,7 +109,7 @@ async def compress_metadata(request: dict):
 @router.post("/compress-chunks")
 async def compress_chunks(request: CompressChunksRequest):
     """
-    Compress an array of chunk metadata objects into natural language text.
+    Compress an array of chunk metadata objects into natural language text and markdown.
     
     Args:
         request: Contains array of chunk metadata objects
@@ -132,13 +132,14 @@ async def compress_chunks(request: CompressChunksRequest):
         
         # Configure compressor if custom settings provided
         if request.max_cells_per_chunk or request.max_cell_length:
-            processor.compressor = JsonTextCompressor(
+            processor.text_compressor = JsonTextCompressor(
                 max_cells_per_sheet=request.max_cells_per_chunk,
                 max_cell_length=request.max_cell_length
             )
         
         # Compress chunks to text
         compressed_texts = processor._compress_chunks_to_text()
+        compressed_markdown_texts = processor._compress_chunks_to_markdown()
         
         # Calculate statistics
         total_chars = sum(len(text) for text in compressed_texts)
@@ -147,6 +148,7 @@ async def compress_chunks(request: CompressChunksRequest):
         return {
             "status": "success",
             "compressed_texts": compressed_texts,
+            "compressed_markdown_texts": compressed_markdown_texts,
             "chunk_count": len(compressed_texts),
             "statistics": {
                 "total_characters": total_chars,
