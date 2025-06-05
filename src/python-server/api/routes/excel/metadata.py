@@ -5,8 +5,9 @@ import sys
 current_dir = Path(__file__).parent.parent.parent.parent.absolute()
 sys.path.append(str(current_dir))
 # Now import using relative path from python-server
-from api.models.excel import ExtractMetadataRequest, CompressMetadataRequest, ChunkMetadataRequest
+from api.models.excel import ExtractMetadataRequest, CompressMetadataRequest, ChunkMetadataRequest, ExtractMetadataChunksRequest, CompressChunksRequest
 from excel.metadata.excel_metadata_processor import ExcelMetadataProcessor
+from excel.metadata.compression.text_compressor import JsonTextCompressor
 import logging
 # Get logger instance
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ router = APIRouter(
 
 #------------------------------------ METADATA EXTRACTION: SHARED---------------------------------------------
 # 1. Extract metadata endpoint - returns raw JSON metadata
-@router.post("/api/excel/extract-metadata")
+@router.post("/extract-metadata")
 async def extract_metadata(request: ExtractMetadataRequest):
     logger.info(f"Received request to extract metadata from: {request.filePath}")
     try:
@@ -43,8 +44,41 @@ async def extract_metadata(request: ExtractMetadataRequest):
         logger.error(f"Error extracting metadata: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ALT: Extract metadata chunks endpoint - returns array of chunk objects
+@router.post("/extract-metadata-chunks")
+async def extract_metadata_chunks(request: ExtractMetadataChunksRequest):
+    """
+    Extract metadata from Excel file as an array of chunk objects.
+    Each chunk contains metadata for a specific row range.
+    """
+    logger.info(f"Received request to extract metadata chunks from: {request.filePath}")
+    logger.info(f"Chunk configuration: {request.rows_per_chunk} rows per chunk")
+    
+    try:
+        processor = ExcelMetadataProcessor(workbook_path=request.filePath)
+        
+        
+        # Extract chunks only
+        chunks = processor._extract_metadata_chunks(
+            rows_per_chunk=request.rows_per_chunk,
+            max_cols_per_sheet=request.max_cols_per_sheet,
+            include_dependencies=request.include_dependencies,
+            include_empty_chunks=request.include_empty_chunks
+        )
+        
+        return {
+            "status": "success",
+            "chunks": chunks,
+            "chunkCount": len(chunks)
+        }
+            
+    except Exception as e:
+        logger.error(f"Error extracting metadata chunks: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+#------------------------------------ METADATA COMPRESSION: SHARED---------------------------------------------
 # 2. Compress metadata endpoint - takes JSON metadata, returns markdown
-@router.post("/api/excel/compress-metadata")
+@router.post("/compress-metadata")
 async def compress_metadata(request: dict):
     logger.info("Received request to compress metadata to markdown")
     try:
@@ -72,8 +106,149 @@ async def compress_metadata(request: dict):
         logger.error(f"Error compressing metadata: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/compress-chunks")
+async def compress_chunks(request: CompressChunksRequest):
+    """
+    Compress an array of chunk metadata objects into natural language text.
+    
+    Args:
+        request: Contains array of chunk metadata objects
+        
+    Returns:
+        Array of compressed text strings, one per chunk
+    """
+    logger.info(f"Received request to compress {len(request.chunks)} chunks to text")
+    
+    try:
+        # Validate chunks
+        if not request.chunks:
+            raise ValueError("No chunks provided")
+        
+        # Create processor instance for compression
+        processor = ExcelMetadataProcessor()
+        
+        # Set the chunks on the processor
+        processor.metadata_chunks = request.chunks
+        
+        # Configure compressor if custom settings provided
+        if request.max_cells_per_chunk or request.max_cell_length:
+            processor.compressor = JsonTextCompressor(
+                max_cells_per_sheet=request.max_cells_per_chunk,
+                max_cell_length=request.max_cell_length
+            )
+        
+        # Compress chunks to text
+        compressed_texts = processor._compress_chunks_to_text()
+        
+        # Calculate statistics
+        total_chars = sum(len(text) for text in compressed_texts)
+        avg_chars = total_chars / len(compressed_texts) if compressed_texts else 0
+        
+        return {
+            "status": "success",
+            "compressed_texts": compressed_texts,
+            "chunk_count": len(compressed_texts),
+            "statistics": {
+                "total_characters": total_chars,
+                "average_characters_per_chunk": round(avg_chars),
+                "chunks_processed": len(request.chunks)
+            }
+        }
+            
+    except Exception as e:
+        logger.error(f"Error compressing chunks: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Alternative endpoint with streaming for large chunk arrays
+@router.post("/compress-chunks-stream")
+async def compress_chunks_stream(request: CompressChunksRequest):
+    """
+    Compress chunks with streaming response for large arrays.
+    Streams each compressed chunk as it's processed.
+    """
+    logger.info(f"Received request to stream compress {len(request.chunks)} chunks")
+    
+    try:
+        if not request.chunks:
+            raise ValueError("No chunks provided")
+        
+        async def text_generator():
+            try:
+                # Start streaming
+                yield f"data: {json.dumps({'status': 'started', 'total_chunks': len(request.chunks)})}\n\n"
+                
+                # Create processor
+                processor = ExcelMetadataProcessor()
+                
+                # Configure compressor
+                if request.max_cells_per_chunk or request.max_cell_length:
+                    processor.compressor = JsonTextCompressor(
+                        max_cells_per_sheet=request.max_cells_per_chunk,
+                        max_cell_length=request.max_cell_length
+                    )
+                
+                compressed_texts = []
+                
+                # Process chunks one by one for streaming
+                for i, chunk in enumerate(request.chunks):
+                    # Compress single chunk
+                    processor.metadata_chunks = [chunk]
+                    chunk_texts = processor._compress_chunks_to_text()
+                    
+                    if chunk_texts:
+                        compressed_text = chunk_texts[0]
+                        compressed_texts.append(compressed_text)
+                        
+                        # Stream the compressed chunk
+                        chunk_data = {
+                            'type': 'compressed_chunk',
+                            'index': i,
+                            'total': len(request.chunks),
+                            'text': compressed_text,
+                            'text_length': len(compressed_text)
+                        }
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
+                    
+                    # Add delay for large batches
+                    if i % 10 == 0 and i > 0:
+                        await asyncio.sleep(0.1)
+                
+                # Send completion with statistics
+                total_chars = sum(len(text) for text in compressed_texts)
+                completion_data = {
+                    'status': 'completed',
+                    'total_chunks': len(compressed_texts),
+                    'total_characters': total_chars,
+                    'average_characters': round(total_chars / len(compressed_texts)) if compressed_texts else 0
+                }
+                yield f"data: {json.dumps(completion_data)}\n\n"
+                yield "data: [DONE]\n\n"
+                
+            except Exception as e:
+                logger.error(f"Error in chunk compression streaming: {str(e)}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                yield "data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            text_generator(),
+            media_type="text/event-stream",
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no'
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in compress chunks streaming endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+#---------------------------------------------CHUNKING: SHARED----------------------
 # 3. Chunk metadata endpoint - takes markdown string, returns chunks
-@router.post("/api/excel/chunk-metadata")
+@router.post("/chunk-metadata")
 async def chunk_metadata(request: dict):
     logger.info("Received request to chunk markdown content")
     try:
@@ -102,7 +277,7 @@ async def chunk_metadata(request: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Excel metadata extraction endpoint - now returns chunks
-@router.post("/api/excel/extract-metadata-legacy")
+@router.post("/extract-metadata-legacy")
 async def extract_metadata(request: ExtractMetadataRequest):
     logger.info(f"Received request to process: {request.filePath}")
     try:
