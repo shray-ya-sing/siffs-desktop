@@ -70,10 +70,33 @@ if (require('electron-squirrel-startup')) {
  */
 
 function startPythonServer() {
+
   const isDev = process.env.NODE_ENV === 'development';
+  
+  // Debug: Log the resource path
+  if (!isDev) {
+    console.log('📁 Resource path:', process.resourcesPath);
+    console.log('📁 Python directory:', path.join(process.resourcesPath, 'python'));
+    
+    // List contents to verify
+    try {
+      const pythonDir = path.join(process.resourcesPath, 'python');
+      if (fs.existsSync(pythonDir)) {
+        console.log('📁 Python directory contents:', fs.readdirSync(pythonDir));
+        
+        const serverDir = path.join(pythonDir, 'python-server');
+        if (fs.existsSync(serverDir)) {
+          console.log('📁 Server directory contents:', fs.readdirSync(serverDir));
+        }
+      }
+    } catch (e) {
+      console.error('Error listing directory:', e);
+    }
+  }
+  
   const pythonPath = isDev 
     ? path.join(__dirname, '../../src/python-server/venv/Scripts/python.exe') // Relies on venv to be init and active
-    : path.join(process.resourcesPath, 'python-server.exe');
+    : path.join(process.resourcesPath, 'python', 'python-server','python-server.exe');
 
   console.log('🔍 Python server path:', pythonPath);
   
