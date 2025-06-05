@@ -1,29 +1,29 @@
-// scripts/build-python.js
+
 const spawn = require('cross-spawn');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 
 function buildPython() {
-    console.log('🔨 Building Python executable...');
+    console.log('Building Python executable...');
 
     const rootDir = process.cwd();    
     const pythonDir = path.join(rootDir, 'src', 'python-server');
     const buildDir = path.join(rootDir, 'build', 'python');
     const distDir = path.join(rootDir, 'resources', 'python');
 
-    // Clean up existing build and dist directories if they exist -- or name them, if they don't
+    // Clean up existing build and dist directories if they exist -- or name them, if they do not
     [buildDir, distDir].forEach(dir => {
         const dirPath = path.dirname(dir);
         if (fs.existsSync(dirPath)) {
-            console.log(`🧹 Cleaning up ${dir}...`);
+            console.log(`Cleaning up ${dir}...`);
             try {
                 fs.removeSync(dir);
-                console.log(`✅ Successfully removed ${dir}`);
+                console.log(`Successfully removed ${dir}`);
                 // Create the directory again
                 fs.mkdirSync(dirPath, { recursive: true });
             } catch (error) {
-                console.error(`❌ Failed to remove ${dir}:`, error.message);
+                console.error(`Failed to remove ${dir}:`, error.message);
                 process.exit(1);
             }
         }
@@ -51,6 +51,16 @@ function buildPython() {
         '--hidden-import=uvicorn',
         '--hidden-import=fastapi',
         '--hidden-import=pydantic',
+        '--hidden-import=numpy',
+        '--hidden-import=pandas',
+        '--hidden-import=sqlalchemy',
+        '--hidden-import=faiss_cpu',
+        '--hidden-import=sentence_transformers',
+        '--hidden-import=httpcore',
+        '--hidden-import=httpx',
+        '--hidden-import=sklearn',
+        '--hidden-import=transformers',
+        '--hidden-import=tokenizers',
         // Add the python-server directory to the path
         '--paths', pythonDir,
         // Collect all Flask components
@@ -69,14 +79,29 @@ function buildPython() {
         '--collect-all', 'httpx',
         '--collect-all', 'openpyxl',
         '--collect-all', 'asgiref',
+        '--collect-all', 'numpy',
+        '--collect-all', 'pandas',
+        '--collect-all', 'sqlalchemy',
+        '--collect-all', 'faiss_cpu',
+        '--collect-all', 'sentence_transformers',
+        '--collect-all', 'httpcore',
+        '--collect-all', 'httpx',
+        '--collect-all', 'sklearn',
+        '--collect-all', 'transformers',
+        '--collect-all', 'tokenizers',
         '--name=python-server',        
         // Add all Python files in the python-server directory
         '--add-data', `${path.join(pythonDir, 'app.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'wsgi.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'asgi.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, '__init__.py')}${path.delimiter}.`,
+        '--add-data', `${path.join(pythonDir, 'logging_config.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, '*.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'excel')}${path.delimiter}excel`,
+        '--add-data', `${path.join(pythonDir, 'ai_services')}${path.delimiter}ai_services`,
+        '--add-data', `${path.join(pythonDir, 'api')}${path.delimiter}api`,
+        '--add-data', `${path.join(pythonDir, 'core')}${path.delimiter}core`,
+        '--add-data', `${path.join(pythonDir, 'vectors')}${path.delimiter}vectors`,
         // Entry point for prod server
         '--onefile',
         path.join(pythonDir, 'asgi.py')
@@ -91,11 +116,11 @@ function buildPython() {
     });
 
     if (result.status !== 0) {
-        console.error('❌ Python build failed');
+        console.error('Python build failed');
         process.exit(1);
     }
 
-    console.log('✅ Python build successful');
+    console.log('Python build successful');
     
     // Ensure resources directory exists
     const resourcesDir = path.join(__dirname, '../../resources');
@@ -123,12 +148,12 @@ function buildPython() {
     try {
         if (fs.existsSync(envSource)) {
             fs.copyFileSync(envSource, envDest);
-            console.log(`✅ Copied .env to ${envDest}`);
+            console.log(`Copied .env to ${envDest}`);
         } else {
-            console.log('ℹ️  No .env file found to copy');
+            console.log('No .env file found to copy');
         }
     } catch (error) {
-        console.warn('⚠️  Could not copy .env file:', error.message);
+        console.warn('Could not copy .env file:', error.message);
     }
 
     return true;
