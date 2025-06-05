@@ -127,3 +127,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+src/python-server/api/routes/excel/qa.py
+
+# SQLite database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Specific database file
+excel_embeddings.db
+
