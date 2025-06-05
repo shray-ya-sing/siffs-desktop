@@ -43,6 +43,7 @@ class ExcelMetadataProcessor:
         self.chunker = None
         self.max_tokens_per_chunk = 18000
         self.text_compressor = None
+        self.metadata_chunks = None
         
         # Try to import required modules
         try:
@@ -218,6 +219,39 @@ class ExcelMetadataProcessor:
             
         except Exception as e:
             logger.error(f"Error during markdown compression: {str(e)}")
+            raise
+
+
+    def _compress_chunks_to_markdown(self) -> List[str]:
+        """
+        Compress the extracted metadata chunks to markdown format.
+        
+        Returns:
+            List[str]: Array of markdown strings, one per chunk
+        """
+        try:
+            logger.info("Compressing metadata chunks to markdown...")
+            
+            if not hasattr(self, 'metadata_chunks') or not self.metadata_chunks:
+                raise ValueError("No metadata chunks available to compress")
+            
+            # Compress chunks to markdown array
+            markdown_chunks = self.compressor.compress_chunks_to_markdown(
+                self.metadata_chunks,
+                self.display_values if hasattr(self, 'display_values') else None
+            )
+            
+            logger.info(f"Successfully compressed {len(markdown_chunks)} chunks to markdown")
+            
+            # Log summary statistics
+            total_chars = sum(len(md) for md in markdown_chunks)
+            avg_chars = total_chars / len(markdown_chunks) if markdown_chunks else 0
+            logger.info(f"Total markdown characters: {total_chars}, Average per chunk: {avg_chars:.0f}")
+            
+            return markdown_chunks
+            
+        except Exception as e:
+            logger.error(f"Error during chunk markdown compression: {str(e)}")
             raise
 
 
