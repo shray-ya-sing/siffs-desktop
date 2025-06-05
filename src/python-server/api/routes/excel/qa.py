@@ -16,32 +16,55 @@ router = APIRouter(
     tags=["excel-qa"],
 )
 
+
 #------------------------------------ METADATA ANALYSIS: QA---------------------------------------------
 
-@router.post("/api/excel/qa")
+@router.post("/qa")
 async def answer_question(request: QuestionRequest):
     """
-    Answer a question about Excel metadata with streaming response.
+    Answer a question about Excel metadata using multiple chunks with streaming response.
     """
     try:
+        # Validate chunk limit
+        if len(request.chunks) > request.chunk_limit:
+            request.chunks = request.chunks[:request.chunk_limit]
+            logger.warning(f"Truncated chunks from {len(request.chunks)} to {request.chunk_limit}")
+        
         qa = ExcelMetadataQA()
         
         async def event_generator():
             try:
+                # Prepare chunks for QA system
+                chunk_texts = []
+                chunk_contexts = []
+                
+                for i, chunk in enumerate(request.chunks):
+                    chunk_texts.append(chunk.text)
+                    
+                    # Build context information for each chunk
+                    context = {
+                        'index': i,
+                        'metadata': chunk.metadata or {},
+                        'score': chunk.score
+                    }
+                    chunk_contexts.append(context)
+                
                 # Stream the answer with rate limiting
-                stream = await qa.answer_question(
-                    metadata=request.metadata,
+                stream = await qa.answer_question_from_chunks(
+                    chunk_texts=chunk_texts,
+                    chunk_contexts=chunk_contexts,
                     question=request.question,
                     model=request.model,
                     temperature=request.temperature,
                     max_tokens=request.max_tokens,
+                    include_sources=request.include_chunk_sources,
                     stream=True
                 )
                 
                 # Stream the response chunks
-                async for chunk in stream:
-                    if chunk:
-                        yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+                async for response_chunk in stream:
+                    if response_chunk:
+                        yield f"data: {json.dumps({'chunk': response_chunk})}\n\n"
                 
                 yield "data: [DONE]\n\n"
                 
@@ -62,4 +85,51 @@ async def answer_question(request: QuestionRequest):
             
     except Exception as e:
         logger.error(f"Error in answer_question endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+#------------------------------------ ALTERNATIVE: NON-STREAMING VERSION ------------------------------------
+
+@router.post("/qa/sync")
+async def answer_question_sync(request: QuestionRequest):
+    """
+    Answer a question about Excel metadata using multiple chunks (non-streaming).
+    """
+    try:
+        # Validate chunk limit
+        if len(request.chunks) > request.chunk_limit:
+            request.chunks = request.chunks[:request.chunk_limit]
+        
+        qa = ExcelMetadataQA()
+        
+        # Prepare chunks
+        chunk_texts = [chunk.text for chunk in request.chunks]
+        chunk_contexts = [
+            {
+                'index': i,
+                'metadata': chunk.metadata or {},
+                'score': chunk.score
+            }
+            for i, chunk in enumerate(request.chunks)
+        ]
+        
+        # Get answer
+        answer = await qa.answer_question_from_chunks(
+            chunk_texts=chunk_texts,
+            chunk_contexts=chunk_contexts,
+            question=request.question,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
+            include_sources=request.include_chunk_sources,
+            stream=False
+        )
+        
+        return {
+            "answer": answer,
+            "chunks_used": len(request.chunks),
+            "question": request.question
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in answer_question_sync endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
