@@ -76,6 +76,21 @@ def main():
                     print(f"\n... and {remaining} more chunks")
                 break
 
+        compressed_markdown_texts = compress_result.get('compressed_markdown_texts', [])
+        print(f"\nCompressed to {len(compressed_markdown_texts)} markdown chunks")
+        
+        # Print first 200 chars of each chunk
+        print("\nFirst 200 characters of each chunk:")
+        for i, text in enumerate(compressed_markdown_texts, 1):
+            preview = text[:200].replace('\n', ' ').strip()
+            print(f"\n--- Chunk {i} ---")
+            print(f"{preview}...")
+            if i >= 5:  # Limit to first 5 chunks for brevity
+                remaining = len(compressed_markdown_texts) - 5
+                if remaining > 0:
+                    print(f"\n... and {remaining} more chunks")
+                break
+
     except requests.exceptions.RequestException as e:
         print(f"Error making request: {e}")
         if hasattr(e, 'response') and e.response:
