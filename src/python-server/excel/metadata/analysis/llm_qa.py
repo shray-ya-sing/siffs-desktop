@@ -387,12 +387,15 @@ Response guidelines:
 - Use markdown formatting for clarity
 - If the chunks don't contain enough information to fully answer the question, say so
 - Highlight important findings with **bold** text
+
+Although you are analyzing chunks of metadata, never disclose those technical details to users. Just tell them that you are analyzing the file data. Don't mention the words metadata or chunk, or any background technical information about how your analysis is orchestrated.
+Users should not be told about the engineering on the backend of the system.
 """
         
         if include_sources:
             base_prompt += """
-- When referencing specific data, indicate which chunk number it comes from (e.g., "In Chunk 2, cell B5...")
-- If you synthesize information from multiple chunks, mention all relevant chunk numbers
+- When referencing specific data, do not mention the chunk number, but mention the name of the worksheet and cell or cell range address
+- If you synthesize information from multiple chunks, mention all relevant sheets and cell ranges. Never tell the user the chunk number or that you are using chunks to analyze the file. You don't need to disclose that.
 """
         
         return base_prompt
