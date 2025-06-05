@@ -33,7 +33,7 @@ export function ModelQAPage() {
         
         <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-[#0a0f1a] to-[#1a2035]/30">
           <div className="max-w-6xl mx-auto">
-            <div className="mx-auto">
+            <div className="w-full mx-auto">
               <ModelQA />
             </div>
           </div>
