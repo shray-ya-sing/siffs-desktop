@@ -19,7 +19,7 @@ router = APIRouter(
 
 #------------------------------------ METADATA ANALYSIS: AUDIT---------------------------------------------
 # Analyze chunks with streaming response and rate limiting
-@router.post("/api/excel/analyze-chunks")
+@router.post("/analyze-chunks")
 async def analyze_chunks(request: AnalyzeMetadataRequest):
     if not request.chunks:
         async def error_stream():
@@ -97,7 +97,7 @@ async def analyze_chunks(request: AnalyzeMetadataRequest):
     )
     
 # Optional: Add endpoint to reset conversation if needed
-@router.post("/api/excel/reset-conversation")
+@router.post("/reset-conversation")
 async def reset_conversation():
     """Reset the conversation history for fresh analysis"""
     try:
@@ -109,7 +109,7 @@ async def reset_conversation():
         return {"error": str(e)}
 
 # Optional: Add endpoint to get conversation info
-@router.get("/api/excel/conversation-info")
+@router.get("/conversation-info")
 async def get_conversation_info():
     """Get current conversation state information"""
     try:
