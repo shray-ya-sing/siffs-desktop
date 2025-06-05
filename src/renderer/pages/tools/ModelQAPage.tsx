@@ -17,7 +17,7 @@ export function ModelQAPage() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-[#0a0f1a] text-gray-200 font-sans font-thin overflow-hidden">
+    <div className="flex h-screen bg-[#0a0f1a] text-gray-200 font-sans font-thin overflow-y-auto">
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -33,7 +33,7 @@ export function ModelQAPage() {
         
         <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-[#0a0f1a] to-[#1a2035]/30">
           <div className="max-w-6xl mx-auto">
-            <div className="bg-[#1a2035]/30 rounded-lg border border-[#ffffff0f] backdrop-blur-sm shadow-lg h-[calc(100vh-180px)]">
+            <div className="mx-auto">
               <ModelQA />
             </div>
           </div>
