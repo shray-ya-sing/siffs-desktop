@@ -45,7 +45,7 @@ def store_embeddings(workbook_path: str, chunks: list, model_name: str = "msmarc
         "workbook_path": workbook_path,
         "chunks": chunks,
         "embedding_model": model_name,
-        "replace_existing": True
+        "replace_existing": False
     }
     
     print(f"Storing embeddings for workbook: {workbook_path}")
