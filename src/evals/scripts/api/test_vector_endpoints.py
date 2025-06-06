@@ -115,8 +115,8 @@ def ask_question(search_response: Dict[str, Any], question: str, model: str = "c
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Test Excel metadata extraction, storage, and search')
-    parser.add_argument('file_path', type=str, help='Path to the Excel file')
-    parser.add_argument('--query', type=str, required=True, help='Search query')
+    parser.add_argument('--file_path', type=str, default=r"C:\Users\shrey\OneDrive\Desktop\docs\test\single_tab_no_error.xlsx", help='Path to the Excel file')
+    parser.add_argument('--query', type=str, default="explain the income statement trends", help='Search query')
     parser.add_argument('--rows', type=int, default=10, help='Number of rows per chunk (default: 10)')
     parser.add_argument('--top_k', type=int, default=3, help='Number of search results to return (default: 3)')
     args = parser.parse_args()
