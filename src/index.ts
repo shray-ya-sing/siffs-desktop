@@ -120,7 +120,11 @@ function startPythonServer() {
         env: {
           ...process.env,
           FLASK_ENV: 'development',
-          FLASK_DEBUG: '1'
+          FLASK_DEBUG: '1',
+          PYTHONIOENCODING: 'utf-8',
+          PYTHONUTF8: '1',
+          LC_ALL: 'en_US.UTF-8',
+          LANG: 'en_US.UTF-8'
         }
       });
     } else {
@@ -134,10 +138,19 @@ function startPythonServer() {
         env: {
           ...process.env,
           FLASK_ENV: 'production',
-          FLASK_DEBUG: '1'
+          FLASK_DEBUG: '1',
+          PYTHONIOENCODING: 'utf-8',
+          PYTHONUTF8: '1',
+          LC_ALL: 'en_US.UTF-8',
+          LANG: 'en_US.UTF-8'
         }
       });
     }
+
+    
+    // Handle stdout with UTF-8 decoding
+    pythonProcess.stdout.setEncoding('utf8');
+    pythonProcess.stderr.setEncoding('utf8');
 
     // Log process events
     pythonProcess.on('error', (error: Error) => {
