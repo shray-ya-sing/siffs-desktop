@@ -15,7 +15,9 @@ import { buildPython } from './src/scripts/build-py';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    icon: './src/assets/icons/icon.ico',
+    icon: process.platform === 'darwin' 
+      ? './src/assets/icons/icon' // Electron will automatically add .icns
+      : './src/assets/icons/icon.ico',
     // Pass environment variables to the packaged app
     extraResource: [
       '.env',      
@@ -24,7 +26,14 @@ const config: ForgeConfig = {
     ],
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    // Windows
+    new MakerSquirrel({}),
+    // MacOS 
+    new MakerZIP({}, ['darwin']),
+    // Linux
+    new MakerRpm({}), 
+    new MakerDeb({})],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
