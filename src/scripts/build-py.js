@@ -54,6 +54,7 @@ function buildPython() {
         '--specpath', buildDir,
         // Hooks
         '--additional-hooks-dir', pythonDir,
+        '--runtime-hook', path.join(pythonDir, 'runtime-hook-encoding.py'),
         // Add all hidden imports
         '--hidden-import=flask_cors',
         '--hidden-import=flask.app',
@@ -82,7 +83,7 @@ function buildPython() {
         '--hidden-import=transformers',
         '--hidden-import=tokenizers',
         '--hidden-import=torch',
-        '--hidden-import=regex._regex',
+        '--hidden-import=regex._regex',        
         // copy metadata needed by transformers lib
         '--copy-metadata', 'regex',
         '--copy-metadata', 'requests',
