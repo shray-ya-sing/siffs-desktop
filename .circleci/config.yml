@@ -7,12 +7,12 @@ orbs:
 jobs:
   build_macos:
     macos:
-      xcode: "14.3.0"  # Latest stable Xcode version
-    resource_class: macos.m1.medium.gen2  # M1 for better performance
+      xcode: "13.4.1"  # Older Xcode version available in free tier
+    resource_class: macos.x86.medium.gen2  # Using x86 instead of M1
     steps:
       - checkout
 
-      # Install Node.js using nvm
+      # Install Node.js
       - run:
           name: Install Node.js
           command: |
@@ -23,7 +23,7 @@ jobs:
             node --version
             npm --version
 
-      # Install Python and pipenv
+      # Install Python
       - run:
           name: Install Python
           command: |
@@ -78,4 +78,4 @@ workflows:
           filters:
             branches:
               only: 
-                - mac-release  # Only build on mac-release branch
+                - mac-release
