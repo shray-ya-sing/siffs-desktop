@@ -1,0 +1,16 @@
+Error Cell(s): Income Statement, H4 through Q4
+
+Error Type: Incorrect formatting
+
+Error Explanation: The year headers from 2012 onwards (H4:Q4) are formatted with "E" suffix (fmt:0"E") while the earlier years 2007-2011 (C4:G4) use "A" suffix (fmt:0"A"). This creates inconsistent formatting for the year headers across the projection period.
+
+Error Fix: Change the formatting in cells H4:Q4 from fmt:0"E" to fmt:0"A" to maintain consistent year header formatting throughout the model.
+
+Error Cell(s): Income Statement, H5 through Q5
+
+Error Type: Incorrect formatting
+
+Error Explanation: The formatting row below the years shows "E" formatting (fmt:0"E") for columns H through Q, while columns C through G show "A" formatting (fmt:0"A"). This formatting inconsistency should match the corrected year header formatting.
+
+Error Fix: Change the formatting in cells H5:Q5 from fmt:0"E" to fmt:0"A" to align with the year header formatting.
+Analysis complete.

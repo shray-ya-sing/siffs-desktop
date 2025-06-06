@@ -3,6 +3,7 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { EventCard, EventType } from '../../events/EventCard';
 import { FilePathInput } from '../../conversation/FilePathInput';
 import { ModelAuditService, ChunkInfo, ExtractionResult } from '../../../services/modelAuditService';
+import { ToolInstructions } from '../ToolInstructions';
 
 export const ModelAudit: React.FC = () => {
   // Refs
@@ -161,6 +162,9 @@ export const ModelAudit: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
+      <div className="px-4 pt-4">
+        <ToolInstructions toolId="excel-model-audit" />
+      </div>
       <div className="p-4 border-t border-gray-700/50 bg-[#0f1117]/50 backdrop-blur-sm">
         {error && (
           <div className="mb-2 text-sm text-red-400">

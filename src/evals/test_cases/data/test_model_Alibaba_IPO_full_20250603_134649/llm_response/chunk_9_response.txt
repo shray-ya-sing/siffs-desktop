@@ -1,0 +1,24 @@
+Error Cell(s): Dep Capex, H58
+
+Error Type: Formula inclusion error
+
+Error Explanation: The depreciation expense formula for the first year of an asset's life incorrectly divides by 2 (=$C58/$D58/2), which assumes half-year convention. However, this creates inconsistency with other years where full annual depreciation is calculated (=$C58/$D58). The pattern shows H58 has yellow fill indicating it's an assumption cell, but the half-year convention should be applied consistently across all asset categories or not at all.
+
+Error Fix: Change formula to =$C58/$D58 for consistency with other depreciation calculations, or apply half-year convention consistently to all first-year depreciation calculations across all asset categories.
+
+Error Cell(s): Dep Capex, I59, J60, K61, L62, M63, N64, O65
+
+Error Type: Formula inclusion error
+
+Error Explanation: These cells use half-year convention (dividing by 2) for the first year of each asset's depreciation life, but this creates an inconsistent depreciation pattern. The first year should either use full depreciation or half-year convention should be applied systematically across all asset categories.
+
+Error Fix: Either remove "/2" from all first-year depreciation formulas to use full-year depreciation, or apply half-year convention consistently across all asset categories including existing assets.
+
+Error Cell(s): Dep Capex, H75, I76, J77, K78, L79, M80, N81, O82
+
+Error Type: Formula inclusion error
+
+Error Explanation: Similar to the furniture and equipment category, these building depreciation cells use half-year convention inconsistently. The pattern shows some first-year cells divide by 2 while subsequent years use full depreciation.
+
+Error Fix: Apply consistent depreciation methodology - either use full-year depreciation for all years or implement half-year convention systematically across all asset additions.
+Analysis complete.

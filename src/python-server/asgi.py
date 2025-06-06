@@ -1,5 +1,35 @@
-import os
 import sys
+import os
+import warnings
+
+# Set environment variable for subprocesses
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+os.environ['TRANSFORMERS_VERBOSITY'] = 'error'
+
+# Suppress transformers warnings
+warnings.filterwarnings("ignore", message=".*Config not found for model.*")
+warnings.filterwarnings("ignore", message=".*Something went wrong trying to find the model name.*")
+warnings.filterwarnings("ignore", message=".*No checkpoint found for.*")
+
+
+# Set UTF-8 encoding for all outputs
+if sys.platform == "win32":
+    import codecs
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    if sys.version_info >= (3, 7) and not getattr(sys, 'frozen', False):
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(errors='replace')
+            sys.stderr.reconfigure(errors='replace')
+    elif not getattr(sys, 'frozen', False):
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+
+
 import logging
 from dotenv import load_dotenv
 import uvicorn
@@ -15,12 +45,9 @@ else:
     sys.path.insert(0, application_path)
 
 # Import and setup logging configuration first
-from logging_config import setup_logging
-
-# Configure logging
-log_file = setup_logging()
+import logging
 logger = logging.getLogger(__name__)
-logger.info(f"ASGI application logging to file: {log_file}")
+logger.info("Starting Python server at entry point asgi.py")
 
 # In production, load .env from the same directory as the executable
 if getattr(sys, 'frozen', False):
@@ -38,6 +65,11 @@ from app import app
 
 if __name__ == '__main__':
     try:
+        # Configure uvicorn logging
+        log_config = uvicorn.config.LOGGING_CONFIG
+        log_config["formatters"]["default"]["fmt"] = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        log_config["formatters"]["access"]["fmt"] = '%(asctime)s - %(client_addr)s - "%(request_line)s" %(status_code)s'
+        
         port = int(os.environ.get('PORT', 5001))
         host = os.environ.get('HOST', '127.0.0.1')
         workers = int(os.environ.get('WORKERS', 1))

@@ -1,0 +1,16 @@
+Error Cell(s): FCFE Valuation, C18
+
+Error Type: Formula inclusion error
+
+Error Explanation: The terminal value calculation incorrectly uses (1+C14) which represents (1+COE) instead of (1+PGR). The formula should grow the final year cash flow by the perpetual growth rate, not the cost of equity.
+
+Error Fix: Change formula from =(M8*(1+C14))/(C14-C15) to =(M8*(1+C15))/(C14-C15)
+
+Error Cell(s): PE Returns analysis, C8
+
+Error Type: Incorrect cell reference
+
+Error Explanation: The formula references DCF!I8 but should reference a cell containing EBITDA for the exit year (year 5). The current reference appears to be linking to an incorrect location for the exit year EBITDA calculation.
+
+Error Fix: Verify the correct cell reference for year 5 EBITDA and update the formula accordingly
+Analysis complete.

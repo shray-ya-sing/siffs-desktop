@@ -1076,3 +1076,324 @@ class ExcelMetadataExtractor:
             }
             
             return json.dumps(error_result, indent=2)
+
+    def extract_workbook_metadata_chunks(
+        self,
+        workbook_path: Optional[str] = None,
+        rows_per_chunk: int = 10,
+        max_cols_per_sheet: int = 50,
+        include_dependencies: bool = True,
+        include_empty_chunks: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract metadata in chunks of N rows, returning an array of metadata objects.
+        
+        Args:
+            workbook_path: Path to the Excel file
+            rows_per_chunk: Number of rows per chunk (default 10)
+            max_cols_per_sheet: Maximum columns to extract per sheet
+            include_dependencies: Whether to include dependency analysis
+            include_empty_chunks: Whether to include chunks with no data
+            
+        Returns:
+            List of metadata dictionaries, one per chunk
+        """
+        try:
+            if workbook_path or not self.workbook:
+                self.open_workbook(workbook_path)
+                
+            if not self.workbook:
+                raise RuntimeError("Workbook is not open")
+            
+            chunks = []
+            all_cells_metadata = {}  # For dependency analysis across all chunks
+            chunk_to_cells_map = {}  # Map chunk index to its cells for dependency updates
+            
+            # Get workbook info
+            workbook_name = os.path.basename(self.workbook_path) if self.workbook_path else "Unknown"
+            
+            # Process each sheet
+            for sheet in self.workbook.worksheets:
+                try:
+                    sheet_name = sheet.title
+                    
+                    # Get actual dimensions
+                    actual_row_count = min(sheet.max_row or 0, 1048576)
+                    actual_col_count = min(sheet.max_column or 0, 16384)
+                    
+                    if actual_row_count == 0 or actual_col_count == 0:
+                        continue
+                    
+                    # Extract columns to process
+                    cols_to_extract = min(actual_col_count, max_cols_per_sheet)
+                    
+                    # Process sheet in chunks
+                    for chunk_start_row in range(1, actual_row_count + 1, rows_per_chunk):
+                        chunk_end_row = min(chunk_start_row + rows_per_chunk - 1, actual_row_count)
+                        
+                        # Extract chunk metadata
+                        chunk_metadata = {
+                            "chunkId": f"{workbook_name}_{sheet_name}_rows_{chunk_start_row}_{chunk_end_row}",
+                            "workbookName": workbook_name,
+                            "workbookPath": self.workbook_path,
+                            "sheetName": sheet_name,
+                            "startRow": chunk_start_row,
+                            "endRow": chunk_end_row,
+                            "rowCount": chunk_end_row - chunk_start_row + 1,
+                            "columnCount": cols_to_extract,
+                            "extractedAt": datetime.now().isoformat(),
+                            "cellData": [],
+                            "chunkIndex": len(chunks),
+                            "includeDependencies": include_dependencies
+                        }
+                        
+                        # Extract cell data for this chunk
+                        chunk_cells, chunk_cells_dict = self._extract_chunk_cell_data(
+                            sheet,
+                            chunk_start_row,
+                            chunk_end_row,
+                            cols_to_extract
+                        )
+                        
+                        # Skip empty chunks if requested
+                        if not include_empty_chunks and not any(
+                            any(cell.get('value') is not None or cell.get('formula') 
+                                for cell in row) 
+                            for row in chunk_cells
+                        ):
+                            continue
+                        
+                        chunk_metadata["cellData"] = chunk_cells
+                        
+                        # Store cells for dependency analysis
+                        all_cells_metadata.update(chunk_cells_dict)
+                        chunk_to_cells_map[len(chunks)] = list(chunk_cells_dict.keys())
+                        
+                        # Extract tables that intersect with this chunk
+                        chunk_metadata["tables"] = self._extract_tables_in_range(
+                            sheet,
+                            chunk_start_row,
+                            chunk_end_row,
+                            1,
+                            cols_to_extract
+                        )
+                        
+                        chunks.append(chunk_metadata)
+                        
+                except Exception as e:
+                    error_msg = f"Error processing sheet '{sheet.title}': {str(e)}"
+                    print(f"Warning: {error_msg}")
+                    print(traceback.format_exc())
+                    
+                    # Add error chunk
+                    chunks.append({
+                        "workbookName": workbook_name,
+                        "workbookPath": self.workbook_path,
+                        "sheetName": sheet.title,
+                        "error": error_msg,
+                        "chunkIndex": len(chunks)
+                    })
+            
+            # Build dependencies if requested
+            if include_dependencies and all_cells_metadata:
+                print(f"Building dependencies for {len(chunks)} chunks...")
+                try:
+                    dependency_map, dependent_map = self.dependency_extractor.build_dependency_maps(all_cells_metadata)
+                    
+                    # Update each chunk with dependency information
+                    for chunk_idx, chunk_cell_addresses in chunk_to_cells_map.items():
+                        self._update_chunk_with_dependencies(
+                            chunks[chunk_idx],
+                            chunk_cell_addresses,
+                            dependency_map,
+                            dependent_map
+                        )
+                        
+                except Exception as e:
+                    print(f"Warning: Error building dependencies: {str(e)}")
+            
+            return chunks
+            
+        except Exception as e:
+            error_msg = f"Failed to extract chunk metadata: {str(e)}"
+            print(error_msg)
+            print(traceback.format_exc())
+            raise RuntimeError(error_msg) from e
+
+    def _extract_chunk_cell_data(
+        self,
+        sheet,
+        start_row: int,
+        end_row: int,
+        col_count: int
+    ) -> Tuple[List[List[Dict[str, Any]]], Dict[str, Any]]:
+        """
+        Extract cell data for a specific chunk range.
+        """
+        cell_data = []
+        cell_dict = {}  # For dependency analysis
+        
+        try:
+            for row_idx in range(start_row, end_row + 1):
+                row_data = []
+                
+                for col_idx in range(1, col_count + 1):
+                    try:
+                        cell = sheet.cell(row=row_idx, column=col_idx)
+                        # Reuse existing method
+                        cell_metadata = self._extract_complete_cell_metadata(
+                            cell, row_idx, col_idx, sheet.title
+                        )
+                        row_data.append(cell_metadata)
+                        
+                        # Add to dictionary for dependency analysis if has content
+                        if cell_metadata.get('value') is not None or cell_metadata.get('formula'):
+                            full_address = f"{sheet.title}!{cell_metadata['address']}"
+                            cell_dict[full_address] = cell_metadata
+                            
+                    except Exception as e:
+                        print(f"Warning: Error processing cell ({row_idx},{col_idx}): {str(e)}")
+                        row_data.append({
+                            "row": row_idx,
+                            "column": col_idx,
+                            "address": f"{get_column_letter(col_idx)}{row_idx}",
+                            "error": str(e)
+                        })
+                
+                cell_data.append(row_data)
+                
+        except Exception as e:
+            print(f"Error extracting chunk cell data: {str(e)}")
+            print(traceback.format_exc())
+            raise
+            
+        return cell_data, cell_dict
+
+    def _extract_tables_in_range(
+        self,
+        sheet,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract tables that intersect with the given range.
+        """
+        tables = []
+        
+        try:
+            if not hasattr(sheet, 'tables'):
+                return tables
+                
+            for table_name, table in sheet.tables.items():
+                try:
+                    # Parse table range
+                    table_range = table.ref
+                    if ':' in table_range:
+                        start_cell, end_cell = table_range.split(':')
+                        
+                        # Extract row and column from cell addresses
+                        table_start_col = self.dependency_extractor.parse_cell_address(start_cell)[0]
+                        table_start_row = self.dependency_extractor.parse_cell_address(start_cell)[1]
+                        table_end_col = self.dependency_extractor.parse_cell_address(end_cell)[0]
+                        table_end_row = self.dependency_extractor.parse_cell_address(end_cell)[1]
+                        
+                        # Check if table intersects with chunk range
+                        if (table_start_row <= end_row and table_end_row >= start_row and
+                            table_start_col <= end_col and table_end_col >= start_col):
+                            
+                            # Add table metadata (reuse existing method logic)
+                            table_data = {
+                                "name": table_name,
+                                "displayName": table.displayName,
+                                "range": table.ref,
+                                "intersectsChunk": True,
+                                "tableStyleInfo": {
+                                    "name": table.tableStyleInfo.name if table.tableStyleInfo else None,
+                                    "showFirstColumn": table.tableStyleInfo.showFirstColumn if table.tableStyleInfo else None,
+                                    "showLastColumn": table.tableStyleInfo.showLastColumn if table.tableStyleInfo else None,
+                                    "showRowStripes": table.tableStyleInfo.showRowStripes if table.tableStyleInfo else None,
+                                    "showColumnStripes": table.tableStyleInfo.showColumnStripes if table.tableStyleInfo else None
+                                }
+                            }
+                            
+                            # Get column information if available
+                            if hasattr(table, 'tableColumns'):
+                                table_data["columns"] = []
+                                for col in table.tableColumns:
+                                    table_data["columns"].append({
+                                        "name": col.name,
+                                        "id": col.id
+                                    })
+                            
+                            tables.append(table_data)
+                            
+                except Exception as e:
+                    print(f"Warning: Error processing table {table_name} for chunk: {str(e)}")
+                    continue
+                    
+        except Exception as e:
+            print(f"Warning: Error extracting tables for chunk: {str(e)}")
+            
+        return tables
+
+    def _update_chunk_with_dependencies(
+        self,
+        chunk_metadata: Dict[str, Any],
+        chunk_cell_addresses: List[str],
+        dependency_map: Dict[str, set],
+        dependent_map: Dict[str, set]
+    ):
+        """
+        Update chunk cells with dependency information.
+        """
+        # Update cells in the chunk
+        for row_data in chunk_metadata["cellData"]:
+            for cell_metadata in row_data:
+                if "address" in cell_metadata:
+                    full_address = f"{chunk_metadata['sheetName']}!{cell_metadata['address']}"
+                    
+                    # Get dependency information
+                    precedents = dependency_map.get(full_address, set())
+                    dependents = dependent_map.get(full_address, set())
+                    
+                    # Update cell metadata (reuse existing logic)
+                    cell_metadata.update({
+                        "directPrecedents": list(precedents),
+                        "directDependents": list(dependents),
+                        "precedentCount": len(precedents),
+                        "dependentCount": len(dependents),
+                        "totalConnections": len(precedents) + len(dependents)
+                    })
+        
+        # Add chunk-level dependency summary
+        chunk_precedents = set()
+        chunk_dependents = set()
+        internal_dependencies = 0
+        external_dependencies = 0
+        
+        for cell_addr in chunk_cell_addresses:
+            # Collect all dependencies for this chunk
+            cell_precedents = dependency_map.get(cell_addr, set())
+            cell_dependents = dependent_map.get(cell_addr, set())
+            
+            chunk_precedents.update(cell_precedents)
+            chunk_dependents.update(cell_dependents)
+            
+            # Count internal vs external dependencies
+            for prec in cell_precedents:
+                if prec in chunk_cell_addresses:
+                    internal_dependencies += 1
+                else:
+                    external_dependencies += 1
+        
+        # Add dependency summary to chunk
+        chunk_metadata["dependencySummary"] = {
+            "totalPrecedents": len(chunk_precedents),
+            "totalDependents": len(chunk_dependents),
+            "internalDependencies": internal_dependencies,
+            "externalDependencies": external_dependencies,
+            "externalPrecedents": list(chunk_precedents - set(chunk_cell_addresses))[:10],  # Top 10
+            "externalDependents": list(chunk_dependents - set(chunk_cell_addresses))[:10]   # Top 10
+        }

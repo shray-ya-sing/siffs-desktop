@@ -369,3 +369,133 @@ class SpreadsheetMarkdownCompressor:
             return False
         except:
             return False
+
+
+    def compress_chunks_to_markdown(self, chunks: list[Dict[str, Any]], display_values: Optional[Dict[str, str]] = None) -> list[str]:
+        """
+        Compress an array of chunk metadata objects into spreadsheet-style markdown.
+        
+        Args:
+            chunks: Array of chunk metadata objects from extract_workbook_metadata_chunks
+            display_values: Optional display values dictionary (for all chunks)
+            
+        Returns:
+            List of markdown strings, one per chunk
+        """
+        markdown_chunks = []
+        
+        for chunk_idx, chunk in enumerate(chunks):
+            try:
+                # Handle error chunks
+                if 'error' in chunk:
+                    markdown = f"# Chunk Error\n"
+                    markdown += f"Workbook: {chunk.get('workbookName', 'Unknown')}\n"
+                    markdown += f"Sheet: {chunk.get('sheetName', 'Unknown')}\n"
+                    markdown += f"Error: {chunk['error']}\n"
+                    markdown_chunks.append(markdown)
+                    continue
+                
+                # Check if dependencies are included for this chunk
+                self.has_dependencies = chunk.get('includeDependencies', False)
+                self.has_display_values = bool(display_values)
+                
+                markdown_lines = []
+                
+                # Chunk header
+                workbook_name = chunk.get('workbookName', 'Unknown')
+                sheet_name = chunk.get('sheetName', 'Unknown')
+                start_row = chunk.get('startRow', 0)
+                end_row = chunk.get('endRow', 0)
+                row_count = chunk.get('rowCount', 0)
+                col_count = chunk.get('columnCount', 0)
+                
+                markdown_lines.append(f"# Chunk: {workbook_name} - {sheet_name}")
+                markdown_lines.append(f"Rows: {start_row}-{end_row} ({row_count} rows) | Columns: {col_count}")
+                
+                # Process cell data if available
+                cell_data = chunk.get('cellData', [])
+                if cell_data:
+                    # Determine actual columns in this chunk
+                    max_cols = max(len(row) for row in cell_data) if cell_data else 0
+                    
+                    # Create header row with column letters
+                    # Get the starting column from the first cell if available
+                    first_row = cell_data[0] if cell_data else []
+                    if first_row and first_row[0].get('column'):
+                        start_col = min(cell.get('column', 1) for cell in first_row if cell.get('column'))
+                    else:
+                        start_col = 1
+                    
+                    header_row = ["Row"] + [get_column_letter(start_col + i) for i in range(max_cols)]
+                    markdown_lines.append("| " + " | ".join(header_row) + " |")
+                    markdown_lines.append("|" + "---|" * len(header_row))
+                    
+                    # Add data rows
+                    for row_idx, row_data in enumerate(cell_data):
+                        # Use actual row number from chunk
+                        actual_row_num = start_row + row_idx
+                        row_cells = [str(actual_row_num)]
+                        
+                        for cell in row_data:
+                            # Get display value if available
+                            display_value = None
+                            if self.has_display_values and display_values:
+                                cell_key = f"{sheet_name}_{cell.get('row')}_{cell.get('column')}"
+                                display_value = display_values.get(cell_key)
+                            
+                            cell_content = self._format_cell_for_spreadsheet(cell, display_value)
+                            row_cells.append(cell_content)
+                        
+                        markdown_lines.append("| " + " | ".join(row_cells) + " |")
+                
+                # Add tables if they intersect with this chunk
+                tables = chunk.get('tables', [])
+                if tables:
+                    table_list = []
+                    for table in tables:
+                        table_name = table.get('displayName') or table.get('name', 'unnamed')
+                        table_range = table.get('range', 'unknown')
+                        if table.get('intersectsChunk'):
+                            table_list.append(f"{table_name}({table_range})*")
+                        else:
+                            table_list.append(f"{table_name}({table_range})")
+                    markdown_lines.append(f"**Tables:** {', '.join(table_list)}")
+                
+                # Add chunk dependency summary if available
+                dep_summary = chunk.get('dependencySummary', {})
+                if dep_summary and any(dep_summary.values()):
+                    dep_parts = []
+                    
+                    if dep_summary.get('totalPrecedents', 0) > 0:
+                        dep_parts.append(f"precedents:{dep_summary['totalPrecedents']}")
+                    
+                    if dep_summary.get('totalDependents', 0) > 0:
+                        dep_parts.append(f"dependents:{dep_summary['totalDependents']}")
+                    
+                    if dep_summary.get('internalDependencies', 0) > 0:
+                        dep_parts.append(f"internal:{dep_summary['internalDependencies']}")
+                    
+                    if dep_summary.get('externalDependencies', 0) > 0:
+                        dep_parts.append(f"external:{dep_summary['externalDependencies']}")
+                    
+                    if dep_parts:
+                        markdown_lines.append(f"**Dependencies:** {', '.join(dep_parts)}")
+                    
+                    # Add key external connections if present
+                    ext_prec = dep_summary.get('externalPrecedents', [])
+                    if ext_prec:
+                        markdown_lines.append(f"**Key Precedents:** {', '.join(ext_prec[:5])}")
+                    
+                    ext_dept = dep_summary.get('externalDependents', [])
+                    if ext_dept:
+                        markdown_lines.append(f"**Key Dependents:** {', '.join(ext_dept[:5])}")
+                
+                markdown_chunks.append("\n".join(markdown_lines))
+                
+            except Exception as e:
+                error_markdown = f"# Chunk Processing Error\n"
+                error_markdown += f"Chunk Index: {chunk_idx}\n"
+                error_markdown += f"Error: {str(e)}\n"
+                markdown_chunks.append(error_markdown)
+        
+        return markdown_chunks
