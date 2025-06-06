@@ -1,0 +1,32 @@
+Error Cell(s): Working Capital, H10
+
+Error Type: Incorrect cell reference
+
+Error Explanation: Cell H10 references H26 instead of the Balance Sheet. The pattern shows that historical years (E10-G10) correctly link to the Balance Sheet (BS!E11, BS!F11, BS!G11), but H10 breaks this pattern by referencing Working Capital!H26 instead of BS!H11.
+
+Error Fix: Change formula from =H26 to =BS!H11
+
+Error Cell(s): Working Capital, I10 through O10
+
+Error Type: Incorrect cell reference
+
+Error Explanation: Cells I10 through O10 reference their corresponding row 26 cells (I26, J26, etc.) instead of the Balance Sheet. These should follow the same pattern as the historical years and link to the Balance Sheet.
+
+Error Fix: Change formulas to reference the Balance Sheet: I10 should be =BS!I11, J10 should be =BS!J11, and so on through O10 should be =BS!O11
+
+Error Cell(s): Working Capital, H11
+
+Error Type: Incorrect cell reference
+
+Error Explanation: Cell H11 references H29 instead of the Balance Sheet. The pattern shows that historical years (E11-G11) correctly link to the Balance Sheet (BS!E13, BS!F13, BS!G13), but H11 breaks this pattern.
+
+Error Fix: Change formula from =H29 to =BS!H13
+
+Error Cell(s): Working Capital, I11 through O11
+
+Error Type: Incorrect cell reference
+
+Error Explanation: Cells I11 through O11 reference their corresponding row 29 cells instead of the Balance Sheet. These should follow the same pattern as the historical years and link to the Balance Sheet.
+
+Error Fix: Change formulas to reference the Balance Sheet: I11 should be =BS!I13, J11 should be =BS!J13, and so on through O11 should be =BS!O13
+Analysis complete.

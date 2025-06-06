@@ -1,0 +1,56 @@
+Error Cell(s): Sheet1, C22
+
+Error Type: Formula omission
+
+Error Explanation: The formula for Accounts Receivable % Revenue in C22 is missing. The cell shows no value and no formula, while D22 and E22 contain the expected calculation (=D78/D56 and =E78/E56 respectively). This creates an incomplete data series for the average calculation in F22.
+
+Error Fix: Add formula =C78/C56 to calculate 2019 Accounts Receivable as percentage of Revenue
+
+Error Cell(s): Sheet1, C23
+
+Error Type: Formula omission
+
+Error Explanation: The formula for Inventory & Other % COGS in C23 is missing. The cell shows no value and no formula, while D23 and E23 contain the expected calculation using SUM(D58:D59) and SUM(E58:E59) respectively. This creates an incomplete data series for the average calculation in F23.
+
+Error Fix: Add formula =-C79/SUM(C58:C59) to calculate 2019 Inventory & Other as percentage of COGS
+
+Error Cell(s): Sheet1, C24
+
+Error Type: Formula omission
+
+Error Explanation: The formula for Op. Lease Assets % OpEx in C24 is missing. The cell shows no value and no formula, while D24 and E24 contain the expected calculation (=-D81/D60 and =-E81/E60 respectively). This creates an incomplete data series for the average calculation in F24.
+
+Error Fix: Add formula =-C81/C60 to calculate 2019 Operating Lease Assets as percentage of Operating Expenses
+
+Error Cell(s): Sheet1, C26
+
+Error Type: Formula omission
+
+Error Explanation: The formula for Accounts Payable % COGS in C26 is missing. The cell shows no value and no formula, while D26 and E26 contain the expected calculation using SUM of COGS components. This creates an incomplete data series for the average calculation in F26.
+
+Error Fix: Add formula =-C86/SUM(C58:C59) to calculate 2019 Accounts Payable as percentage of COGS
+
+Error Cell(s): Sheet1, C27
+
+Error Type: Formula omission
+
+Error Explanation: The formula for Accrued Liabilities % Total Expenses in C27 is missing. The cell shows no value and no formula, while D27 and E27 contain the expected calculation using SUM of total expenses. This creates an incomplete data series for the average calculation in F27.
+
+Error Fix: Add formula =-C87/SUM(C58:C60) to calculate 2019 Accrued Liabilities as percentage of Total Expenses
+
+Error Cell(s): Sheet1, C28
+
+Error Type: Formula omission
+
+Error Explanation: The formula for Contract Liabilities % Total Expenses in C28 is missing. The cell shows no value and no formula, while D28 and E28 contain the expected calculation using SUM of total expenses. This creates an incomplete data series for the average calculation in F28.
+
+Error Fix: Add formula =-C88/SUM(C58:C60) to calculate 2019 Contract Liabilities as percentage of Total Expenses
+
+Error Cell(s): Sheet1, C29
+
+Error Type: Formula omission
+
+Error Explanation: The formula for Other Liabilities % Total Expenses in C29 is missing. The cell shows no value and no formula, while D29 and E29 contain the expected calculation using SUM of total expenses. This creates an incomplete data series for the average calculation in F29.
+
+Error Fix: Add formula =-C91/SUM(C58:C60) to calculate 2019 Other Liabilities as percentage of Total Expenses
+Analysis complete.

@@ -1,0 +1,16 @@
+Error Cell(s): PE Returns analysis, C22
+
+Error Type: Incorrect Function Error
+
+Error Explanation: The IRR calculation in cell C22 uses XIRR function with the formula "=+XIRR(C20:H20,C14:H14)", but this is logically incorrect for a standard IRR calculation. XIRR is designed for irregular cash flow timing with specific dates, while IRR should be used for regular periodic cash flows (typically annual). The cash flows appear to be annual based on the years shown in row 25 (2011-2016), making IRR the appropriate function.
+
+Error Fix: Change formula from "=+XIRR(C20:H20,C14:H14)" to "=+IRR(C20:H20)" for standard annual cash flow IRR calculation.
+
+Error Cell(s): WACC Calculation, C9
+
+Error Type: Formula Exclusion Error
+
+Error Explanation: The post-tax cost of debt calculation in cell C9 simply references the pre-tax cost of debt (C8) without applying the tax shield adjustment. The post-tax cost of debt should be calculated as pre-tax cost × (1 - tax rate) to reflect the tax deductibility of interest expense.
+
+Error Fix: Change formula from "=+C8" to "=+C8*(1-[tax rate])" where [tax rate] should reference the appropriate tax rate assumption cell in the model.
+Analysis complete.

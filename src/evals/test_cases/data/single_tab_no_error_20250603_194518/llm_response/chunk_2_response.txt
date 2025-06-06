@@ -1,0 +1,16 @@
+Error Cell(s): Sheet1, F79
+
+Error Type: Formula inclusion error
+
+Error Explanation: The formula "=-SUM(F58:F59)*F23" includes a negative sign that makes the calculation incorrect. Since this appears to be calculating Inventory & Other assets based on revenue multiples, the formula should be positive. The negative sign would incorrectly reduce the asset value when it should increase it based on the revenue relationship.
+
+Error Fix: Change formula from "=-SUM(F58:F59)*F23" to "=SUM(F58:F59)*F23"
+
+Error Cell(s): Sheet1, G79 through J79
+
+Error Type: Formula inclusion error
+
+Error Explanation: Similar to F79, these cells contain formulas with incorrect negative signs ("=-SUM(G58:G59)*G23", "=-SUM(H58:H59)*H23", etc.) for calculating Inventory & Other assets. The negative signs would incorrectly reduce asset values when they should be positive calculations based on revenue relationships.
+
+Error Fix: Remove the negative signs from all formulas in this range, changing them from "=-SUM(...)*..." to "=SUM(...)*..."
+Analysis complete.

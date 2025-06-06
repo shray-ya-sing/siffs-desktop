@@ -1,0 +1,28 @@
+{
+  "file_path": "C:\\Users\\shrey\\OneDrive\\Desktop\\docs\\test\\single_tab_3_statement_no_errors.xlsx",
+  "file_name": "single_tab_3_statement_no_errors",
+  "timestamp": "20250603_200723",
+  "num_chunks": 1,
+  "chunk_info": [
+    {
+      "chunk_index": 1,
+      "token_count": 15032,
+      "line_count": 114,
+      "character_count": 42091,
+      "sheets": [
+        "Wallstreetmojo.com",
+        "Example"
+      ],
+      "table_rows": 106,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8351111111111111
+    }
+  ],
+  "output_dir": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\single_tab_3_statement_no_errors_20250603_200723",
+  "output_files": [
+    "complete_response.json",
+    "markdown.md",
+    "chunk_1.md"
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "file_path": "C:\\Users\\shrey\\OneDrive\\Desktop\\docs\\test\\test_model_Alibaba_IPO_full.xlsx",
+  "file_name": "test_model_Alibaba_IPO_full",
+  "timestamp": "20250603_134649",
+  "num_chunks": 11,
+  "chunk_info": [
+    {
+      "chunk_index": 1,
+      "token_count": 15703,
+      "line_count": 105,
+      "character_count": 43970,
+      "sheets": [
+        "Index",
+        "Quarterly IS"
+      ],
+      "table_rows": 97,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8723888888888889
+    },
+    {
+      "chunk_index": 2,
+      "token_count": 15779,
+      "line_count": 70,
+      "character_count": 44182,
+      "sheets": [
+        "IS"
+      ],
+      "table_rows": 65,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8766111111111111
+    },
+    {
+      "chunk_index": 3,
+      "token_count": 16000,
+      "line_count": 57,
+      "character_count": 44800,
+      "sheets": [],
+      "table_rows": 55,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8888888888888888
+    },
+    {
+      "chunk_index": 4,
+      "token_count": 15991,
+      "line_count": 56,
+      "character_count": 44776,
+      "sheets": [
+        "BS"
+      ],
+      "table_rows": 51,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8883888888888889
+    },
+    {
+      "chunk_index": 5,
+      "token_count": 15800,
+      "line_count": 57,
+      "character_count": 44241,
+      "sheets": [
+        "CF"
+      ],
+      "table_rows": 52,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8777777777777778
+    },
+    {
+      "chunk_index": 6,
+      "token_count": 15972,
+      "line_count": 72,
+      "character_count": 44722,
+      "sheets": [
+        "Working Capital"
+      ],
+      "table_rows": 67,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8873333333333333
+    },
+    {
+      "chunk_index": 7,
+      "token_count": 15628,
+      "line_count": 40,
+      "character_count": 43761,
+      "sheets": [],
+      "table_rows": 38,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8682222222222222
+    },
+    {
+      "chunk_index": 8,
+      "token_count": 15988,
+      "line_count": 70,
+      "character_count": 44768,
+      "sheets": [
+        "Dep Capex"
+      ],
+      "table_rows": 65,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8882222222222222
+    },
+    {
+      "chunk_index": 9,
+      "token_count": 15804,
+      "line_count": 61,
+      "character_count": 44253,
+      "sheets": [
+        "Amort Intangible",
+        "Debt"
+      ],
+      "table_rows": 53,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.878
+    },
+    {
+      "chunk_index": 10,
+      "token_count": 16057,
+      "line_count": 90,
+      "character_count": 44962,
+      "sheets": [
+        "Shareholders Equity",
+        "Option value"
+      ],
+      "table_rows": 82,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8920555555555556
+    },
+    {
+      "chunk_index": 11,
+      "token_count": 13316,
+      "line_count": 106,
+      "character_count": 37287,
+      "sheets": [
+        "Shares Outstanding",
+        "DCF Valuations"
+      ],
+      "table_rows": 98,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.7397777777777778
+    }
+  ],
+  "output_dir": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649",
+  "output_files": [
+    "complete_response.json",
+    "markdown.md",
+    "chunk_1.md",
+    "chunk_2.md",
+    "chunk_3.md",
+    "chunk_4.md",
+    "chunk_5.md",
+    "chunk_6.md",
+    "chunk_7.md",
+    "chunk_8.md",
+    "chunk_9.md",
+    "chunk_10.md",
+    "chunk_11.md"
+  ]
+}

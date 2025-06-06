@@ -1,0 +1,43 @@
+{
+  "file_path": "C:\\Users\\shrey\\OneDrive\\Desktop\\docs\\test\\Mislinked_3Statement.xlsx",
+  "file_name": "Mislinked_3Statement",
+  "timestamp": "20250603_194118",
+  "num_chunks": 2,
+  "chunk_info": [
+    {
+      "chunk_index": 1,
+      "token_count": 16010,
+      "line_count": 223,
+      "character_count": 44829,
+      "sheets": [
+        "operations",
+        "comprehensive income",
+        "consolidated balance sheets",
+        "changes in equity",
+        "Cash Flows"
+      ],
+      "table_rows": 206,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.8894444444444445
+    },
+    {
+      "chunk_index": 2,
+      "token_count": 452,
+      "line_count": 9,
+      "character_count": 1268,
+      "sheets": [],
+      "table_rows": 7,
+      "has_dependency_summary": false,
+      "has_header": true,
+      "token_efficiency": 0.025111111111111112
+    }
+  ],
+  "output_dir": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\Mislinked_3Statement_20250603_194118",
+  "output_files": [
+    "complete_response.json",
+    "markdown.md",
+    "chunk_1.md",
+    "chunk_2.md"
+  ]
+}

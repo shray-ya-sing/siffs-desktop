@@ -1,0 +1,93 @@
+{
+  "timestamp": "2025-06-03T17:26:57.491322",
+  "total_chunks": 14,
+  "successful": 14,
+  "failed": 0,
+  "average_score": 0.0,
+  "results": [
+    {
+      "chunk": "chunk_1",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_empty_model_20250603_134517\\llm_response\\evaluation_result\\chunk_1_eval.json"
+    },
+    {
+      "chunk": "chunk_1",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_1_eval.json"
+    },
+    {
+      "chunk": "chunk_10",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_10_eval.json"
+    },
+    {
+      "chunk": "chunk_11",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_11_eval.json"
+    },
+    {
+      "chunk": "chunk_2",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_2_eval.json"
+    },
+    {
+      "chunk": "chunk_3",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_3_eval.json"
+    },
+    {
+      "chunk": "chunk_4",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_4_eval.json"
+    },
+    {
+      "chunk": "chunk_5",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_5_eval.json"
+    },
+    {
+      "chunk": "chunk_6",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_6_eval.json"
+    },
+    {
+      "chunk": "chunk_7",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_7_eval.json"
+    },
+    {
+      "chunk": "chunk_8",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_8_eval.json"
+    },
+    {
+      "chunk": "chunk_9",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_Alibaba_IPO_full_20250603_134649\\llm_response\\evaluation_result\\chunk_9_eval.json"
+    },
+    {
+      "chunk": "chunk_1",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_IPO_20250603_133944\\llm_response\\evaluation_result\\chunk_1_eval.json"
+    },
+    {
+      "chunk": "chunk_2",
+      "success": true,
+      "score": 0.0,
+      "eval_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\test_cases\\data\\test_model_IPO_20250603_133944\\llm_response\\evaluation_result\\chunk_2_eval.json"
+    }
+  ]
+}

@@ -10,13 +10,30 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+import { buildPython } from './src/scripts/build-py';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    icon: process.platform === 'darwin' 
+      ? './src/assets/icons/icon' // Electron will automatically add .icns
+      : './src/assets/icons/icon.ico',
+    // Pass environment variables to the packaged app
+    extraResource: [
+      '.env',      
+      'resources/python/python-server',
+      'resources/asgi.py'
+    ],
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    // Windows
+    new MakerSquirrel({}),
+    // MacOS 
+    new MakerZIP({}, ['darwin']),
+    // Linux
+    new MakerRpm({}), 
+    new MakerDeb({})],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
@@ -26,7 +43,7 @@ const config: ForgeConfig = {
         entryPoints: [
           {
             html: './src/index.html',
-            js: './src/renderer.ts',
+            js: './src/renderer.tsx', // Use .tsx instead of .ts
             name: 'main_window',
             preload: {
               js: './src/preload.ts',
@@ -52,7 +69,7 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'cori-tan',  // Replace with your GitHub username
+          owner: 'Cori',  // Replace with your GitHub username
           name: 'cori_app'         // Replace with your repository name
         },
         prerelease: true,  // Set to false if you don't want releases marked as pre-release

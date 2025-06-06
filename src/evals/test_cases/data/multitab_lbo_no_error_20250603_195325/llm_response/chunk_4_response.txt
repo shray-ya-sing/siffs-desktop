@@ -1,0 +1,16 @@
+Error Cell(s): Income Statement, C55
+
+Error Type: Formula inclusion error
+
+Error Explanation: The market size calculation in C55 uses formula =+D55/(D56+1) which incorrectly includes adding 1 to the growth rate D56. This should be =+D55/(1+D56) to properly calculate the prior period value from current period and growth rate.
+
+Error Fix: Change formula from =+D55/(D56+1) to =+D55/(1+D56)
+
+Error Cell(s): Income Statement, D55
+
+Error Type: Formula inclusion error
+
+Error Explanation: The market size calculation in D55 uses formula =+E55/(E56+1) which incorrectly includes adding 1 to the growth rate E56. This should be =+E55/(1+E56) to properly calculate the prior period value from current period and growth rate.
+
+Error Fix: Change formula from =+E55/(E56+1) to =+E55/(1+E56)
+Analysis complete.

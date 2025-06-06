@@ -1,0 +1,16 @@
+Error Cell(s): Income Statement, H82 through Q82
+
+Error Type: Incorrect Function Error
+
+Error Explanation: The depreciation calculation uses a multiplication formula (H86*H84) instead of linking directly to the PPE Schedule. This creates an inconsistent calculation method where historical years (C82-G82) correctly link to the PPE Schedule depreciation values, but projected years calculate depreciation as a percentage of capital expenditure, which is not the standard depreciation methodology.
+
+Error Fix: Replace formulas like =H86*H84 with ='PPE Schedule'!H8 to maintain consistency with the depreciation calculation method used in historical years and ensure proper linkage to the dedicated PPE Schedule.
+
+Error Cell(s): Income Statement, H84 through P84
+
+Error Type: Formula inclusion error
+
+Error Explanation: The depreciation as percentage of capex calculation creates a gradual increase from G84 (66.65%) to Q84 (95%) using a linear interpolation formula. However, this approach forces depreciation to be calculated as a fixed percentage of capex rather than using proper depreciation methods (straight-line, accelerated, etc.) that should be based on asset lives and depreciation policies.
+
+Error Fix: Remove the interpolation formulas and replace with proper depreciation calculations that link to asset-specific depreciation schedules based on asset lives, depreciation methods, and timing of asset additions.
+Analysis complete.
