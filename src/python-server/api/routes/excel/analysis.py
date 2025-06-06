@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
+from fastapi.responses import StreamingResponse
 from pathlib import Path
 import sys
 # Add the current directory to Python path
@@ -7,10 +8,11 @@ sys.path.append(str(current_dir))
 # Now import using relative path from python-server
 from api.models.excel import AnalyzeMetadataRequest
 from excel.metadata.excel_metadata_processor import ExcelMetadataProcessor
+from excel.metadata.excel_metadata_analyzer import ExcelMetadataAnalyzer
 import logging
 # Get logger instance
 logger = logging.getLogger(__name__)
-
+import json
 
 router = APIRouter(
     prefix="/api/excel",

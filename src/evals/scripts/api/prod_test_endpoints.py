@@ -4,7 +4,7 @@ import argparse
 from typing import Dict, Any
 
 # API configuration
-BASE_URL = "http://localhost:3001/api"
+BASE_URL = "http://localhost:5001/api"
 EXCEL_BASE = f"{BASE_URL}/excel"
 VECTORS_BASE = f"{BASE_URL}/vectors"
 
@@ -110,7 +110,6 @@ def ask_question(search_response: Dict[str, Any], question: str, model: str = "c
         print(f"\nError making QA request: {e}")
         if hasattr(e, 'response') and e.response:
             print(f"Response: {e.response.text}")
-
 
 def main():
     # Set up argument parser
