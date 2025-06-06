@@ -42,15 +42,19 @@ class ExcelMetadataProcessor:
         self.display_values = None
         self.chunker = None
         self.max_tokens_per_chunk = 18000
+        self.text_compressor = None
+        self.metadata_chunks = None
         
         # Try to import required modules
         try:
             from extraction.excel_metadata_extractor import ExcelMetadataExtractor
             from compression.markdown_compressor import SpreadsheetMarkdownCompressor
+            from compression.text_compressor import JsonTextCompressor
             from chunking.markdown_metadata_chunker import MarkdownMetadataChunker
             self.extractor = ExcelMetadataExtractor(workbook_path)
             self.compressor = SpreadsheetMarkdownCompressor(workbook_path)
             self.chunker = MarkdownMetadataChunker(max_tokens=self.max_tokens_per_chunk)
+            self.text_compressor = JsonTextCompressor()
             logger.info("Successfully initialized ExcelMetadataProcessor")
         except ImportError as e:
             logger.error(f"Failed to initialize required modules: {str(e)}")
@@ -140,6 +144,63 @@ class ExcelMetadataProcessor:
             logger.error(f"Error during metadata extraction: {str(e)}")
             raise
 
+
+    def _extract_metadata_chunks(
+        self,
+        rows_per_chunk: int = 10,
+        max_cols_per_sheet: int = 50,
+        include_dependencies: bool = True,
+        include_empty_chunks: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract metadata from the workbook as an array of chunk objects.
+        
+        Args:
+            rows_per_chunk: Number of rows per chunk (default 10)
+            max_cols_per_sheet: Maximum columns to extract per sheet
+            include_dependencies: Whether to include dependency analysis
+            include_empty_chunks: Whether to include chunks with no data
+            
+        Returns:
+            List of metadata dictionaries, one per chunk
+        """
+        try:
+            logger.info(f"Extracting metadata chunks from workbook (rows per chunk: {rows_per_chunk})...")
+            
+            # Extract metadata chunks using the extractor
+            self.metadata_chunks = self.extractor.extract_workbook_metadata_chunks(
+                workbook_path=self.workbook_path,
+                rows_per_chunk=rows_per_chunk,
+                max_cols_per_sheet=max_cols_per_sheet,
+                include_dependencies=include_dependencies,
+                include_empty_chunks=include_empty_chunks
+            )
+            
+            # Log extraction summary
+            total_chunks = len(self.metadata_chunks)
+            sheets_processed = len(set(chunk['sheetName'] for chunk in self.metadata_chunks if 'sheetName' in chunk))
+            total_rows = sum(chunk.get('rowCount', 0) for chunk in self.metadata_chunks)
+            
+            logger.info(f"Extracted {total_chunks} chunks from {sheets_processed} sheets ({total_rows} total rows)")
+            
+            # Add chunk statistics
+            for i, chunk in enumerate(self.metadata_chunks):
+                if 'error' not in chunk:
+                    cell_count = sum(
+                        1 for row in chunk.get('cellData', [])
+                        for cell in row
+                        if cell.get('value') is not None or cell.get('formula')
+                    )
+                    chunk['cellCount'] = cell_count
+                    chunk['chunkNumber'] = i + 1
+                    chunk['totalChunks'] = total_chunks
+            
+            return self.metadata_chunks
+            
+        except Exception as e:
+            logger.error(f"Error during metadata chunk extraction: {str(e)}")
+            raise
+
     def _compress_to_markdown(self) -> str:
         """Compress the extracted metadata to markdown format."""
         try:
@@ -158,6 +219,69 @@ class ExcelMetadataProcessor:
             
         except Exception as e:
             logger.error(f"Error during markdown compression: {str(e)}")
+            raise
+
+
+    def _compress_chunks_to_markdown(self) -> List[str]:
+        """
+        Compress the extracted metadata chunks to markdown format.
+        
+        Returns:
+            List[str]: Array of markdown strings, one per chunk
+        """
+        try:
+            logger.info("Compressing metadata chunks to markdown...")
+            
+            if not hasattr(self, 'metadata_chunks') or not self.metadata_chunks:
+                raise ValueError("No metadata chunks available to compress")
+            
+            # Compress chunks to markdown array
+            markdown_chunks = self.compressor.compress_chunks_to_markdown(
+                self.metadata_chunks,
+                self.display_values if hasattr(self, 'display_values') else None
+            )
+            
+            logger.info(f"Successfully compressed {len(markdown_chunks)} chunks to markdown")
+            
+            # Log summary statistics
+            total_chars = sum(len(md) for md in markdown_chunks)
+            avg_chars = total_chars / len(markdown_chunks) if markdown_chunks else 0
+            logger.info(f"Total markdown characters: {total_chars}, Average per chunk: {avg_chars:.0f}")
+            
+            return markdown_chunks
+            
+        except Exception as e:
+            logger.error(f"Error during chunk markdown compression: {str(e)}")
+            raise
+
+
+    def _compress_chunks_to_text(self) -> List[str]:
+        """
+        Compress the extracted metadata chunks to natural language text format.
+        
+        Returns:
+            List[str]: Array of compressed text strings, one per chunk
+        """
+        try:
+            logger.info("Compressing metadata chunks to text...")
+            
+            if not hasattr(self, 'metadata_chunks') or not self.metadata_chunks:
+                raise ValueError("No metadata chunks available to compress")
+            
+            # Compress chunks to text array
+            compressed_texts = self.text_compressor.compress_chunks(self.metadata_chunks)
+            
+            logger.info(f"Successfully compressed {len(compressed_texts)} chunks to text")
+            
+            # Log summary statistics
+            total_chars = sum(len(text) for text in compressed_texts)
+            avg_chars = total_chars / len(compressed_texts) if compressed_texts else 0
+            logger.info(f"Total characters: {total_chars}, Average per chunk: {avg_chars:.0f}")
+            
+            return compressed_texts
+            
+        except Exception as e:
+            logger.error(f"Error during chunk compression: {str(e)}")
             raise
 
     async def _chunk_markdown(self, markdown: str) -> Tuple[List[str], List[Dict[str, Any]]]:

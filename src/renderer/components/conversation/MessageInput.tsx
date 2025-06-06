@@ -25,6 +25,7 @@ interface MessageInputProps {
     documents: File[];
   };
   onRemoveFile?: (type: "image" | "document", index: number) => void;
+  disabled?: boolean;
 }
 
 export function MessageInput({
@@ -38,6 +39,7 @@ export function MessageInput({
   className,
   attachedFiles = { images: [], documents: [] },
   onRemoveFile,
+  disabled = false,
 }: MessageInputProps) {
   // Auto-resize textarea as content grows
   useEffect(() => {
@@ -108,7 +110,7 @@ export function MessageInput({
         <Button
           onClick={handleSendClick}
           className="absolute right-1 top-1 h-7 w-7 p-0 bg-blue-600/80 hover:bg-blue-700/80 text-white rounded-md backdrop-blur-sm shadow-[0_0_10px_rgba(59,130,246,0.3)] transition-all duration-300 hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] disabled:opacity-50 disabled:hover:bg-blue-600/80 disabled:hover:shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-          disabled={!input.trim() && totalAttachedFiles === 0}
+          disabled={!input.trim() && totalAttachedFiles === 0 || disabled}
         >
           <TechArrowUpIcon />
         </Button>
@@ -121,7 +123,7 @@ export function MessageInput({
           size="sm"
           className="h-7 px-2 text-xs bg-[#1a2035]/20 hover:bg-[#1a2035]/40 text-gray-300 rounded-md backdrop-blur-sm border border-[#ffffff0f] transition-all duration-300"
           onClick={() => handleAttachment("file")}
-          disabled={isTyping}
+          disabled={isTyping || disabled}
         >
           <TechAttachmentIcon className="mr-1.5" />
           <span>Attach</span>
@@ -131,7 +133,7 @@ export function MessageInput({
           size="sm"
           className="h-7 px-2 text-xs bg-[#1a2035]/20 hover:bg-[#1a2035]/40 text-gray-300 rounded-md backdrop-blur-sm border border-[#ffffff0f] transition-all duration-300"
           onClick={() => handleAttachment("image")}
-          disabled={isTyping}
+          disabled={isTyping || disabled}
         >
           <TechImageIcon className="mr-1.5" />
           <span>Image</span>
@@ -141,7 +143,7 @@ export function MessageInput({
           size="sm"
           className="h-7 px-2 text-xs bg-[#1a2035]/20 hover:bg-[#1a2035]/40 text-gray-300 rounded-md backdrop-blur-sm border border-[#ffffff0f] transition-all duration-300"
           onClick={() => handleAttachment("file")}
-          disabled={isTyping}
+          disabled={isTyping || disabled}
         >
           <TechFileIcon className="mr-1.5" />
           <span>File</span>

@@ -28,9 +28,9 @@ export function HomePage() {
         <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-[#0a0f1a] to-[#1a2035]/30">
           <div className="max-w-6xl mx-auto space-y-8">
             <div className="bg-[#1a2035]/30 p-6 rounded-lg border border-[#ffffff0f] backdrop-blur-sm shadow-lg">
-              <h2 className="text-xl font-semibold mb-4 text-white">Welcome to Your Dashboard</h2>
+              <h2 className="text-xl font-semibold mb-4 text-white">Welcome to Cori!</h2>
               <p className="text-white/80 mb-4">
-                You're now logged in and can access the protected content.
+                You're now logged in! You can access the tools below to interact with excel files and models in natural and intuitive ways.
               </p>
               
               <button

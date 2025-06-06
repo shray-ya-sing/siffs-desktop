@@ -70,10 +70,33 @@ if (require('electron-squirrel-startup')) {
  */
 
 function startPythonServer() {
+
   const isDev = process.env.NODE_ENV === 'development';
+  
+  // Debug: Log the resource path
+  if (!isDev) {
+    console.log('📁 Resource path:', process.resourcesPath);
+    console.log('📁 Python directory:', path.join(process.resourcesPath, 'python'));
+    
+    // List contents to verify
+    try {
+      const pythonDir = path.join(process.resourcesPath, 'python');
+      if (fs.existsSync(pythonDir)) {
+        console.log('📁 Python directory contents:', fs.readdirSync(pythonDir));
+        
+        const serverDir = path.join(pythonDir, 'python-server');
+        if (fs.existsSync(serverDir)) {
+          console.log('📁 Server directory contents:', fs.readdirSync(serverDir));
+        }
+      }
+    } catch (e) {
+      console.error('Error listing directory:', e);
+    }
+  }
+  
   const pythonPath = isDev 
     ? path.join(__dirname, '../../src/python-server/venv/Scripts/python.exe') // Relies on venv to be init and active
-    : path.join(process.resourcesPath, 'python-server.exe');
+    : path.join(process.resourcesPath, 'python-server','python-server.exe');
 
   console.log('🔍 Python server path:', pythonPath);
   
@@ -97,7 +120,11 @@ function startPythonServer() {
         env: {
           ...process.env,
           FLASK_ENV: 'development',
-          FLASK_DEBUG: '1'
+          FLASK_DEBUG: '1',
+          PYTHONIOENCODING: 'utf-8',
+          PYTHONUTF8: '1',
+          LC_ALL: 'en_US.UTF-8',
+          LANG: 'en_US.UTF-8'
         }
       });
     } else {
@@ -111,10 +138,19 @@ function startPythonServer() {
         env: {
           ...process.env,
           FLASK_ENV: 'production',
-          FLASK_DEBUG: '1'
+          FLASK_DEBUG: '1',
+          PYTHONIOENCODING: 'utf-8',
+          PYTHONUTF8: '1',
+          LC_ALL: 'en_US.UTF-8',
+          LANG: 'en_US.UTF-8'
         }
       });
     }
+
+    
+    // Handle stdout with UTF-8 decoding
+    pythonProcess.stdout.setEncoding('utf8');
+    pythonProcess.stderr.setEncoding('utf8');
 
     // Log process events
     pythonProcess.on('error', (error: Error) => {

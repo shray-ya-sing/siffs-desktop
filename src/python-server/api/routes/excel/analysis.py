@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
+from fastapi.responses import StreamingResponse
 from pathlib import Path
 import sys
 # Add the current directory to Python path
@@ -7,10 +8,11 @@ sys.path.append(str(current_dir))
 # Now import using relative path from python-server
 from api.models.excel import AnalyzeMetadataRequest
 from excel.metadata.excel_metadata_processor import ExcelMetadataProcessor
+from excel.metadata.excel_metadata_analyzer import ExcelMetadataAnalyzer
 import logging
 # Get logger instance
 logger = logging.getLogger(__name__)
-
+import json
 
 router = APIRouter(
     prefix="/api/excel",
@@ -19,7 +21,7 @@ router = APIRouter(
 
 #------------------------------------ METADATA ANALYSIS: AUDIT---------------------------------------------
 # Analyze chunks with streaming response and rate limiting
-@router.post("/api/excel/analyze-chunks")
+@router.post("/analyze-chunks")
 async def analyze_chunks(request: AnalyzeMetadataRequest):
     if not request.chunks:
         async def error_stream():
@@ -97,7 +99,7 @@ async def analyze_chunks(request: AnalyzeMetadataRequest):
     )
     
 # Optional: Add endpoint to reset conversation if needed
-@router.post("/api/excel/reset-conversation")
+@router.post("/reset-conversation")
 async def reset_conversation():
     """Reset the conversation history for fresh analysis"""
     try:
@@ -109,7 +111,7 @@ async def reset_conversation():
         return {"error": str(e)}
 
 # Optional: Add endpoint to get conversation info
-@router.get("/api/excel/conversation-info")
+@router.get("/conversation-info")
 async def get_conversation_info():
     """Get current conversation state information"""
     try:

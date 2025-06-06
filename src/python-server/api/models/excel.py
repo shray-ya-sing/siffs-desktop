@@ -1,15 +1,20 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
+# -------------------------------------------EXTRACT EXCEL METADATA---------------------------------------------------------------------------------------------
 # Pydantic models for request/response validation
 class ExtractMetadataRequest(BaseModel):
     filePath: str
 
-class AnalyzeMetadataRequest(BaseModel):
-    chunks: List[str]  # Changed from metadata to chunks
-    model: Optional[str] = "claude-sonnet-4-20250514" # or claude-3-5-haiku-20241022
-    temperature: Optional[float] = 0.2
-    max_tokens: Optional[int] = 8000  # Add this line
+class ExtractMetadataChunksRequest(BaseModel):
+    filePath: str = Field(..., description="Path to the Excel file")
+    rows_per_chunk: Optional[int] = Field(default=10, description="Number of rows per chunk")
+    max_cols_per_sheet: Optional[int] = Field(default=50, description="Maximum columns to extract per sheet")
+    include_dependencies: Optional[bool] = Field(default=True, description="Whether to include dependency analysis")
+    include_empty_chunks: Optional[bool] = Field(default=False, description="Whether to include chunks with no data")
+    include_summary: Optional[bool] = Field(default=False, description="Whether to include a summary object")
+
+# -------------------------------------------COMPRESS METADATA---------------------------------------------------------------------------------------------
 
 class CompressMetadataRequest(BaseModel):
     metadata: dict
@@ -19,9 +24,43 @@ class ChunkMetadataRequest(BaseModel):
     markdown: str
     max_tokens: Optional[int] = 18000
 
+class CompressChunksRequest(BaseModel):
+    chunks: List[Dict[str, Any]] = Field(..., description="Array of chunk metadata objects")
+    max_cells_per_chunk: Optional[int] = Field(default=1000, description="Maximum cells to process per chunk")
+    max_cell_length: Optional[int] = Field(default=200, description="Maximum length of cell content")
+
+# -------------------------------------------AUDIT EXCEL---------------------------------------------------------------------------------------------
+
+class AnalyzeMetadataRequest(BaseModel):
+    chunks: List[str]  # Changed from metadata to chunks
+    model: Optional[str] = "claude-sonnet-4-20250514" # or claude-3-5-haiku-20241022
+    temperature: Optional[float] = 0.2
+    max_tokens: Optional[int] = 8000  # Add this line
+
+
+class ChunkData(BaseModel):
+    """Individual chunk with markdown content and metadata."""
+    markdown: str = Field(..., description="Markdown formatted chunk content")
+    score: Optional[float] = Field(default=1.0, description="Relevance score from search")
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Chunk metadata (workbook, sheet, rows, etc.)")
+
+# -------------------------------------------QA EXCEL---------------------------------------------------------------------------------------------
+
 class QuestionRequest(BaseModel):
-    metadata: str
-    question: str
-    model: Optional[str] = "claude-sonnet-4-20250514"
-    temperature: Optional[float] = 0.3
-    max_tokens: Optional[int] = 2000
+    """Request model for Excel Q&A with markdown chunks."""
+    chunks: List[ChunkData] = Field(..., description="Array of markdown chunks with metadata")
+    question: str = Field(..., description="Question to answer based on the chunks")
+    model: Optional[str] = Field(default="claude-sonnet-4-20250514", description="LLM model to use")
+    temperature: Optional[float] = Field(default=0.3, description="Temperature for response generation")
+    max_tokens: Optional[int] = Field(default=2000, description="Maximum tokens in response")
+    include_chunk_sources: Optional[bool] = Field(default=True, description="Include source chunk references in answer")
+    chunk_limit: Optional[int] = Field(default=10, description="Maximum number of chunks to process")
+
+class SearchQARequest(BaseModel):
+    """Request model for Q&A directly from search results."""
+    search_response: Dict[str, Any] = Field(..., description="Response from search API")
+    question: str = Field(..., description="Question to answer based on search results")
+    model: Optional[str] = Field(default="claude-sonnet-4-20250514", description="LLM model to use")
+    temperature: Optional[float] = Field(default=0.3, description="Temperature for response generation")
+    max_tokens: Optional[int] = Field(default=2000, description="Maximum tokens in response")
+    include_chunk_sources: Optional[bool] = Field(default=True, description="Include source chunk references in answer")
