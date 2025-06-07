@@ -1,31 +1,101 @@
-import React, { useState } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { ToolInstructions } from '../ToolInstructions';
+import { SimpleMessageInput } from '../../conversation/SimpleMessageInput';
+import { FilePathInput } from '../../conversation/FilePathInput';
+import { ModelCreateService } from '../../../services/tools/modelCreateService';
 
 export const ModelCreate: React.FC = () => {
-  const [modelName, setModelName] = useState('');
-  const [template, setTemplate] = useState('blank');
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState('');
+  // Refs
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const modelCreateServiceRef = useRef<ModelCreateService | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!modelName.trim()) {
-      setError('Please enter a model name');
+  // State
+  const [filePath, setFilePath] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
+
+  // Initialize the service
+  useEffect(() => {
+    modelCreateServiceRef.current = new ModelCreateService({
+      onMessage: (message) => {
+        setStatusMessage(message);
+      },
+      onError: (error) => {
+        setError(error);
+        setIsProcessing(false);
+      },
+      onProcessingChange: (processing) => {
+        setIsProcessing(processing);
+      },
+      onProgress: (step, message) => {
+        setStatusMessage(`${step}: ${message}`);
+      },
+      onComplete: (result) => {
+        setStatusMessage('✓ Model creation completed successfully!');
+        // Reset form after successful completion
+        setTimeout(() => {
+          setFilePath('');
+          setInstructions('');
+          setIsSubmitted(false);
+          setStatusMessage('');
+        }, 2000);
+      }
+    });
+
+    return () => {
+      modelCreateServiceRef.current?.cleanup();
+    };
+  }, []);
+
+  // Handle file path submission
+  const handleFilePathSubmit = useCallback(() => {
+    if (!filePath.trim()) {
+      setError('Please enter a file path');
       return;
     }
     
-    // Handle model creation here
-    setIsCreating(true);
     setError('');
-    console.log('Creating model:', { modelName, template });
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsCreating(false);
-      // Navigate to editor or show success message
-    }, 1500);
-  };
+    setStatusMessage('File selected. Please enter your instructions below.');
+    setIsSubmitted(true);
+  }, [filePath]);
+
+  const handleFilePathKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !isProcessing) {
+      e.preventDefault();
+      handleFilePathSubmit();
+    }
+  }, [handleFilePathSubmit, isProcessing]);
+
+  // Handle instruction submission
+  const handleSubmitInstructions = useCallback(() => {
+    if (!instructions.trim()) {
+      setError('Please enter instructions');
+      return;
+    }
+
+    if (!isSubmitted) {
+      setError('Please process a file first');
+      return;
+    }
+
+    setError('');
+    setStatusMessage('Processing your request...');
+    modelCreateServiceRef.current?.processExcelFile(filePath, instructions);
+  }, [instructions, isSubmitted, filePath]);
+
+  // Handle key down in textarea
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!isProcessing) {
+        handleSubmitInstructions();
+      }
+    }
+  }, [handleSubmitInstructions, isProcessing]);
 
   return (
     <div className="flex flex-col h-full">
@@ -33,63 +103,61 @@ export const ModelCreate: React.FC = () => {
         <ToolInstructions toolId="create-excel-model" />
       </div>
       
-      <div className="p-4 flex-1">
-        <div className="max-w-2xl mx-auto">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-3xl mx-auto space-y-6">
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-white mb-6">Create New Excel Model</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">Create New Excel Model</h2>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-6">
               <div>
-                <label htmlFor="modelName" className="block text-sm font-medium text-slate-300 mb-1">
-                  Model Name
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Excel File Path
                 </label>
-                <input
-                  type="text"
-                  id="modelName"
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-md text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Financial Forecast Q3 2023"
-                  disabled={isCreating}
+                <FilePathInput
+                  filePath={filePath}
+                  setFilePath={setFilePath}
+                  handleSubmit={handleFilePathSubmit}
+                  handleKeyDown={handleFilePathKeyDown}
+                  isProcessing={isProcessing}
+                  isSubmitted={isSubmitted}
+                  inputRef={fileInputRef}
+                  disabled={isProcessing}
+                  className="w-full"
                 />
               </div>
-              
-              <div>
-                <label htmlFor="template" className="block text-sm font-medium text-slate-300 mb-1">
-                  Template
-                </label>
-                <select
-                  id="template"
-                  value={template}
-                  onChange={(e) => setTemplate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-md text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={isCreating}
-                >
-                  <option value="blank">Blank Workbook</option>
-                  <option value="financial">Financial Model</option>
-                  <option value="budget">Budget Planner</option>
-                  <option value="inventory">Inventory Tracker</option>
-                </select>
-              </div>
-              
-              {error && (
-                <div className="text-red-400 text-sm">{error}</div>
+
+              {isSubmitted && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Instructions for Model Creation
+                  </label>
+                  <SimpleMessageInput
+                    input={instructions}
+                    setInput={setInstructions}
+                    handleKeyDown={handleKeyDown}
+                    handleSendClick={handleSubmitInstructions}
+                    isTyping={isProcessing}
+                    textareaRef={textareaRef}
+                    disabled={isProcessing}
+                    className="w-full"
+                  />
+                </div>
               )}
-              
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isCreating || !modelName.trim()}
-                  className={`w-full py-2 px-4 rounded-md text-white font-medium ${
-                    isCreating || !modelName.trim() 
-                      ? 'bg-blue-600/50 cursor-not-allowed' 
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  } transition-colors`}
-                >
-                  {isCreating ? 'Creating...' : 'Create Model'}
-                </button>
-              </div>
-            </form>
+
+              {(statusMessage || error) && (
+                <div className={`text-sm px-3 py-2 rounded ${
+                  error ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'
+                }`}>
+                  {error || statusMessage}
+                </div>
+              )}
+
+              {isProcessing && (
+                <div className="flex items-center justify-center py-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
