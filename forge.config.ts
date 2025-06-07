@@ -7,7 +7,7 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
-
+import {MakerDMG} from '@electron-forge/maker-dmg';
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 import { buildPython } from './src/scripts/build-py';
@@ -31,9 +31,17 @@ const config: ForgeConfig = {
     new MakerSquirrel({}),
     // MacOS 
     new MakerZIP({}, ['darwin']),
+    new MakerDMG({
+      // Basic configuration
+      name: 'Cori',
+      icon: './src/assets/icons/icon.icns', // Path to your .icns file
+      // Format and compression
+      format: 'ULFO', // ULFO, UDZO, UDBZ, ULMO, etc.
+    }, ['darwin']),
     // Linux
     new MakerRpm({}), 
-    new MakerDeb({})],
+    new MakerDeb({}),   
+  ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({

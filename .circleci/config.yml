@@ -7,65 +7,72 @@ orbs:
 jobs:
   build_macos:
     macos:
-      xcode: "13.4.1"  # Older Xcode version available in free tier
-    resource_class: macos.x86.medium.gen2  # Using x86 instead of M1
+      xcode: "16.4.0"
+    resource_class: m2pro.medium
     steps:
       - checkout
 
-      # Install Node.js
       - run:
-          name: Install Node.js
+          name: Verify file structure
           command: |
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            nvm install 18
-            node --version
-            npm --version
-
-      # Install Python
+            pwd
+            ls -la src/renderer/lib/
+            ls -la src/renderer/pages/
+      
+      - node/install:
+          node-version: '18'
+      
+      - python/install-packages:
+          pkg-manager: pip
+          app-dir: ~/project
+          pip-dependency-file: src/python-server/requirements.txt
+      
       - run:
-          name: Install Python
-          command: |
-            brew install python@3.10
-            echo 'export PATH="/usr/local/opt/python@3.10/bin:$PATH"' >> ~/.bash_profile
-            source ~/.bash_profile
-            python3 --version
-            pip3 --version
+          name: Install additional Python packages
+          command: pip3 install pyinstaller==6.13.0
 
-      # Install system dependencies
       - run:
           name: Install system dependencies
           command: |
             brew install pkg-config cairo pango libpng jpeg giflib librsvg
 
-      # Cache node_modules
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "package-lock.json" }}
             - v1-dependencies-
       
-      # Install dependencies
       - run:
           name: Install dependencies
-          command: |
-            npm ci
-            pip3 install -r src/python-server/requirements.txt
-            pip3 install pyinstaller==5.13.0
+          command: npm ci
 
-      # Save node_modules to cache
       - save_cache:
           paths:
             - node_modules
             - ~/.cache/pip
           key: v1-dependencies-{{ checksum "package-lock.json" }}
+      
+      - run:
+          name: Create .env file
+          working_directory: ~/project  # This is CircleCI's default
+          command: |
+            cat > .env \<< EOL
+            API_KEY=${API_KEY}
+            ANOTHER_VAR=${ANOTHER_VAR}
+            EOL
+      
+      # Verify the file was created
+      - run: 
+          name: Verify .env file exists
+          command: test -f .env && echo ".env exists" || echo ".env missing"
+      
+      - run: 
+          name: Verify .env not empty
+          command: ls -la .env
 
-      # Build the application
       - run:
           name: Build application
           command: npm run make:mac
 
-      # Store artifacts
       - store_artifacts:
           path: out/make
           destination: build
