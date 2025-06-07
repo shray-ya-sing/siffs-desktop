@@ -63,6 +63,7 @@ from api.routes.excel.qa import router as excel_qa_router
 from api.routes.vectors.embed import router as vectors_embed_router
 from api.routes.vectors.search import router as vectors_search_router
 from api.routes.vectors.store import router as vectors_store_router
+from api.routes.excel.editing import router as excel_editing_router
 
 
 # Create FastAPI app
@@ -103,6 +104,7 @@ app.include_router(excel_qa_router)
 app.include_router(vectors_embed_router)
 app.include_router(vectors_search_router)
 app.include_router(vectors_store_router)
+app.include_router(excel_editing_router)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
