@@ -1,13 +1,17 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pathlib import Path
 import sys
 # Add the current directory to Python path
 current_dir = Path(__file__).parent.parent.parent.parent.absolute()
 sys.path.append(str(current_dir))
 # Now import using relative path from python-server
-from api.models.excel import ExtractMetadataRequest, CompressMetadataRequest, ChunkMetadataRequest, ExtractMetadataChunksRequest, CompressChunksRequest
+from api.models.excel import ExtractMetadataRequest, CompressMetadataRequest, ChunkMetadataRequest, ExtractMetadataChunksRequest, CompressChunksRequest, GenerateMetadataRequest
 from excel.metadata.excel_metadata_processor import ExcelMetadataProcessor
 from excel.metadata.compression.text_compressor import JsonTextCompressor
+from excel.metadata.generation.llm_metadata_generator import LLMMetadataGenerator
+from excel.metadata.parsing.llm_metadata_parser import LLMMetadataParser
+
 import logging
 # Get logger instance
 logger = logging.getLogger(__name__)
@@ -300,3 +304,136 @@ async def extract_metadata(request: ExtractMetadataRequest):
     except Exception as e:
         logger.error(f"Error processing workbook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+#-------------------------------------------GENERATION-------------------------------------------
+
+# Excel metadata generation endpoint
+@router.post("/generate-metadata")
+async def generate_metadata(request: GenerateMetadataRequest):
+    """
+    Generate metadata for Excel using LLM based on user request.
+    
+    Args:
+        request: GenerateMetadataRequest containing:
+            - user_request: The user's request for metadata generation
+            - model: LLM model to use (default: claude-sonnet-4-20250514)
+            - max_tokens: Maximum tokens in response (default: 2000)
+            - temperature: Temperature for response generation (default: 0.3)
+            - stream: Whether to stream the response (default: False)
+    """
+    logger.info(f"Received request to generate metadata with model: {request.model}")
+    
+    try:
+        # Initialize the LLM metadata generator
+        metadata_generator = LLMMetadataGenerator()
+        
+        # Generate metadata using the LLM
+        result = await metadata_generator.generate_metadata_from_request(
+            user_request=request.user_request,
+            model=request.model,
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            stream=request.stream
+        )
+        
+        if request.stream:
+            # For streaming responses, return the async generator directly
+            async def stream_response():
+                try:
+                    async for chunk in result:
+                        yield chunk
+                except Exception as e:
+                    logger.error(f"Error during streaming: {str(e)}")
+                    yield f"Error: {str(e)}"
+            
+            return StreamingResponse(stream_response(), media_type="text/event-stream")
+        else:
+            # For non-streaming responses, return a structured response
+            return {
+                "status": "success",
+                "result": result,
+                "model": request.model
+            }
+            
+    except Exception as e:
+        logger.error(f"Error generating metadata: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate metadata: {str(e)}"
+        )
+
+
+
+#-------------------------------------------PARSING-------------------------------------------
+
+# Excel metadata parsing endpoint
+@router.post("/parse-metadata")
+async def parse_metadata(request: dict):
+    """
+    Parse Excel metadata string into structured format.
+    
+    Request body:
+    {
+        "metadata": "worksheet name=\"Sheet1\" | cell=\"A1\" | formula=\"Test\" | bold=true ...",
+        "strict": true  # Optional, defaults to True
+    }
+    """
+    logger.info("Received request to parse metadata")
+    
+    try:
+        # Extract and validate request data
+        metadata = request.get("metadata")
+        strict = request.get("strict", True)  # Default to strict mode
+        
+        if not metadata or not isinstance(metadata, str):
+            raise HTTPException(
+                status_code=400,
+                detail="Metadata must be a non-empty string"
+            )
+
+        # Parse the metadata
+        try:
+            parsed_data = LLMMetadataParser.parse(metadata, strict=strict)
+            
+            if not parsed_data:
+                logger.warning("No valid metadata could be parsed from the input")
+                return {
+                    "status": "success",
+                    "data": {},
+                    "warnings": ["No valid metadata found in input"],
+                    "valid": False
+                }
+                
+            return {
+                "status": "success",
+                "data": parsed_data,
+                "valid": True
+            }
+            
+        except ValueError as ve:
+            # Handle validation errors from the parser
+            logger.warning(f"Validation error parsing metadata: {str(ve)}")
+            raise HTTPException(
+                status_code=422,  # Unprocessable Entity
+                detail={
+                    "error": "Metadata validation failed",
+                    "message": str(ve),
+                    "valid": False
+                }
+            )
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+        
+    except Exception as e:
+        # Log the full error for debugging
+        logger.error(f"Unexpected error parsing metadata: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal server error",
+                "message": "An unexpected error occurred while parsing metadata",
+                "valid": False
+            }
+        )
