@@ -64,3 +64,13 @@ class SearchQARequest(BaseModel):
     temperature: Optional[float] = Field(default=0.3, description="Temperature for response generation")
     max_tokens: Optional[int] = Field(default=2000, description="Maximum tokens in response")
     include_chunk_sources: Optional[bool] = Field(default=True, description="Include source chunk references in answer")
+
+#-------------------------------------------CREATE OR EDIT EXCEL-------------------------------------------
+
+class GenerateMetadataRequest(BaseModel):
+    """Request model for generating Excel metadata using LLM."""
+    user_request: str = Field(..., description="The user's request for metadata generation")
+    model: str = Field(default="claude-sonnet-4-20250514", description="LLM model to use for generation")
+    max_tokens: int = Field(default=2000, description="Maximum number of tokens in the response")
+    temperature: float = Field(default=0.3, description="Temperature parameter for response generation (0.0 to 1.0)")
+    stream: bool = Field(default=False, description="Whether to stream the response")
