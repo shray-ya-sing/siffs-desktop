@@ -1,0 +1,116 @@
+from fastapi import APIRouter, HTTPException, Response
+from fastapi.responses import StreamingResponse
+from pathlib import Path
+import sys
+# Add the current directory to Python path
+current_dir = Path(__file__).parent.parent.parent.parent.absolute()
+sys.path.append(str(current_dir))
+# Now import using relative path from python-server
+from api.models.excel import AnalyzeMetadataRequest
+from excel.editing.excel_writer import ExcelWriter
+import logging
+# Get logger instance
+logger = logging.getLogger(__name__)
+import json
+
+router = APIRouter(
+    prefix="/api/excel",
+    tags=["excel-editing"],
+)
+
+#------------------------------------ MODEL CREATE OR EDIT---------------------------------------------
+# Endpoint to edit Excel file with metadata
+@router.post("/edit-excel")
+async def edit_excel(request: dict):
+    """
+    Edit an Excel file using the provided metadata.
+    
+    Request body:
+    {
+        "file_path": "/path/to/excel.xlsx",
+        "metadata": {
+            "Sheet1": [
+                {
+                    "cell": "A1",
+                    "formula": "Test",
+                    "font_style": "Arial",
+                    "font_size": 12,
+                    "bold": true,
+                    "text_color": "#FF0000",
+                    "horizontal_alignment": "center",
+                    "vertical_alignment": "center",
+                    "number_format": "0.00",
+                    "fill_color": "#FFFF00",
+                    "wrap_text": true
+                }
+            ]
+        },
+        "visible": false  # Optional, whether to show Excel during editing
+    }
+    """
+    logger.info("Received request to edit Excel file")
+    
+    try:
+        # Extract and validate request data
+        file_path = request.get("file_path")
+        metadata = request.get("metadata")
+        visible = request.get("visible", False)
+        
+        if not file_path or not isinstance(file_path, str):
+            raise HTTPException(
+                status_code=400,
+                detail="Valid file_path is required"
+            )
+            
+        if not metadata or not isinstance(metadata, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="Metadata must be a non-empty dictionary"
+            )
+
+        try:
+            # Create Excel writer instance
+            with ExcelWriter(visible=visible) as writer:
+                success = writer.write_data(metadata, file_path)
+                
+                if not success:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Failed to write data to Excel"
+                    )
+            
+            return {
+                "status": "success",
+                "message": f"Successfully updated {file_path}",
+                "file_path": file_path,
+                "modified_sheets": list(metadata.keys())
+            }
+            
+        except PermissionError as pe:
+            logger.error(f"Permission error writing to {file_path}: {str(pe)}")
+            raise HTTPException(
+                status_code=403,
+                detail=f"Permission denied when writing to {file_path}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error writing to Excel file: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error writing to Excel file: {str(e)}"
+            )
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+        
+    except Exception as e:
+        # Log the full error for debugging
+        logger.error(f"Unexpected error editing Excel: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal server error",
+                "message": "An unexpected error occurred while editing the Excel file"
+            }
+        )
