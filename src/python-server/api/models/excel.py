@@ -74,3 +74,18 @@ class GenerateMetadataRequest(BaseModel):
     max_tokens: int = Field(default=2000, description="Maximum number of tokens in the response")
     temperature: float = Field(default=0.3, description="Temperature parameter for response generation (0.0 to 1.0)")
     stream: bool = Field(default=False, description="Whether to stream the response")
+
+class GenerateEditMetadataRequest(BaseModel):
+    user_request: str
+    chunks: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of search result chunks with markdown content and metadata"
+    )
+    chunk_limit: int = Field(
+        default=10,
+        description="Maximum number of chunks to process (for safety)"
+    )
+    model: str = "claude-sonnet-4-20250514"
+    max_tokens: int = 2000
+    temperature: float = 0.3
+    stream: bool = False
