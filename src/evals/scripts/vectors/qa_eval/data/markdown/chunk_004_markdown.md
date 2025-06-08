@@ -1,0 +1,14 @@
+# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 41-50 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 41 | A41 | B41, v=Dividends accrued on convertible preference shares | C41, fmt=[color:#0070C0,fmt:_(* #,##0_] | D41, fmt=[color:#0070C0,fmt:_(* #,##0_] | E41, fmt=[color:#0070C0,fmt:_(* #,##0_] | F41, fmt=[color:#0070C0,fmt:_(* #,##0_] | G41, fmt=[color:#0070C0,fmt:_(* #,##0_] | H41 | I41 | J41 | K41 | L41 | M41 | N41 | O41 | P41 |
+| 42 | A42 | B42, v=Net loss attributable to common stockholders, fmt=[bold] | C42, v=1722, fmt=[color:#0070C0,fmt:_(* #,##0_] | D42, v=-1560, fmt=[color:#0070C0,fmt:_(* #,##0_] | E42, v=4045, fmt=[color:#0070C0,fmt:_(* #,##0_] | F42, v=4197, fmt=[color:#0070C0,fmt:_(* #,##0_] | G42, v=4384, fmt=[color:#0070C0,fmt:_(* #,##0_] | H42, v=4883, fmt=[color:#0070C0,fmt:_(* #,##0_] | I42, v=8266, fmt=[color:#0070C0,fmt:_(* #,##0_] | J42, fmt=[color:#0070C0,fmt:_(* #,##0_] | K42, fmt=[fmt:_(* #,##0_] | L42 | M42 | N42 | O42 | P42 |
+| 43 | A43 | B43 | C43, fmt=[fmt:_(* #,##0_] | D43, fmt=[fmt:_(* #,##0_] | E43, fmt=[fmt:_(* #,##0_] | F43, fmt=[fmt:_(* #,##0_] | G43, fmt=[fmt:_(* #,##0_] | H43 | I43 | J43 | K43 | L43 | M43 | N43 | O43 | P43 |
+| 44 | A44 | B44, v="(1) Share-based compensation expense" | C44, v=279, fmt=[color:#0070C0,fmt:_(* #,##0_] | D44, v=462, fmt=[color:#0070C0,fmt:_(* #,##0_] | E44, v=293, fmt=[color:#0070C0,fmt:_(* #,##0_] | F44, v=225, fmt=[color:#0070C0,fmt:_(* #,##0_] | G44, v=396, fmt=[color:#0070C0,fmt:_(* #,##0_] | H44, v=864, fmt=[color:#0070C0] | I44, v=659, fmt=[color:#0070C0] | J44, fmt=[color:#0070C0] | K44 | L44 | M44 | N44 | O44 | P44 |
+| 45 | A45 | B45 | C45, fmt=[fmt:_(* #,##0_] | D45, fmt=[fmt:_(* #,##0_] | E45, fmt=[fmt:_(* #,##0_] | F45, fmt=[fmt:_(* #,##0_] | G45, fmt=[fmt:_(* #,##0_] | H45 | I45 | J45 | K45 | L45 | M45 | N45 | O45 | P45 |
+| 46 | A46 | B46 | C46, fmt=[fmt:_(* #,##0_] | D46, fmt=[fmt:_(* #,##0_] | E46, fmt=[fmt:_(* #,##0_] | F46, fmt=[fmt:_(* #,##0_] | G46, fmt=[fmt:_(* #,##0_] | H46 | I46 | J46 | K46 | L46 | M46 | N46 | O46 | P46 |
+| 47 | A47 | B47, v=Growth Analysis and Drivers, fmt=[bold] | C47 | D47 | E47 | F47 | G47 | H47 | I47 | J47 | K47 | L47 | M47 | N47 | O47 | P47 |
+| 48 | A48 | B48, fmt=[bold] | C48 | D48 | E48 | F48 | G48 | H48 | I48 | J48 | K48 | L48 | M48 | N48 | O48 | P48 |
+| 49 | A49 | B49, v=Revenue, fmt=[bold] | C49 | D49 | E49 | F49 | G49 | H49 | I49 | J49 | K49 | L49 | M49 | N49 | O49 | P49 |
+| 50 | A50 | B50, fmt=[bold] | C50 | D50 | E50 | F50 | G50 | H50 | I50 | J50 | K50 | L50 | M50 | N50 | O50 | P50 |
