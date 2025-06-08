@@ -252,6 +252,105 @@ Create Excel metadata for the following request. Return ONLY the metadata string
                 return error_generator()
             else:
                 raise Exception(f"Error answering question: {str(e)}")
+
+    async def generate_metadata_for_edit(
+        self, 
+        user_request: str,
+        search_results: List[Dict[str, Any]] = None,
+        model: str = "claude-sonnet-4-20250514",
+        max_tokens: int = 2000,
+        temperature: float = 0.3,
+        stream: bool = False,
+    ) -> Union[str, AsyncGenerator[str, None]]:
+        """
+        Generate metadata for Excel based on user requests with chunk context.
+        
+        Args:
+            user_request: User's edit request
+            search_results: List of search results from FAISSChunkRetriever
+            model: LLM model to use
+            max_tokens: Maximum tokens in response
+            temperature: LLM temperature
+            stream: Whether to stream the response
+            
+        Returns:
+            Metadata string or async generator for streaming
+        """
+        # Check if we need to reset conversation due to context limit
+        if self._should_reset_conversation(model):
+            self._reset_conversation()
+        
+        system_prompt = self._get_metadata_generation_for_editing_system_prompt()
+        
+        # Initialize chunks context
+        chunks_context = ""
+        if search_results:
+            chunks_context = self._compose_chunks_context(search_results)
+        
+        # Format the user's question with the composed chunks
+        user_message = f"""## Instruction
+    Create Excel metadata for the following edit request. Return ONLY the metadata string in the exact specified format, with no additional text, explanations, or commentary.
+
+    ## Relevant Excel Data
+    {chunks_context if chunks_context else 'No relevant data chunks provided.'}
+
+    ## User Request
+    {user_request}
+
+    ## Your Response (metadata only):
+    """
+        try:
+            # Use cached/approximate token counting to avoid blocking
+            if self._system_prompt_tokens is None:
+                self._system_prompt_tokens = await self._get_cached_token_count(system_prompt, model)
+            
+            system_tokens = self._system_prompt_tokens
+            user_tokens = self.anthropic_service._approximate_token_count(user_message)
+            
+            # Calculate total tokens needed (approximation)
+            total_request_tokens = system_tokens + self.conversation_tokens + user_tokens
+            
+            # Check rate limit and wait if necessary
+            if not self._can_make_request(total_request_tokens, model):
+                wait_time = self._time_until_available(total_request_tokens, model)
+                logger.info(f"Rate limit reached. Waiting {wait_time:.1f} seconds...")
+                
+                if stream:
+                    async def rate_limit_stream():
+                        logger.info(f"\n--- Rate limit reached. Waiting {wait_time:.1f} seconds... ---\n")
+                        await asyncio.sleep(wait_time)
+                        
+                        # After waiting, proceed with the actual request
+                        stream_result = await self._make_request(
+                            system_prompt, user_message, user_tokens, 
+                            model, max_tokens, temperature, stream
+                        )
+                        async for chunk in stream_result:
+                            yield chunk
+                    
+                    return rate_limit_stream()
+                else:
+                    await asyncio.sleep(wait_time)
+
+            # Make the request
+            result = await self._make_request(
+                system_prompt, user_message, user_tokens,
+                model, max_tokens, temperature, stream
+            )
+            
+            # Record token usage
+            self._add_token_usage(total_request_tokens)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error generating edit metadata: {str(e)}")
+            if stream:
+                async def error_generator():
+                    yield f"Error: {str(e)}"
+                return error_generator()
+            else:
+                raise Exception(f"Error generating edit metadata: {str(e)}")
         
     async def _make_request(
         self,
@@ -437,3 +536,52 @@ Create Excel metadata for the following request. Return ONLY the metadata string
     7. For new cells, include all necessary formatting to match the existing document style
     8. Be careful with formula dependencies - update all related formulas if needed
     """
+
+    def _compose_chunks_context(self, search_results: List[Dict[str, Any]]) -> str:
+        """
+        Compose multiple markdown chunks into a coherent context for the LLM.
+        
+        Args:
+            search_results: List of search results with 'markdown', 'score', and 'metadata'
+            
+        Returns:
+            Composed markdown context string
+        """
+        if not search_results:
+            return "No relevant data found."
+        
+        composed_parts = []
+        
+        # Add header
+        composed_parts.append("## Retrieved Excel Data Chunks")
+        composed_parts.append(f"*Found {len(search_results)} relevant sections from the workbook(s)*")
+        composed_parts.append("")
+        
+        # Add each chunk with context
+        for i, result in enumerate(search_results, 1):
+            # Extract metadata
+            metadata = result.get('metadata', {})
+            workbook = metadata.get('workbook', result.get('workbook_name', 'Unknown'))
+            sheet = metadata.get('sheet', metadata.get('worksheet', 'Unknown'))
+            rows = f"{metadata.get('start_row', '?')}-{metadata.get('end_row', '?')}"
+            score = result.get('score', 0)
+            
+            # Add chunk header
+            composed_parts.append(f"### Chunk {i} (Relevance: {score:.2f})")
+            composed_parts.append(f"**Source:** {workbook} / {sheet} (Rows {rows})")
+            composed_parts.append("")
+            
+            # Add the markdown content
+            markdown_content = result.get('markdown', '')
+            if markdown_content:
+                composed_parts.append(markdown_content)
+            else:
+                composed_parts.append("*No content available for this chunk*")
+            
+            # Add separator between chunks
+            if i < len(search_results):
+                composed_parts.append("")
+                composed_parts.append("---")
+                composed_parts.append("")
+        
+        return "\n".join(composed_parts)
