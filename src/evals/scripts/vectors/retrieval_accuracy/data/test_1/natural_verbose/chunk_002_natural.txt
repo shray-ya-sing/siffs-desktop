@@ -1,0 +1,182 @@
+# Excel Data Chunk 3 of 8
+Workbook: test_model_Alibaba_IPO(shorter)_llm.xlsx
+Worksheet: Quarterly IS
+Row Range: 21 to 30 (10 rows)
+
+## Cell Data and Relationships:
+Cell B21 (Amortization of intangible assets) in worksheet 'Quarterly IS':
+This cell contains the text 'Amortization of intangible assets'
+Cell formatting: background color #00000000
+
+Cell B22 (Impairment of goodwill and intangible assets) in worksheet 'Quarterly IS':
+This cell contains the text 'Impairment of goodwill and intangible assets'
+Adjacent cells: top cell B21 contains 'Amortization of intangible assets'; right cell C22 contains '—  '
+Cell formatting: background color #00000000
+
+Cell C22 (—  ) in worksheet 'Quarterly IS':
+This cell contains the text '—  '
+Adjacent cells: left cell B22 contains label 'Impairment of goodwill and intangible assets'; right cell D22 contains '-3487'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell D22 in worksheet 'Quarterly IS':
+This cell contains the numeric value -3487
+Adjacent cells: left cell C22 contains label '—  '
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell B23 (Yahoo TIPLA amendment payment(3)) in worksheet 'Quarterly IS':
+This cell contains the text 'Yahoo TIPLA amendment payment(3)'
+Adjacent cells: top cell B22 contains 'Impairment of goodwill and intangible assets'
+Cell formatting: background color #00000000
+
+Cell B24 (Total operating expenses) in worksheet 'Quarterly IS':
+This cell contains the text 'Total operating expenses'
+Adjacent cells: top cell B23 contains 'Yahoo TIPLA amendment payment(3)'; right cell C24 contains '-4448'
+Cell formatting: bold text, background color #00000000
+
+Cell C24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -4448
+This cell's value influences this dependent cell: Quarterly IS!C27
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: left cell B24 contains label 'Total operating expenses'; right cell D24 contains '-8563'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell D24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -8563
+This cell's value influences this dependent cell: Quarterly IS!D27
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: right cell E24 contains '-6533'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell E24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -6533
+This cell's value influences this dependent cell: Quarterly IS!E27
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: right cell F24 contains '-4222'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell F24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -4222
+This cell's value influences this dependent cell: Quarterly IS!F27
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: right cell G24 contains '-5358'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell G24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -5358
+This cell's value influences this dependent cell: Quarterly IS!G27
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: right cell H24 contains '-5702'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell H24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -5702
+This cell's value influences this dependent cell: Quarterly IS!H27
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: right cell I24 contains '-9944'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell I24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -9944
+This cell's value influences this dependent cell: Quarterly IS!I27
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: right cell J24 contains '-7631.993200000001'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell J24 in worksheet 'Quarterly IS':
+This cell contains the numeric value -7631.993200000001
+The cell calculates its value using the SUM aggregation formula: =SUM(J18:J20)+J14
+This cell's formula depends on these 4 precedent cells: Quarterly IS!J19, Quarterly IS!J18, Quarterly IS!J20, Quarterly IS!J14
+This cell's value influences this dependent cell: Quarterly IS!J27
+In total, this cell has 5 formula connections in the workbook
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell B27 (Income (loss) from operations) in worksheet 'Quarterly IS':
+This cell contains the text 'Income (loss) from operations'
+Adjacent cells: right cell C27 contains '2345'
+Cell formatting: bold text, background color #00000000
+
+Cell C27 in worksheet 'Quarterly IS':
+This cell contains the numeric value 2345
+The cell calculates its value using the arithmetic formula: =C12+C24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!C12, Quarterly IS!C24
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: left cell B27 contains label 'Income (loss) from operations'; right cell D27 contains '-1106'
+Cell formatting: bold text, background color #00000000
+
+Cell D27 in worksheet 'Quarterly IS':
+This cell contains the numeric value -1106
+The cell calculates its value using the arithmetic formula: =D12+D24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!D24, Quarterly IS!D12
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: right cell E27 contains '5060'
+Cell formatting: bold text, background color #00000000
+
+Cell E27 in worksheet 'Quarterly IS':
+This cell contains the numeric value 5060
+The cell calculates its value using the arithmetic formula: =E12+E24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!E24, Quarterly IS!E12
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: right cell F27 contains '4452'
+Cell formatting: bold text, background color #00000000
+
+Cell F27 in worksheet 'Quarterly IS':
+This cell contains the numeric value 4452
+The cell calculates its value using the arithmetic formula: =F12+F24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!F12, Quarterly IS!F24
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: right cell G27 contains '5420'
+Cell formatting: bold text, background color #00000000
+
+Cell G27 in worksheet 'Quarterly IS':
+This cell contains the numeric value 5420
+The cell calculates its value using the arithmetic formula: =G12+G24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!G24, Quarterly IS!G12
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: right cell H27 contains '5248'
+Cell formatting: bold text, background color #00000000
+
+Cell H27 in worksheet 'Quarterly IS':
+This cell contains the numeric value 5248
+The cell calculates its value using the arithmetic formula: =H12+H24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!H12, Quarterly IS!H24
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: right cell I27 contains '8801'
+Cell formatting: bold text, background color #00000000
+
+Cell I27 in worksheet 'Quarterly IS':
+This cell contains the numeric value 8801
+The cell calculates its value using the arithmetic formula: =I12+I24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!I12, Quarterly IS!I24
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: right cell J27 contains '7044.916799999997'
+Cell formatting: bold text, background color #00000000
+
+Cell J27 in worksheet 'Quarterly IS':
+This cell contains the numeric value 7044.916799999997
+The cell calculates its value using the arithmetic formula: =J12+J24
+This cell's formula depends on these 2 precedent cells: Quarterly IS!J24, Quarterly IS!J12
+In total, this cell has 2 formula connections in the workbook
+Cell formatting: bold text, background color #00000000
+
+Cell B29 (Interest and investment income (loss), net) in worksheet 'Quarterly IS':
+This cell contains the text 'Interest and investment income (loss), net'
+Cell formatting: background color #00000000
+
+Cell B30 (Interest Expense) in worksheet 'Quarterly IS':
+This cell contains the text 'Interest Expense'
+Adjacent cells: top cell B29 contains 'Interest and investment income (loss), net'
+Cell formatting: background color #00000000
+
+
+### Chunk Dependency Summary:
+Cells in this chunk depend on 20 external cells
+Cells in this chunk influence 8 external cells
+There are 8 dependencies within this chunk
+There are 12 dependencies to cells outside this chunk
+
+Key external cells this chunk depends on:
+- Quarterly IS!J20
+- Quarterly IS!J14
+- Quarterly IS!E12
+- Quarterly IS!I12
+- Quarterly IS!J19

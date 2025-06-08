@@ -1,0 +1,510 @@
+# Excel Data Chunk 6 of 8
+Workbook: test_model_Alibaba_IPO(shorter)_llm.xlsx
+Worksheet: Quarterly IS
+Row Range: 51 to 60 (10 rows)
+
+## Cell Data and Relationships:
+Cell B51 (China commerce) in worksheet 'Quarterly IS':
+This cell contains the text 'China commerce'
+Adjacent cells: right cell C51 contains '5601'
+Cell formatting: bold text, background color #00000000
+
+Cell C51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 5601
+The cell calculates its value using the custom formula: =C8
+This cell's formula depends on this precedent cell: Quarterly IS!C8
+This cell's value influences these 2 dependent cells: Quarterly IS!C63, Quarterly IS!D52
+In total, this cell has 3 formula connections in the workbook
+Adjacent cells: left cell B51 contains label 'China commerce'; right cell D51 contains '6152'
+Cell formatting: background color #00000000
+
+Cell D51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 6152
+The cell calculates its value using the custom formula: =D8
+This cell's formula depends on this precedent cell: Quarterly IS!D8
+This cell's value influences these 3 dependent cells: Quarterly IS!D63, Quarterly IS!E52, Quarterly IS!D52
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell E51 contains '10172'
+Cell formatting: background color #00000000
+
+Cell E51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 10172
+The cell calculates its value using the custom formula: =E8
+This cell's formula depends on this precedent cell: Quarterly IS!E8
+This cell's value influences these 3 dependent cells: Quarterly IS!E52, Quarterly IS!F52, Quarterly IS!E63
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell F51 contains '7242'
+Cell formatting: background color #00000000
+
+Cell F51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 7242
+The cell calculates its value using the custom formula: =F8
+This cell's formula depends on this precedent cell: Quarterly IS!F8
+This cell's value influences these 3 dependent cells: Quarterly IS!F52, Quarterly IS!F63, Quarterly IS!G52
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell G51 contains '9193'
+Cell formatting: background color #00000000
+
+Cell G51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 9193
+The cell calculates its value using the custom formula: =G8
+This cell's formula depends on this precedent cell: Quarterly IS!G8
+This cell's value influences these 3 dependent cells: Quarterly IS!G63, Quarterly IS!H52, Quarterly IS!G52
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell H51 contains '9213'
+Cell formatting: background color #00000000
+
+Cell H51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 9213
+The cell calculates its value using the custom formula: =H8
+This cell's formula depends on this precedent cell: Quarterly IS!H8
+This cell's value influences these 3 dependent cells: Quarterly IS!H63, Quarterly IS!I52, Quarterly IS!H52
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell I51 contains '16761'
+Cell formatting: background color #00000000
+
+Cell I51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 16761
+The cell calculates its value using the custom formula: =I8
+This cell's formula depends on this precedent cell: Quarterly IS!I8
+This cell's value influences these 3 dependent cells: Quarterly IS!I63, Quarterly IS!I52, Quarterly IS!J51
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell J51 contains '12570.75'
+Cell formatting: background color #00000000
+
+Cell J51 in worksheet 'Quarterly IS':
+This cell contains the numeric value 12570.75
+The cell calculates its value using the arithmetic formula: =I51*(1+J52)
+This cell's formula depends on these 2 precedent cells: Quarterly IS!I51, Quarterly IS!J52
+This cell's value influences these 2 dependent cells: Quarterly IS!J63, Quarterly IS!J8
+In total, this cell has 4 formula connections in the workbook
+Cell formatting: background color #00000000
+
+Cell B52 (% qoq (sequential)) in worksheet 'Quarterly IS':
+This cell contains the text '% qoq (sequential)'
+Adjacent cells: top cell B51 contains 'China commerce'
+Cell formatting: italic text, background color #00000000
+
+Cell D52 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.09837529012676316
+The cell calculates its value using the arithmetic formula: =D51/C51-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!D51, Quarterly IS!C51
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell D51 contains '6152'; right cell E52 contains '0.6534460338101431'
+Cell formatting: background color #00000000, percentage format
+
+Cell E52 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.6534460338101431
+The cell calculates its value using the arithmetic formula: =E51/D51-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!D51, Quarterly IS!E51
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell E51 contains '10172'; right cell F52 contains '-0.2880456154148643'
+Cell formatting: background color #00000000, percentage format
+
+Cell F52 in worksheet 'Quarterly IS':
+This cell contains the numeric value -0.2880456154148643
+The cell calculates its value using the arithmetic formula: =F51/E51-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!F51, Quarterly IS!E51
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell F51 contains '7242'; right cell G52 contains '0.26940071803369237'
+Cell formatting: background color #00000000, percentage format
+
+Cell G52 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.26940071803369237
+The cell calculates its value using the arithmetic formula: =G51/F51-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!F51, Quarterly IS!G51
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell G51 contains '9193'; right cell H52 contains '0.0021755683672359805'
+Cell formatting: background color #00000000, percentage format
+
+Cell H52 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.0021755683672359805
+The cell calculates its value using the arithmetic formula: =H51/G51-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!H51, Quarterly IS!G51
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell H51 contains '9213'; right cell I52 contains '0.8192771084337349'
+Cell formatting: background color #00000000, percentage format
+
+Cell I52 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.8192771084337349
+The cell calculates its value using the arithmetic formula: =I51/H51-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!I51, Quarterly IS!H51
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell I51 contains '16761'; right cell J52 contains '-0.25'
+Cell formatting: background color #00000000, percentage format
+
+Cell J52 in worksheet 'Quarterly IS':
+This cell contains the numeric value -0.25
+This cell's value influences this dependent cell: Quarterly IS!J51
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: top cell J51 contains '12570.75'
+Cell formatting: colored text (#00B0F0), background color #FFFF00, percentage format
+
+Cell B54 (International commerce) in worksheet 'Quarterly IS':
+This cell contains the text 'International commerce'
+Adjacent cells: right cell C54 contains '974'
+Cell formatting: background color #00000000
+
+Cell C54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 974
+The cell calculates its value using the custom formula: =C9
+This cell's formula depends on this precedent cell: Quarterly IS!C9
+This cell's value influences these 2 dependent cells: Quarterly IS!C63, Quarterly IS!D55
+In total, this cell has 3 formula connections in the workbook
+Adjacent cells: left cell B54 contains label 'International commerce'; right cell D54 contains '1049'
+Cell formatting: background color #00000000
+
+Cell D54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 1049
+The cell calculates its value using the custom formula: =D9
+This cell's formula depends on this precedent cell: Quarterly IS!D9
+This cell's value influences these 3 dependent cells: Quarterly IS!E55, Quarterly IS!D55, Quarterly IS!D63
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell E54 contains '1094'
+Cell formatting: background color #00000000
+
+Cell E54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 1094
+The cell calculates its value using the custom formula: =E9
+This cell's formula depends on this precedent cell: Quarterly IS!E9
+This cell's value influences these 3 dependent cells: Quarterly IS!E55, Quarterly IS!E63, Quarterly IS!F55
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell F54 contains '1043'
+Cell formatting: background color #00000000
+
+Cell F54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 1043
+The cell calculates its value using the custom formula: =F9
+This cell's formula depends on this precedent cell: Quarterly IS!F9
+This cell's value influences these 3 dependent cells: Quarterly IS!F63, Quarterly IS!F55, Quarterly IS!G55
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell G54 contains '1117'
+Cell formatting: background color #00000000
+
+Cell G54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 1117
+The cell calculates its value using the custom formula: =G9
+This cell's formula depends on this precedent cell: Quarterly IS!G9
+This cell's value influences these 3 dependent cells: Quarterly IS!G63, Quarterly IS!H55, Quarterly IS!G55
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell H54 contains '1176'
+Cell formatting: background color #00000000
+
+Cell H54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 1176
+The cell calculates its value using the custom formula: =H9
+This cell's formula depends on this precedent cell: Quarterly IS!H9
+This cell's value influences these 3 dependent cells: Quarterly IS!H63, Quarterly IS!H55, Quarterly IS!I55
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell I54 contains '1264'
+Cell formatting: background color #00000000
+
+Cell I54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 1264
+The cell calculates its value using the custom formula: =I9
+This cell's formula depends on this precedent cell: Quarterly IS!I9
+This cell's value influences these 3 dependent cells: Quarterly IS!I63, Quarterly IS!J54, Quarterly IS!I55
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell J54 contains '1200.8'
+Cell formatting: background color #00000000
+
+Cell J54 in worksheet 'Quarterly IS':
+This cell contains the numeric value 1200.8
+The cell calculates its value using the arithmetic formula: =I54*(1+J55)
+This cell's formula depends on these 2 precedent cells: Quarterly IS!I54, Quarterly IS!J55
+This cell's value influences these 2 dependent cells: Quarterly IS!J9, Quarterly IS!J63
+In total, this cell has 4 formula connections in the workbook
+Cell formatting: background color #00000000
+
+Cell B55 (% qoq (sequential)) in worksheet 'Quarterly IS':
+This cell contains the text '% qoq (sequential)'
+Adjacent cells: top cell B54 contains 'International commerce'
+Cell formatting: italic text, background color #00000000
+
+Cell D55 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.07700205338809041
+The cell calculates its value using the arithmetic formula: =D54/C54-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!D54, Quarterly IS!C54
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell D54 contains '1049'; right cell E55 contains '0.04289799809342232'
+Cell formatting: background color #00000000, percentage format
+
+Cell E55 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.04289799809342232
+The cell calculates its value using the arithmetic formula: =E54/D54-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!D54, Quarterly IS!E54
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell E54 contains '1094'; right cell F55 contains '-0.046617915904936025'
+Cell formatting: background color #00000000, percentage format
+
+Cell F55 in worksheet 'Quarterly IS':
+This cell contains the numeric value -0.046617915904936025
+The cell calculates its value using the arithmetic formula: =F54/E54-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!F54, Quarterly IS!E54
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell F54 contains '1043'; right cell G55 contains '0.07094918504314474'
+Cell formatting: background color #00000000, percentage format
+
+Cell G55 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.07094918504314474
+The cell calculates its value using the arithmetic formula: =G54/F54-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!G54, Quarterly IS!F54
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell G54 contains '1117'; right cell H55 contains '0.05282005371530896'
+Cell formatting: background color #00000000, percentage format
+
+Cell H55 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.05282005371530896
+The cell calculates its value using the arithmetic formula: =H54/G54-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!G54, Quarterly IS!H54
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell H54 contains '1176'; right cell I55 contains '0.0748299319727892'
+Cell formatting: background color #00000000, percentage format
+
+Cell I55 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.0748299319727892
+The cell calculates its value using the arithmetic formula: =I54/H54-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!H54, Quarterly IS!I54
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell I54 contains '1264'; right cell J55 contains '-0.05'
+Cell formatting: background color #00000000, percentage format
+
+Cell J55 in worksheet 'Quarterly IS':
+This cell contains the numeric value -0.05
+This cell's value influences this dependent cell: Quarterly IS!J54
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: top cell J54 contains '1200.8'
+Cell formatting: colored text (#00B0F0), background color #FFFF00, percentage format
+
+Cell B57 (Cloud computing and Internet infrastructure (ii)) in worksheet 'Quarterly IS':
+This cell contains the text 'Cloud computing and Internet infrastructure (ii)'
+Adjacent cells: right cell C57 contains '155'
+Cell formatting: background color #00000000
+
+Cell C57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 155
+The cell calculates its value using the custom formula: =C10
+This cell's formula depends on this precedent cell: Quarterly IS!C10
+This cell's value influences these 2 dependent cells: Quarterly IS!C63, Quarterly IS!D58
+In total, this cell has 3 formula connections in the workbook
+Adjacent cells: left cell B57 contains label 'Cloud computing and Internet infrastructure (ii)'; right cell D57 contains '164'
+Cell formatting: background color #00000000
+
+Cell D57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 164
+The cell calculates its value using the custom formula: =D10
+This cell's formula depends on this precedent cell: Quarterly IS!D10
+This cell's value influences these 3 dependent cells: Quarterly IS!D63, Quarterly IS!E58, Quarterly IS!D58
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell E57 contains '165'
+Cell formatting: background color #00000000
+
+Cell E57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 165
+The cell calculates its value using the custom formula: =E10
+This cell's formula depends on this precedent cell: Quarterly IS!E10
+This cell's value influences these 3 dependent cells: Quarterly IS!E58, Quarterly IS!F58, Quarterly IS!E63
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell F57 contains '166'
+Cell formatting: background color #00000000
+
+Cell F57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 166
+The cell calculates its value using the custom formula: =F10
+This cell's formula depends on this precedent cell: Quarterly IS!F10
+This cell's value influences these 3 dependent cells: Quarterly IS!F58, Quarterly IS!G58, Quarterly IS!F63
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell G57 contains '174'
+Cell formatting: background color #00000000
+
+Cell G57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 174
+The cell calculates its value using the custom formula: =G10
+This cell's formula depends on this precedent cell: Quarterly IS!G10
+This cell's value influences these 3 dependent cells: Quarterly IS!G63, Quarterly IS!G58, Quarterly IS!H58
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell H57 contains '190'
+Cell formatting: background color #00000000
+
+Cell H57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 190
+The cell calculates its value using the custom formula: =H10
+This cell's formula depends on this precedent cell: Quarterly IS!H10
+This cell's value influences these 3 dependent cells: Quarterly IS!H63, Quarterly IS!I58, Quarterly IS!H58
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell I57 contains '196'
+Cell formatting: background color #00000000
+
+Cell I57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 196
+The cell calculates its value using the custom formula: =I10
+This cell's formula depends on this precedent cell: Quarterly IS!I10
+This cell's value influences these 3 dependent cells: Quarterly IS!I63, Quarterly IS!J57, Quarterly IS!I58
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell J57 contains '197.96'
+Cell formatting: background color #00000000
+
+Cell J57 in worksheet 'Quarterly IS':
+This cell contains the numeric value 197.96
+The cell calculates its value using the arithmetic formula: =I57*(1+J58)
+This cell's formula depends on these 2 precedent cells: Quarterly IS!I57, Quarterly IS!J58
+This cell's value influences these 2 dependent cells: Quarterly IS!J63, Quarterly IS!J10
+In total, this cell has 4 formula connections in the workbook
+Cell formatting: background color #00000000
+
+Cell B58 (% qoq (sequential)) in worksheet 'Quarterly IS':
+This cell contains the text '% qoq (sequential)'
+Adjacent cells: top cell B57 contains 'Cloud computing and Internet infrastructure (ii)'
+Cell formatting: italic text, background color #00000000
+
+Cell D58 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.058064516129032295
+The cell calculates its value using the arithmetic formula: =D57/C57-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!D57, Quarterly IS!C57
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell D57 contains '164'; right cell E58 contains '0.0060975609756097615'
+Cell formatting: background color #00000000, percentage format
+
+Cell E58 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.0060975609756097615
+The cell calculates its value using the arithmetic formula: =E57/D57-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!E57, Quarterly IS!D57
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell E57 contains '165'; right cell F58 contains '0.0060606060606061'
+Cell formatting: background color #00000000, percentage format
+
+Cell F58 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.0060606060606061
+The cell calculates its value using the arithmetic formula: =F57/E57-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!F57, Quarterly IS!E57
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell F57 contains '166'; right cell G58 contains '0.04819277108433728'
+Cell formatting: background color #00000000, percentage format
+
+Cell G58 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.04819277108433728
+The cell calculates its value using the arithmetic formula: =G57/F57-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!F57, Quarterly IS!G57
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell G57 contains '174'; right cell H58 contains '0.09195402298850586'
+Cell formatting: background color #00000000, percentage format
+
+Cell H58 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.09195402298850586
+The cell calculates its value using the arithmetic formula: =H57/G57-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!H57, Quarterly IS!G57
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell H57 contains '190'; right cell I58 contains '0.03157894736842115'
+Cell formatting: background color #00000000, percentage format
+
+Cell I58 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.03157894736842115
+The cell calculates its value using the arithmetic formula: =I57/H57-1
+This cell's formula depends on these 2 precedent cells: Quarterly IS!H57, Quarterly IS!I57
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: top cell I57 contains '196'; right cell J58 contains '0.01'
+Cell formatting: background color #00000000, percentage format
+
+Cell J58 in worksheet 'Quarterly IS':
+This cell contains the numeric value 0.01
+This cell's value influences this dependent cell: Quarterly IS!J57
+In total, this cell has 1 formula connections in the workbook
+Adjacent cells: top cell J57 contains '197.96'
+Cell formatting: colored text (#00B0F0), background color #FFFF00, percentage format
+
+Cell B60 (Others (iii)) in worksheet 'Quarterly IS':
+This cell contains the text 'Others (iii)'
+Adjacent cells: right cell C60 contains '63'
+Cell formatting: background color #00000000
+
+Cell C60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 63
+The cell calculates its value using the custom formula: =C11
+This cell's formula depends on this precedent cell: Quarterly IS!C11
+This cell's value influences these 2 dependent cells: Quarterly IS!D61, Quarterly IS!C63
+In total, this cell has 3 formula connections in the workbook
+Adjacent cells: left cell B60 contains label 'Others (iii)'; right cell D60 contains '92'
+Cell formatting: background color #00000000
+
+Cell D60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 92
+The cell calculates its value using the custom formula: =D11
+This cell's formula depends on this precedent cell: Quarterly IS!D11
+This cell's value influences these 3 dependent cells: Quarterly IS!D63, Quarterly IS!D61, Quarterly IS!E61
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell E60 contains '162'
+Cell formatting: background color #00000000
+
+Cell E60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 162
+The cell calculates its value using the custom formula: =E11
+This cell's formula depends on this precedent cell: Quarterly IS!E11
+This cell's value influences these 3 dependent cells: Quarterly IS!E63, Quarterly IS!F61, Quarterly IS!E61
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell F60 contains '223'
+Cell formatting: background color #00000000
+
+Cell F60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 223
+The cell calculates its value using the custom formula: =F11
+This cell's formula depends on this precedent cell: Quarterly IS!F11
+This cell's value influences these 3 dependent cells: Quarterly IS!F63, Quarterly IS!F61, Quarterly IS!G61
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell G60 contains '294'
+Cell formatting: background color #00000000
+
+Cell G60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 294
+The cell calculates its value using the custom formula: =G11
+This cell's formula depends on this precedent cell: Quarterly IS!G11
+This cell's value influences these 3 dependent cells: Quarterly IS!G63, Quarterly IS!H61, Quarterly IS!G61
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell H60 contains '371'
+Cell formatting: background color #00000000
+
+Cell H60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 371
+The cell calculates its value using the custom formula: =H11
+This cell's formula depends on this precedent cell: Quarterly IS!H11
+This cell's value influences these 3 dependent cells: Quarterly IS!H63, Quarterly IS!H61, Quarterly IS!I61
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell I60 contains '524'
+Cell formatting: background color #00000000
+
+Cell I60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 524
+The cell calculates its value using the custom formula: =I11
+This cell's formula depends on this precedent cell: Quarterly IS!I11
+This cell's value influences these 3 dependent cells: Quarterly IS!I61, Quarterly IS!I63, Quarterly IS!J60
+In total, this cell has 4 formula connections in the workbook
+Adjacent cells: right cell J60 contains '707.4000000000001'
+Cell formatting: background color #00000000
+
+Cell J60 in worksheet 'Quarterly IS':
+This cell contains the numeric value 707.4000000000001
+The cell calculates its value using the arithmetic formula: =I60*(1+J61)
+This cell's formula depends on these 2 precedent cells: Quarterly IS!I60, Quarterly IS!J61
+This cell's value influences these 2 dependent cells: Quarterly IS!J63, Quarterly IS!J11
+In total, this cell has 4 formula connections in the workbook
+Cell formatting: background color #00000000
+
+
+### Chunk Dependency Summary:
+Cells in this chunk depend on 54 external cells
+Cells in this chunk influence 40 external cells
+There are 43 dependencies within this chunk
+There are 29 dependencies to cells outside this chunk
+
+Key external cells this chunk depends on:
+- Quarterly IS!E10
+- Quarterly IS!D9
+- Quarterly IS!F11
+- Quarterly IS!G8
+- Quarterly IS!F9
+
+Key external cells that depend on this chunk:
+- Quarterly IS!J63
+- Quarterly IS!C63
+- Quarterly IS!J11
+- Quarterly IS!J9
+- Quarterly IS!I63

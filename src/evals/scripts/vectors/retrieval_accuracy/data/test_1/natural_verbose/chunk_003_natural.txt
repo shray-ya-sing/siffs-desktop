@@ -1,0 +1,45 @@
+# Excel Data Chunk 4 of 8
+Workbook: test_model_Alibaba_IPO(shorter)_llm.xlsx
+Worksheet: Quarterly IS
+Row Range: 31 to 40 (10 rows)
+
+## Cell Data and Relationships:
+Cell B31 (Other income (expense), net) in worksheet 'Quarterly IS':
+This cell contains the text 'Other income (expense), net'
+Cell formatting: background color #00000000
+
+Cell B33 (Loss before provision (benefit) for income taxes) in worksheet 'Quarterly IS':
+This cell contains the text 'Loss before provision (benefit) for income taxes'
+Cell formatting: background color #00000000
+
+Cell B34 (Income tax expenses) in worksheet 'Quarterly IS':
+This cell contains the text 'Income tax expenses'
+Adjacent cells: top cell B33 contains 'Loss before provision (benefit) for income taxes'
+Cell formatting: background color #00000000
+
+Cell B35 (Share of results of equity investees) in worksheet 'Quarterly IS':
+This cell contains the text 'Share of results of equity investees'
+Adjacent cells: top cell B34 contains 'Income tax expenses'
+Cell formatting: background color #00000000
+
+Cell B36 (Net income (loss)) in worksheet 'Quarterly IS':
+This cell contains the text 'Net income (loss)'
+Adjacent cells: top cell B35 contains 'Share of results of equity investees'
+Cell formatting: bold text, background color #00000000
+
+Cell B37 (Net income (loss) attributable to noncontrolling i) in worksheet 'Quarterly IS':
+This cell contains the text 'Net income (loss) attributable to noncontrolling interests'
+Adjacent cells: top cell B36 contains 'Net income (loss)'
+Cell formatting: background color #00000000
+
+Cell B38 (Net income (loss) attributable to Alibaba Group Ho) in worksheet 'Quarterly IS':
+This cell contains the text 'Net income (loss) attributable to Alibaba Group Holding Limited'
+Adjacent cells: top cell B37 contains 'Net income (loss) attributable to noncontrolling interests'
+Cell formatting: background color #00000000
+
+Cell B40 (Accretion of redeemable convertible preferred stoc) in worksheet 'Quarterly IS':
+This cell contains the text 'Accretion of redeemable convertible preferred stock'
+Cell formatting: background color #00000000
+
+
+### Chunk Dependency Summary:
