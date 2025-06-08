@@ -4,24 +4,19 @@ import { ConversationHistory } from '../../conversation/ConversationHistory';
 import { FilePathInput } from '../../conversation/FilePathInput';
 import { ToolInstructions } from '../ToolInstructions';
 import { Message } from '../../../types/message';
+import { ModelEditService } from '../../../services/tools/modelEditService';
 
-// Mock service - replace with your actual service
-class ModelEditService {
-  async processExcelFile(filePath: string) {
-    // Implement file processing logic
-    console.log('Processing file:', filePath);
-  }
-
-  async processMessage(message: string) {
-    // Implement message processing logic
-    console.log('Processing message:', message);
-    return 'This is a mock response. Implement your actual service logic.';
-  }
-
-  cleanup() {
-    // Cleanup logic
-  }
+interface ModelEditCallbacks {
+  onMessage: (message: string) => void;
+  onError: (error: string) => void;
+  onProcessingChange: (isProcessing: boolean) => void;
+  onTypingStart: () => void;
+  onTypingEnd: () => void;
+  onDataReady: (isReady: boolean) => void;
+  onEditComplete: (result: any) => void;
 }
+
+
 
 export const ModelEdit: React.FC = () => {
   // Refs
@@ -43,7 +38,25 @@ export const ModelEdit: React.FC = () => {
   // Initialize service
   const initializeService = useCallback(() => {
     if (!modelEditServiceRef.current) {
-      modelEditServiceRef.current = new ModelEditService();
+      modelEditServiceRef.current = new ModelEditService({
+        onMessage: (message) => {
+          setMessages(prev => [...prev, {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: message,
+            timestamp: Date.now().toString()
+          }]);
+        },
+        onError: setError,
+        onProcessingChange: setIsProcessing,
+        onTypingStart: () => setIsTyping(true),
+        onTypingEnd: () => setIsTyping(false),
+        onDataReady: setIsDataReady,
+        onEditComplete: (result) => {
+          // Handle edit completion if needed
+          console.log('Edit completed:', result);
+        }
+      });
     }
     return modelEditServiceRef.current;
   }, []);
@@ -56,27 +69,8 @@ export const ModelEdit: React.FC = () => {
     }
     
     setError('');
-    setIsProcessing(true);
-    setMessages([]);
-    
-    try {
-      const service = initializeService();
-      await service.processExcelFile(filePath);
-      setIsDataReady(true);
-      
-      // Add welcome message
-      const welcomeMessage: Message = {
-        id: `msg-${Date.now()}`,
-        role: 'assistant',
-        content: `I've loaded your Excel file. What changes would you like to make?`,
-        timestamp: Date.now().toString()
-      };
-      setMessages([welcomeMessage]);
-    } catch (error: any) {
-      setError(error.message || 'Failed to process file');
-    } finally {
-      setIsProcessing(false);
-    }
+    const service = initializeService();
+    await service.processExcelFile(filePath);
   }, [filePath, initializeService]);
 
   const handleFilePathKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -93,39 +87,35 @@ export const ModelEdit: React.FC = () => {
       setError('Please load an Excel file first');
       return;
     }
-
+  
+    const service = initializeService();
+    const userMessage: Message = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: input,
+      timestamp: Date.now().toString()
+    };
+  
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+  
     try {
-      const service = initializeService();
-      const userMessage: Message = {
-        id: `msg-${Date.now()}`,
-        role: 'user',
-        content: input,
-        timestamp: Date.now().toString()
-      };
-
-      // Add user message to the conversation
-      setMessages(prev => [...prev, userMessage]);
-      setInput('');
-      setIsTyping(true);
-
-      // Process the message and get response
-      const response = await service.processMessage(input);
-      
-      // Add assistant's response
-      const assistantMessage: Message = {
-        id: `msg-${Date.now()}`,
-        role: 'assistant',
-        content: response,
-        timestamp: Date.now().toString()
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
+      await service.processEditRequest(input);
     } catch (error: any) {
       setError(error.message || 'An error occurred while processing your request');
-    } finally {
-      setIsTyping(false);
     }
   }, [input, isDataReady, initializeService]);
+
+  useEffect(() => {
+    if (isDataReady && messages.length === 0) {
+      setMessages([{
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: 'I\'ve loaded your Excel file. What changes would you like to make?',
+        timestamp: Date.now().toString()
+      }]);
+    }
+  }, [isDataReady, messages.length]);
 
   // Handle key down in textarea
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
