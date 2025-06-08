@@ -17,3 +17,4 @@ openai==1.84.0 # dev only
 sentence-transformers
 numpy
 faiss-cpu>=1.7.4
+pandas
