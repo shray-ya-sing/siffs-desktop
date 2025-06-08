@@ -5,6 +5,7 @@ import os
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 import logging
+from pathlib import Path
 
 class EmbeddingStorage:
     """
@@ -12,14 +13,26 @@ class EmbeddingStorage:
     Modified to store both natural text and markdown formats.
     """
     
-    def __init__(self, db_path: str = "./excel_embeddings.db"):
-        """Initialize the embedding storage."""
-        self.db_path = db_path
+    def __init__(self, db_path: str = None, db_name: str = None):
+        """Initialize the embedding storage.
+        
+        Args:
+            db_path: Path to the database directory
+            db_name: Name of the database file
+        """
+        if db_path is None:
+            base_dir = Path(__file__).parent.parent
+            db_path = base_dir / "db"
+            db_path.mkdir(exist_ok=True)  # Create directory if it doesn't exist
+        if db_name is None:
+            db_name = "excel_embeddings.db"
+
+        self.db_path = os.path.join(db_path, db_name)
+        os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
+
         self.logger = logging.getLogger(__name__)
         
-        os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
-        
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         
         self.conn.execute("PRAGMA foreign_keys = ON")
