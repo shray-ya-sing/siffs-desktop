@@ -27,15 +27,9 @@ class ChunkEmbedder:
                 device=device,
                 cache_folder=cache_folder,
                 use_auth_token=use_auth_token
-            )
-            
-            self.model_name = model_name
-            self.embedding_dimension = self.model.get_sentence_embedding_dimension()
-            self.max_seq_length = self.model.max_seq_length
-            
-            self.logger.info(f"Initialized {model_name} with {self.embedding_dimension} dimensions")
-            self.logger.info(f"Max sequence length: {self.max_seq_length} tokens")
-            
+            )            
+            self.model_name = model_name                            
+        
         except Exception as e:
             self.logger.error(f"Failed to initialize model {model_name}: {str(e)}")
             raise
@@ -67,11 +61,11 @@ class ChunkEmbedder:
         
         # Prepare enhanced chunk data that includes both formats
         enhanced_chunks = []
-        for chunk in chunks:
+        for chunk in chunks:               
             enhanced_chunk = {
-                'text': chunk['text'],  # Natural language text
-                'markdown': chunk.get('markdown', chunk['text']),  # Markdown format
-                'metadata': chunk.get('metadata', {})
+                'text': chunk.get('text', ''),  # Default to empty string if not present
+                'markdown': chunk.get('markdown', chunk.get('text', '')),  # Fallback to text if markdown not available
+                'metadata': chunk.get('metadata', {})  # Default to empty dict
             }
             enhanced_chunks.append(enhanced_chunk)
         
@@ -115,8 +109,8 @@ class ChunkEmbedder:
         """Get information about the current model."""
         return {
             'model_name': self.model_name,
-            'embedding_dimension': self.embedding_dimension,
-            'max_seq_length': self.max_seq_length,
+            'embedding_dimension': self.model.get_sentence_embedding_dimension(),
+            'max_seq_length': self.model.max_seq_length,
             'device': str(self.model.device),
             'similarity_function': self.model.similarity_fn_name
         }
