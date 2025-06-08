@@ -1,0 +1,12 @@
+# Quarterly IS - Chunk 4
+## Source: test_model_Alibaba_IPO(shorter)_llm.xlsx_Quarterly IS_rows_31_40
+## Rows: 31 to 40
+
+Other income (expense), net
+Loss before provision (benefit) for income taxes
+Income tax expenses
+Share of results of equity investees
+Net income (loss)
+Net income (loss) attributable to noncontrolling interests
+Net income (loss) attributable to Alibaba Group Holding Limited
+Accretion of redeemable convertible preferred stock

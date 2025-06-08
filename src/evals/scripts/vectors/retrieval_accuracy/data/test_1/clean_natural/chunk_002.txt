@@ -1,0 +1,12 @@
+# Quarterly IS - Chunk 1
+## Source: test_model_Alibaba_IPO(shorter)_llm.xlsx_Quarterly IS_rows_1_10
+## Rows: 1 to 10
+
+#REF!
+Quarterly Income Statement
+Quarter Ended
+2012-06-30T00:00:00 | 2012-09-30T00:00:00 | 2012-12-31T00:00:00 | 2013-03-31T00:00:00 | 2013-06-30T00:00:00 | 2013-09-30T00:00:00 | 2013-12-31T00:00:00 | 2014-03-31T00:00:00
+(RMB in Million Except Per Share Amounts) | 2012 | 2012 | 2012 | 2013 | 2013 | 2013 | 2013 | 2014
+China commerce | 5601 | 6152 | 10172 | 7242 | 9193 | 9213 | 16761 | 12570.75
+International commerce | 974 | 1049 | 1094 | 1043 | 1117 | 1176 | 1264 | 1200.8
+Cloud computing and Internet infrastructure | 155 | 164 | 165 | 166 | 174 | 190 | 196 | 197.96
