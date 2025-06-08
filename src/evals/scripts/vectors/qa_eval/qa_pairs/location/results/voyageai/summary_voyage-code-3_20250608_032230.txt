@@ -1,0 +1,24 @@
+====================================================================================================
+RETRIEVAL EVALUATION REPORT - voyage-code-3
+====================================================================================================
+
+MODEL INFORMATION
+--------------------------------------------------
+Model Name: voyage-code-3
+Embedding Dimension: 1024
+Max Sequence Length: 32000
+Device: API
+Embedding Time: 2.45 seconds
+
+OVERALL STATISTICS
+--------------------------------------------------
+Total test cases: 114
+Overall average score: 0.855
+
+SCORES BY CATEGORY
+--------------------------------------------------
+                       Category  Count Average Score  Perfect (1.0)  Partial (0.5)  Failed (0.0)
+  multi_cell_answer_multi_chunk     12         1.000             12              0             0
+ multi_cell_answer_single_chunk     36         0.917             31              4             1
+ single_cell_answer_multi_chunk     10         1.000             10              0             0
+single_cell_answer_single_chunk     56         0.759             35             15             6

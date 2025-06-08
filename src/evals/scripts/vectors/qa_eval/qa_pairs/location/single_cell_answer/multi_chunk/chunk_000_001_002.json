@@ -1,0 +1,72 @@
+[
+    {
+      "query": "What is the total revenue for Q4 2012, considering all business segments shown in the income statement?",
+      "golden_answer": {
+        "cell_address": "E12",
+        "value": 11593
+      }
+    },
+    {
+      "query": "After accounting for cost of revenue, what is the gross profit for Q4 2013?",
+      "golden_answer": {
+        "cell_address": "I15",
+        "value": 14574
+      }
+    },
+    {
+      "query": "What is the income from operations for Q1 2014, after deducting all operating expenses from gross profit?",
+      "golden_answer": {
+        "cell_address": "J27",
+        "value": 7044.916799999997
+      }
+    },
+    {
+      "query": "What is the total operating expenses for Q3 2012, which includes all expense categories listed in the operating expenses section?",
+      "golden_answer": {
+        "cell_address": "D24",
+        "value": -8563
+      }
+    },
+    {
+      "query": "What is the largest revenue component contributing to total revenue in Q4 2013?",
+      "golden_answer": {
+        "cell_address": "I8",
+        "value": 16761
+      }
+    },
+    {
+      "query": "What is the income from operations for Q4 2012, calculated as the difference between total revenue and total operating expenses?",
+      "golden_answer": {
+        "cell_address": "E27",
+        "value": 5060
+      }
+    },
+    {
+      "query": "What is the total revenue for Q1 2014, which is the sum of all business segment revenues?",
+      "golden_answer": {
+        "cell_address": "J12",
+        "value": 14676.909999999998
+      }
+    },
+    {
+      "query": "What is the cost of revenue for Q4 2013, which is deducted from total revenue to calculate gross profit?",
+      "golden_answer": {
+        "cell_address": "I14",
+        "value": -4171
+      }
+    },
+    {
+      "query": "What is the income from operations for Q2 2013, after all operating expenses are subtracted from gross profit?",
+      "golden_answer": {
+        "cell_address": "G27",
+        "value": 5420
+      }
+    },
+    {
+      "query": "What is the impairment of goodwill and intangible assets expense for Q3 2012?",
+      "golden_answer": {
+        "cell_address": "D22",
+        "value": -3487
+      }
+    }
+  ]

@@ -1,0 +1,31 @@
+========================================================================================================================
+MODEL COMPARISON REPORT
+========================================================================================================================
+
+Evaluation Date: 2025-06-08 01:20:46
+Number of Models Tested: 9
+
+OVERALL COMPARISON
+------------------------------------------------------------------------------------------------------------------------
+                     Model Overall Score Embedding Time (s)  Total Tests multi_cell_answer_multi_chunk multi_cell_answer_single_chunk single_cell_answer_multi_chunk single_cell_answer_single_chunk
+     msmarco-MiniLM-L-6-v3         0.320               1.03          114                         0.500                          0.375                          0.400                           0.232
+          all-MiniLM-L6-v2         0.298               0.74          114                         0.083                          0.306                          0.500                           0.304
+         all-MiniLM-L12-v2         0.158               0.97          114                         0.333                          0.111                          0.400                           0.107
+   paraphrase-MiniLM-L3-v2         0.215               0.35          114                         0.333                          0.125                          0.200                           0.250
+ multi-qa-MiniLM-L6-cos-v1         0.342               0.92          114                         0.083                          0.500                          0.300                           0.304
+multi-qa-mpnet-base-dot-v1         0.333              11.83          114                         0.083                          0.361                          0.500                           0.339
+          sentence-t5-base         0.316               2.03          114                         0.083                          0.361                          0.400                           0.321
+      intfloat/e5-large-v2         0.373              44.55          114                         0.167                          0.472                          0.200                           0.384
+     BAAI/bge-base-en-v1.5         0.272              13.97          114                         0.083                          0.417                          0.100                           0.250
+
+BEST PERFORMERS BY METRIC
+------------------------------------------------------------------------------------------------------------------------
+Best Overall: intfloat/e5-large-v2 (Score: 0.373)
+Fastest Embedding: paraphrase-MiniLM-L3-v2 (Time: 0.35s)
+
+BEST PERFORMERS BY CATEGORY
+------------------------------------------------------------------------------------------------------------------------
+multi_cell_answer_multi_chunk: msmarco-MiniLM-L-6-v3 (Score: 0.500)
+multi_cell_answer_single_chunk: multi-qa-MiniLM-L6-cos-v1 (Score: 0.500)
+single_cell_answer_multi_chunk: all-MiniLM-L6-v2 (Score: 0.500)
+single_cell_answer_single_chunk: intfloat/e5-large-v2 (Score: 0.384)

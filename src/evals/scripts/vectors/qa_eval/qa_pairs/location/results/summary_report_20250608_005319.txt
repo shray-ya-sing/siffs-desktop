@@ -1,0 +1,1493 @@
+====================================================================================================
+MARCOS MINI MODEL RETRIEVAL EVALUATION REPORT
+====================================================================================================
+
+MODEL INFORMATION
+--------------------------------------------------
+Model Name: msmarco-MiniLM-L-6-v3
+Embedding Dimension: 384
+Max Sequence Length: 512
+Device: cpu
+
+OVERALL STATISTICS
+--------------------------------------------------
+Total test cases: 114
+Overall average score: 0.320
+
+SCORES BY CATEGORY
+--------------------------------------------------
+                       Category  Count Average Score  Perfect (1.0)  Partial (0.5)  Failed (0.0)
+  multi_cell_answer_multi_chunk     12         0.500              6              0             6
+ multi_cell_answer_single_chunk     36         0.375              8             11            17
+ single_cell_answer_multi_chunk     10         0.400              4              0             6
+single_cell_answer_single_chunk     56         0.232              8             10            38
+
+====================================================================================================
+DETAILED RESULTS BY CATEGORY
+====================================================================================================
+
+
+MULTI_CELL_ANSWER - MULTI_CHUNK
+--------------------------------------------------------------------------------
+
+Test Case 1:
+Query: What are the China commerce revenues for all quarters in 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C8: 5601
+  - D8: 6152
+  - E8: 10172
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1769)
+  2. chunk_007_markdown (score: 0.1701)
+  3. chunk_006_markdown (score: 0.1514)
+----------------------------------------
+
+Test Case 2:
+Query: What are the International commerce revenues for all quarters in 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - F9: 1043
+  - G9: 1117
+  - H9: 1176
+  - I9: 1264
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1177)
+  2. chunk_007_markdown (score: 0.1170)
+  3. chunk_006_markdown (score: 0.1111)
+----------------------------------------
+
+Test Case 3:
+Query: What are the Cloud computing and Internet infrastructure revenues for Q2 and Q3 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C10: 155
+  - D10: 164
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1878)
+  2. chunk_006_markdown (score: 0.1516)
+  3. chunk_005_markdown (score: 0.1486)
+----------------------------------------
+
+Test Case 4:
+Query: What are the total revenues for the first and last quarters shown in the income statement?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: 
+  - C12: 6793
+  - J12: 14676.909999999998
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3713)
+  2. chunk_005_markdown (score: 0.3641)
+  3. chunk_007_markdown (score: 0.3415)
+----------------------------------------
+
+Test Case 5:
+Query: What are the gross profits for all quarters in 2013?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: 
+  - F15: 6397
+  - G15: 10778
+  - H15: 7949
+  - I15: 14574
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2795)
+  2. chunk_007_markdown (score: 0.2604)
+  3. chunk_006_markdown (score: 0.2363)
+----------------------------------------
+
+Test Case 6:
+Query: What are the cost of revenues for Q4 2012 and Q4 2013?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: 
+  - E14: -2911
+  - I14: -4171
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2139)
+  2. chunk_007_markdown (score: 0.1939)
+  3. chunk_006_markdown (score: 0.1700)
+----------------------------------------
+
+Test Case 7:
+Query: What are the Others revenue figures for the last three quarters of 2013?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: 
+  - G11: 294
+  - H11: 371
+  - I11: 524
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2249)
+  2. chunk_007_markdown (score: 0.2033)
+  3. chunk_005_markdown (score: 0.1849)
+----------------------------------------
+
+Test Case 8:
+Query: What are the Product development expenses for all quarters in 2012?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: 
+  - C18: -848
+  - D18: -888
+  - E18: -1163
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3126)
+  2. chunk_007_markdown (score: 0.2471)
+  3. chunk_005_markdown (score: 0.2257)
+----------------------------------------
+
+Test Case 9:
+Query: What are the Sales and marketing expenses for Q1 2013 and Q1 2014?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - F19: -521
+  - J19: -1467.691
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1939)
+  2. chunk_000_markdown (score: 0.1537)
+  3. chunk_002_markdown (score: 0.1520)
+----------------------------------------
+
+Test Case 10:
+Query: What are the income from operations figures for the middle two quarters of 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - G27: 5420
+  - H27: 5248
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2440)
+  2. chunk_007_markdown (score: 0.2291)
+  3. chunk_000_markdown (score: 0.2279)
+----------------------------------------
+
+Test Case 11:
+Query: What are the General and administrative expenses for Q3 2012 and Q3 2013?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: 
+  - D20: -804
+  - H20: -793
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2622)
+  2. chunk_007_markdown (score: 0.2427)
+  3. chunk_006_markdown (score: 0.2116)
+----------------------------------------
+
+Test Case 12:
+Query: What are the total operating expenses for the first and last quarters in the dataset?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C24: -4448
+  - J24: -7631.993200000001
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3089)
+  2. chunk_005_markdown (score: 0.2869)
+  3. chunk_007_markdown (score: 0.2802)
+----------------------------------------
+
+MULTI_CELL_ANSWER - SINGLE_CHUNK
+--------------------------------------------------------------------------------
+
+Test Case 1:
+Query: What are the China commerce revenues for all quarters in 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C8: 5601
+  - D8: 6152
+  - E8: 10172
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1769)
+  2. chunk_007_markdown (score: 0.1701)
+  3. chunk_006_markdown (score: 0.1514)
+----------------------------------------
+
+Test Case 2:
+Query: What are the International commerce revenues for all quarters in 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - F9: 1043
+  - G9: 1117
+  - H9: 1176
+  - I9: 1264
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1177)
+  2. chunk_007_markdown (score: 0.1170)
+  3. chunk_006_markdown (score: 0.1111)
+----------------------------------------
+
+Test Case 3:
+Query: What are the Cloud computing and Internet infrastructure revenues for the first three quarters shown?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C10: 155
+  - D10: 164
+  - E10: 165
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1724)
+  2. chunk_005_markdown (score: 0.1620)
+  3. chunk_007_markdown (score: 0.1448)
+----------------------------------------
+
+Test Case 4:
+Query: What are the quarter end dates for all quarters in 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - F5: 2013-03-31T00:00:00
+  - G5: 2013-06-30T00:00:00
+  - H5: 2013-09-30T00:00:00
+  - I5: 2013-12-31T00:00:00
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3282)
+  2. chunk_006_markdown (score: 0.2563)
+  3. chunk_005_markdown (score: 0.2293)
+----------------------------------------
+
+Test Case 5:
+Query: What are the China commerce and International commerce revenues for Q4 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - E8: 10172
+  - E9: 1094
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1664)
+  2. chunk_007_markdown (score: 0.1611)
+  3. chunk_001_markdown (score: 0.1524)
+----------------------------------------
+
+Test Case 6:
+Query: What are the revenues for all three business segments in Q1 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - F8: 7242
+  - F9: 1043
+  - F10: 166
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.3008)
+  2. chunk_001_markdown (score: 0.2744)
+  3. chunk_006_markdown (score: 0.2700)
+----------------------------------------
+
+Test Case 7:
+Query: What are the Cloud computing revenues for the last three quarters of 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - G10: 174
+  - H10: 190
+  - I10: 196
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1581)
+  2. chunk_006_markdown (score: 0.1562)
+  3. chunk_007_markdown (score: 0.1556)
+----------------------------------------
+
+Test Case 8:
+Query: What are the International commerce revenues for Q2 2012 and Q2 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C9: 974
+  - G9: 1117
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1418)
+  2. chunk_002_markdown (score: 0.1288)
+  3. chunk_001_markdown (score: 0.1276)
+----------------------------------------
+
+Test Case 9:
+Query: What are the revenues for all business segments in Q1 2014?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - J8: 12570.75
+  - J9: 1200.8
+  - J10: 197.96
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2493)
+  2. chunk_001_markdown (score: 0.2254)
+  3. chunk_006_markdown (score: 0.2082)
+----------------------------------------
+
+Test Case 10:
+Query: What are the China commerce revenues for the two middle quarters of 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - G8: 9193
+  - H8: 9213
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1833)
+  2. chunk_006_markdown (score: 0.1790)
+  3. chunk_001_markdown (score: 0.1597)
+----------------------------------------
+
+Test Case 11:
+Query: What are the year labels shown in the column headers?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C6: 2012
+  - D6: 2012
+  - E6: 2012
+  - F6: 2013
+  - G6: 2013
+  - H6: 2013
+  - I6: 2013
+  - J6: 2014
+Retrieved Chunks:
+  1. chunk_005_markdown (score: 0.2273)
+  2. chunk_007_markdown (score: 0.2098)
+  3. chunk_006_markdown (score: 0.1877)
+----------------------------------------
+
+Test Case 12:
+Query: What are the Cloud computing revenues for all quarters in 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C10: 155
+  - D10: 164
+  - E10: 165
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2014)
+  2. chunk_007_markdown (score: 0.1597)
+  3. chunk_005_markdown (score: 0.1436)
+----------------------------------------
+
+Test Case 13:
+Query: What are the quarter-over-quarter growth percentages for Others revenue across all quarters in 2012?
+Score: 0.5
+Location: chunk_3
+Golden Answer: 
+  - D61: 0.46031746031746024
+  - E61: 0.7608695652173914
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2131)
+  2. chunk_007_markdown (score: 0.1811)
+  3. chunk_006_markdown (score: 0.1704)
+----------------------------------------
+
+Test Case 14:
+Query: What are the quarter-over-quarter growth percentages for Others revenue across all quarters in 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: 
+  - F61: 0.3765432098765431
+  - G61: 0.3183856502242153
+  - H61: 0.26190476190476186
+  - I61: 0.41239892183288407
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2177)
+  2. chunk_007_markdown (score: 0.1869)
+  3. chunk_006_markdown (score: 0.1854)
+----------------------------------------
+
+Test Case 15:
+Query: What are the total revenues for all quarters in 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C63: 6793
+  - D63: 7457
+  - E63: 11593
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3142)
+  2. chunk_007_markdown (score: 0.2375)
+  3. chunk_005_markdown (score: 0.2189)
+----------------------------------------
+
+Test Case 16:
+Query: What are the total revenues for all quarters in 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - F63: 8674
+  - G63: 10778
+  - H63: 10950
+  - I63: 18745
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3127)
+  2. chunk_007_markdown (score: 0.2426)
+  3. chunk_005_markdown (score: 0.2235)
+----------------------------------------
+
+Test Case 17:
+Query: What are the cost of revenue figures for the first and last quarters shown?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C66: 2158
+  - J66: 3228.9202
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3094)
+  2. chunk_007_markdown (score: 0.2844)
+  3. chunk_005_markdown (score: 0.2836)
+----------------------------------------
+
+Test Case 18:
+Query: What are the cost of revenue as percentage of sales for all quarters in 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C67: 0.31767996466951276
+  - D67: 0.3182244870591391
+  - E67: 0.2510998016044165
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2030)
+  2. chunk_007_markdown (score: 0.1757)
+  3. chunk_005_markdown (score: 0.1391)
+----------------------------------------
+
+Test Case 19:
+Query: What are the cost of revenue as percentage of sales for all quarters in 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: 
+  - F67: 0.26250864652985934
+  - G67: 0.25301540174429393
+  - H67: 0.27406392694063925
+  - I67: 0.22251267004534542
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2029)
+  2. chunk_007_markdown (score: 0.1853)
+  3. chunk_006_markdown (score: 0.1637)
+----------------------------------------
+
+Test Case 20:
+Query: What are the Product development expenses for the middle two quarters of 2013?
+Score: 0.5
+Location: chunk_2
+Golden Answer: 
+  - G69: 1018
+  - H69: 1168
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2529)
+  2. chunk_006_markdown (score: 0.2483)
+  3. chunk_007_markdown (score: 0.2463)
+----------------------------------------
+
+Test Case 21:
+Query: What are the Product development expenses as percentage of sales for all quarters in 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: 
+  - C70: 0.1248343883409392
+  - D70: 0.1190827410486791
+  - E70: 0.10031915811265418
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2300)
+  2. chunk_007_markdown (score: 0.2163)
+  3. chunk_005_markdown (score: 0.1774)
+----------------------------------------
+
+Test Case 22:
+Query: What are the Product development expenses for Q4 2012 and Q4 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: 
+  - E69: 1163
+  - I69: 1707
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2700)
+  2. chunk_007_markdown (score: 0.2415)
+  3. chunk_006_markdown (score: 0.2126)
+----------------------------------------
+
+Test Case 23:
+Query: What are the cost of revenue figures for all quarters in 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: 
+  - F66: 2277
+  - G66: 2727
+  - H66: 3001
+  - I66: 4171
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3096)
+  2. chunk_007_markdown (score: 0.2357)
+  3. chunk_006_markdown (score: 0.2201)
+----------------------------------------
+
+Test Case 24:
+Query: What are the Product development expenses as percentage of sales for the last three quarters of 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: 
+  - G70: 0.09445166079049916
+  - H70: 0.10666666666666667
+  - I70: 0.09106428380901574
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2258)
+  2. chunk_001_markdown (score: 0.2099)
+  3. chunk_006_markdown (score: 0.1988)
+----------------------------------------
+
+Test Case 25:
+Query: What are the Sales and marketing expenses for all quarters in 2012?
+Score: 0.5
+Location: chunk_2
+Golden Answer: 
+  - C72: 869
+  - D72: 974
+  - E72: 1249
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2247)
+  2. chunk_007_markdown (score: 0.2234)
+  3. chunk_000_markdown (score: 0.1482)
+----------------------------------------
+
+Test Case 26:
+Query: What are the Sales and marketing expenses for all quarters in 2013?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - F72: 521
+  - G72: 713
+  - H72: 657
+  - I72: 1897
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2325)
+  2. chunk_001_markdown (score: 0.2226)
+  3. chunk_005_markdown (score: 0.1483)
+----------------------------------------
+
+Test Case 27:
+Query: What are the Sales and marketing expenses as percentage of sales for all quarters in 2012?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - C73: 0.12792580597674078
+  - D73: 0.13061552903312323
+  - E73: 0.1077374277581299
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1967)
+  2. chunk_001_markdown (score: 0.1588)
+  3. chunk_005_markdown (score: 0.1241)
+----------------------------------------
+
+Test Case 28:
+Query: What are the Sales and marketing expenses as percentage of sales for all quarters in 2013?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - F73: 0.06006456075628314
+  - G73: 0.06615327519020227
+  - H73: 0.06
+  - I73: 0.1012003200853561
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2076)
+  2. chunk_001_markdown (score: 0.1616)
+  3. chunk_005_markdown (score: 0.1331)
+----------------------------------------
+
+Test Case 29:
+Query: What are the General and administrative expenses for all quarters in 2012?
+Score: 0.5
+Location: chunk_2
+Golden Answer: 
+  - C75: 537
+  - D75: 804
+  - E75: 1003
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2569)
+  2. chunk_007_markdown (score: 0.1832)
+  3. chunk_005_markdown (score: 0.1579)
+----------------------------------------
+
+Test Case 30:
+Query: What are the General and administrative expenses for all quarters in 2013?
+Score: 0.5
+Location: chunk_2
+Golden Answer: 
+  - F75: 545
+  - G75: 865
+  - H75: 793
+  - I75: 2046
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2454)
+  2. chunk_007_markdown (score: 0.1840)
+  3. chunk_006_markdown (score: 0.1691)
+----------------------------------------
+
+Test Case 31:
+Query: What are the General and administrative expenses as percentage of sales for the first and last quarters shown?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - C76: 0.07905196525835419
+  - J76: 0.11
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2313)
+  2. chunk_001_markdown (score: 0.1873)
+  3. chunk_006_markdown (score: 0.1867)
+----------------------------------------
+
+Test Case 32:
+Query: What are the General and administrative expenses as percentage of sales for all quarters in 2013?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - F76: 0.06283145031127507
+  - G76: 0.08025607719428465
+  - H76: 0.07242009132420091
+  - I76: 0.1091491064283809
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1942)
+  2. chunk_001_markdown (score: 0.1939)
+  3. chunk_006_markdown (score: 0.1626)
+----------------------------------------
+
+Test Case 33:
+Query: What are the Sales and marketing expenses for Q4 2012 and Q4 2013?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - E72: 1249
+  - I72: 1897
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2340)
+  2. chunk_001_markdown (score: 0.2166)
+  3. chunk_000_markdown (score: 0.1922)
+----------------------------------------
+
+Test Case 34:
+Query: What are the General and administrative expenses for the middle two quarters of 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: 
+  - G75: 865
+  - H75: 793
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2200)
+  2. chunk_006_markdown (score: 0.2061)
+  3. chunk_007_markdown (score: 0.2059)
+----------------------------------------
+
+Test Case 35:
+Query: What are the Sales and marketing expenses for Q1 2013 and Q1 2014?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - F72: 521
+  - J72: 1467.691
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1939)
+  2. chunk_000_markdown (score: 0.1537)
+  3. chunk_002_markdown (score: 0.1520)
+----------------------------------------
+
+Test Case 36:
+Query: What are the General and administrative expenses as percentage of sales for Q3 2012 and Q3 2013?
+Score: 1.0
+Location: top_chunk
+Golden Answer: 
+  - D76: 0.1078181574359662
+  - H76: 0.07242009132420091
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2504)
+  2. chunk_001_markdown (score: 0.2244)
+  3. chunk_006_markdown (score: 0.2040)
+----------------------------------------
+
+SINGLE_CELL_ANSWER - MULTI_CHUNK
+--------------------------------------------------------------------------------
+
+Test Case 1:
+Query: What is the total revenue for Q4 2012, considering all business segments shown in the income statement?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: E12: 11593
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3573)
+  2. chunk_007_markdown (score: 0.3189)
+  3. chunk_000_markdown (score: 0.3047)
+----------------------------------------
+
+Test Case 2:
+Query: After accounting for cost of revenue, what is the gross profit for Q4 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: I15: 14574
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.3060)
+  2. chunk_007_markdown (score: 0.2963)
+  3. chunk_005_markdown (score: 0.2734)
+----------------------------------------
+
+Test Case 3:
+Query: What is the income from operations for Q1 2014, after deducting all operating expenses from gross profit?
+Score: 0.0
+Location: not_found
+Golden Answer: J27: 7044.916799999997
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1659)
+  2. chunk_001_markdown (score: 0.1562)
+  3. chunk_006_markdown (score: 0.1375)
+----------------------------------------
+
+Test Case 4:
+Query: What is the total operating expenses for Q3 2012, which includes all expense categories listed in the operating expenses section?
+Score: 0.0
+Location: not_found
+Golden Answer: D24: -8563
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2308)
+  2. chunk_000_markdown (score: 0.2183)
+  3. chunk_007_markdown (score: 0.1982)
+----------------------------------------
+
+Test Case 5:
+Query: What is the largest revenue component contributing to total revenue in Q4 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: I8: 16761
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2944)
+  2. chunk_007_markdown (score: 0.2415)
+  3. chunk_006_markdown (score: 0.2163)
+----------------------------------------
+
+Test Case 6:
+Query: What is the income from operations for Q4 2012, calculated as the difference between total revenue and total operating expenses?
+Score: 0.0
+Location: not_found
+Golden Answer: E27: 5060
+Retrieved Chunks:
+  1. chunk_000_markdown (score: 0.2757)
+  2. chunk_001_markdown (score: 0.2623)
+  3. chunk_007_markdown (score: 0.2366)
+----------------------------------------
+
+Test Case 7:
+Query: What is the total revenue for Q1 2014, which is the sum of all business segment revenues?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: J12: 14676.909999999998
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2240)
+  2. chunk_001_markdown (score: 0.2078)
+  3. chunk_006_markdown (score: 0.1969)
+----------------------------------------
+
+Test Case 8:
+Query: What is the cost of revenue for Q4 2013, which is deducted from total revenue to calculate gross profit?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: I14: -4171
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2560)
+  2. chunk_007_markdown (score: 0.2511)
+  3. chunk_006_markdown (score: 0.2253)
+----------------------------------------
+
+Test Case 9:
+Query: What is the income from operations for Q2 2013, after all operating expenses are subtracted from gross profit?
+Score: 0.0
+Location: not_found
+Golden Answer: G27: 5420
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2065)
+  2. chunk_000_markdown (score: 0.2016)
+  3. chunk_001_markdown (score: 0.1899)
+----------------------------------------
+
+Test Case 10:
+Query: What is the impairment of goodwill and intangible assets expense for Q3 2012?
+Score: 1.0
+Location: composed_chunks
+Golden Answer: D22: -3487
+Retrieved Chunks:
+  1. chunk_002_markdown (score: 0.2029)
+  2. chunk_001_markdown (score: 0.0820)
+  3. chunk_007_markdown (score: 0.0472)
+----------------------------------------
+
+SINGLE_CELL_ANSWER - SINGLE_CHUNK
+--------------------------------------------------------------------------------
+
+Test Case 1:
+Query: What is the China commerce revenue for Q2 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: C8: 5601
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1852)
+  2. chunk_001_markdown (score: 0.1836)
+  3. chunk_006_markdown (score: 0.1741)
+----------------------------------------
+
+Test Case 2:
+Query: What is the China commerce revenue for Q4 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: E8: 10172
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2084)
+  2. chunk_007_markdown (score: 0.2082)
+  3. chunk_006_markdown (score: 0.2065)
+----------------------------------------
+
+Test Case 3:
+Query: What is the International commerce revenue for Q3 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: D9: 1049
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1854)
+  2. chunk_001_markdown (score: 0.1821)
+  3. chunk_006_markdown (score: 0.1802)
+----------------------------------------
+
+Test Case 4:
+Query: What is the Cloud computing and Internet infrastructure revenue for Q4 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: I10: 196
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1860)
+  2. chunk_006_markdown (score: 0.1704)
+  3. chunk_005_markdown (score: 0.1535)
+----------------------------------------
+
+Test Case 5:
+Query: What is the China commerce revenue for Q1 2014?
+Score: 0.0
+Location: not_found
+Golden Answer: J8: 12570.75
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1760)
+  2. chunk_007_markdown (score: 0.1561)
+  3. chunk_002_markdown (score: 0.1433)
+----------------------------------------
+
+Test Case 6:
+Query: What is the International commerce revenue for Q2 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: G9: 1117
+Retrieved Chunks:
+  1. chunk_002_markdown (score: 0.1626)
+  2. chunk_006_markdown (score: 0.1572)
+  3. chunk_007_markdown (score: 0.1481)
+----------------------------------------
+
+Test Case 7:
+Query: What is the Cloud computing revenue for Q1 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: F10: 166
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1928)
+  2. chunk_001_markdown (score: 0.1672)
+  3. chunk_007_markdown (score: 0.1624)
+----------------------------------------
+
+Test Case 8:
+Query: What is the China commerce revenue for Q3 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: H8: 9213
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.2058)
+  2. chunk_007_markdown (score: 0.1937)
+  3. chunk_005_markdown (score: 0.1784)
+----------------------------------------
+
+Test Case 9:
+Query: What is the International commerce revenue for the final quarter of 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: I9: 1264
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1723)
+  2. chunk_007_markdown (score: 0.1566)
+  3. chunk_002_markdown (score: 0.1510)
+----------------------------------------
+
+Test Case 10:
+Query: What is the Cloud computing and Internet infrastructure revenue for Q3 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: H10: 190
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1667)
+  2. chunk_001_markdown (score: 0.1663)
+  3. chunk_005_markdown (score: 0.1535)
+----------------------------------------
+
+Test Case 11:
+Query: What currency unit is specified for the financial amounts in this statement?
+Score: 0.0
+Location: not_found
+Golden Answer: B6: (RMB in Million Except Per Share Amounts)
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1179)
+  2. chunk_007_markdown (score: 0.0976)
+  3. chunk_000_markdown (score: 0.0837)
+----------------------------------------
+
+Test Case 12:
+Query: What is the International commerce revenue for Q1 2014?
+Score: 0.0
+Location: not_found
+Golden Answer: J9: 1200.8
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1457)
+  2. chunk_002_markdown (score: 0.1358)
+  3. chunk_007_markdown (score: 0.1243)
+----------------------------------------
+
+Test Case 13:
+Query: What is the Others revenue for Q4 2012?
+Score: 1.0
+Location: top_chunk
+Golden Answer: E11: 162
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2378)
+  2. chunk_007_markdown (score: 0.1905)
+  3. chunk_005_markdown (score: 0.1637)
+----------------------------------------
+
+Test Case 14:
+Query: What is the total Revenue for Q2 2012?
+Score: 1.0
+Location: top_chunk
+Golden Answer: C12: 6793
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2754)
+  2. chunk_007_markdown (score: 0.2304)
+  3. chunk_005_markdown (score: 0.2071)
+----------------------------------------
+
+Test Case 15:
+Query: What is the total Revenue for Q4 2012?
+Score: 1.0
+Location: top_chunk
+Golden Answer: E12: 11593
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.3005)
+  2. chunk_007_markdown (score: 0.2591)
+  3. chunk_005_markdown (score: 0.2302)
+----------------------------------------
+
+Test Case 16:
+Query: What is the Cost of revenue for Q3 2012?
+Score: 1.0
+Location: top_chunk
+Golden Answer: D14: -2373
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2519)
+  2. chunk_007_markdown (score: 0.2275)
+  3. chunk_005_markdown (score: 0.2087)
+----------------------------------------
+
+Test Case 17:
+Query: What is the Gross profit for Q4 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: I15: 14574
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2653)
+  2. chunk_006_markdown (score: 0.2578)
+  3. chunk_001_markdown (score: 0.2489)
+----------------------------------------
+
+Test Case 18:
+Query: What is the Others revenue for Q1 2014?
+Score: 1.0
+Location: top_chunk
+Golden Answer: J11: 707.4000000000001
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1573)
+  2. chunk_007_markdown (score: 0.1380)
+  3. chunk_006_markdown (score: 0.1226)
+----------------------------------------
+
+Test Case 19:
+Query: What is the total Revenue for Q1 2014?
+Score: 1.0
+Location: top_chunk
+Golden Answer: J12: 14676.909999999998
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2086)
+  2. chunk_007_markdown (score: 0.2020)
+  3. chunk_006_markdown (score: 0.1939)
+----------------------------------------
+
+Test Case 20:
+Query: What is the Product development expenses for Q4 2013?
+Score: 1.0
+Location: top_chunk
+Golden Answer: I18: -1707
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2718)
+  2. chunk_007_markdown (score: 0.2486)
+  3. chunk_006_markdown (score: 0.2398)
+----------------------------------------
+
+Test Case 21:
+Query: What is the Sales and marketing expenses for Q1 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: F19: -521
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2417)
+  2. chunk_006_markdown (score: 0.1887)
+  3. chunk_000_markdown (score: 0.1866)
+----------------------------------------
+
+Test Case 22:
+Query: What is the General and administrative expenses for Q3 2013?
+Score: 0.5
+Location: chunk_2
+Golden Answer: H20: -793
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2520)
+  2. chunk_001_markdown (score: 0.2490)
+  3. chunk_006_markdown (score: 0.2343)
+----------------------------------------
+
+Test Case 23:
+Query: What is the Cost of revenue for Q4 2013?
+Score: 1.0
+Location: top_chunk
+Golden Answer: I14: -4171
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2479)
+  2. chunk_007_markdown (score: 0.2221)
+  3. chunk_006_markdown (score: 0.2206)
+----------------------------------------
+
+Test Case 24:
+Query: What is the Gross profit for Q2 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: G15: 10778
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2526)
+  2. chunk_006_markdown (score: 0.2389)
+  3. chunk_001_markdown (score: 0.2268)
+----------------------------------------
+
+Test Case 25:
+Query: What line item is described in cell B31?
+Score: 0.0
+Location: not_found
+Golden Answer: B31: Other income (expense), net
+Retrieved Chunks:
+  1. chunk_003_markdown (score: 0.3028)
+  2. chunk_000_markdown (score: 0.2669)
+  3. chunk_004_markdown (score: 0.2597)
+----------------------------------------
+
+Test Case 26:
+Query: What financial metric is shown in row 33?
+Score: 0.0
+Location: not_found
+Golden Answer: B33: Loss before provision (benefit) for income taxes
+Retrieved Chunks:
+  1. chunk_000_markdown (score: 0.2737)
+  2. chunk_001_markdown (score: 0.2559)
+  3. chunk_005_markdown (score: 0.2555)
+----------------------------------------
+
+Test Case 27:
+Query: What expense category is listed in cell B34?
+Score: 0.0
+Location: not_found
+Golden Answer: B34: Income tax expenses
+Retrieved Chunks:
+  1. chunk_000_markdown (score: 0.1040)
+  2. chunk_007_markdown (score: 0.0963)
+  3. chunk_001_markdown (score: 0.0953)
+----------------------------------------
+
+Test Case 28:
+Query: What type of investment results are shown in row 35?
+Score: 0.0
+Location: not_found
+Golden Answer: B35: Share of results of equity investees
+Retrieved Chunks:
+  1. chunk_002_markdown (score: 0.2628)
+  2. chunk_004_markdown (score: 0.2390)
+  3. chunk_007_markdown (score: 0.2261)
+----------------------------------------
+
+Test Case 29:
+Query: What is the main profit/loss metric shown in row 36?
+Score: 0.0
+Location: not_found
+Golden Answer: B36: Net income (loss)
+Retrieved Chunks:
+  1. chunk_005_markdown (score: 0.2629)
+  2. chunk_007_markdown (score: 0.2612)
+  3. chunk_000_markdown (score: 0.2604)
+----------------------------------------
+
+Test Case 30:
+Query: What attribution of net income is described in cell B37?
+Score: 0.0
+Location: not_found
+Golden Answer: B37: Net income (loss) attributable to noncontrolling interests
+Retrieved Chunks:
+  1. chunk_002_markdown (score: 0.1902)
+  2. chunk_000_markdown (score: 0.1750)
+  3. chunk_004_markdown (score: 0.1389)
+----------------------------------------
+
+Test Case 31:
+Query: What company-specific net income line item is shown in row 38?
+Score: 0.0
+Location: not_found
+Golden Answer: B38: Net income (loss) attributable to Alibaba Group Holding Limited
+Retrieved Chunks:
+  1. chunk_000_markdown (score: 0.3590)
+  2. chunk_005_markdown (score: 0.3152)
+  3. chunk_007_markdown (score: 0.3105)
+----------------------------------------
+
+Test Case 32:
+Query: What type of stock accretion is mentioned in cell B40?
+Score: 0.5
+Location: chunk_3
+Golden Answer: B40: Accretion of redeemable convertible preferred stock
+Retrieved Chunks:
+  1. chunk_002_markdown (score: 0.2578)
+  2. chunk_004_markdown (score: 0.2410)
+  3. chunk_003_markdown (score: 0.2239)
+----------------------------------------
+
+Test Case 33:
+Query: What financial item is described in cell B41?
+Score: 0.0
+Location: not_found
+Golden Answer: B41: Dividends accrued on convertible preference shares
+Retrieved Chunks:
+  1. chunk_000_markdown (score: 0.1434)
+  2. chunk_003_markdown (score: 0.1318)
+  3. chunk_002_markdown (score: 0.1221)
+----------------------------------------
+
+Test Case 34:
+Query: What is the Net loss attributable to common stockholders for Q2 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: C42: 1722
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2307)
+  2. chunk_006_markdown (score: 0.1732)
+  3. chunk_005_markdown (score: 0.1638)
+----------------------------------------
+
+Test Case 35:
+Query: What is the Net loss attributable to common stockholders for Q3 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: D42: -1560
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2490)
+  2. chunk_006_markdown (score: 0.2021)
+  3. chunk_005_markdown (score: 0.1926)
+----------------------------------------
+
+Test Case 36:
+Query: What is the Net loss attributable to common stockholders for Q4 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: E42: 4045
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2436)
+  2. chunk_006_markdown (score: 0.1918)
+  3. chunk_007_markdown (score: 0.1780)
+----------------------------------------
+
+Test Case 37:
+Query: What is the Net loss attributable to common stockholders for Q1 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: F42: 4197
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2014)
+  2. chunk_006_markdown (score: 0.1998)
+  3. chunk_005_markdown (score: 0.1615)
+----------------------------------------
+
+Test Case 38:
+Query: What is the Net loss attributable to common stockholders for Q2 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: G42: 4384
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2136)
+  2. chunk_006_markdown (score: 0.1845)
+  3. chunk_005_markdown (score: 0.1582)
+----------------------------------------
+
+Test Case 39:
+Query: What is the Net loss attributable to common stockholders for Q3 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: H42: 4883
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2330)
+  2. chunk_006_markdown (score: 0.2124)
+  3. chunk_005_markdown (score: 0.1883)
+----------------------------------------
+
+Test Case 40:
+Query: What is the Net loss attributable to common stockholders for Q4 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: I42: 8266
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2276)
+  2. chunk_006_markdown (score: 0.2011)
+  3. chunk_007_markdown (score: 0.1714)
+----------------------------------------
+
+Test Case 41:
+Query: What is the Share-based compensation expense for Q2 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: C44: 279
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2029)
+  2. chunk_007_markdown (score: 0.1888)
+  3. chunk_002_markdown (score: 0.1697)
+----------------------------------------
+
+Test Case 42:
+Query: What is the Share-based compensation expense for Q3 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: H44: 864
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.2139)
+  2. chunk_006_markdown (score: 0.2064)
+  3. chunk_001_markdown (score: 0.1950)
+----------------------------------------
+
+Test Case 43:
+Query: What is the Share-based compensation expense for Q4 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: I44: 659
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.2119)
+  2. chunk_001_markdown (score: 0.2108)
+  3. chunk_007_markdown (score: 0.2092)
+----------------------------------------
+
+Test Case 44:
+Query: What analysis section begins in row 47?
+Score: 0.0
+Location: not_found
+Golden Answer: B47: Growth Analysis and Drivers
+Retrieved Chunks:
+  1. chunk_000_markdown (score: 0.3680)
+  2. chunk_003_markdown (score: 0.3666)
+  3. chunk_002_markdown (score: 0.3631)
+----------------------------------------
+
+Test Case 45:
+Query: What is the China commerce revenue for Q2 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: C51: 5601
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1852)
+  2. chunk_001_markdown (score: 0.1836)
+  3. chunk_006_markdown (score: 0.1741)
+----------------------------------------
+
+Test Case 46:
+Query: What is the China commerce revenue for Q4 2013?
+Score: 0.0
+Location: not_found
+Golden Answer: I51: 16761
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.2124)
+  2. chunk_007_markdown (score: 0.1983)
+  3. chunk_001_markdown (score: 0.1853)
+----------------------------------------
+
+Test Case 47:
+Query: What is the China commerce revenue for Q1 2014?
+Score: 0.0
+Location: not_found
+Golden Answer: J51: 12570.75
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1760)
+  2. chunk_007_markdown (score: 0.1561)
+  3. chunk_002_markdown (score: 0.1433)
+----------------------------------------
+
+Test Case 48:
+Query: What is the percentage driver behind China commerce revenue in Q1 2014?
+Score: 0.5
+Location: chunk_3
+Golden Answer: J52: -0.25
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1445)
+  2. chunk_007_markdown (score: 0.1439)
+  3. chunk_005_markdown (score: 0.1276)
+----------------------------------------
+
+Test Case 49:
+Query: What is the International commerce revenue for Q3 2012?
+Score: 0.0
+Location: not_found
+Golden Answer: D54: 1049
+Retrieved Chunks:
+  1. chunk_007_markdown (score: 0.1854)
+  2. chunk_001_markdown (score: 0.1821)
+  3. chunk_006_markdown (score: 0.1802)
+----------------------------------------
+
+Test Case 50:
+Query: What is the International commerce revenue for Q1 2014?
+Score: 0.0
+Location: not_found
+Golden Answer: J54: 1200.8
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1457)
+  2. chunk_002_markdown (score: 0.1358)
+  3. chunk_007_markdown (score: 0.1243)
+----------------------------------------
+
+Test Case 51:
+Query: What is the quarter-over-quarter growth percentage for International commerce in Q2 2013?
+Score: 0.5
+Location: chunk_3
+Golden Answer: G55: 0.07094918504314474
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1865)
+  2. chunk_007_markdown (score: 0.1635)
+  3. chunk_005_markdown (score: 0.1475)
+----------------------------------------
+
+Test Case 52:
+Query: What is the Cloud computing and Internet infrastructure revenue for Q2 2012?
+Score: 0.5
+Location: chunk_2
+Golden Answer: C57: 155
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1875)
+  2. chunk_005_markdown (score: 0.1398)
+  3. chunk_007_markdown (score: 0.1336)
+----------------------------------------
+
+Test Case 53:
+Query: What is the Cloud computing and Internet infrastructure revenue for Q1 2014?
+Score: 0.5
+Location: chunk_3
+Golden Answer: J57: 197.96
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1270)
+  2. chunk_001_markdown (score: 0.1225)
+  3. chunk_005_markdown (score: 0.1107)
+----------------------------------------
+
+Test Case 54:
+Query: What is the percentage growth driver for Cloud computing revenue in Q1 2014?
+Score: 0.5
+Location: chunk_3
+Golden Answer: J58: 0.01
+Retrieved Chunks:
+  1. chunk_006_markdown (score: 0.1767)
+  2. chunk_007_markdown (score: 0.1674)
+  3. chunk_005_markdown (score: 0.1592)
+----------------------------------------
+
+Test Case 55:
+Query: What is the Others revenue for Q4 2012?
+Score: 0.5
+Location: chunk_3
+Golden Answer: E60: 162
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.2378)
+  2. chunk_007_markdown (score: 0.1905)
+  3. chunk_005_markdown (score: 0.1637)
+----------------------------------------
+
+Test Case 56:
+Query: What is the Others revenue for Q1 2014?
+Score: 0.0
+Location: not_found
+Golden Answer: J60: 707.4000000000001
+Retrieved Chunks:
+  1. chunk_001_markdown (score: 0.1573)
+  2. chunk_007_markdown (score: 0.1380)
+  3. chunk_006_markdown (score: 0.1226)
+----------------------------------------
+
+====================================================================================================
+FAILED CASES ANALYSIS
+====================================================================================================
+
+Total failed cases: 67
+
+Failed Case 1:
+Query: What are the China commerce revenues for all quarters in 2012?
+Category: multi_cell_answer - multi_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 2:
+Query: What are the International commerce revenues for all quarters in 2013?
+Category: multi_cell_answer - multi_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 3:
+Query: What are the Cloud computing and Internet infrastructure revenues for Q2 and Q3 2012?
+Category: multi_cell_answer - multi_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 4:
+Query: What are the Sales and marketing expenses for Q1 2013 and Q1 2014?
+Category: multi_cell_answer - multi_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 5:
+Query: What are the income from operations figures for the middle two quarters of 2013?
+Category: multi_cell_answer - multi_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 6:
+Query: What are the total operating expenses for the first and last quarters in the dataset?
+Category: multi_cell_answer - multi_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 7:
+Query: What are the China commerce revenues for all quarters in 2012?
+Category: multi_cell_answer - single_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 8:
+Query: What are the International commerce revenues for all quarters in 2013?
+Category: multi_cell_answer - single_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 9:
+Query: What are the Cloud computing and Internet infrastructure revenues for the first three quarters shown?
+Category: multi_cell_answer - single_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------
+Failed Case 10:
+Query: What are the quarter end dates for all quarters in 2013?
+Category: multi_cell_answer - single_chunk
+Expected chunk(s) containing answer not retrieved
+----------------------------------------

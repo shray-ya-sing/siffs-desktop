@@ -1,0 +1,4054 @@
+[
+  {
+    "query": "What are the China commerce revenues for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C8",
+        "value": 5601
+      },
+      {
+        "cell_address": "D8",
+        "value": 6152
+      },
+      {
+        "cell_address": "E8",
+        "value": 10172
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5750257968902588,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5731446743011475,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5477277040481567,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the International commerce revenues for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F9",
+        "value": 1043
+      },
+      {
+        "cell_address": "G9",
+        "value": 1117
+      },
+      {
+        "cell_address": "H9",
+        "value": 1176
+      },
+      {
+        "cell_address": "I9",
+        "value": 1264
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "composed_chunks",
+      "chunk_ids": [
+        "chunk_007_markdown",
+        "chunk_005_markdown",
+        "chunk_000_markdown"
+      ]
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5706068277359009,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5614716410636902,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5522725582122803,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the Cloud computing and Internet infrastructure revenues for Q2 and Q3 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C10",
+        "value": 155
+      },
+      {
+        "cell_address": "D10",
+        "value": 164
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5502954125404358,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5498877167701721,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.5447854995727539,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the total revenues for the first and last quarters shown in the income statement?",
+    "golden_answer": [
+      {
+        "cell_address": "C12",
+        "value": 6793
+      },
+      {
+        "cell_address": "J12",
+        "value": 14676.909999999998
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.7174267172813416,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.7061470746994019,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.687487006187439,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the gross profits for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F15",
+        "value": 6397
+      },
+      {
+        "cell_address": "G15",
+        "value": 10778
+      },
+      {
+        "cell_address": "H15",
+        "value": 7949
+      },
+      {
+        "cell_address": "I15",
+        "value": 14574
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5995647311210632,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5840045809745789,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5825031995773315,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the cost of revenues for Q4 2012 and Q4 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "E14",
+        "value": -2911
+      },
+      {
+        "cell_address": "I14",
+        "value": -4171
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6249247789382935,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6088316440582275,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6016026139259338,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the Others revenue figures for the last three quarters of 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "G11",
+        "value": 294
+      },
+      {
+        "cell_address": "H11",
+        "value": 371
+      },
+      {
+        "cell_address": "I11",
+        "value": 524
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6011202931404114,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5860127210617065,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.577830970287323,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the Product development expenses for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C18",
+        "value": -848
+      },
+      {
+        "cell_address": "D18",
+        "value": -888
+      },
+      {
+        "cell_address": "E18",
+        "value": -1163
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5502848625183105,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5242553949356079,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5183305740356445,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the Sales and marketing expenses for Q1 2013 and Q1 2014?",
+    "golden_answer": [
+      {
+        "cell_address": "F19",
+        "value": -521
+      },
+      {
+        "cell_address": "J19",
+        "value": -1467.691
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6451355814933777,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6028182506561279,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6024102568626404,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the income from operations figures for the middle two quarters of 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "G27",
+        "value": 5420
+      },
+      {
+        "cell_address": "H27",
+        "value": 5248
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6273238658905029,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6236165761947632,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6113042831420898,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the General and administrative expenses for Q3 2012 and Q3 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "D20",
+        "value": -804
+      },
+      {
+        "cell_address": "H20",
+        "value": -793
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6202588081359863,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5980883836746216,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.591651439666748,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the total operating expenses for the first and last quarters in the dataset?",
+    "golden_answer": [
+      {
+        "cell_address": "C24",
+        "value": -4448
+      },
+      {
+        "cell_address": "J24",
+        "value": -7631.993200000001
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6878219842910767,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6727729439735413,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6598144173622131,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What are the China commerce revenues for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C8",
+        "value": 5601
+      },
+      {
+        "cell_address": "D8",
+        "value": 6152
+      },
+      {
+        "cell_address": "E8",
+        "value": 10172
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5750257968902588,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5731446743011475,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5477277040481567,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the International commerce revenues for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F9",
+        "value": 1043
+      },
+      {
+        "cell_address": "G9",
+        "value": 1117
+      },
+      {
+        "cell_address": "H9",
+        "value": 1176
+      },
+      {
+        "cell_address": "I9",
+        "value": 1264
+      }
+    ],
+    "score": 0.5,
+    "details": {
+      "location": "chunk_3",
+      "chunk_id": "chunk_000_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5706068277359009,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5614716410636902,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5522725582122803,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Cloud computing and Internet infrastructure revenues for the first three quarters shown?",
+    "golden_answer": [
+      {
+        "cell_address": "C10",
+        "value": 155
+      },
+      {
+        "cell_address": "D10",
+        "value": 164
+      },
+      {
+        "cell_address": "E10",
+        "value": 165
+      }
+    ],
+    "score": 0.5,
+    "details": {
+      "location": "chunk_3",
+      "chunk_id": "chunk_000_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5498064756393433,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5450814962387085,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5448270440101624,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the quarter end dates for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F5",
+        "value": "2013-03-31T00:00:00"
+      },
+      {
+        "cell_address": "G5",
+        "value": "2013-06-30T00:00:00"
+      },
+      {
+        "cell_address": "H5",
+        "value": "2013-09-30T00:00:00"
+      },
+      {
+        "cell_address": "I5",
+        "value": "2013-12-31T00:00:00"
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6337020397186279,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6305514574050903,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_006_markdown",
+        "score": 0.6276548504829407,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 61-70 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the China commerce and International commerce revenues for Q4 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "E8",
+        "value": 10172
+      },
+      {
+        "cell_address": "E9",
+        "value": 1094
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6168889403343201,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.612984299659729,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6005150079727173,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the revenues for all three business segments in Q1 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F8",
+        "value": 7242
+      },
+      {
+        "cell_address": "F9",
+        "value": 1043
+      },
+      {
+        "cell_address": "F10",
+        "value": 166
+      }
+    ],
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_000_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6043616533279419,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5913977026939392,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5888673067092896,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Cloud computing revenues for the last three quarters of 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "G10",
+        "value": 174
+      },
+      {
+        "cell_address": "H10",
+        "value": 190
+      },
+      {
+        "cell_address": "I10",
+        "value": 196
+      }
+    ],
+    "score": 0.5,
+    "details": {
+      "location": "chunk_3",
+      "chunk_id": "chunk_000_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5502762198448181,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5410194396972656,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5371147394180298,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the International commerce revenues for Q2 2012 and Q2 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "C9",
+        "value": 974
+      },
+      {
+        "cell_address": "G9",
+        "value": 1117
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6145331263542175,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6029101610183716,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.598874032497406,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the revenues for all business segments in Q1 2014?",
+    "golden_answer": [
+      {
+        "cell_address": "J8",
+        "value": 12570.75
+      },
+      {
+        "cell_address": "J9",
+        "value": 1200.8
+      },
+      {
+        "cell_address": "J10",
+        "value": 197.96
+      }
+    ],
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_000_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5972015857696533,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5831284523010254,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5765285491943359,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the China commerce revenues for the two middle quarters of 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "G8",
+        "value": 9193
+      },
+      {
+        "cell_address": "H8",
+        "value": 9213
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6059167385101318,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6055786609649658,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.5833609700202942,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the year labels shown in the column headers?",
+    "golden_answer": [
+      {
+        "cell_address": "C6",
+        "value": 2012
+      },
+      {
+        "cell_address": "D6",
+        "value": 2012
+      },
+      {
+        "cell_address": "E6",
+        "value": 2012
+      },
+      {
+        "cell_address": "F6",
+        "value": 2013
+      },
+      {
+        "cell_address": "G6",
+        "value": 2013
+      },
+      {
+        "cell_address": "H6",
+        "value": 2013
+      },
+      {
+        "cell_address": "I6",
+        "value": 2013
+      },
+      {
+        "cell_address": "J6",
+        "value": 2014
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_006_markdown",
+        "score": 0.639938235282898,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 61-70 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6376404762268066,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_001_markdown",
+        "score": 0.6356871128082275,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 11-20 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Cloud computing revenues for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C10",
+        "value": 155
+      },
+      {
+        "cell_address": "D10",
+        "value": 164
+      },
+      {
+        "cell_address": "E10",
+        "value": 165
+      }
+    ],
+    "score": 0.5,
+    "details": {
+      "location": "chunk_3",
+      "chunk_id": "chunk_000_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.517081618309021,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5050997734069824,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5020276308059692,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_000_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the quarter-over-quarter growth percentages for Others revenue across all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "D61",
+        "value": 0.46031746031746024
+      },
+      {
+        "cell_address": "E61",
+        "value": 0.7608695652173914
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5866168737411499,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5745834708213806,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5699558258056641,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the quarter-over-quarter growth percentages for Others revenue across all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F61",
+        "value": 0.3765432098765431
+      },
+      {
+        "cell_address": "G61",
+        "value": 0.3183856502242153
+      },
+      {
+        "cell_address": "H61",
+        "value": 0.26190476190476186
+      },
+      {
+        "cell_address": "I61",
+        "value": 0.41239892183288407
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6026286482810974,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5915815234184265,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5852078199386597,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the total revenues for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C63",
+        "value": 6793
+      },
+      {
+        "cell_address": "D63",
+        "value": 7457
+      },
+      {
+        "cell_address": "E63",
+        "value": 11593
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5825555920600891,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5654732584953308,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5617706775665283,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the total revenues for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F63",
+        "value": 8674
+      },
+      {
+        "cell_address": "G63",
+        "value": 10778
+      },
+      {
+        "cell_address": "H63",
+        "value": 10950
+      },
+      {
+        "cell_address": "I63",
+        "value": 18745
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5975704789161682,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5835608243942261,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5768228769302368,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the cost of revenue figures for the first and last quarters shown?",
+    "golden_answer": [
+      {
+        "cell_address": "C66",
+        "value": 2158
+      },
+      {
+        "cell_address": "J66",
+        "value": 3228.9202
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6839021444320679,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6688371300697327,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6541146636009216,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the cost of revenue as percentage of sales for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C67",
+        "value": 0.31767996466951276
+      },
+      {
+        "cell_address": "D67",
+        "value": 0.3182244870591391
+      },
+      {
+        "cell_address": "E67",
+        "value": 0.2510998016044165
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5864540338516235,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5539768934249878,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_001_markdown",
+        "score": 0.5512589812278748,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 11-20 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the cost of revenue as percentage of sales for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F67",
+        "value": 0.26250864652985934
+      },
+      {
+        "cell_address": "G67",
+        "value": 0.25301540174429393
+      },
+      {
+        "cell_address": "H67",
+        "value": 0.27406392694063925
+      },
+      {
+        "cell_address": "I67",
+        "value": 0.22251267004534542
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6017687320709229,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5710117816925049,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5659356117248535,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Product development expenses for the middle two quarters of 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "G69",
+        "value": 1018
+      },
+      {
+        "cell_address": "H69",
+        "value": 1168
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5848356485366821,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5623199939727783,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5557010769844055,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Product development expenses as percentage of sales for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C70",
+        "value": 0.1248343883409392
+      },
+      {
+        "cell_address": "D70",
+        "value": 0.1190827410486791
+      },
+      {
+        "cell_address": "E70",
+        "value": 0.10031915811265418
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5758408904075623,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5401545763015747,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5397353172302246,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Product development expenses for Q4 2012 and Q4 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "E69",
+        "value": 1163
+      },
+      {
+        "cell_address": "I69",
+        "value": 1707
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5983325839042664,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5769937634468079,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.5685765743255615,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the cost of revenue figures for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F66",
+        "value": 2277
+      },
+      {
+        "cell_address": "G66",
+        "value": 2727
+      },
+      {
+        "cell_address": "H66",
+        "value": 3001
+      },
+      {
+        "cell_address": "I66",
+        "value": 4171
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6038503646850586,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5815367102622986,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5734163522720337,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Product development expenses as percentage of sales for the last three quarters of 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "G70",
+        "value": 0.09445166079049916
+      },
+      {
+        "cell_address": "H70",
+        "value": 0.10666666666666667
+      },
+      {
+        "cell_address": "I70",
+        "value": 0.09106428380901574
+      }
+    ],
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.601455807685852,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5691530704498291,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5673502683639526,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_006_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Sales and marketing expenses for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C72",
+        "value": 869
+      },
+      {
+        "cell_address": "D72",
+        "value": 974
+      },
+      {
+        "cell_address": "E72",
+        "value": 1249
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5842257738113403,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5364380478858948,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5357617139816284,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Sales and marketing expenses for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F72",
+        "value": 521
+      },
+      {
+        "cell_address": "G72",
+        "value": 713
+      },
+      {
+        "cell_address": "H72",
+        "value": 657
+      },
+      {
+        "cell_address": "I72",
+        "value": 1897
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5968964099884033,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5517780780792236,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5496782064437866,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Sales and marketing expenses as percentage of sales for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C73",
+        "value": 0.12792580597674078
+      },
+      {
+        "cell_address": "D73",
+        "value": 0.13061552903312323
+      },
+      {
+        "cell_address": "E73",
+        "value": 0.1077374277581299
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5926791429519653,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5469818711280823,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_001_markdown",
+        "score": 0.5433768033981323,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 11-20 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Sales and marketing expenses as percentage of sales for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F73",
+        "value": 0.06006456075628314
+      },
+      {
+        "cell_address": "G73",
+        "value": 0.06615327519020227
+      },
+      {
+        "cell_address": "H73",
+        "value": 0.06
+      },
+      {
+        "cell_address": "I73",
+        "value": 0.1012003200853561
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6034864187240601,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5578062534332275,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.556433916091919,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the General and administrative expenses for all quarters in 2012?",
+    "golden_answer": [
+      {
+        "cell_address": "C75",
+        "value": 537
+      },
+      {
+        "cell_address": "D75",
+        "value": 804
+      },
+      {
+        "cell_address": "E75",
+        "value": 1003
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5694892406463623,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5421676635742188,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5386868715286255,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the General and administrative expenses for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F75",
+        "value": 545
+      },
+      {
+        "cell_address": "G75",
+        "value": 865
+      },
+      {
+        "cell_address": "H75",
+        "value": 793
+      },
+      {
+        "cell_address": "I75",
+        "value": 2046
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5798339247703552,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5554689168930054,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5499964952468872,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the General and administrative expenses as percentage of sales for the first and last quarters shown?",
+    "golden_answer": [
+      {
+        "cell_address": "C76",
+        "value": 0.07905196525835419
+      },
+      {
+        "cell_address": "J76",
+        "value": 0.11
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6596789360046387,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6342337131500244,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6253222227096558,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the General and administrative expenses as percentage of sales for all quarters in 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "F76",
+        "value": 0.06283145031127507
+      },
+      {
+        "cell_address": "G76",
+        "value": 0.08025607719428465
+      },
+      {
+        "cell_address": "H76",
+        "value": 0.07242009132420091
+      },
+      {
+        "cell_address": "I76",
+        "value": 0.1091491064283809
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6028016805648804,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5708683729171753,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5672383308410645,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Sales and marketing expenses for Q4 2012 and Q4 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "E72",
+        "value": 1249
+      },
+      {
+        "cell_address": "I72",
+        "value": 1897
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6322726011276245,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5903213024139404,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5874842405319214,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the General and administrative expenses for the middle two quarters of 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "G75",
+        "value": 865
+      },
+      {
+        "cell_address": "H75",
+        "value": 793
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6043565273284912,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5826539397239685,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5801637172698975,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the Sales and marketing expenses for Q1 2013 and Q1 2014?",
+    "golden_answer": [
+      {
+        "cell_address": "F72",
+        "value": 521
+      },
+      {
+        "cell_address": "J72",
+        "value": 1467.691
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6451355814933777,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6028182506561279,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6024102568626404,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What are the General and administrative expenses as percentage of sales for Q3 2012 and Q3 2013?",
+    "golden_answer": [
+      {
+        "cell_address": "D76",
+        "value": 0.1078181574359662
+      },
+      {
+        "cell_address": "H76",
+        "value": 0.07242009132420091
+      }
+    ],
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_007_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6372166872024536,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6029543876647949,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6028713583946228,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\multi_cell_answer\\single_chunk\\chunk_007_qa.json",
+    "answer_type": "multi_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the total revenue for Q4 2012, considering all business segments shown in the income statement?",
+    "golden_answer": {
+      "cell_address": "E12",
+      "value": 11593
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6587322950363159,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6535931825637817,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6422334909439087,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "After accounting for cost of revenue, what is the gross profit for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I15",
+      "value": 14574
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6443359851837158,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6252104043960571,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6176811456680298,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the income from operations for Q1 2014, after deducting all operating expenses from gross profit?",
+    "golden_answer": {
+      "cell_address": "J27",
+      "value": 7044.916799999997
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6377069354057312,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6261056065559387,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6255149245262146,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the total operating expenses for Q3 2012, which includes all expense categories listed in the operating expenses section?",
+    "golden_answer": {
+      "cell_address": "D24",
+      "value": -8563
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6205263137817383,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.594359278678894,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5878573060035706,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the largest revenue component contributing to total revenue in Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I8",
+      "value": 16761
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.602631688117981,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.5844734907150269,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5840771794319153,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the income from operations for Q4 2012, calculated as the difference between total revenue and total operating expenses?",
+    "golden_answer": {
+      "cell_address": "E27",
+      "value": 5060
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6315120458602905,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6134713888168335,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6118152141571045,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the total revenue for Q1 2014, which is the sum of all business segment revenues?",
+    "golden_answer": {
+      "cell_address": "J12",
+      "value": 14676.909999999998
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6171422004699707,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.59644615650177,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5926839113235474,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the cost of revenue for Q4 2013, which is deducted from total revenue to calculate gross profit?",
+    "golden_answer": {
+      "cell_address": "I14",
+      "value": -4171
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6264599561691284,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6050595641136169,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5956478118896484,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the income from operations for Q2 2013, after all operating expenses are subtracted from gross profit?",
+    "golden_answer": {
+      "cell_address": "G27",
+      "value": 5420
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6423764228820801,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6281355619430542,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6244222521781921,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the impairment of goodwill and intangible assets expense for Q3 2012?",
+    "golden_answer": {
+      "cell_address": "D22",
+      "value": -3487
+    },
+    "score": 1.0,
+    "details": {
+      "location": "composed_chunks",
+      "chunk_ids": [
+        "chunk_002_markdown",
+        "chunk_007_markdown",
+        "chunk_004_markdown"
+      ]
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.613357663154602,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5983969569206238,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.5896644592285156,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\multi_chunk\\chunk_000_001_002.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "multi_chunk"
+  },
+  {
+    "query": "What is the China commerce revenue for Q2 2012?",
+    "golden_answer": {
+      "cell_address": "C8",
+      "value": 5601
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6252579092979431,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6177246570587158,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6072218418121338,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the China commerce revenue for Q4 2012?",
+    "golden_answer": {
+      "cell_address": "E8",
+      "value": 10172
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6246693730354309,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6185072660446167,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6057682037353516,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the International commerce revenue for Q3 2012?",
+    "golden_answer": {
+      "cell_address": "D9",
+      "value": 1049
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5960204601287842,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5864742398262024,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5792944431304932,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Cloud computing and Internet infrastructure revenue for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I10",
+      "value": 196
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5474376082420349,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5460505485534668,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.5399982929229736,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the China commerce revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J8",
+      "value": 12570.75
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6308661699295044,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6241555213928223,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6125192046165466,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the International commerce revenue for Q2 2013?",
+    "golden_answer": {
+      "cell_address": "G9",
+      "value": 1117
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6180547475814819,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.604328989982605,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6023760437965393,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Cloud computing revenue for Q1 2013?",
+    "golden_answer": {
+      "cell_address": "F10",
+      "value": 166
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_3",
+      "chunk_id": "chunk_000_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5772383213043213,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5700669884681702,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5629655122756958,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the China commerce revenue for Q3 2013?",
+    "golden_answer": {
+      "cell_address": "H8",
+      "value": 9213
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.620031476020813,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6186577081680298,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6020315885543823,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the International commerce revenue for the final quarter of 2013?",
+    "golden_answer": {
+      "cell_address": "I9",
+      "value": 1264
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6212596893310547,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.610163152217865,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6019091010093689,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Cloud computing and Internet infrastructure revenue for Q3 2013?",
+    "golden_answer": {
+      "cell_address": "H10",
+      "value": 190
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5346428155899048,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5314685106277466,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.5289290547370911,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What currency unit is specified for the financial amounts in this statement?",
+    "golden_answer": {
+      "cell_address": "B6",
+      "value": "(RMB in Million Except Per Share Amounts)"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.692629873752594,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6891223192214966,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.680866003036499,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the International commerce revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J9",
+      "value": 1200.8
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.617180347442627,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6041079759597778,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6005910038948059,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_000_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Others revenue for Q4 2012?",
+    "golden_answer": {
+      "cell_address": "E11",
+      "value": 162
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6054911613464355,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5943246483802795,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.593414306640625,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the total Revenue for Q2 2012?",
+    "golden_answer": {
+      "cell_address": "C12",
+      "value": 6793
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6209003329277039,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6068848371505737,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6028168201446533,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the total Revenue for Q4 2012?",
+    "golden_answer": {
+      "cell_address": "E12",
+      "value": 11593
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6172597408294678,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6023693084716797,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5994572639465332,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Cost of revenue for Q3 2012?",
+    "golden_answer": {
+      "cell_address": "D14",
+      "value": -2373
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5923705697059631,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5807902812957764,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.5758142471313477,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Gross profit for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I15",
+      "value": 14574
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6284674406051636,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6189645528793335,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.615626335144043,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Others revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J11",
+      "value": 707.4000000000001
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6205281615257263,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6092618703842163,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.605516254901886,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the total Revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J12",
+      "value": 14676.909999999998
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6330706477165222,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6185755729675293,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6181914806365967,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Product development expenses for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I18",
+      "value": -1707
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.593966543674469,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5766589045524597,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.567681074142456,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Sales and marketing expenses for Q1 2013?",
+    "golden_answer": {
+      "cell_address": "F19",
+      "value": -521
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.639413595199585,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5998286008834839,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5981537103652954,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the General and administrative expenses for Q3 2013?",
+    "golden_answer": {
+      "cell_address": "H20",
+      "value": -793
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6160539388656616,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5965389013290405,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5894681811332703,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Cost of revenue for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I14",
+      "value": -4171
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6174663305282593,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6016250252723694,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.5943276882171631,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Gross profit for Q2 2013?",
+    "golden_answer": {
+      "cell_address": "G15",
+      "value": 10778
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6298184990882874,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6207489371299744,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6149951219558716,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_001_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What line item is described in cell B31?",
+    "golden_answer": {
+      "cell_address": "B31",
+      "value": "Other income (expense), net"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_001_markdown",
+        "score": 0.6134194135665894,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 11-20 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6054974794387817,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6053687334060669,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What financial metric is shown in row 33?",
+    "golden_answer": {
+      "cell_address": "B33",
+      "value": "Loss before provision (benefit) for income taxes"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.7006422281265259,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6976349353790283,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.697176456451416,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What expense category is listed in cell B34?",
+    "golden_answer": {
+      "cell_address": "B34",
+      "value": "Income tax expenses"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6204367280006409,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5910298824310303,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_006_markdown",
+        "score": 0.5882025957107544,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 61-70 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What type of investment results are shown in row 35?",
+    "golden_answer": {
+      "cell_address": "B35",
+      "value": "Share of results of equity investees"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6839841604232788,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.680910050868988,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6808056831359863,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the main profit/loss metric shown in row 36?",
+    "golden_answer": {
+      "cell_address": "B36",
+      "value": "Net income (loss)"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6788033843040466,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6746180057525635,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6725578308105469,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What attribution of net income is described in cell B37?",
+    "golden_answer": {
+      "cell_address": "B37",
+      "value": "Net income (loss) attributable to noncontrolling interests"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6387836933135986,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6326549053192139,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6237895488739014,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What company-specific net income line item is shown in row 38?",
+    "golden_answer": {
+      "cell_address": "B38",
+      "value": "Net income (loss) attributable to Alibaba Group Holding Limited"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6849398612976074,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6807041168212891,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6803727746009827,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What type of stock accretion is mentioned in cell B40?",
+    "golden_answer": {
+      "cell_address": "B40",
+      "value": "Accretion of redeemable convertible preferred stock"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6101135015487671,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6053463816642761,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_006_markdown",
+        "score": 0.6040873527526855,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 61-70 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_002_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What financial item is described in cell B41?",
+    "golden_answer": {
+      "cell_address": "B41",
+      "value": "Dividends accrued on convertible preference shares"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6363195776939392,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.6359978318214417,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6359229683876038,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Net loss attributable to common stockholders for Q2 2012?",
+    "golden_answer": {
+      "cell_address": "C42",
+      "value": 1722
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6845515966415405,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6690142750740051,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6604434251785278,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Net loss attributable to common stockholders for Q3 2012?",
+    "golden_answer": {
+      "cell_address": "D42",
+      "value": -1560
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6758371591567993,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6563810110092163,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6493527889251709,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Net loss attributable to common stockholders for Q4 2012?",
+    "golden_answer": {
+      "cell_address": "E42",
+      "value": 4045
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6781479716300964,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6590062975883484,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.651993989944458,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Net loss attributable to common stockholders for Q1 2013?",
+    "golden_answer": {
+      "cell_address": "F42",
+      "value": 4197
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6874217987060547,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6715291738510132,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6631056070327759,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Net loss attributable to common stockholders for Q2 2013?",
+    "golden_answer": {
+      "cell_address": "G42",
+      "value": 4384
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6906017661094666,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6760568022727966,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.66622394323349,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Net loss attributable to common stockholders for Q3 2013?",
+    "golden_answer": {
+      "cell_address": "H42",
+      "value": 4883
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6833202838897705,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6636511087417603,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6556835770606995,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Net loss attributable to common stockholders for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I42",
+      "value": 8266
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6864013671875,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6676257848739624,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6594250202178955,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Share-based compensation expense for Q2 2012?",
+    "golden_answer": {
+      "cell_address": "C44",
+      "value": 279
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6240869760513306,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6180948615074158,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6125383377075195,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Share-based compensation expense for Q3 2013?",
+    "golden_answer": {
+      "cell_address": "H44",
+      "value": 864
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6243579983711243,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6131824851036072,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6086078882217407,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Share-based compensation expense for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I44",
+      "value": 659
+    },
+    "score": 1.0,
+    "details": {
+      "location": "top_chunk",
+      "chunk_id": "chunk_004_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.6235052943229675,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.615108072757721,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6090903282165527,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What analysis section begins in row 47?",
+    "golden_answer": {
+      "cell_address": "B47",
+      "value": "Growth Analysis and Drivers"
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6100937724113464,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6085271835327148,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_001_markdown",
+        "score": 0.6073637008666992,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 11-20 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_004_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the China commerce revenue for Q2 2012?",
+    "golden_answer": {
+      "cell_address": "C51",
+      "value": 5601
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_005_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6252579092979431,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6177246570587158,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6072218418121338,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the China commerce revenue for Q4 2013?",
+    "golden_answer": {
+      "cell_address": "I51",
+      "value": 16761
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_005_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6304610967636108,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6251019835472107,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6118987798690796,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the China commerce revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J51",
+      "value": 12570.75
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_005_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6308661699295044,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6241555213928223,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6125192046165466,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the percentage driver behind China commerce revenue in Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J52",
+      "value": -0.25
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_005_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.612907350063324,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6086049675941467,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6039583683013916,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the International commerce revenue for Q3 2012?",
+    "golden_answer": {
+      "cell_address": "D54",
+      "value": 1049
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_005_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5960204601287842,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.5864742398262024,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5792944431304932,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the International commerce revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J54",
+      "value": 1200.8
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_005_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.617180347442627,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6041079759597778,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6005910038948059,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the quarter-over-quarter growth percentage for International commerce in Q2 2013?",
+    "golden_answer": {
+      "cell_address": "G55",
+      "value": 0.07094918504314474
+    },
+    "score": 0.5,
+    "details": {
+      "location": "chunk_2",
+      "chunk_id": "chunk_005_markdown"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6347365379333496,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_005_markdown",
+        "score": 0.6293344497680664,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 51-60 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.6241220235824585,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Cloud computing and Internet infrastructure revenue for Q2 2012?",
+    "golden_answer": {
+      "cell_address": "C57",
+      "value": 155
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5518659353256226,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5489678382873535,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.5444831848144531,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Cloud computing and Internet infrastructure revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J57",
+      "value": 197.96
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5506907105445862,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.548445463180542,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_002_markdown",
+        "score": 0.5423974990844727,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 21-30 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the percentage growth driver for Cloud computing revenue in Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J58",
+      "value": 0.01
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.5476303100585938,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.5442730188369751,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5438411235809326,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Others revenue for Q4 2012?",
+    "golden_answer": {
+      "cell_address": "E60",
+      "value": 162
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6054911613464355,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.5943246483802795,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_004_markdown",
+        "score": 0.593414306640625,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 41-50 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  },
+  {
+    "query": "What is the Others revenue for Q1 2014?",
+    "golden_answer": {
+      "cell_address": "J60",
+      "value": 707.4000000000001
+    },
+    "score": 0.0,
+    "details": {
+      "location": "not_found"
+    },
+    "retrieved_chunks": [
+      {
+        "chunk_id": "chunk_007_markdown",
+        "score": 0.6205281615257263,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 71-80 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_003_markdown",
+        "score": 0.6092618703842163,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 31-40 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|--..."
+      },
+      {
+        "chunk_id": "chunk_000_markdown",
+        "score": 0.605516254901886,
+        "text_preview": "# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS\nRows: 1-10 (10 rows) | Columns: 16\n| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |\n|---|---|---|---|---|---|---..."
+      }
+    ],
+    "qa_file": "C:\\Users\\shrey\\projects\\cori-apps\\cori_app\\src\\evals\\scripts\\vectors\\qa_eval\\qa_pairs\\location\\single_cell_answer\\scoped_chunk\\chunk_005_qa.json",
+    "answer_type": "single_cell_answer",
+    "scenario_type": "single_chunk"
+  }
+]

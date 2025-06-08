@@ -1,0 +1,24 @@
+====================================================================================================
+RETRIEVAL EVALUATION REPORT - paraphrase-MiniLM-L3-v2
+====================================================================================================
+
+MODEL INFORMATION
+--------------------------------------------------
+Model Name: paraphrase-MiniLM-L3-v2
+Embedding Dimension: 384
+Max Sequence Length: 128
+Device: cpu
+Embedding Time: 0.35 seconds
+
+OVERALL STATISTICS
+--------------------------------------------------
+Total test cases: 114
+Overall average score: 0.215
+
+SCORES BY CATEGORY
+--------------------------------------------------
+                       Category  Count Average Score  Perfect (1.0)  Partial (0.5)  Failed (0.0)
+  multi_cell_answer_multi_chunk     12         0.333              4              0             8
+ multi_cell_answer_single_chunk     36         0.125              1              7            28
+ single_cell_answer_multi_chunk     10         0.200              2              0             8
+single_cell_answer_single_chunk     56         0.250              7             14            35
