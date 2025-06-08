@@ -6,7 +6,7 @@ import sys
 current_dir = Path(__file__).parent.parent.parent.parent.absolute()
 sys.path.append(str(current_dir))
 # Now import using relative path from python-server
-from api.models.excel import ExtractMetadataRequest, CompressMetadataRequest, ChunkMetadataRequest, ExtractMetadataChunksRequest, CompressChunksRequest, GenerateMetadataRequest
+from api.models.excel import ExtractMetadataRequest, CompressMetadataRequest, ChunkMetadataRequest, ExtractMetadataChunksRequest, CompressChunksRequest, GenerateMetadataRequest, GenerateEditMetadataRequest
 from excel.metadata.excel_metadata_processor import ExcelMetadataProcessor
 from excel.metadata.compression.text_compressor import JsonTextCompressor
 from excel.metadata.generation.llm_metadata_generator import LLMMetadataGenerator
@@ -362,7 +362,90 @@ async def generate_metadata(request: GenerateMetadataRequest):
             detail=f"Failed to generate metadata: {str(e)}"
         )
 
-
+@router.post("/generate-edit-metadata")
+async def generate_edit_metadata(request: GenerateEditMetadataRequest):
+    """
+    Generate metadata for Excel editing using LLM based on user request and provided chunks.
+    
+    Args:
+        request: GenerateEditMetadataRequest containing:
+            - user_request: The user's edit request
+            - chunks: List of search result chunks with markdown and metadata
+            - chunk_limit: Maximum number of chunks to process (default: 10)
+            - model: LLM model to use (default: claude-sonnet-4-20250514)
+            - max_tokens: Maximum tokens in response (default: 2000)
+            - temperature: Temperature for response generation (default: 0.3)
+            - stream: Whether to stream the response (default: False)
+    """
+    logger.info(f"Received request to generate edit metadata with model: {request.model}")
+    
+    try:
+        # Validate chunk limit
+        if len(request.chunks) > request.chunk_limit:
+            request.chunks = request.chunks[:request.chunk_limit]
+            logger.warning(f"Truncated chunks from {len(request.chunks)} to {request.chunk_limit}")
+        
+        # Initialize the LLM metadata generator
+        metadata_generator = LLMMetadataGenerator()
+        
+        # Format search results as expected by generate_metadata_for_edit
+        search_results = []
+        for i, chunk in enumerate(request.chunks):
+            search_result = {
+                'markdown': chunk.get('markdown', ''),
+                'score': chunk.get('score', 1.0),
+                'metadata': chunk.get('metadata', {}),
+                'chunk_index': i
+            }
+            search_results.append(search_result)
+        
+        # Generate edit metadata using the LLM with chunk context
+        result = await metadata_generator.generate_metadata_for_edit(
+            user_request=request.user_request,
+            search_results=search_results,
+            model=request.model,
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            stream=request.stream
+        )
+        
+        if request.stream:
+            # For streaming responses, return the async generator directly
+            async def stream_response():
+                try:
+                    async for chunk in result:
+                        yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+                    yield "data: [DONE]\n\n"
+                except Exception as e:
+                    error_msg = f"Error during streaming: {str(e)}"
+                    logger.error(error_msg)
+                    yield f"data: {json.dumps({'error': error_msg})}\n\n"
+                    yield "data: [DONE]\n\n"
+            
+            return StreamingResponse(
+                stream_response(),
+                media_type="text/event-stream",
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'X-Accel-Buffering': 'no'
+                }
+            )
+        else:
+            # For non-streaming responses, return a structured response
+            return {
+                "status": "success",
+                "result": result,
+                "model": request.model,
+                "chunks_used": len(search_results)
+            }
+            
+    except Exception as e:
+        logger.error(f"Error generating edit metadata: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate edit metadata: {str(e)}"
+        )
 
 #-------------------------------------------PARSING-------------------------------------------
 
@@ -437,3 +520,4 @@ async def parse_metadata(request: dict):
                 "valid": False
             }
         )
+
