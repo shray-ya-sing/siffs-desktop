@@ -9,3 +9,4 @@ numpy>=1.24.0
 sentence_transformers
 fastapi==0.115.12,
 accelerate
+voyageai
