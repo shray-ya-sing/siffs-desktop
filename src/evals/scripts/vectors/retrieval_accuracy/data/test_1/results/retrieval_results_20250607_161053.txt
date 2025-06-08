@@ -1,0 +1,438 @@
+================================================================================
+RETRIEVAL ACCURACY TEST RESULTS
+================================================================================
+
+--------------------------------------------------------------------------------
+MODEL INFORMATION
+--------------------------------------------------------------------------------
+Model Name: all-MiniLM-L12-v2
+Embedding Dimension: 384
+Max Sequence Length: 128
+Device: cpu
+Similarity Function: cosine
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+              Scenario Top Score Avg Score  Num Results  Num Chunks
+       natural_verbose    0.2593    0.2460            3           8
+       natural_summary    0.2621    0.2449            3           8
+         clean_natural    0.2985    0.2324            3           8
+              markdown    0.1486    0.1306            3           8
+expanded_clean_natural    0.0495    0.0383            3           8
+
+--------------------------------------------------------------------------------
+SCENARIO: NATURAL_VERBOSE
+--------------------------------------------------------------------------------
+Top Score: 0.2593, Avg Score: 0.2460
+Number of Results: 3, Total Chunks: 8
+
+TOP RESULTS:
+
+--- Result 1 (Score: 0.2593) ---
+# Excel Data Chunk 3 of 8
+Workbook: test_model_Alibaba_IPO(shorter)_llm.xlsx
+Worksheet: Quarterly IS
+Row Range: 21 to 30 (10 rows)
+
+## Cell Data and Relationships:
+Cell B21 (Amortization of intangible assets) in worksheet 'Quarterly IS':
+This cell contains the text 'Amortization of intangible assets'
+Cell formatting: background color #00000000
+
+Cell B22 (Impairment of goodwill and intangible assets) in worksheet 'Quarterly IS':
+This cell contains the text 'Impairment of goodwill and intangible assets'
+Adjacent cells: top cell B21 contains 'Amortization of intangible assets'; right cell C22 contains '—  '
+Cell formatting: background color #00000000
+
+Cell C22 (—  ) in worksheet 'Quarterly IS':
+This cell contains the text '—  '
+Adjacent cells: left cell B22 contains label 'Impairment of goodwill and intangible assets'; right cell D22 contains '-3487'
+Cell formatting: colored text (#0070C0), background color #00000000
+
+Cell D22 in worksheet 'Quarterly IS':
+This cell contains the numeric va
+
+[...truncated]
+
+--- Result 2 (Score: 0.2405) ---
+# Excel Data Chunk 8 of 8
+Workbook: test_model_Alibaba_IPO(shorter)_llm.xlsx
+Worksheet: Quarterly IS
+Row Range: 71 to 80 (10 rows)
+
+## Cell Data and Relationships:
+Cell B72 (Sales and marketing expenses) in worksheet 'Quarterly IS':
+This cell contains the text 'Sales and marketing expenses'
+Adjacent cells: right cell C72 contains '869'
+Cell formatting: background color #00000000
+
+Cell C72 in worksheet 'Quarterly IS':
+This cell contains the numeric value 869
+The cell calculates its value using the arithmetic formula: =-C19
+This cell's formula depends on this precedent cell: Quarterly IS!C19
+This cell's value influences this dependent cell: Quarterly IS!C73
+In total, this cell has 2 formula connections in the workbook
+Adjacent cells: left cell B72 contains label 'Sales and marketing expenses'; right cell D72 contains '974'
+Cell formatting: background color #00000000
+
+Cell D72 in worksheet 'Quarterly IS':
+This cell contains the numeric value 974
+The cell calculates its value using the ari
+
+[...truncated]
+
+--- Result 3 (Score: 0.2383) ---
+# Excel Data Chunk 4 of 8
+Workbook: test_model_Alibaba_IPO(shorter)_llm.xlsx
+Worksheet: Quarterly IS
+Row Range: 31 to 40 (10 rows)
+
+## Cell Data and Relationships:
+Cell B31 (Other income (expense), net) in worksheet 'Quarterly IS':
+This cell contains the text 'Other income (expense), net'
+Cell formatting: background color #00000000
+
+Cell B33 (Loss before provision (benefit) for income taxes) in worksheet 'Quarterly IS':
+This cell contains the text 'Loss before provision (benefit) for income taxes'
+Cell formatting: background color #00000000
+
+Cell B34 (Income tax expenses) in worksheet 'Quarterly IS':
+This cell contains the text 'Income tax expenses'
+Adjacent cells: top cell B33 contains 'Loss before provision (benefit) for income taxes'
+Cell formatting: background color #00000000
+
+Cell B35 (Share of results of equity investees) in worksheet 'Quarterly IS':
+This cell contains the text 'Share of results of equity investees'
+Adjacent cells: top cell B34 contains 'Income tax expenses'
+Cell
+
+[...truncated]
+
+--------------------------------------------------------------------------------
+SCENARIO: NATURAL_SUMMARY
+--------------------------------------------------------------------------------
+Top Score: 0.2621, Avg Score: 0.2449
+Number of Results: 3, Total Chunks: 8
+
+TOP RESULTS:
+
+--- Result 1 (Score: 0.2621) ---
+# Alibaba Quarterly Income Statement - Final Section
+
+## Summary of Key Metrics
+
+### Revenue Composition (Latest Quarter)
+- **China Commerce**: 10,670 (RMB millions)
+- **International Commerce**: 1,201 (RMB millions)
+- **Cloud Computing**: 198 (RMB millions)
+- **Total Revenue**: 12,069 (RMB millions)
+
+### Growth Trends (YoY)
+- **China Commerce**: +19.4%
+- **International Commerce**: +15.2%
+- **Cloud Computing**: +19.3%
+- **Total Revenue**: +19.1%
+
+## Key Observations
+1. **Revenue Concentration**:
+   - China Commerce represents ~88.4% of total revenue
+   - International Commerce contributes ~10.0%
+   - Cloud Computing accounts for ~1.6%
+
+2. **Growth Patterns**:
+   - All segments showing double-digit YoY growth
+   - Cloud Computing shows the highest growth potential
+   - International business growth is accelerating
+
+3. **Margins**:
+   - China Commerce maintains healthy margins
+   - Cloud Computing shows improving profitability
+   - International segment margins impacted by expansion cos
+
+[...truncated]
+
+--- Result 2 (Score: 0.2455) ---
+# Quarterly Income Statement - Alibaba Group
+## Time Periods
+- 2012 Q2 to 2013 Q4 (with projections)
+- Currency: RMB (Millions)
+
+## Revenue Line Items
+### Others (Miscellaneous Revenue)
+- 2012 Q2: 63
+- 2012 Q3: 92 (+46.0% QoQ)
+- 2012 Q4: 162 (+76.1% QoQ)
+- 2013 Q1: 223 (+37.7% QoQ)
+- 2013 Q2: 294 (+31.8% QoQ)
+- 2013 Q3: 371 (+26.2% QoQ)
+- 2013 Q4: 524 (+41.2% QoQ)
+- 2014 Q1: 707.4 (Projected, +35.0% QoQ)
+
+### Total Revenue
+- 2012 Q2: 6,793
+- 2012 Q3: 7,457 (+9.8% QoQ)
+- 2012 Q4: 11,593 (+55.5% QoQ)
+- 2013 Q1: 8,674 (-25.2% QoQ)
+- 2013 Q2: 10,778 (+24.3% QoQ)
+- 2013 Q3: 10,950 (+1.6% QoQ)
+- 2013 Q4: 18,745 (+71.2% QoQ)
+- 2014 Q1: 14,676.9 (Projected, -21.7% QoQ)
+
+## Key Observations
+- Strong sequential growth in "Others" revenue category, though it represents a small portion of total revenue
+- Total revenue shows significant seasonality with Q4 being the strongest quarter each year
+- Projected Q1 2014 shows a typical seasonal decline from Q4 2013
+- The "Others" category is growing faste
+
+[...truncated]
+
+--- Result 3 (Score: 0.2272) ---
+# Alibaba Quarterly Growth Rate Analysis
+
+## Quarter-over-Quarter Growth Rates (%)
+
+### China Commerce Growth
+- Q3 2012: +9.8%
+- Q4 2012: +20.7%
+- Q1 2013: +0.3%
+- Q2 2013: +7.8%
+- Q3 2013: +14.2%
+- Q4 2013: +15.1%
+- Q1 2014: +1.1%
+
+### International Commerce Growth
+- Q3 2012: +7.7%
+- Q4 2012: +4.3%
+- Q1 2013: -4.7%
+- Q2 2013: +7.1%
+- Q3 2013: +5.3%
+- Q4 2013: +7.5%
+- Q1 2014: -5.0%
+
+### Cloud Computing Growth
+- Q3 2012: +5.8%
+- Q4 2012: +0.6%
+- Q1 2013: +0.6%
+- Q2 2013: +4.8%
+- Q3 2013: +9.2%
+- Q4 2013: +3.2%
+- Q1 2014: +1.0%
+
+## Key Observations
+- Strongest growth in Q4 quarters across all segments (seasonal pattern)
+- China Commerce shows the most consistent positive growth
+- International Commerce has the most volatility with both highest and lowest growth rates
+- Cloud Computing maintains steady but more modest growth
+- Q1 typically shows the slowest growth across segments
+
+## Dependencies
+- These growth rates are calculated from the segment revenue figures
+- Important for trend a
+
+[...truncated]
+
+--------------------------------------------------------------------------------
+SCENARIO: CLEAN_NATURAL
+--------------------------------------------------------------------------------
+Top Score: 0.2985, Avg Score: 0.2324
+Number of Results: 3, Total Chunks: 8
+
+TOP RESULTS:
+
+--- Result 1 (Score: 0.2985) ---
+# Quarterly IS - Chunk 4
+## Source: test_model_Alibaba_IPO(shorter)_llm.xlsx_Quarterly IS_rows_31_40
+## Rows: 31 to 40
+
+Other income (expense), net
+Loss before provision (benefit) for income taxes
+Income tax expenses
+Share of results of equity investees
+Net income (loss)
+Net income (loss) attributable to noncontrolling interests
+Net income (loss) attributable to Alibaba Group Holding Limited
+Accretion of redeemable convertible preferred stock
+
+--- Result 2 (Score: 0.2034) ---
+# Quarterly IS - Chunk 3
+## Source: test_model_Alibaba_IPO(shorter)_llm.xlsx_Quarterly IS_rows_21_30
+## Rows: 21 to 30
+
+Amortization of intangible assets
+Impairment of goodwill and intangible assets | —   | -3487 | 0 | 0 | 0 | 0 | 0 | 0
+Yahoo TIPLA amendment payment(3)
+Total operating expenses | -4448 | -8563 | -6533 | -4222 | -5358 | -5702 | -9944 | -7631.993200000001
+Income (loss) from operations | 2345 | -1106 | 5060 | 4452 | 5420 | 5248 | 8801 | 7044.916799999997
+Interest and investment income (loss), net
+Interest Expense
+
+--- Result 3 (Score: 0.1953) ---
+# Quarterly IS - Chunk 5
+## Source: test_model_Alibaba_IPO(shorter)_llm.xlsx_Quarterly IS_rows_41_50
+## Rows: 41 to 50
+
+Dividends accrued on convertible preference shares
+Net loss attributable to common stockholders | 1722 | -1560 | 4045 | 4197 | 4384 | 4883 | 8266
+(1) Share-based compensation expense | 279 | 462 | 293 | 225 | 396 | 864 | 659
+Growth Analysis and Drivers
+Revenue
+
+--------------------------------------------------------------------------------
+SCENARIO: MARKDOWN
+--------------------------------------------------------------------------------
+Top Score: 0.1486, Avg Score: 0.1306
+Number of Results: 3, Total Chunks: 8
+
+TOP RESULTS:
+
+--- Result 1 (Score: 0.1486) ---
+# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 11-20 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 11 | A11 | B11, v=Others | C11, v=63, deps=0→2, dept=[Quarterly IS!C12,Quarterly IS!C60], fmt=[color:#0070C0,fmt:_(* #,##0_] | D11, v=92, deps=0→2, dept=[Quarterly IS!D60,Quarterly IS!D12], fmt=[color:#0070C0,fmt:_(* #,##0_] | E11, v=162, deps=0→2, dept=[Quarterly IS!E60,Quarterly IS!E12], fmt=[color:#0070C0,fmt:_(* #,##0_] | F11, v=223, deps=0→2, dept=[Quarterly IS!F12,Quarterly IS!F60], fmt=[color:#0070C0,fmt:_(* #,##0_] | G11, v=294, deps=0→2, dept=[Quarterly IS!G12,Quarterly IS!G60], fmt=[color:#0070C0,fmt:_(* #,##0_] | H11, v=371, deps=0→2, dept=[Quarterly IS!H12,Quarterly IS!H60], fmt=[color:#0070C0,fmt:_(* #,##0_] | I11, v=524, deps=0→2, dept=[Quarterly IS!I60,Quarterly IS!I12], fmt=[color:#0070C0,fmt:_(* #,##0_] | J11, v=707.400000000000
+
+[...truncated]
+
+--- Result 2 (Score: 0.1263) ---
+# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 71-80 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 71 | A71 | B71 | C71 | D71 | E71 | F71 | G71 | H71 | I71 | J71 | K71 | L71 | M71 | N71 | O71 | P71 |
+| 72 | A72 | B72, v=Sales and marketing expenses | C72, v=869, f==-C19, deps=1→1, prec=[Quarterly IS!C19], dept=[Quarterly IS!C73], fmt=[fmt:_(* #,##0_], type=f | D72, v=974, f==-D19, deps=1→1, prec=[Quarterly IS!D19], dept=[Quarterly IS!D73], fmt=[fmt:_(* #,##0_], type=f | E72, v=1249, f==-E19, deps=1→1, prec=[Quarterly IS!E19], dept=[Quarterly IS!E73], fmt=[fmt:_(* #,##0_], type=f | F72, v=521, f==-F19, deps=1→1, prec=[Quarterly IS!F19], dept=[Quarterly IS!F73], fmt=[fmt:_(* #,##0_], type=f | G72, v=713, f==-G19, deps=1→1, prec=[Quarterly IS!G19], dept=[Quarterly IS!G73], fmt=[fmt:_(* #,##0_], type=f | H72, v=657, f==-H19, deps=1→1, prec=[Quart
+
+[...truncated]
+
+--- Result 3 (Score: 0.1170) ---
+# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 51-60 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 51 | A51 | B51, v=China commerce, fmt=[bold] | C51, v=5601, f==C8, deps=1→2, prec=[Quarterly IS!C8], dept=[Quarterly IS!C63,Quarterly IS!D52], fmt=[fmt:_(* #,##0_], type=f | D51, v=6152, f==D8, deps=1→3, prec=[Quarterly IS!D8], dept=[Quarterly IS!D63,Quarterly IS!E52,+1more], fmt=[fmt:_(* #,##0_], type=f | E51, v=10172, f==E8, deps=1→3, prec=[Quarterly IS!E8], dept=[Quarterly IS!E52,Quarterly IS!F52,+1more], fmt=[fmt:_(* #,##0_], type=f | F51, v=7242, f==F8, deps=1→3, prec=[Quarterly IS!F8], dept=[Quarterly IS!F52,Quarterly IS!F63,+1more], fmt=[fmt:_(* #,##0_], type=f | G51, v=9193, f==G8, deps=1→3, prec=[Quarterly IS!G8], dept=[Quarterly IS!G63,Quarterly IS!H52,+1more], fmt=[fmt:_(* #,##0_], type=f | H51, v=9213, f==H8, deps=1→3, prec=[Quarterl
+
+[...truncated]
+
+--------------------------------------------------------------------------------
+SCENARIO: EXPANDED_CLEAN_NATURAL
+--------------------------------------------------------------------------------
+Top Score: 0.0495, Avg Score: 0.0383
+Number of Results: 3, Total Chunks: 8
+
+TOP RESULTS:
+
+--- Result 1 (Score: 0.0495) ---
+# Comprehensive Summary - Chunk 004 (Rows 41-50)
+
+## Document Structure
+- **Source**: test_model_Alibaba_IPO(shorter)_llm.xlsx
+- **Sheet**: Quarterly IS
+- **Rows**: 41-50
+- **Columns**: A-P (16 columns)
+
+## Content Overview
+- **Row 41**: "Dividends accrued on convertible preference shares" line item
+- **Rows 42-49**: Detailed financial line items related to earnings and adjustments
+- **Row 50**: Subtotal/summary row for the section
+- Contains key financial metrics including earnings per share calculations
+
+## Formatting Details
+
+### Text Formatting
+- **Standard Text**:
+  - Font: Arial 11pt, regular weight
+  - Color: Black (#000000) for most cells
+  - Alignment: Left for labels, right for numbers
+- **Special Text**:
+  - Blue text (#0070C0) for certain values
+  - Negative numbers in red with parentheses
+  - Some row headers in bold for emphasis
+
+### Data Formatting
+- **Numeric Values**:
+  - Accounting format with parentheses for negatives
+  - Thousands separators for large numbers
+  - Co
+
+[...truncated]
+
+--- Result 2 (Score: 0.0459) ---
+# Comprehensive Summary - Chunk 003 (Rows 31-40)
+
+## Document Structure
+- **Source**: test_model_Alibaba_IPO(shorter)_llm.xlsx
+- **Sheet**: Quarterly IS
+- **Rows**: 31-40
+- **Columns**: A-P (16 columns)
+
+## Content Overview
+- **Row 31**: "Other income (expense), net" line item
+- **Rows 32-39**: Detailed components of other income/expense
+- **Row 40**: Subtotal/summary row for the section
+- Contains various non-operating income and expense items
+
+## Formatting Details
+
+### Text Formatting
+- **Standard Text**:
+  - Font: Arial 11pt, regular weight
+  - Color: Black (#000000) for most cells
+  - Alignment: Left for labels, right for numbers
+- **Special Text**:
+  - Blue text (#0070C0) for certain values
+  - Negative numbers in red with parentheses
+
+### Data Formatting
+- **Numeric Values**:
+  - Accounting format with parentheses for negatives
+  - Thousands separators for large numbers
+  - Consistent decimal places within columns
+  - Special formatting for percentages
+
+### Cell Styling
+- **Stan
+
+[...truncated]
+
+--- Result 3 (Score: 0.0195) ---
+# Comprehensive Summary - Chunk 005 (Rows 51-60)
+
+## Document Structure
+- **Source**: test_model_Alibaba_IPO(shorter)_llm.xlsx
+- **Sheet**: Quarterly IS
+- **Rows**: 51-60
+- **Columns**: A-P (16 columns)
+
+## Content Overview
+- **Row 51**: "China commerce" segment data
+- **Row 52-59**: Various segment data including international commerce and cloud computing
+- **Row 60**: Subtotal/summary row for the section
+- Contains detailed segment-wise revenue and performance metrics
+
+## Formatting Details
+
+### Text Formatting
+- **Section Headers**:
+  - Font: Arial 11pt, bold
+  - Black text (#000000)
+  - Left-aligned for labels
+- **Data Values**:
+  - Font: Arial 11pt, regular weight
+  - Right-aligned for numbers
+  - Blue text (#0070C0) for certain values
+  - Negative numbers in red with parentheses
+
+### Data Formatting
+- **Numeric Values**:
+  - Accounting format with parentheses for negatives
+  - Thousands separators for large numbers
+  - Consistent decimal places within columns
+  - Special formatti
+
+[...truncated]
+
+--------------------------------------------------------------------------------
+QUERY
+--------------------------------------------------------------------------------
+What is the total revenue in the quarter ending 31st March 2013?

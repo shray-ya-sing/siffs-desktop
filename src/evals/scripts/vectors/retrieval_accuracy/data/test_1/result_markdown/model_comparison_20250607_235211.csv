@@ -1,0 +1,37 @@
+model,score,top_result
+msmarco-MiniLM-L-6-v3,1.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 11-20 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+all-MiniLM-L6-v2,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 31-40 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+all-MiniLM-L12-v2,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 71-80 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+paraphrase-MiniLM-L3-v2,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 31-40 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+multi-qa-MiniLM-L6-cos-v1,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 71-80 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+multi-qa-mpnet-base-dot-v1,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 21-30 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+sentence-t5-base,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 71-80 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+intfloat/e5-large-v2,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 31-40 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
+BAAI/bge-base-en-v1.5,0.0,"# Chunk: test_model_Alibaba_IPO(shorter)_llm.xlsx - Quarterly IS
+Rows: 71-80 (10 rows) | Columns: 16
+| Row | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
+|---|---|---|---|---|---|--..."
