@@ -1,0 +1,6557 @@
+{
+  "chunkId": "test_model_Alibaba_IPO(shorter)_llm.xlsx_Quarterly IS_rows_1_10",
+  "workbookName": "test_model_Alibaba_IPO(shorter)_llm.xlsx",
+  "workbookPath": "C:\\Users\\shrey\\OneDrive\\Desktop\\docs\\test\\test_model_Alibaba_IPO(shorter)_llm.xlsx",
+  "sheetName": "Quarterly IS",
+  "startRow": 1,
+  "endRow": 10,
+  "rowCount": 10,
+  "columnCount": 16,
+  "extractedAt": "2025-06-07T07:02:44.199871",
+  "cellData": [
+    [
+      {
+        "row": 1,
+        "column": 1,
+        "address": "A1",
+        "sheet": "Quarterly IS",
+        "value": "#REF!",
+        "formula": "=#REF!",
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 25.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "f",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 2,
+        "address": "B1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 3,
+        "address": "C1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 4,
+        "address": "D1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 5,
+        "address": "E1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 6,
+        "address": "F1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 7,
+        "address": "G1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 8,
+        "address": "H1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 9,
+        "address": "I1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 10,
+        "address": "J1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 11,
+        "address": "K1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 12,
+        "address": "L1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 13,
+        "address": "M1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 14,
+        "address": "N1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 15,
+        "address": "O1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 1,
+        "column": 16,
+        "address": "P1",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 2,
+        "column": 1,
+        "address": "A2",
+        "sheet": "Quarterly IS",
+        "value": "Quarterly Income Statement",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 18.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "s",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 2,
+        "address": "B2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 3,
+        "address": "C2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 4,
+        "address": "D2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 5,
+        "address": "E2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 6,
+        "address": "F2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 7,
+        "address": "G2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 8,
+        "address": "H2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 9,
+        "address": "I2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 10,
+        "address": "J2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 11,
+        "address": "K2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 12,
+        "address": "L2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 13,
+        "address": "M2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 14,
+        "address": "N2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 15,
+        "address": "O2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 2,
+        "column": 16,
+        "address": "P2",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 3,
+        "column": 1,
+        "address": "A3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 2,
+        "address": "B3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 3,
+        "address": "C3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 4,
+        "address": "D3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 5,
+        "address": "E3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 6,
+        "address": "F3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 7,
+        "address": "G3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 8,
+        "address": "H3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 9,
+        "address": "I3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 10,
+        "address": "J3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 11,
+        "address": "K3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 12,
+        "address": "L3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 13,
+        "address": "M3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 14,
+        "address": "N3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 15,
+        "address": "O3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 3,
+        "column": 16,
+        "address": "P3",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 4,
+        "column": 1,
+        "address": "A4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 12.0,
+            "bold": true,
+            "italic": false,
+            "color": "#00B0F0",
+            "underline": "single",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 2,
+        "address": "B4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 3,
+        "address": "C4",
+        "sheet": "Quarterly IS",
+        "value": "Quarter Ended",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "s",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 4,
+        "address": "D4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 5,
+        "address": "E4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 6,
+        "address": "F4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 7,
+        "address": "G4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 8,
+        "address": "H4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 9,
+        "address": "I4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 10,
+        "address": "J4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": "singleAccounting",
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 11,
+        "address": "K4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 12,
+        "address": "L4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 13,
+        "address": "M4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 14,
+        "address": "N4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 15,
+        "address": "O4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 4,
+        "column": 16,
+        "address": "P4",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 5,
+        "column": 1,
+        "address": "A5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 2,
+        "address": "B5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 12.0,
+            "bold": true,
+            "italic": false,
+            "color": "#00B0F0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 3,
+        "address": "C5",
+        "sheet": "Quarterly IS",
+        "value": "2012-06-30T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 4,
+        "address": "D5",
+        "sheet": "Quarterly IS",
+        "value": "2012-09-30T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 5,
+        "address": "E5",
+        "sheet": "Quarterly IS",
+        "value": "2012-12-31T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 6,
+        "address": "F5",
+        "sheet": "Quarterly IS",
+        "value": "2013-03-31T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 7,
+        "address": "G5",
+        "sheet": "Quarterly IS",
+        "value": "2013-06-30T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 8,
+        "address": "H5",
+        "sheet": "Quarterly IS",
+        "value": "2013-09-30T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 9,
+        "address": "I5",
+        "sheet": "Quarterly IS",
+        "value": "2013-12-31T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 10,
+        "address": "J5",
+        "sheet": "Quarterly IS",
+        "value": "2014-03-31T00:00:00",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": "solid",
+            "startColor": "#00B0F0",
+            "endColor": null,
+            "patternType": "solid"
+          },
+          "numberFormat": "[$-409]d\\-mmm\\-yy;@",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "d",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 11,
+        "address": "K5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 12,
+        "address": "L5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 13,
+        "address": "M5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 14,
+        "address": "N5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 15,
+        "address": "O5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 5,
+        "column": 16,
+        "address": "P5",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 6,
+        "column": 1,
+        "address": "A6",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 2,
+        "address": "B6",
+        "sheet": "Quarterly IS",
+        "value": "(RMB in Million Except Per Share Amounts)",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "s",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 3,
+        "address": "C6",
+        "sheet": "Quarterly IS",
+        "value": 2012,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 4,
+        "address": "D6",
+        "sheet": "Quarterly IS",
+        "value": 2012,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 5,
+        "address": "E6",
+        "sheet": "Quarterly IS",
+        "value": 2012,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 6,
+        "address": "F6",
+        "sheet": "Quarterly IS",
+        "value": 2013,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 7,
+        "address": "G6",
+        "sheet": "Quarterly IS",
+        "value": 2013,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 8,
+        "address": "H6",
+        "sheet": "Quarterly IS",
+        "value": 2013,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 9,
+        "address": "I6",
+        "sheet": "Quarterly IS",
+        "value": 2013,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 10,
+        "address": "J6",
+        "sheet": "Quarterly IS",
+        "value": 2014,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Calibri",
+            "size": 11.0,
+            "bold": true,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 11,
+        "address": "K6",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 12,
+        "address": "L6",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 13,
+        "address": "M6",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 14,
+        "address": "N6",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 15,
+        "address": "O6",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 6,
+        "column": 16,
+        "address": "P6",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 7,
+        "column": 1,
+        "address": "A7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 2,
+        "address": "B7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 3,
+        "address": "C7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 4,
+        "address": "D7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 5,
+        "address": "E7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 6,
+        "address": "F7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 7,
+        "address": "G7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 8,
+        "address": "H7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 9,
+        "address": "I7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 10,
+        "address": "J7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 11,
+        "address": "K7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 12,
+        "address": "L7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 13,
+        "address": "M7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 14,
+        "address": "N7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 15,
+        "address": "O7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 7,
+        "column": 16,
+        "address": "P7",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 8,
+        "column": 1,
+        "address": "A8",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 8,
+        "column": 2,
+        "address": "B8",
+        "sheet": "Quarterly IS",
+        "value": "China commerce",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "s",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 8,
+        "column": 3,
+        "address": "C8",
+        "sheet": "Quarterly IS",
+        "value": 5601,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!C12",
+          "Quarterly IS!C51"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 4,
+        "address": "D8",
+        "sheet": "Quarterly IS",
+        "value": 6152,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!D51",
+          "Quarterly IS!D12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 5,
+        "address": "E8",
+        "sheet": "Quarterly IS",
+        "value": 10172,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!E12",
+          "Quarterly IS!E51"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 6,
+        "address": "F8",
+        "sheet": "Quarterly IS",
+        "value": 7242,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!F12",
+          "Quarterly IS!F51"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 7,
+        "address": "G8",
+        "sheet": "Quarterly IS",
+        "value": 9193,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!G51",
+          "Quarterly IS!G12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 8,
+        "address": "H8",
+        "sheet": "Quarterly IS",
+        "value": 9213,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!H12",
+          "Quarterly IS!H51"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 9,
+        "address": "I8",
+        "sheet": "Quarterly IS",
+        "value": 16761,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!I51",
+          "Quarterly IS!I12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 10,
+        "address": "J8",
+        "sheet": "Quarterly IS",
+        "value": 12570.75,
+        "formula": "=J51",
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "f",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [
+          "Quarterly IS!J51"
+        ],
+        "directDependents": [
+          "Quarterly IS!J12"
+        ],
+        "precedentCount": 1,
+        "dependentCount": 1,
+        "totalConnections": 2
+      },
+      {
+        "row": 8,
+        "column": 11,
+        "address": "K8",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 8,
+        "column": 12,
+        "address": "L8",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 8,
+        "column": 13,
+        "address": "M8",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 8,
+        "column": 14,
+        "address": "N8",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 8,
+        "column": 15,
+        "address": "O8",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 8,
+        "column": 16,
+        "address": "P8",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 9,
+        "column": 1,
+        "address": "A9",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 9,
+        "column": 2,
+        "address": "B9",
+        "sheet": "Quarterly IS",
+        "value": "International commerce",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "s",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 9,
+        "column": 3,
+        "address": "C9",
+        "sheet": "Quarterly IS",
+        "value": 974,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!C54",
+          "Quarterly IS!C12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 4,
+        "address": "D9",
+        "sheet": "Quarterly IS",
+        "value": 1049,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!D54",
+          "Quarterly IS!D12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 5,
+        "address": "E9",
+        "sheet": "Quarterly IS",
+        "value": 1094,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!E12",
+          "Quarterly IS!E54"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 6,
+        "address": "F9",
+        "sheet": "Quarterly IS",
+        "value": 1043,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!F12",
+          "Quarterly IS!F54"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 7,
+        "address": "G9",
+        "sheet": "Quarterly IS",
+        "value": 1117,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!G54",
+          "Quarterly IS!G12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 8,
+        "address": "H9",
+        "sheet": "Quarterly IS",
+        "value": 1176,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!H12",
+          "Quarterly IS!H54"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 9,
+        "address": "I9",
+        "sheet": "Quarterly IS",
+        "value": 1264,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!I54",
+          "Quarterly IS!I12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 10,
+        "address": "J9",
+        "sheet": "Quarterly IS",
+        "value": 1200.8,
+        "formula": "=J54",
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "f",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [
+          "Quarterly IS!J54"
+        ],
+        "directDependents": [
+          "Quarterly IS!J12"
+        ],
+        "precedentCount": 1,
+        "dependentCount": 1,
+        "totalConnections": 2
+      },
+      {
+        "row": 9,
+        "column": 11,
+        "address": "K9",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 9,
+        "column": 12,
+        "address": "L9",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 9,
+        "column": 13,
+        "address": "M9",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 9,
+        "column": 14,
+        "address": "N9",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 9,
+        "column": 15,
+        "address": "O9",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 9,
+        "column": 16,
+        "address": "P9",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ],
+    [
+      {
+        "row": 10,
+        "column": 1,
+        "address": "A10",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 10,
+        "column": 2,
+        "address": "B10",
+        "sheet": "Quarterly IS",
+        "value": "Cloud computing and Internet infrastructure",
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "s",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 10,
+        "column": 3,
+        "address": "C10",
+        "sheet": "Quarterly IS",
+        "value": 155,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!C12",
+          "Quarterly IS!C57"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 4,
+        "address": "D10",
+        "sheet": "Quarterly IS",
+        "value": 164,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!D12",
+          "Quarterly IS!D57"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 5,
+        "address": "E10",
+        "sheet": "Quarterly IS",
+        "value": 165,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!E12",
+          "Quarterly IS!E57"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 6,
+        "address": "F10",
+        "sheet": "Quarterly IS",
+        "value": 166,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!F12",
+          "Quarterly IS!F57"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 7,
+        "address": "G10",
+        "sheet": "Quarterly IS",
+        "value": 174,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!G12",
+          "Quarterly IS!G57"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 8,
+        "address": "H10",
+        "sheet": "Quarterly IS",
+        "value": 190,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!H12",
+          "Quarterly IS!H57"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 9,
+        "address": "I10",
+        "sheet": "Quarterly IS",
+        "value": 196,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": "#0070C0",
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [
+          "Quarterly IS!I57",
+          "Quarterly IS!I12"
+        ],
+        "precedentCount": 0,
+        "dependentCount": 2,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 10,
+        "address": "J10",
+        "sheet": "Quarterly IS",
+        "value": 197.96,
+        "formula": "=J57",
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "_(* #,##0_);_(* \\(#,##0\\);_(* \"-\"??_);_(@_)",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "f",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [
+          "Quarterly IS!J57"
+        ],
+        "directDependents": [
+          "Quarterly IS!J12"
+        ],
+        "precedentCount": 1,
+        "dependentCount": 1,
+        "totalConnections": 2
+      },
+      {
+        "row": 10,
+        "column": 11,
+        "address": "K10",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {
+          "font": {
+            "name": "Arial",
+            "size": 11.0,
+            "bold": false,
+            "italic": false,
+            "color": null,
+            "underline": null,
+            "strikethrough": null,
+            "vertAlign": null
+          },
+          "fill": {
+            "fillType": null,
+            "startColor": "#00000000",
+            "endColor": "#00000000",
+            "patternType": null
+          },
+          "numberFormat": "General",
+          "alignment": {
+            "error": "'Alignment' object has no attribute 'reading_order'"
+          },
+          "borders": {
+            "error": "'Border' object has no attribute 'diagonal_up'"
+          },
+          "protection": {
+            "locked": true,
+            "hidden": false
+          },
+          "comment": {
+            "error": "'ReadOnlyCell' object has no attribute 'comment'"
+          },
+          "hyperlink": {
+            "error": "'ReadOnlyCell' object has no attribute 'hyperlink'"
+          },
+          "dataType": "n",
+          "merged": {
+            "error": "'ReadOnlyWorksheet' object has no attribute 'merged_cells'"
+          }
+        },
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 10,
+        "column": 12,
+        "address": "L10",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 10,
+        "column": 13,
+        "address": "M10",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 10,
+        "column": 14,
+        "address": "N10",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 10,
+        "column": 15,
+        "address": "O10",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      },
+      {
+        "row": 10,
+        "column": 16,
+        "address": "P10",
+        "sheet": "Quarterly IS",
+        "value": null,
+        "formula": null,
+        "formatting": {},
+        "directPrecedents": [],
+        "directDependents": [],
+        "precedentCount": 0,
+        "dependentCount": 0,
+        "totalConnections": 0
+      }
+    ]
+  ],
+  "chunkIndex": 0,
+  "includeDependencies": true,
+  "tables": [],
+  "dependencySummary": {
+    "totalPrecedents": 3,
+    "totalDependents": 29,
+    "internalDependencies": 0,
+    "externalDependencies": 3,
+    "externalPrecedents": [
+      "Quarterly IS!J57",
+      "Quarterly IS!J54",
+      "Quarterly IS!J51"
+    ],
+    "externalDependents": [
+      "Quarterly IS!C51",
+      "Quarterly IS!F54",
+      "Quarterly IS!I54",
+      "Quarterly IS!E51",
+      "Quarterly IS!G51",
+      "Quarterly IS!D57",
+      "Quarterly IS!H12",
+      "Quarterly IS!G12",
+      "Quarterly IS!G54",
+      "Quarterly IS!D54"
+    ]
+  },
+  "cellCount": 47,
+  "chunkNumber": 1,
+  "totalChunks": 8
+}
