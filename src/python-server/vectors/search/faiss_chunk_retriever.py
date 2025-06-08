@@ -7,6 +7,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import sys
+import os
+from pathlib import Path
 # Add the current directory to Python path
 current_dir = Path(__file__).parent.parent.absolute()
 sys.path.append(str(current_dir))
@@ -24,7 +26,7 @@ class FAISSChunkRetriever:
         self,
         storage: 'EmbeddingStorage',
         embedder: 'ChunkEmbedder',
-        index_path: str = "./faiss_indices"
+        index_path: str = None
     ):
         """
         Initialize the FAISS retriever.
@@ -36,6 +38,8 @@ class FAISSChunkRetriever:
         """
         self.storage = storage
         self.embedder = embedder
+        if index_path is None:
+            index_path = os.path.join(str(Path(__file__).parent.parent / "index"), "./faiss_indices")
         self.index_path = index_path
         self.logger = logging.getLogger(__name__)
         
