@@ -8,6 +8,8 @@ from collections import deque
 import json
 from dataclasses import dataclass
 
+from .llm_metadata_cache_manager import LLMMetadataCacheManager
+
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
@@ -46,7 +48,10 @@ class LLMMetadataGenerator:
         "claude-3-haiku-20240307": ModelLimits(80000, 200000),
     }
 
-    def __init__(self, anthropic_service: Optional[AnthropicService] = None):
+    def __init__(self, 
+        anthropic_service: Optional[AnthropicService] = None,
+        cache_manager: Optional[LLMMetadataCacheManager] = None
+        ):
         """
         Initialize the LLM Generator with an optional Anthropic service instance.
         If no service is provided, a new one will be created.
@@ -64,6 +69,8 @@ class LLMMetadataGenerator:
         # Cache for token counts to avoid repeated API calls
         self._token_cache = {}
         self._system_prompt_tokens = None  # Cache system prompt tokens
+
+        self.cache_manager = cache_manager or LLMMetadataCacheManager()
 
     async def _get_cached_token_count(self, text: str, model: str) -> int:
         """Get token count with caching to avoid repeated API calls"""
@@ -169,7 +176,8 @@ class LLMMetadataGenerator:
         model: str = "claude-sonnet-4-20250514",
         max_tokens: int = 2000,
         temperature: float = 0.3,
-        stream: bool = False
+        stream: bool = False,
+        use_cache: bool = True
     ) -> Union[str, AsyncGenerator[str, None]]:
         """
         Generate metadata for Excel based on user requests.
@@ -180,10 +188,31 @@ class LLMMetadataGenerator:
             max_tokens: Maximum tokens in response
             temperature: LLM temperature
             stream: Whether to stream the response
+            use_cache: Whether to use the cache
             
         Returns:
             Metadata string or async generator for streaming
         """
+        # Generate cache key
+        cache_key = self.cache_manager._generate_key(
+            "generate_metadata_from_request",
+            user_request=user_request,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+
+        # Check cache if enabled
+        if use_cache and not stream:
+            cached = self.cache_manager.get(cache_key)
+            if cached is not None:
+                self._logger.info("Returning cached response")
+                if stream:
+                    async def cached_stream():
+                        yield cached
+                    return cached_stream()
+                return cached
+
         # Check if we need to reset conversation due to context limit
         if self._should_reset_conversation(model):
             self._reset_conversation()
@@ -241,6 +270,10 @@ Create Excel metadata for the following request. Return ONLY the metadata string
             
             # Record token usage
             self._add_token_usage(total_request_tokens)
+
+            # Cache the result if successful
+            if use_cache and not stream and result:
+                self.cache_manager.set(cache_key, result)
             
             return result
             
@@ -261,6 +294,7 @@ Create Excel metadata for the following request. Return ONLY the metadata string
         max_tokens: int = 2000,
         temperature: float = 0.3,
         stream: bool = False,
+        use_cache: bool = True
     ) -> Union[str, AsyncGenerator[str, None]]:
         """
         Generate metadata for Excel based on user requests with chunk context.
@@ -272,10 +306,38 @@ Create Excel metadata for the following request. Return ONLY the metadata string
             max_tokens: Maximum tokens in response
             temperature: LLM temperature
             stream: Whether to stream the response
+            use_cache: Whether to use the cache
             
         Returns:
             Metadata string or async generator for streaming
         """
+
+        # Generate cache key including search results
+        search_context = json.dumps([
+            {k: v for k, v in res.items() if k in {'metadata', 'markdown'}} 
+            for res in (search_results or [])
+        ], sort_keys=True)
+        
+        cache_key = self.cache_manager._generate_key(
+            "generate_metadata_for_edit",
+            user_request=user_request,
+            search_context=search_context,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+
+        # Check cache if enabled
+        if use_cache and not stream:
+            cached = self.cache_manager.get(cache_key)
+            if cached is not None:
+                self._logger.info("Returning cached edit response")
+                if stream:
+                    async def cached_stream():
+                        yield cached
+                    return cached_stream()
+                return cached
+
         # Check if we need to reset conversation due to context limit
         if self._should_reset_conversation(model):
             self._reset_conversation()
@@ -340,7 +402,11 @@ Create Excel metadata for the following request. Return ONLY the metadata string
             
             # Record token usage
             self._add_token_usage(total_request_tokens)
-            
+
+            # Cache the result if successful
+            if use_cache and not stream and result:
+                self.cache_manager.set(cache_key, result)
+ 
             return result
             
         except Exception as e:
@@ -466,6 +532,122 @@ Create Excel metadata for the following request. Return ONLY the metadata string
     6. Ensure all formulas are valid Excel formulas
     7. Use absolute references ($A$1) when appropriate
     8. Include error handling in formulas where necessary
+
+    # LIST OF CORRECT FORMULAE TO USE AND ANTI-PATTERNS TO AVOID    
+    1. AVERAGE
+    Correct: =AVERAGE(A1:A10), =AVERAGE(A1,B1,C1)
+    Incorrect: =AVERAGE(A1:A10:2), =AVERAGE(A1 A10), =AVERAGE(A1;A10)
+    When you need the average of separate cells, use =AVERAGE(A1,B1,C1) instead of =AVERAGE(A1:A10:2)
+    2. SUM
+    Correct: =SUM(A1:A10), =SUM(A1,B1,C1), =SUM(A1+B1+C1)
+    Incorrect: =SUM A1:A10, =SUM(A1-A10), =SUM(A1;A10)
+    When you need the sum of separate cells, use =SUM(A1,B1,C1) instead of =SUM(A1:A10:2)
+    3. VLOOKUP
+    Correct: =VLOOKUP(value, table, col_index, [range_lookup])
+    =VLOOKUP("John", A2:B10, 2, FALSE)
+    Incorrect:
+    =VLOOKUP("John", A2:B10, 2) (missing range_lookup)
+    =VLOOKUP(John, A2:B10, 2, FALSE) (text without quotes)
+    =VLOOKUP("John", A2:B10, "2", FALSE) (col_index as text)
+    4. IF
+    Correct: =IF(A1>10, "Yes", "No"), =IF(AND(A1>10, B1<5), "OK", "Not OK")
+    Incorrect:
+    =IF A1>10 "Yes" "No" (missing parentheses and commas)
+    =IF(A1>10, "Yes") (missing false value)
+    =IF("A1>10", "Yes", "No") (condition as text)
+    5. SUMIF/SUMIFS
+    Correct:
+    =SUMIF(A1:A10, ">10")
+    =SUMIFS(C1:C10, A1:A10, ">10", B1:B10, "<5")
+    Incorrect:
+    =SUMIF(A1:A10 > 10) (incorrect syntax)
+    =SUMIFS(C1:C10, A1:A10, ">10", B1:B10) (unpaired criteria)
+    6. INDEX-MATCH
+    Correct:
+    =INDEX(B1:B10, MATCH("John", A1:A10, 0))
+    =INDEX(A1:C10, MATCH("John", A1:A10, 0), 3)
+    Incorrect:
+    =INDEX(B1:B10, MATCH("John", A1:A10)) (missing match_type)
+    =INDEX(B1:B10, MATCH(John, A1:A10, 0)) (text without quotes)
+    7. COUNTIF/COUNTIFS
+    Correct:
+    =COUNTIF(A1:A10, ">10")
+    =COUNTIFS(A1:A10, ">10", B1:B10, "<5")
+    Incorrect:
+    =COUNTIF(A1:A10 > 10) (incorrect syntax)
+    =COUNTIF("A1:A10", ">10") (range as text)
+    8. CONCATENATE/CONCAT/TEXTJOIN
+    Correct:
+    =CONCATENATE(A1, " ", B1)
+    =A1 & " " & B1
+    =TEXTJOIN(" ", TRUE, A1, B1)
+    Incorrect:
+    =CONCATENATE A1 B1 (missing parentheses)
+    =A1 + " " + B1 (using + for text concatenation)
+    9. DATE
+    Correct: =DATE(2023, 12, 31), =DATE(YEAR(A1), MONTH(A1), DAY(A1))
+    Incorrect:
+    =DATE("2023", "12", "31") (text instead of numbers)
+    =DATE(31, 12, 2023) (wrong order of arguments)
+    10. IFERROR/IFNA
+    Correct:
+    =IFERROR(VLOOKUP(A1, B:C, 2, FALSE), "Not found")
+    =IFNA(VLOOKUP(A1, B:C, 2, FALSE), "Not found")
+    Incorrect:
+    =IFERROR VLOOKUP(A1, B:C, 2, FALSE), "Not found" (missing parentheses)
+    =IFERROR("VLOOKUP(A1, B:C, 2, FALSE)", "Not found") (formula as text)
+    11. XLOOKUP (Excel 365+)
+    Correct:
+    =XLOOKUP(A1, B1:B10, C1:C10, "Not found")
+    =XLOOKUP(A1, B1:B10, C1:C10, "", 0, -1)
+    Incorrect:
+    =XLOOKUP(A1, B1:B10, C1:C10) (missing default value)
+    =XLOOKUP(A1, B1:B10) (missing return_array)
+    12. UNIQUE/FILTER (Excel 365+)
+    Correct:
+    =UNIQUE(A1:A100)
+    =FILTER(A1:B10, B1:B10>10)
+    Incorrect:
+    =UNIQUE("A1:A100") (range as text)
+    =FILTER(A1:B10, "B1:B10>10") (condition as text)
+    13. OFFSET
+    Correct:
+    =OFFSET(A1, 2, 3)                     // 2 rows down, 3 columns right from A1
+    =OFFSET(A1, 0, 0, 5, 3)               // 5 rows by 3 columns range starting at A1
+    =SUM(OFFSET(A1, 1, 0, 3, 1))          // Sum of A2:A4
+    =OFFSET($A$1, ROW()-1, 0)             // Dynamic reference in a table
+    Incorrect:
+    =OFFSET("A1", 2, 3)                   // Reference as text
+    =OFFSET(A1, "2", 3)                   // Rows parameter as text
+    =OFFSET(A1, , , , )                   // Missing required parameters
+    =OFFSET(A1, -1, 0)                    // Negative offset that goes before row 1
+    =OFFSET(A1, 1048576, 0)               // Offset beyond worksheet limits
+    =OFFSET(A1, 0, 0, 0, 1)               // Height of 0 is invalid
+    14. HLOOKUP
+    Correct:
+    =HLOOKUP("Product", A1:Z2, 2, FALSE)  // Exact match
+    =HLOOKUP("Q1", A1:Z4, 3, TRUE)       // Approximate match (requires sorted data)
+    =HLOOKUP(A1, B1:Z100, 5, FALSE)       // Using cell reference for lookup value
+    Incorrect:
+    =HLOOKUP(Product, A1:Z2, 2, FALSE)    // Text without quotes
+    =HLOOKUP("Product", A1:Z2, 2)         // Missing range_lookup parameter
+    =HLOOKUP("Product", "A1:Z2", 2, FALSE) // Range as text
+    =HLOOKUP("Product", A1:Z2, "2", FALSE) // Row_index_num as text
+    =HLOOKUP("Product", A1:Z2, 0, FALSE)  // Row_index_num less than 1
+    
+    General Formula Best Practices:
+    Always start with =
+    Match all opening and closing parentheses
+    Use correct argument separators (comma or semicolon based on locale)
+    Enclose text in double quotes
+    Don't use text formatting in formulas (e.g., bold, italics)
+    Avoid circular references unless intentional
+    Use absolute/relative references appropriately ($A$1 vs A1)
+    Favor using XLOOKUPS instead of VLOOKUPS and HLOOKUPS
+    For HLOOKUP, always include the range_lookup parameter (FALSE for exact match, TRUE for approximate)
+    For OFFSET, be cautious with volatile functions as they recalculate with every worksheet change
+    Consider using INDEX/MATCH as a non-volatile alternative to OFFSET
+    
     """
 
 
@@ -585,3 +767,27 @@ Create Excel metadata for the following request. Return ONLY the metadata string
                 composed_parts.append("")
         
         return "\n".join(composed_parts)
+
+# HELPER METHODS FOR CACHE MANAGEMENT-------------------------------------------------------------------
+
+    def clear_cache(self, older_than: Optional[float] = None) -> int:
+        """Clear cache entries. See LLMMetadataCacheManager.clear() for details."""
+        return self.cache_manager.clear(older_than)
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics. See LLMMetadataCacheManager.get_stats() for details."""
+        return self.cache_manager.get_stats()
+
+    def save_cache_to_file(self, filepath: str) -> bool:
+        """Save cache to file. See LLMMetadataCacheManager.save_to_file() for details."""
+        return self.cache_manager.save_to_file(filepath)
+
+    @classmethod
+    def with_cache_from_file(
+        cls, 
+        filepath: str,
+        anthropic_service: Optional[AnthropicService] = None
+    ) -> 'LLMMetadataGenerator':
+        """Create a new instance with cache loaded from file."""
+        cache_manager = LLMMetadataCacheManager.load_from_file(filepath)
+        return cls(anthropic_service=anthropic_service, cache_manager=cache_manager)
