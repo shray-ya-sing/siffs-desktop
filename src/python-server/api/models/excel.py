@@ -89,3 +89,23 @@ class GenerateEditMetadataRequest(BaseModel):
     max_tokens: int = 2000
     temperature: float = 0.3
     stream: bool = False
+
+
+class EditExcelRequest(BaseModel):
+    file_path: str
+    metadata: dict
+    visible: bool = False
+    version_id: int
+
+class CreateExcelRequest(BaseModel):
+    file_path: str
+    metadata: dict
+    visible: bool = False
+    version_id: int = 1
+
+#-------------------------------------------ACCEPT/ REJECT EDITS-------------------------------------------
+class EditActionRequest(BaseModel):
+    file_path: str
+    version_id: int
+    sheet_name: Optional[str] = None
+    visible: bool = False
