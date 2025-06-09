@@ -101,7 +101,7 @@ def parse_metadata(metadata: str) -> dict:
 def edit_excel(file_path: str, metadata: dict) -> bool:
     """Apply the metadata to an Excel file."""
     print("\n=== Step 3: Creating Excel File ===")
-    url = f"{BASE_URL}/api/excel/edit-excel"
+    url = f"{BASE_URL}/api/excel/create-excel"
     
     try:
         # Ensure the directory exists
