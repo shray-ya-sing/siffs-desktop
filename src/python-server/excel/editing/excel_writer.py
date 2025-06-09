@@ -270,10 +270,9 @@ class ExcelWriter:
 
     def close(self, save: bool = True) -> None:
         """Close the workbook and clean up resources"""
-        if save and self.file_path:
-            self.save()
-
         if not self.use_session_manager:
+            if save and self.file_path:
+                self.save()
             # Original behavior for direct management
             for path in list(self.workbooks.keys()):
                 try:
@@ -283,14 +282,21 @@ class ExcelWriter:
                 except:
                     pass
                 self.workbooks.pop(path, None)
-        
-        # Only quit app if not using session manager
-        if not self.use_session_manager and self.app:
-            try:
-                self.app.quit()
-            except:
-                pass
-            self.app = None
+
+            if self.app:
+                try:
+                    self.app.quit()
+                except:
+                    pass
+                self.app = None
+
+        else:
+            if self.file_path:
+                if save:
+                    self.session_manager.save_session(self.file_path)
+                self.session_manager.close_session(self.file_path, save=save)
+                self.file_path = None
+                self.workbook = None
             
         
     # CONTEXT MANAGER METHODS-------------------------------------------------------------------------------------------------------------------------------------------
