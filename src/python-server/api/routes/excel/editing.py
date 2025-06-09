@@ -23,7 +23,7 @@ router = APIRouter(
 @router.post("/edit-excel")
 async def edit_excel(request: dict):
     """
-    Edit an Excel file using the provided metadata.
+    Edit an EXISTING Excel file using the provided metadata.
     
     Request body:
     {
@@ -46,6 +46,7 @@ async def edit_excel(request: dict):
             ]
         },
         "visible": false  # Optional, whether to show Excel during editing
+        "version_id": 1  # Optional, version ID for tracking edits
     }
     """
     logger.info("Received request to edit Excel file")
@@ -55,6 +56,7 @@ async def edit_excel(request: dict):
         file_path = request.get("file_path")
         metadata = request.get("metadata")
         visible = request.get("visible", False)
+        version_id = request.get("version_id", 1)
         
         if not file_path or not isinstance(file_path, str):
             raise HTTPException(
@@ -71,7 +73,7 @@ async def edit_excel(request: dict):
         try:
             # Create Excel writer instance
             with ExcelWriter(visible=visible) as writer:
-                success = writer.write_data(metadata, file_path)
+                success = writer.write_data_to_existing(metadata, file_path, version_id)
                 
                 if not success:
                     raise HTTPException(
@@ -114,3 +116,107 @@ async def edit_excel(request: dict):
                 "message": "An unexpected error occurred while editing the Excel file"
             }
         )
+        
+
+
+@router.post("/create-excel")
+async def create_excel(request: dict):
+    """
+    Create a new Excel file using the provided metadata.
+    
+    Request body:
+    {
+        "file_path": "/path/to/excel.xlsx",
+        "metadata": {
+            "Sheet1": [
+                {
+                    "cell": "A1",
+                    "formula": "Test",
+                    "font_style": "Arial",
+                    "font_size": 12,
+                    "bold": true,
+                    "text_color": "#FF0000",
+                    "horizontal_alignment": "center",
+                    "vertical_alignment": "center",
+                    "number_format": "0.00",
+                    "fill_color": "#FFFF00",
+                    "wrap_text": true
+                }
+            ]
+        },
+        "visible": false  # Optional, whether to show Excel during editing
+        "version_id": 1  # Optional, version ID for tracking edits
+    }
+    """
+    logger.info("Received request to edit Excel file")
+    
+    try:
+        # Extract and validate request data
+        file_path = request.get("file_path")
+        metadata = request.get("metadata")
+        visible = request.get("visible", False)
+        version_id = request.get("version_id", 1)
+        
+        if not file_path or not isinstance(file_path, str):
+            raise HTTPException(
+                status_code=400,
+                detail="Valid file_path is required"
+            )
+            
+        if not metadata or not isinstance(metadata, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="Metadata must be a non-empty dictionary"
+            )
+
+        try:
+            # Create Excel writer instance
+            with ExcelWriter(visible=visible) as writer:
+                success = writer.write_data_to_new(metadata, file_path, version_id)
+                
+                if not success:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Failed to write data to Excel"
+                    )
+            
+            return {
+                "status": "success",
+                "message": f"Successfully created new excel at {file_path}",
+                "file_path": file_path,
+                "modified_sheets": list(metadata.keys())
+            }
+            
+        except PermissionError as pe:
+            logger.error(f"Permission error writing to {file_path}: {str(pe)}")
+            raise HTTPException(
+                status_code=403,
+                detail=f"Permission denied when writing to {file_path}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error writing to Excel file: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error writing to Excel file: {str(e)}"
+            )
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+        
+    except Exception as e:
+        # Log the full error for debugging
+        logger.error(f"Unexpected error editing Excel: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Internal server error",
+                "message": "An unexpected error occurred while editing the Excel file"
+            }
+        )
+
+
+
+#------------------------------------ EDIT ACCEPTANCE & REJECTION ---------------------------------------------
+
