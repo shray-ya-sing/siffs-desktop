@@ -114,7 +114,7 @@ const modelCreatePipelineService = {
    * @returns Promise with the edit result
    */
   async editExcel(params: EditExcelParams): Promise<PipelineResult> {
-    const response = await apiClient.post('/excel/edit-excel', {
+    const response = await apiClient.post('/excel/create-excel', {
       file_path: params.file_path,
       metadata: params.metadata,
       visible: params.visible || false,
