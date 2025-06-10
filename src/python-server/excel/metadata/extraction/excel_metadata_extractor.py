@@ -5,6 +5,13 @@ import re
 from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime
 from collections import defaultdict
+import sys
+from pathlib import Path
+
+# Add the project parent to Python path
+project_root = Path(__file__).parent.parent.absolute()
+sys.path.append(str(project_root))
+from storage.excel_metadata_storage import ExcelMetadataStorage
 
 # Handle import errors gracefully
 try:
@@ -186,12 +193,18 @@ class ExcelDependencyExtractor:
         return self.dependency_map, self.dependent_map
 
 class ExcelMetadataExtractor:
-    def __init__(self, workbook_path: Optional[str] = None):
+    
+    def __init__(self, 
+        workbook_path: Optional[str] = None, 
+        use_storage: Optional[bool] = True,
+        storage: Optional[ExcelMetadataStorage] = None):
         """
         Initialize the metadata extractor with enhanced error handling and dependency extraction.
         
         Args:
             workbook_path: Path to the Excel file (optional, can be set later)
+            use_storage: Whether to use storage for metadata extraction
+            storage: Optional storage instance to use
         """
         if not OPENPYXL_AVAILABLE:
             raise ImportError("openpyxl is required but not installed. Please install with: pip install openpyxl")
@@ -202,9 +215,17 @@ class ExcelMetadataExtractor:
         self.xlwings_extractor = None
         self.dependency_extractor = ExcelDependencyExtractor()
         self._initialize_xlwings()
-        
-        if workbook_path:
-            self.open_workbook(workbook_path)
+        print("ExcelMetadataExtractor initialized, initialized storage for extractor")
+        self.use_storage = use_storage
+        if self.use_storage:
+            try:
+                self.storage = storage or ExcelMetadataStorage()
+                print("Storage initialized, ExcelMetadataExtractor class initialization complete. ")
+            except Exception as e:
+                print(f"Error initializing storage: {str(e)}")
+                self.storage = None
+                self.use_storage = False
+            
 
     def _initialize_xlwings(self) -> None:
         """Initialize xlwings extractor if available."""
@@ -298,12 +319,71 @@ class ExcelMetadataExtractor:
         max_rows_per_sheet: int = 100,
         max_cols_per_sheet: int = 50,
         include_display_values: bool = False,
-        include_dependencies: bool = True
+        include_dependencies: bool = True,
+        force_extract: bool = False
     ) -> Tuple[Dict[str, Any], Dict[str, str]]:
         """
         Extract metadata with comprehensive error handling and dependency analysis.
+        Optionally checks storage first to avoid re-extracting unchanged workbooks.
+        
+        Args:
+            workbook_path: Path to the Excel file
+            output_path: Optional path to save the metadata
+            max_rows_per_sheet: Maximum rows to extract per sheet
+            max_cols_per_sheet: Maximum columns to extract per sheet
+            include_display_values: Whether to include display values using xlwings
+            include_dependencies: Whether to include cell dependency analysis
+            force_extract: If True, always extract even if unchanged
+            
+        Returns:
+            Tuple of (metadata_dict, display_values_dict)
         """
         try:
+
+            # Ensure we have a storage instance if needed
+            if self.use_storage:
+                if not hasattr(self, 'storage'):
+                    self.storage = ExcelMetadataStorage()
+                
+                # Normalize the file path
+                normalized_path = str(Path(workbook_path).resolve()) if workbook_path else None
+                
+                # Check storage first if not forcing extraction
+                if not force_extract and normalized_path and hasattr(self, 'storage'):
+                    try:
+                        # Get the latest version from storage
+                        latest_version = self.storage.get_latest_version(normalized_path)
+                        if latest_version:
+                            # Get the file's current hash
+                            current_hash = self._calculate_file_hash(normalized_path)
+                            
+                            # If the file hasn't changed, return stored metadata
+                            if latest_version.get('file_hash') == current_hash:
+                                print(f"Using cached metadata for {normalized_path}")
+                                stored_metadata = json.loads(latest_version.get('full_metadata_json', '{}'))
+                                if stored_metadata:
+                                    try:
+                                        metadata = json.loads(stored_metadata)
+                                        # Validate the metadata structure
+                                        if self._is_valid_metadata(metadata):
+                                            print(f"Using cached metadata for {normalized_path}")
+                                            return metadata, {}
+                                        else:
+                                            print("Cached metadata is invalid, forcing re-extraction")
+                                    except (json.JSONDecodeError, TypeError) as e:
+                                        print(f"Error parsing stored metadata: {str(e)}")
+                                else:
+                                    print("No metadata found in storage, forcing extraction")
+                    except Exception as e:
+                        print(f"Warning: Error checking storage for existing metadata: {str(e)}")
+            
+            # If we get here, either:
+            # 1. No existing version found in storage
+            # 2. File has changed
+            # 3. force_extract is True
+            # 4. There was an error checking storage
+            # 5. use_storage is set to false and the class is oconfigured not to use storage
+
             # Get metadata using openpyxl
             metadata = self.extract_workbook_metadata_openpyxl(
                 workbook_path,
@@ -323,6 +403,27 @@ class ExcelMetadataExtractor:
                 except Exception as e:
                     print(f"Warning: Failed to extract display values: {str(e)}")
                     display_values = {"error": str(e)}
+
+
+            if self.use_storage:
+                # Save to storage
+                if normalized_path and hasattr(self, 'storage'):
+                    try:
+                        # Create or update workbook in storage
+                        workbook_id = self.storage.create_or_update_workbook(normalized_path)
+                        
+                        # Create a new version with the extracted metadata
+                        version_id = self.storage.create_new_version(
+                            file_path=normalized_path,
+                            change_description="Initial extraction" if not latest_version else "Updated extraction",
+                            full_metadata_json=json.dumps(metadata)
+                        )
+                        
+                    except Exception as e:
+                        print(f"Warning: Failed to store metadata in storage: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+
             
             return metadata, display_values
             
@@ -1083,7 +1184,8 @@ class ExcelMetadataExtractor:
         rows_per_chunk: int = 10,
         max_cols_per_sheet: int = 50,
         include_dependencies: bool = True,
-        include_empty_chunks: bool = False
+        include_empty_chunks: bool = False,
+        force_extract: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Extract metadata in chunks of N rows, returning an array of metadata objects.
@@ -1094,16 +1196,44 @@ class ExcelMetadataExtractor:
             max_cols_per_sheet: Maximum columns to extract per sheet
             include_dependencies: Whether to include dependency analysis
             include_empty_chunks: Whether to include chunks with no data
+            force_extract: Whether to force extraction even if storage is available
             
         Returns:
             List of metadata dictionaries, one per chunk
         """
         try:
+
+            normalized_path = str(Path(workbook_path).resolve()) if workbook_path else None
+        
+            # Check storage first if not forcing extraction
+            if self.use_storage and not force_extract and normalized_path:
+                try:
+                    # Get the latest version from storage
+                    latest_version = self.storage.get_latest_version(normalized_path)
+                    if latest_version and latest_version.get('file_hash') == self._calculate_file_hash(normalized_path):
+                        print(f"Using cached metadata for {normalized_path}")
+                        # Get all chunks for this version from db storage
+                        chunks = self.storage.get_all_chunks(latest_version['version_id'])
+                        if chunks and len(chunks) > 0:
+                            # check that each chunk is a valid json object
+                            if self._are_valid_chunks(chunks):
+                                print(f"Using {len(chunks)} cached metadata chunks for {normalized_path}")
+                                return chunks
+
+                            print(f"Invalid chunks found for {normalized_path}, reverting to forced extraction")
+                        print(f"No chunks found for {normalized_path}, reverting to forced extraction")
+                except Exception as e:
+                    print(f"Warning: Error checking storage for existing metadata: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    
             if workbook_path or not self.workbook:
                 self.open_workbook(workbook_path)
                 
             if not self.workbook:
                 raise RuntimeError("Workbook is not open")
+
+            # Extract metadata chunks from xl file
             
             chunks = []
             all_cells_metadata = {}  # For dependency analysis across all chunks
@@ -1212,6 +1342,23 @@ class ExcelMetadataExtractor:
                 except Exception as e:
                     print(f"Warning: Error building dependencies: {str(e)}")
             
+            # Store the chunks if storage is enabled
+            if self.use_storage and normalized_path:
+                try:
+                    # Create or update workbook in storage
+                    self.storage.create_or_update_workbook(normalized_path)
+                    
+                    # Create a new version with the extracted chunks
+                    self.storage.create_new_version(
+                        file_path=normalized_path,
+                        change_description=f"Initialized in DB. Chunked extraction with {rows_per_chunk} rows per chunk",
+                        chunks=chunks
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to store chunks in storage: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+
             return chunks
             
         except Exception as e:
@@ -1397,3 +1544,77 @@ class ExcelMetadataExtractor:
             "externalPrecedents": list(chunk_precedents - set(chunk_cell_addresses))[:10],  # Top 10
             "externalDependents": list(chunk_dependents - set(chunk_cell_addresses))[:10]   # Top 10
         }
+
+
+    def _calculate_file_hash(self, file_path: str) -> str:
+        """Calculate a hash of the file contents."""
+        if not os.path.exists(file_path):
+            return ""
+            
+        try:
+            with open(file_path, 'rb') as f:
+                return hashlib.sha256(f.read()).hexdigest()
+        except Exception:
+            return ""
+
+
+    def _is_valid_metadata(self, metadata: Dict[str, Any]) -> bool:
+        """
+        Validate that the metadata has the expected structure and contains data.
+        
+        Args:
+            metadata: The metadata dictionary to validate
+            
+        Returns:
+            bool: True if metadata is valid, False otherwise
+        """
+        if not isinstance(metadata, dict):
+            return False
+        
+        # Check for required top-level keys
+        required_keys = {'file_info', 'sheets'}
+        if not required_keys.issubset(metadata.keys()):
+            return False
+        
+        # Check that sheets is a non-empty list
+        if not isinstance(metadata.get('sheets'), list) or not metadata['sheets']:
+            return False
+        
+        # Check that at least one sheet has content
+        return any(
+            isinstance(sheet, dict) and 
+            sheet.get('cells') and 
+            isinstance(sheet['cells'], list)
+            for sheet in metadata['sheets']
+        )
+
+
+    def _are_valid_chunks(self, chunks: List[Dict[str, Any]]) -> bool:
+        """Validate that all chunks in the list are valid."""
+        return all(self._is_valid_chunk(chunk) for chunk in chunks)
+
+
+    def _is_valid_chunk(self, chunk: dict) -> bool:
+        """Validate that a chunk has the required structure and data."""
+        if not chunk or not isinstance(chunk, dict):
+            return False
+            
+        # Check for required top-level fields
+        required_fields = {'sheetName', 'startRow', 'endRow', 'cellData'}
+        if not all(field in chunk for field in required_fields):
+            return False
+            
+        # Check cellData is a non-empty 2D array
+        cell_data = chunk.get('cellData', [])
+        if not isinstance(cell_data, list) or not cell_data:
+            return False
+        if not all(isinstance(row, list) for row in cell_data):
+            return False
+        if not any(len(row) > 0 for row in cell_data):  # At least one non-empty row
+            return False
+            
+        # Check row bounds make sense
+        if not (0 <= chunk['startRow'] <= chunk['endRow']):
+            return False
+            
+        return True
