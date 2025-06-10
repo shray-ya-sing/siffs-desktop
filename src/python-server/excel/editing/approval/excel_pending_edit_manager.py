@@ -153,12 +153,55 @@ class ExcelPendingEditManager:
         self.PENDING_WITH_COLOR_COLOR = (200, 255, 200)  # Light green if edit includes color change
     
     def apply_pending_edit(self, 
-                          wb: xw.Book,
-                          sheet_name: str,
-                          cell_data: Dict[str, Any],
-                          version_id: int,
-                          file_path: str) -> str:
-        """Apply a pending edit with color indicator."""
+        wb: xw.Book,
+        sheet_name: str,
+        cell_data: Dict[str, Any],
+        version_id: int,
+        file_path: str) -> str:
+        """
+        Apply an edit directly to the cell without any pending indicators.
+        
+        Args:
+            wb: Excel workbook
+            sheet_name: Name of the sheet containing the cell
+            cell_data: Dictionary containing cell data including value/formula and formatting
+            version_id: Version ID for tracking
+            file_path: Path to the workbook file
+            
+        Returns:
+            str: Edit ID for tracking
+        """
+        edit_id = str(uuid.uuid4())[:8]
+        cell_address = cell_data.get('cell', '')
+        
+        try:
+            sheet = wb.sheets[sheet_name]
+            cell = sheet.range(cell_address)
+
+            # 1. Apply the value or formula
+            if 'formula' in cell_data and cell_data['formula']:
+                cell.formula = cell_data['formula']
+            elif 'value' in cell_data:
+                cell.value = cell_data['value']
+            
+            # 2. Apply all formatting including fill color
+            if cell_data:  # Only apply formatting if cell_data is not empty
+                self._apply_formatting_from_data(cell, cell_data)
+            
+            print(f"Applied pending edit to {cell_address} without indicator color")
+            return edit_id
+            
+        except Exception as e:
+            print(f"Error applying pending edit: {e}")
+            raise
+    
+    def apply_pending_edit_with_separate_color_indicator(self, 
+        wb: xw.Book,
+        sheet_name: str,
+        cell_data: Dict[str, Any],
+        version_id: int,
+        file_path: str) -> str:
+        """Apply a pending edit with separate color indicator."""
         edit_id = str(uuid.uuid4())[:8]
         cell_address = cell_data.get('cell', '')
         
@@ -212,6 +255,60 @@ class ExcelPendingEditManager:
         except Exception as e:
             print(f"Error applying pending edit: {e}")
             raise
+
+
+    def apply_pending_edit_with_color_indicator(self, 
+        wb: xw.Book,
+        sheet_name: str,
+        cell_data: Dict[str, Any],
+        version_id: int,
+        file_path: str) -> str:
+        """Apply a pending edit with a green color indicator."""
+        edit_id = str(uuid.uuid4())[:8]
+        cell_address = cell_data.get('cell', '')
+        
+        try:
+            sheet = wb.sheets[sheet_name]
+            cell = sheet.range(cell_address)
+            
+            # 1. Capture original state
+            original_state = self._capture_cell_state(cell)
+            
+            # 2. Extract intended fill_color from cell_data if present
+            intended_fill_color = cell_data.get('fill_color')
+            
+            # 3. Apply the edit without the fill color
+            if 'formula' in cell_data and cell_data['formula']:
+                cell.formula = cell_data['formula']
+            elif 'value' in cell_data:
+                cell.value = cell_data['value']
+            
+            # 4. Apply all formatting EXCEPT fill color
+            cell_data_without_color = {k: v for k, v in cell_data.items() if k != 'fill_color'}
+            self._apply_formatting_from_data(cell, cell_data_without_color)
+            
+            # 5. Apply green indicator color to all pending edits
+            cell.color = self.PENDING_WITH_COLOR_COLOR  # Always use green
+            
+            # 6. Store the pending edit with all data
+            self._create_pending_edit(
+                version_id=version_id,
+                sheet_name=sheet_name,
+                cell_address=cell_address,
+                original_state=original_state,
+                cell_data=cell_data,  # Includes the intended fill_color
+                edit_id=edit_id,
+                file_path=file_path,
+                intended_fill_color=intended_fill_color
+            )
+            
+            print(f"Applied pending edit to {cell_address} with green indicator")
+            return edit_id
+            
+        except Exception as e:
+            print(f"Error applying pending edit: {e}")
+            raise
+    
     
     def accept_edit(self, 
                     wb: xw.Book,
