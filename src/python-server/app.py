@@ -1,5 +1,8 @@
 import os
 import sys
+import json
+from fastapi.responses import JSONResponse
+from fastapi import Request
 
 # Set UTF-8 encoding for all outputs
 if sys.platform == "win32":
@@ -108,9 +111,28 @@ app.include_router(excel_editing_router)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    logger.info(f"Incoming request: {request.method} {request.url}")
-    response = await call_next(request)
-    logger.info(f"Response status: {response.status_code}")
+    # Log request details
+    body = await request.body()
+    print(f"\n=== INCOMING REQUEST ===")
+    print(f"Method: {request.method}")
+    print(f"URL: {request.url}")
+    print(f"Headers: {dict(request.headers)}")
+    try:
+        print(f"Body: {body.decode()}")
+    except:
+        print("Could not decode body")
+    print("=======================\n")
+    
+    # Reset body for downstream processing
+    request._body = body
+    
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        print(f"Error processing request: {str(e)}")
+        raise
+    
+    print(f"=== RESPONSE: {response.status_code} ===")
     return response
 
 if __name__ == '__main__':
