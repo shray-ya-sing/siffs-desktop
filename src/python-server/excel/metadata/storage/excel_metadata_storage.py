@@ -503,6 +503,51 @@ class ExcelMetadataStorage:
             result = cursor.fetchone()
             return json.loads(result['cell_json']) if result else None
 
+
+    def get_workbook_id(self, file_path: str) -> Optional[int]:
+        """Get the workbook ID for a given file path."""
+        with self._lock:
+            cursor = self.conn.cursor()
+            normalized_path = str(Path(file_path).resolve())
+            cursor.execute("""
+                SELECT workbook_id 
+                FROM workbooks 
+                WHERE file_path = ?
+            """, (normalized_path,))
+            result = cursor.fetchone()
+            return result['workbook_id'] if result else None
+
+    def get_latest_version(self, file_path: str) -> Optional[dict]:
+        """Get the latest version of a workbook by file path."""
+        with self._lock:
+            cursor = self.conn.cursor()
+            normalized_path = str(Path(file_path).resolve())
+            
+            # Get the latest version in a single query
+            cursor.execute("""
+                SELECT v.* 
+                FROM file_versions v
+                JOIN workbooks w ON v.workbook_id = w.workbook_id
+                WHERE w.file_path = ?
+                ORDER BY v.version_number DESC
+                LIMIT 1
+            """, (normalized_path,))
+            
+            result = cursor.fetchone()
+            if not result:
+                return None
+                
+            # Convert to dict for easier use
+            return dict(result)
+            
+    def get_latest_metadata(self, file_path: str) -> Optional[dict]:
+        """Get the full metadata of the latest version of a workbook."""
+        latest_version = self.get_latest_version(file_path)
+        if not latest_version:
+            return None
+            
+        return self.get_workbook_metadata(latest_version['version_id'])
+
     def get_workbook_metadata(self, version_id: int) -> dict:
         """Get full workbook metadata for a version."""
         with self._lock:
