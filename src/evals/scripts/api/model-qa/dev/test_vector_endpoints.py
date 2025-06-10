@@ -40,12 +40,12 @@ def compress_chunks(chunks: list) -> Dict[str, Any]:
 
 def store_embeddings(workbook_path: str, chunks: list, model_name: str = "msmarco-MiniLM-L-6-v3") -> Dict[str, Any]:
     """Store embeddings for the given chunks."""
-    url = f"{VECTORS_BASE}/storage/embed-and-store-workbook"
+    url = f"{VECTORS_BASE}/storage/embed-and-store-chunks"
     payload = {
         "workbook_path": workbook_path,
         "chunks": chunks,
         "embedding_model": model_name,
-        "replace_existing": False
+        "replace_existing": True
     }
     
     print(f"Storing embeddings for workbook: {workbook_path}")
