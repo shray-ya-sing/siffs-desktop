@@ -1,0 +1,351 @@
+{
+  "status": "success",
+  "data": {
+    "Financial Analysis": [
+      {
+        "cell": "A1",
+        "formula": "Financial Analysis - Quarterly Forecast",
+        "font_style": "Arial",
+        "font_size": 14,
+        "bold": true
+      },
+      {
+        "cell": "A2",
+        "formula": "($ in thousands)",
+        "font_style": "Arial",
+        "font_size": 10,
+        "italic": true
+      },
+      {
+        "cell": "B3",
+        "formula": "Q1 2025",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "C3",
+        "formula": "Q2 2025",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "D3",
+        "formula": "Q3 2025",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "E3",
+        "formula": "Q4 2025",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "F3",
+        "formula": "Q1 2026",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "G3",
+        "formula": "Q2 2026",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "H3",
+        "formula": "Q3 2026",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "I3",
+        "formula": "Q4 2026",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "horizontal_alignment": "center"
+      },
+      {
+        "cell": "A5",
+        "formula": "Revenue",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "fill_color": "#D9EAD3"
+      },
+      {
+        "cell": "B5",
+        "formula": 100
+      },
+      {
+        "cell": "C5",
+        "formula": "=B5*1.1"
+      },
+      {
+        "cell": "D5",
+        "formula": "=C5*1.1"
+      },
+      {
+        "cell": "E5",
+        "formula": "=D5*1.1"
+      },
+      {
+        "cell": "F5",
+        "formula": "=E5*1.1"
+      },
+      {
+        "cell": "G5",
+        "formula": "=F5*1.1"
+      },
+      {
+        "cell": "H5",
+        "formula": "=G5*1.1"
+      },
+      {
+        "cell": "I5",
+        "formula": "=H5*1.1"
+      },
+      {
+        "cell": "A7",
+        "formula": "Expenses",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "fill_color": "#FCE5CD"
+      },
+      {
+        "cell": "A8",
+        "formula": "COGS (40%)",
+        "font_style": "Arial",
+        "font_size": 10
+      },
+      {
+        "cell": "B8",
+        "formula": "=B5*0.4"
+      },
+      {
+        "cell": "C8",
+        "formula": "=C5*0.4"
+      },
+      {
+        "cell": "D8",
+        "formula": "=D5*0.4"
+      },
+      {
+        "cell": "E8",
+        "formula": "=E5*0.4"
+      },
+      {
+        "cell": "F8",
+        "formula": "=F5*0.4"
+      },
+      {
+        "cell": "G8",
+        "formula": "=G5*0.4"
+      },
+      {
+        "cell": "H8",
+        "formula": "=H5*0.4"
+      },
+      {
+        "cell": "I8",
+        "formula": "=I5*0.4"
+      },
+      {
+        "cell": "A9",
+        "formula": "Salaries",
+        "font_style": "Arial",
+        "font_size": 10
+      },
+      {
+        "cell": "B9",
+        "formula": 20
+      },
+      {
+        "cell": "C9",
+        "formula": 20
+      },
+      {
+        "cell": "D9",
+        "formula": 20
+      },
+      {
+        "cell": "E9",
+        "formula": 20
+      },
+      {
+        "cell": "F9",
+        "formula": 20
+      },
+      {
+        "cell": "G9",
+        "formula": 20
+      },
+      {
+        "cell": "H9",
+        "formula": 20
+      },
+      {
+        "cell": "I9",
+        "formula": 20
+      },
+      {
+        "cell": "A10",
+        "formula": "Marketing (15%)",
+        "font_style": "Arial",
+        "font_size": 10
+      },
+      {
+        "cell": "B10",
+        "formula": "=B5*0.15"
+      },
+      {
+        "cell": "C10",
+        "formula": "=C5*0.15"
+      },
+      {
+        "cell": "D10",
+        "formula": "=D5*0.15"
+      },
+      {
+        "cell": "E10",
+        "formula": "=E5*0.15"
+      },
+      {
+        "cell": "F10",
+        "formula": "=F5*0.15"
+      },
+      {
+        "cell": "G10",
+        "formula": "=G5*0.15"
+      },
+      {
+        "cell": "H10",
+        "formula": "=H5*0.15"
+      },
+      {
+        "cell": "I10",
+        "formula": "=I5*0.15"
+      },
+      {
+        "cell": "A11",
+        "formula": "Total Expenses",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true
+      },
+      {
+        "cell": "B11",
+        "formula": "=SUM(B8:B10)"
+      },
+      {
+        "cell": "C11",
+        "formula": "=SUM(C8:C10)"
+      },
+      {
+        "cell": "D11",
+        "formula": "=SUM(D8:D10)"
+      },
+      {
+        "cell": "E11",
+        "formula": "=SUM(E8:E10)"
+      },
+      {
+        "cell": "F11",
+        "formula": "=SUM(F8:F10)"
+      },
+      {
+        "cell": "G11",
+        "formula": "=SUM(G8:G10)"
+      },
+      {
+        "cell": "H11",
+        "formula": "=SUM(H8:H10)"
+      },
+      {
+        "cell": "I11",
+        "formula": "=SUM(I8:I10)"
+      },
+      {
+        "cell": "A13",
+        "formula": "Gross Profit",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "fill_color": "#D0E0E3"
+      },
+      {
+        "cell": "B13",
+        "formula": "=B5-B8"
+      },
+      {
+        "cell": "C13",
+        "formula": "=C5-C8"
+      },
+      {
+        "cell": "D13",
+        "formula": "=D5-D8"
+      },
+      {
+        "cell": "E13",
+        "formula": "=E5-E8"
+      },
+      {
+        "cell": "F13",
+        "formula": "=F5-F8"
+      },
+      {
+        "cell": "G13",
+        "formula": "=G5-G8"
+      },
+      {
+        "cell": "H13",
+        "formula": "=H5-H8"
+      },
+      {
+        "cell": "I13",
+        "formula": "=I5-I8"
+      },
+      {
+        "cell": "A14",
+        "formula": "Operating Income",
+        "font_style": "Arial",
+        "font_size": 11,
+        "bold": true,
+        "fill_color": "#D0E0E3"
+      },
+      {
+        "cell": "B14",
+        "formula": "=B5-B11"
+      },
+      {
+        "cell": "C14",
+        "formula": "=C5-C11"
+      },
+      {
+        "cell": "D14",
+        "formula": "=D5-D11"
+      },
+      {
+        "cell": "E14",
+        "formula": "=E5-E11"
+      }
+    ]
+  },
+  "valid": true
+}
