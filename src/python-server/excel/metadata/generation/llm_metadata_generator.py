@@ -634,7 +634,28 @@ Create Excel metadata for the following request. Return ONLY the metadata string
     =HLOOKUP("Product", "A1:Z2", 2, FALSE) // Range as text
     =HLOOKUP("Product", A1:Z2, "2", FALSE) // Row_index_num as text
     =HLOOKUP("Product", A1:Z2, 0, FALSE)  // Row_index_num less than 1
+
+
+    # HOW TO LINK TO OTHER TABS
+    Correct:
+    ='Sheet Name'!A1 (sheet name enclosed in commas, exclamation mark after sheet name)
+    ='Sheet Name'!A1:A10 (sheet name enclosed in commas, exclamation mark after sheet name)
+    ='Sheet Name'!A1:A10 (sheet name enclosed in commas, exclamation mark after sheet name)
+    =VLOOKUP(A1, 'Data Sheet'!Table1, 2, FALSE) (sheet name enclosed in commas, exclamation mark after sheet name)
+    Incorrect:
+    =Sheet2.A1 (missing exclamation mark, period is invalid)
+    =Sheet2:A1:A10 (missing exclamation mark, colon is invalid)
+    =Sheet2,A1:A10 (missing exclamation mark, comma is invalid)
+    =VLOOKUP(A1, 'Data Sheet'.Table1, 2, FALSE) (missing exclamation mark, period is invalid)
+    =VLOOKUP(A1, 'Data Sheet',Table1, 2, FALSE) (missing exclamation mark, comma is invalid)
     
+    # HOW TO LINK TO OTHER WORKBOOK
+    Correct:
+    ='C:\Reports\[Q1.xlsx]Sheet1'!$A$1 (brackets around workbook name, exclamation mark)
+    Incorrect:
+    ='C:\Reports\Q1.xlsx]Sheet1'.$A$1 (missing opening bracket around workbook name,missing exclamation mark, period is invalid)
+
+    # IMPORTANT GUIDELINES
     General Formula Best Practices:
     Always start with =
     Match all opening and closing parentheses
