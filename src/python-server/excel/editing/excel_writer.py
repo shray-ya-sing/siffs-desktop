@@ -33,7 +33,7 @@ class ExcelCell:
 
 class ExcelWriter:
     def __init__(self, 
-                 visible: bool = False, 
+                 visible: bool = True, 
                  storage: 'ExcelMetadataStorage' = None,
                  use_session_manager: bool = True,  # Default to True for better resource management
                  session_manager: 'ExcelSessionManager' = None):
@@ -52,7 +52,7 @@ class ExcelWriter:
         self.app = None if use_session_manager else xw.App(visible=visible, add_book=False)
         self.workbook = None
         self.workbooks = {}  # Track workbooks by filepath
-        self.storage = storage 
+        self.storage = storage or ExcelMetadataStorage() 
         self.edit_manager = ExcelPendingEditManager(self.storage) if self.storage else None
         self.file_path = None
         self.version_id = None
@@ -106,7 +106,7 @@ class ExcelWriter:
                         )
                         edit_ids_by_sheet[sheet_name].append(edit_id)
                 
-                self.save()
+                self.save() #TODO: Experiment with how to save, leave this in for now
                 return edit_ids_by_sheet
             else:
                 # Direct write without pending edits
@@ -138,10 +138,22 @@ class ExcelWriter:
         self,
         data: Dict[str, List[Dict[str, Any]]],
         output_filepath: str,
-        version_id: int = 1,
-        create_pending: bool = True
+        version_id: Optional[int] = None,
+        create_pending: bool = True,
+        save: bool = False
     ) -> Dict[str, List[str]]:
-        """Write data to an existing Excel file with pending edit tracking."""
+        """Write data to an existing Excel file with pending edit tracking.
+    
+        Args:
+            data: Dictionary mapping sheet names to lists of cell data
+            output_filepath: Path to the Excel file
+            version_id: Optional version ID. If None, will try to get the latest version from metadata.
+            create_pending: Whether to create pending edits or apply directly
+            save: Whether to save changes to disk
+            
+        Returns:
+            Dictionary mapping sheet names to lists of edit IDs
+        """
         if not data:
             return {}
 
@@ -153,6 +165,16 @@ class ExcelWriter:
             self.file_path = str(Path(output_filepath).resolve())
             self.workbook = self._get_or_create_workbook(self.file_path)
             self.workbooks[self.file_path] = self.workbook
+            # Get the latest version ID if not provided
+            if version_id is None and self.storage:
+                latest_version = self.storage.get_latest_version(self.file_path)
+                if latest_version:
+                    version_id = latest_version['version_number']
+                    print(f"Using latest version ID from metadata: {version_id}")
+                else:
+                    version_id = 1  # Default to 1 if no version exists
+                    print("No existing version found, using default version ID: 1")
+            
             self.version_id = version_id
             
             edit_ids_by_sheet = {}
@@ -189,7 +211,8 @@ class ExcelWriter:
                             print(f"Error updating cell {cell_data['cell']}: {e}")
                             continue
             
-            self.save()
+            if save:
+                self.save()
             return edit_ids_by_sheet
 
         except Exception as e:
