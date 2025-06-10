@@ -17,8 +17,6 @@ router = APIRouter(
     tags=["excel-session"],
 )
 
-
-
 @router.post("/start")
 async def start_excel_session(request: dict):
     """Start a new Excel session for a file"""
@@ -30,13 +28,18 @@ async def start_excel_session(request: dict):
     
     try:
         session_manager = ExcelSessionManager()
-        if not session_manager.open_session(file_path, visible=visible):
+        wb = session_manager.get_session(file_path, visible=visible)
+        
+        if not wb:
             raise HTTPException(status_code=500, detail="Failed to open workbook")
             
-        return {"status": "success", "message": "Excel session started"}
+        return {
+            "status": "success", 
+            "message": "Excel session started",
+            "file_path": str(Path(file_path).resolve())
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("/end")
 async def end_excel_session(request: dict):
@@ -54,37 +57,26 @@ async def end_excel_session(request: dict):
         if not success:
             raise HTTPException(status_code=404, detail="No active session found for file")
             
-        return {"status": "success", "message": "Excel session ended"}
+        return {
+            "status": "success", 
+            "message": "Excel session ended",
+            "file_path": str(Path(file_path).resolve())
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/end-all")
 async def end_all_excel_sessions(request: dict):
-    """End an Excel session for a file and clean up all resources"""
-    file_path = request.get("file_path")
+    """End all Excel sessions and clean up resources"""
     save = request.get("save", True)
-    
-    if not file_path:
-        raise HTTPException(status_code=400, detail="file_path is required")
     
     try:
         session_manager = ExcelSessionManager()
-        
-        # First close the specific session
-        success = session_manager.close_session(file_path, save=save)
-        
-        if not success:
-            raise HTTPException(status_code=404, detail="No active session found for file")
-            
-        # Then close all sessions and clean up the singleton
         session_manager.close_all_sessions(save=save)
-        
-        # Clear the singleton instance
-        ExcelSessionManager._instance = None
         
         return {
             "status": "success", 
-            "message": "Excel session ended and resources cleaned up"
+            "message": "All Excel sessions ended and resources cleaned up"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -104,6 +96,25 @@ async def save_excel_session(request: dict):
         if not success:
             raise HTTPException(status_code=404, detail="No active session found for file")
             
-        return {"status": "success", "message": "Excel session saved"}
+        return {
+            "status": "success", 
+            "message": "Excel session saved",
+            "file_path": str(Path(file_path).resolve())
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/status/{file_path:path}")
+async def get_session_status(file_path: str):
+    """Check if a session exists and is valid"""
+    try:
+        session_manager = ExcelSessionManager()
+        is_valid = session_manager.is_session_valid(file_path)
+        
+        return {
+            "status": "success",
+            "file_path": str(Path(file_path).resolve()),
+            "is_valid": is_valid
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
