@@ -1,5 +1,12 @@
 // src/renderer/services/python-api/modelEditPipelineService.ts
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { 
+  AxiosInstance, 
+  AxiosRequestConfig, 
+  AxiosResponse, 
+  AxiosError,
+  CancelTokenSource,
+  AxiosRequestHeaders
+} from 'axios';
 
 const isDev = process.env.NODE_ENV === 'development';
 const baseURL = isDev 
@@ -78,7 +85,175 @@ interface PipelineResult {
   modified_sheets: string[];
 }
 
+interface SearchEmbeddingsParams {
+  query: string;
+  workbook_path: string;
+  top_k?: number;
+}
+
+interface SearchResult {
+  text: string;
+  markdown: string;
+  score: number;
+  metadata: Record<string, any>;
+}
+
+interface SearchResponse {
+  status: string;
+  results: SearchResult[];
+  total_chunks: number;
+}
+
+// Define response types
+interface Chunk {
+  text: string;
+  markdown: string;
+  metadata: Record<string, any>;
+  [key: string]: any; // For additional properties
+}
+
+interface ExtractMetadataResponse {
+  status: string;
+  chunks: Chunk[];
+  file_path: string;
+}
+
+interface CompressChunksResponse {
+  status: string;
+  compressed_texts: string[];
+  compressed_markdown_texts: string[];
+}
+
+interface StoreEmbeddingsResponse {
+  status: string;
+  workbook_id: string;
+  chunks_stored: number;
+  embedding_model: string;
+}
+
 const modelEditPipelineService = {
+
+    /**
+   * Start a new Excel session
+   */
+  async startExcelSession(filePath: string, visible: boolean = false): Promise<{ status: string; message: string }> {
+    const response = await apiClient.post('/excel/start-excel-session', {
+      file_path: filePath,
+      visible
+    });
+    return response.data;
+  },
+
+  /**
+   * End an Excel session
+   */
+  async endExcelSession(filePath: string, save: boolean = true): Promise<{ status: string; message: string }> {
+    const response = await apiClient.post('/excel/end-excel-session', {
+      file_path: filePath,
+      save
+    });
+    return response.data;
+  },
+
+  /**
+   * Save an Excel session without closing it
+   */
+  async saveExcelSession(filePath: string): Promise<{ status: string; message: string }> {
+    const response = await apiClient.post('/excel/save-excel-session', {
+      file_path: filePath
+    });
+    return response.data;
+  },
+
+  /**
+       * Extract metadata chunks from an Excel file
+       * @param filePath Path to the Excel file
+       * @param rowsPerChunk Number of rows per chunk (default: 10)
+       * @param maxColsPerSheet Maximum columns per sheet (default: 50)
+       * @param includeDependencies Whether to include cell dependencies (default: true)
+       * @returns Promise with extracted chunks
+       */
+      extractMetadataChunks(
+        filePath: string,
+        rowsPerChunk: number = 10,
+        maxColsPerSheet: number = 50,
+        includeDependencies: boolean = true
+      ): Promise<AxiosResponse<ExtractMetadataResponse>> {
+        return apiClient.post<ExtractMetadataResponse>('/excel/extract-metadata-chunks', {
+          filePath,
+          rows_per_chunk: rowsPerChunk,
+          max_cols_per_sheet: maxColsPerSheet,
+          include_dependencies: includeDependencies,
+          include_empty_chunks: false
+        });
+      },
+    
+      /**
+       * Compress metadata chunks to text and markdown
+       * @param chunks Array of chunks to compress
+       * @param maxCellsPerChunk Maximum cells per chunk (default: 1000)
+       * @param maxCellLength Maximum length of cell content (default: 200)
+       * @returns Promise with compressed text and markdown
+       */
+      compressChunks(
+        chunks: Chunk[],
+        maxCellsPerChunk: number = 1000,
+        maxCellLength: number = 200
+      ): Promise<AxiosResponse<CompressChunksResponse>> {
+        return apiClient.post<CompressChunksResponse>('/excel/compress-chunks', {
+          chunks: chunks,
+          max_cells_per_chunk: maxCellsPerChunk,
+          max_cell_length: maxCellLength
+        });
+      },
+    
+      /**
+       * Store embeddings for the given chunks
+       * @param workbookPath Path to the workbook
+       * @param chunks Array of chunks with text and markdown
+       * @param modelName Name of the embedding model (default: 'msmarco-MiniLM-L-6-v3')
+       * @param replaceExisting Whether to replace existing embeddings (default: true)
+       * @returns Promise with storage results
+       */
+      storeEmbeddings(
+        workbookPath: string,
+        chunks: Chunk[],
+        modelName: string = 'msmarco-MiniLM-L-6-v3',
+        replaceExisting: boolean = true
+      ): Promise<AxiosResponse<StoreEmbeddingsResponse>> {
+        return apiClient.post<StoreEmbeddingsResponse>('/vectors/storage/embed-and-store-chunks', {
+          workbook_path: workbookPath,
+          chunks: chunks,
+          embedding_model: modelName,
+          replace_existing: replaceExisting
+        });
+      },
+    
+      /**
+       * Search stored embeddings
+       * @param query Search query
+       * @param workbookPath Path to the workbook (optional, searches all if not provided)
+       * @param topK Number of results to return (default: 5)
+       * @returns Promise with search results
+       */
+      searchEmbeddings(
+        query: string,
+        workbookPath?: string,
+        topK: number = 5
+      ): Promise<AxiosResponse<SearchResponse>> {
+        const payload: Record<string, any> = {
+          query,
+          top_k: topK,
+          return_format: 'both' // Get both text and markdown
+        };
+    
+        if (workbookPath) {
+          payload.workbook_path = workbookPath;
+        }
+    
+        return apiClient.post<SearchResponse>('/vectors/search/query', payload);
+      },
+
   /**
    * Generate edit metadata for Excel using LLM
    * @param params Parameters for edit metadata generation
@@ -88,6 +263,7 @@ const modelEditPipelineService = {
    */
   async generateEditMetadata(params: GenerateEditMetadataParams): Promise<string> {
     const response = await apiClient.post('/excel/generate-edit-metadata', {
+      
       user_request: params.user_request,
       chunks: params.chunks || [],
       chunk_limit: params.chunk_limit || 10,
