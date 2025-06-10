@@ -162,7 +162,7 @@ import axios, {
       modelName: string = 'msmarco-MiniLM-L-6-v3',
       replaceExisting: boolean = true
     ): Promise<AxiosResponse<StoreEmbeddingsResponse>> {
-      return apiClient.post<StoreEmbeddingsResponse>('/vectors/storage/embed-and-store-workbook', {
+      return apiClient.post<StoreEmbeddingsResponse>('/vectors/storage/embed-and-store-chunks', {
         workbook_path: workbookPath,
         chunks,
         embedding_model: modelName,
