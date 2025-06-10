@@ -7,10 +7,10 @@ from typing import Dict, Any, List, Optional
 BASE_URL = "http://127.0.0.1:3001/api"
 
 # Test file path (using raw string to handle Windows paths)
-TEST_FILE = r"C:\Users\shrey\OneDrive\Desktop\docs\test\full_create_model_flow_test.xlsx"
+TEST_FILE = r"C:\Users\shrey\OneDrive\Desktop\docs\test\single_tab_no_error.xlsx"
 
 # Test query
-TEST_QUERY = "add a line for the operating profit after tax under the operating profit and tax line, with formulaes to calculate the operating profit minus tax"
+TEST_QUERY = "add a line for the operating income margin as % of revenue under the operating income line on the income statement. use appropriate formulae instead of hardcoding"
 
 def make_request(method: str, endpoint: str, data: Optional[Dict] = None, params: Optional[Dict] = None) -> Dict[str, Any]:
     """Helper function to make HTTP requests with error handling"""
