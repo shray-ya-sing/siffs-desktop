@@ -20,8 +20,8 @@ router = APIRouter(
 )
 
 
-@router.post("/embed-and-store-workbook")
-async def embed_and_store_workbook(
+@router.post("/embed-and-store-chunks")
+async def embed_and_store_chunks(
     request: StoreEmbeddingsRequest,
     storage: EmbeddingStorage = Depends(get_storage)
 ):
