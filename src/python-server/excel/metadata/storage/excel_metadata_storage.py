@@ -2,45 +2,160 @@ from pathlib import Path
 import os
 import sqlite3
 import json
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Set
+import atexit
 import threading
 import hashlib
 from datetime import datetime
 import re
 
+# Class-level registry to track initialized databases
+_initialized_dbs = set()
+_initialization_lock = threading.Lock()
 
 class ExcelMetadataStorage:
-    def __init__(self, db_path: str = None, db_name: str = "excel_metadata.db"):
-        """Initialize the metadata storage."""
+    _instances = {}
+    _instances_lock = threading.Lock()
+    
+    def __new__(cls, db_path: str = None, db_name: str = "excel_metadata.db"):
+        """Implement singleton pattern per database path."""
         if db_path is None:
             base_dir = Path(__file__).parent.parent
-            db_path = base_dir / "db"
-            db_path.mkdir(exist_ok=True)
+            db_path = str(base_dir / "db" / db_name)
+        else:
+            db_path = str(Path(db_path) / db_name)
             
-        self.db_path = os.path.join(db_path, db_name)
-        os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
+        with cls._instances_lock:
+            if db_path not in cls._instances:
+                instance = super(ExcelMetadataStorage, cls).__new__(cls)
+                instance._initialized = False
+                cls._instances[db_path] = instance
+            return cls._instances[db_path]
+
+    def __init__(self, db_path: str = None, db_name: str = "excel_metadata.db"):
+        """Initialize the metadata storage."""
+        if self._initialized:
+            print("ExcelMetadataStorage already initialized")
+            return
+
+        if db_path is None:
+            base_dir = Path(__file__).parent.parent
+            db_dir = base_dir / "db"
+            db_dir.mkdir(exist_ok=True, parents=True)
+            self.db_path = str(db_dir / db_name)
+        else:
+            db_dir = Path(db_path)
+            db_dir.mkdir(exist_ok=True, parents=True)
+            self.db_path = str(db_dir / db_name)
+
+        os.makedirs(os.path.dirname(os.path.abspath(Path(self.db_path))), exist_ok=True)
+        print(f"ExcelMetadataStorage initialized with db_path: {self.db_path}")
         
         # Add thread lock for thread safety
         self._lock = threading.Lock()
-        
-        # Initialize connection with lock
-        with self._lock:
-            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            self.conn.row_factory = sqlite3.Row
+        print("Thread lock added for thread safety")
+        try:
+            self.conn = sqlite3.connect(
+                self.db_path,
+                check_same_thread=False,
+                timeout=10.0,  # Reduced timeout
+                isolation_level=None
+            )
+            print(f"SQLite connection established to {self.db_path}")
+            
+            # Set pragmas
+            self.conn.execute("PRAGMA journal_mode=WAL")
+            self.conn.execute("PRAGMA synchronous=NORMAL")
+            self.conn.execute("PRAGMA cache_size=-2000")
             self.conn.execute("PRAGMA foreign_keys = ON")
-            self._init_schema()
+            self.conn.row_factory = sqlite3.Row
+            
+            # Initialize schema
+            self._init_schema_if_needed()
+            print("Schema initialization complete")
+            
+            # Set up cleanup
+            atexit.register(self.close)
+            self._initialized = True
+            print("ExcelMetadataStorage class completed initialization successfully with connection lock")
 
-    def _init_schema(self) -> None:
-        """Initialize the database schema if it doesn't exist."""
+        except sqlite3.Error as e:
+            print(f"Error initializing SQLite connection: {e}")
+            if hasattr(self, 'conn') and self.conn:
+                self.conn.close()
+
+    def _init_schema_if_needed(self) -> None:
+        """Initialize schema only if not already done for this database."""
         with self._lock:
+            if self.db_path in _initialized_dbs:
+                return
+                
             cursor = self.conn.cursor()
             
-            # Enable foreign key constraints
-            cursor.execute("PRAGMA foreign_keys = ON")
+            try:
+                # First, check if tables exist
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='workbooks'
+                """)
+                table_exists = cursor.fetchone() is not None
+                
+                if not table_exists:
+                    # If no tables exist, run the full schema initialization
+                    self._init_schema()
+                else:
+                    # If tables exist, just ensure we have all the necessary tables
+                    required_tables = {'workbooks', 'file_versions', 'chunks', 'cells'}
+                    cursor.execute("""
+                        SELECT name FROM sqlite_master 
+                        WHERE type='table' AND name IN (?, ?, ?, ?)
+                    """, tuple(required_tables))
+                    
+                    existing_tables = {row[0] for row in cursor.fetchall()}
+                    if required_tables - existing_tables:
+                        # If any required tables are missing, recreate the schema
+                        self._init_schema()
+                
+                # Create any missing indexes
+                cursor.executescript("""
+                    CREATE INDEX IF NOT EXISTS idx_chunks_version_id ON chunks(version_id);
+                    CREATE INDEX IF NOT EXISTS idx_cells_version_sheet ON cells(version_id, sheet_name);
+                    CREATE INDEX IF NOT EXISTS idx_file_versions_workbook ON file_versions(workbook_id);
+                """)
+                
+                self.conn.commit()
+                _initialized_dbs.add(self.db_path)
+                print("ExcelMetadataStorage schema initialized and verified")
+                
+            except sqlite3.Error as e:
+                self.conn.rollback()
+                print(f"Error initializing schema: {e}")
+                raise
+            finally:
+                cursor.close()
+
+    def _init_schema(self) -> None:
+        """Initialize the database schema."""
+        print("Initializing ExcelMetadataStorage database schema...")
+        cursor = self.conn.cursor()
+        
+        try:
+            # Drop existing tables if they exist
+            cursor.executescript("""
+                PRAGMA foreign_keys = OFF;
+                
+                DROP TABLE IF EXISTS cells;
+                DROP TABLE IF EXISTS chunks;
+                DROP TABLE IF EXISTS file_versions;
+                DROP TABLE IF EXISTS workbooks;
+                
+                PRAGMA foreign_keys = ON;
+            """)
             
-            # Create workbooks table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS workbooks (
+            # Create tables
+            cursor.executescript("""
+                -- Workbooks table
+                CREATE TABLE workbooks (
                     workbook_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     file_path TEXT NOT NULL UNIQUE,
                     file_name TEXT NOT NULL,
@@ -48,12 +163,10 @@ class ExcelMetadataStorage:
                     file_hash TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Create file_versions table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS file_versions (
+                );
+                
+                -- File versions table
+                CREATE TABLE file_versions (
                     version_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     workbook_id INTEGER NOT NULL,
                     version_number INTEGER NOT NULL,
@@ -64,12 +177,10 @@ class ExcelMetadataStorage:
                     full_metadata_json TEXT,
                     FOREIGN KEY (workbook_id) REFERENCES workbooks(workbook_id) ON DELETE CASCADE,
                     UNIQUE(workbook_id, version_number)
-                )
-            """)
-            
-            # Create chunks table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS chunks (
+                );
+                
+                -- Chunks table
+                CREATE TABLE chunks (
                     chunk_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     version_id INTEGER NOT NULL,
                     chunk_index INTEGER NOT NULL,
@@ -84,12 +195,10 @@ class ExcelMetadataStorage:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (version_id) REFERENCES file_versions(version_id) ON DELETE CASCADE,
                     UNIQUE(version_id, chunk_index, sheet_name)
-                )
-            """)
-            
-            # Create cells table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS cells (
+                );
+                
+                -- Cells table
+                CREATE TABLE cells (
                     cell_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     version_id INTEGER NOT NULL,
                     chunk_id INTEGER NOT NULL,
@@ -102,26 +211,31 @@ class ExcelMetadataStorage:
                     FOREIGN KEY (version_id) REFERENCES file_versions(version_id) ON DELETE CASCADE,
                     FOREIGN KEY (chunk_id) REFERENCES chunks(chunk_id) ON DELETE CASCADE,
                     UNIQUE(version_id, sheet_name, cell_address)
-                )
-            """)
-            
-            # Create indexes for better query performance
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_chunks_version_id 
-                ON chunks(version_id)
-            """)
-            
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_cells_version_sheet 
-                ON cells(version_id, sheet_name)
-            """)
-            
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_file_versions_workbook 
-                ON file_versions(workbook_id)
+                );
+                
+                -- Create indexes
+                CREATE INDEX idx_chunks_version_id ON chunks(version_id);
+                CREATE INDEX idx_cells_version_sheet ON cells(version_id, sheet_name);
+                CREATE INDEX idx_file_versions_workbook ON file_versions(workbook_id);
+                
+                -- Set pragmas
+                PRAGMA journal_mode=WAL;
+                PRAGMA synchronous=NORMAL;
+                PRAGMA cache_size=-2000;
+                PRAGMA temp_store=MEMORY;
+                PRAGMA mmap_size=30000000000;
+                PRAGMA foreign_keys = ON;
             """)
             
             self.conn.commit()
+            print("Database schema created successfully")
+            
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            print(f"Error creating database schema: {e}")
+            raise
+        finally:
+            cursor.close()
     
     def create_or_update_workbook(self, file_path: str) -> int:
         """Create or update a workbook entry."""
@@ -169,8 +283,25 @@ class ExcelMetadataStorage:
         except:
             return "error_reading_file"
 
-    def create_new_version(self, file_path: str, change_description: str = None) -> int:
-        """Create a new version based on the previous one (copy-on-write)."""
+    def create_new_version(
+        self,
+        file_path: str,
+        change_description: str = None,
+        full_metadata_json: str = None,
+        chunks: List[Dict] = None,
+    ) -> int:
+        """
+        Create a new version and optionally store full metadata and chunks.
+        
+        Args:
+            file_path: Path to the Excel file
+            change_description: Description of changes in this version
+            full_metadata_json: Optional JSON string of full metadata
+            chunks: Optional list of chunk dictionaries to store
+            
+        Returns:
+            int: The new version ID
+        """
         with self._lock:
             cursor = self.conn.cursor()
             
@@ -231,10 +362,19 @@ class ExcelMetadataStorage:
                     # First version - create new
                     cursor.execute("""
                         INSERT INTO file_versions (
-                            workbook_id, version_number, change_description
-                        ) VALUES (?, ?, ?)
-                    """, (workbook_id, version_number, 
-                          change_description or f"Initial version"))
+                            workbook_id, 
+                            version_number, 
+                            change_description,
+                            full_metadata_json,
+                            created_at,
+                            updated_at
+                        ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """, (
+                        workbook_id, 
+                        version_number, 
+                        change_description or "Initial version",
+                        full_metadata_json or '' # store the full metadata_json from the args
+                    ))
                 
                 new_version_id = cursor.lastrowid
                 
@@ -283,6 +423,80 @@ class ExcelMetadataStorage:
                         JOIN chunks c1 ON cl.chunk_id = c1.chunk_id
                         WHERE cl.version_id = ?
                     """, (new_version_id, new_version_id, prev_version_id))
+
+                else:
+                    # Store chunks if provided
+                    if chunks and isinstance(chunks, list):
+                        for chunk_idx, chunk in enumerate(chunks):
+                            if not isinstance(chunk, dict):
+                                continue
+                                
+                            # Extract chunk data
+                            chunk_json = json.dumps(chunk)
+                            chunk_text = self._generate_chunk_text(chunk)
+                            chunk_hash = self._calculate_hash(chunk_json)
+                            
+                            # Store chunk
+                            cursor.execute("""
+                                INSERT INTO chunks (
+                                    version_id, 
+                                    chunk_index, 
+                                    chunk_json, 
+                                    chunk_text,
+                                    chunk_hash,
+                                    sheet_name,
+                                    start_row,
+                                    end_row,
+                                    is_modified,
+                                    created_at,
+                                    updated_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            """, (
+                                new_version_id,
+                                chunk_idx,
+                                chunk_json,
+                                chunk_text,
+                                chunk_hash,
+                                chunk.get('sheetName', ''),
+                                chunk.get('startRow', 0),
+                                chunk.get('endRow', 0)
+                            ))
+                            
+                            chunk_id = cursor.lastrowid
+
+                     # Store cells if present in chunk
+                    if 'cellData' in chunk and isinstance(chunk['cellData'], list):
+                        for row_idx, row in enumerate(chunk['cellData']):
+                            if not isinstance(row, list):
+                                continue
+                                
+                            for col_idx, cell in enumerate(row):
+                                if not isinstance(cell, dict):
+                                    continue
+                                    
+                                cell_address = cell.get('address') or f"{chr(65 + col_idx)}{row_idx + 1}"
+                                cell_json = json.dumps(cell)
+                                cell_hash = self._calculate_hash(cell_json)
+                                
+                                cursor.execute("""
+                                    INSERT INTO cells (
+                                        version_id,
+                                        chunk_id,
+                                        sheet_name,
+                                        cell_address,
+                                        cell_json,
+                                        cell_hash,
+                                        created_at,
+                                        updated_at
+                                    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                """, (
+                                    new_version_id,
+                                    chunk_id,
+                                    chunk.get('sheetName', ''),
+                                    cell_address,
+                                    cell_json,
+                                    cell_hash
+                                ))  
                 
                 self.conn.commit()
                 return new_version_id
@@ -539,7 +753,7 @@ class ExcelMetadataStorage:
                 
             # Convert to dict for easier use
             return dict(result)
-            
+
     def get_latest_metadata(self, file_path: str) -> Optional[dict]:
         """Get the full metadata of the latest version of a workbook."""
         latest_version = self.get_latest_version(file_path)
@@ -600,10 +814,14 @@ class ExcelMetadataStorage:
 
     def close(self):
         """Close the database connection."""
-        with self._lock:
-            if hasattr(self, 'conn') and self.conn:
-                self.conn.close()
-                self.conn = None
+        if hasattr(self, 'conn'):
+            try:
+                with self._lock:
+                    if self.conn:
+                        self.conn.close()
+                        self.conn = None
+            except Exception as e:
+                print(f"Error closing database connection: {e}")
 
     def __enter__(self):
         """Context manager entry."""
@@ -614,7 +832,7 @@ class ExcelMetadataStorage:
         self.close()
 
     def __del__(self):
-        """Destructor to ensure connection is closed."""
+        """Ensure connection is closed when object is destroyed."""
         try:
             self.close()
         except:
