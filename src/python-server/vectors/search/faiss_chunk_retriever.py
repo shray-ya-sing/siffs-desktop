@@ -257,23 +257,27 @@ class FAISSChunkRetriever:
             
             # Get chunk information from storage
             if workbook_path:
-                chunk_index = chunk_ids[idx]
+                chunk_id = chunk_ids[idx]  # This is the original chunk ID
                 _, chunks, _ = self.storage.get_workbook_embeddings(workbook_path, return_format=return_format)
-                chunk_info = chunks[chunk_index]
+                # Find the chunk with this ID
+                chunk_info = next((c for c in chunks if c['chunk_index'] == chunk_id), None)
+                if chunk_info is None:
+                    self.logger.warning(f"Chunk {chunk_id} not found in workbook {workbook_path}")
+                    continue
                 
                 result = {
                     'score': float(score),
                     'workbook_path': workbook_path,
                     'workbook_name': os.path.basename(workbook_path),
-                    'chunk_index': chunk_index,
-                    'metadata': chunk_info['metadata']
+                    'chunk_index': chunk_id,
+                    'metadata': chunk_info.get('metadata', {})
                 }
                 
                 # Add requested text format(s)
                 if return_format == 'text':
-                    result['text'] = chunk_info['text']
+                    result['text'] = chunk_info.get('text', '')
                 elif return_format == 'markdown':
-                    result['markdown'] = chunk_info['markdown']
+                    result['markdown'] = chunk_info.get('markdown', '')
                 else:  # 'both'
                     result['text'] = chunk_info.get('text', '')
                     result['markdown'] = chunk_info.get('markdown', '')
