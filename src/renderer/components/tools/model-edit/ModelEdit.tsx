@@ -47,14 +47,27 @@ export const ModelEdit: React.FC = () => {
             timestamp: Date.now().toString()
           }]);
         },
-        onError: setError,
+        onError: (error) => {
+          setError(error);
+          setMessages(prev => [...prev, {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: `❌ ${error}`,
+            timestamp: Date.now().toString()
+          }]);
+        },
         onProcessingChange: setIsProcessing,
         onTypingStart: () => setIsTyping(true),
         onTypingEnd: () => setIsTyping(false),
         onDataReady: setIsDataReady,
         onEditComplete: (result) => {
-          // Handle edit completion if needed
           console.log('Edit completed:', result);
+          setMessages(prev => [...prev, {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: '✓ Edit completed successfully!',
+            timestamp: Date.now().toString()
+          }]);
         }
       });
     }
@@ -167,7 +180,7 @@ export const ModelEdit: React.FC = () => {
       {/* Fixed input area at the bottom */}
       <div className="sticky bottom-0 p-4 border-t border-gray-700/50 bg-[#0f1117]/50 backdrop-blur-sm space-y-3">
         {error && (
-          <div className="mb-2 text-sm text-red-400">
+          <div className="mb-2 text-sm text-red-400 whitespace-pre-wrap">
             {error}
           </div>
         )}
