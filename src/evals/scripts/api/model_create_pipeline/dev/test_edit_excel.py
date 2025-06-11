@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Test configuration
 BASE_URL = "http://127.0.0.1:3001"  # Update with your server URL
-ENDPOINT = f"{BASE_URL}/api/excel/create-excel"
+ENDPOINT = f"{BASE_URL}/api/excel/edit-excel"
 
 # Sample metadata for testing
 SAMPLE_METADATA = {
