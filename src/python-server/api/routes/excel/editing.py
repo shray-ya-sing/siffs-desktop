@@ -55,7 +55,7 @@ async def edit_excel(request: dict):
         # Extract and validate request data
         file_path = request.get("file_path")
         metadata = request.get("metadata")
-        visible = request.get("visible", False)
+        visible = request.get("visible", True)
         version_id = request.get("version_id", 1)
         
         if not file_path or not isinstance(file_path, str):
