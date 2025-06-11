@@ -505,6 +505,155 @@ class ExcelMetadataStorage:
                 self.conn.rollback()
                 raise
 
+    def store_file_blob(self, file_path: str, version_id: Optional[int] = None, overwrite: bool = False) -> bool:
+        """
+        Store the Excel file as a blob, with automatic version management.
+        
+        Args:
+            file_path: Path to the Excel file
+            version_id: Optional version ID. If None, will auto-increment from latest version.
+            overwrite: If True and version_id is None, overwrite latest version. 
+                     If False and version_id is None, create new version.
+                     If version_id is provided, overwrite that specific version.
+            
+        Returns:
+            bool: True if blob was stored or already exists, False on error
+        """
+        try:
+            normalized_path = str(Path(file_path).resolve())
+            
+            with self._lock:
+                cursor = self.conn.cursor()
+                
+                # If version_id is not provided, find the latest version for this file
+                if version_id is None:
+                    cursor.execute("""
+                        SELECT v.version_id, v.file_blob
+                        FROM file_versions v
+                        JOIN workbooks w ON v.workbook_id = w.workbook_id
+                        WHERE w.file_path = ?
+                        ORDER BY v.version_id DESC
+                        LIMIT 1
+                    """, (normalized_path,))
+                    
+                    latest = cursor.fetchone()
+                    
+                    if latest and latest['file_blob'] is not None and not overwrite:
+                        # Create new version
+                        new_version_id = self.create_new_version(
+                            file_path=normalized_path,
+                            change_description=f"New version created at {datetime.now().isoformat()}"
+                        )
+                        version_id = new_version_id
+                    elif latest:
+                        # Use existing version (overwrite or no blob exists yet)
+                        version_id = latest['version_id']
+                    else:
+                        # First version of this file
+                        self.create_or_update_workbook(normalized_path)
+                        version_id = 1
+                
+                # If version_id was provided, check if we can overwrite
+                elif not overwrite:
+                    cursor.execute("""
+                        SELECT file_blob 
+                        FROM file_versions 
+                        WHERE version_id = ? AND file_blob IS NOT NULL
+                    """, (version_id,))
+                    
+                    if cursor.fetchone():
+                        # Blob exists and we're not overwriting
+                        return True
+            
+            # Read the file
+            with open(file_path, 'rb') as f:
+                file_blob = f.read()
+            
+            # Ensure the workbook and version exist in the database
+            with self._lock:
+                cursor = self.conn.cursor()
+                
+                # Verify the version exists or create it
+                cursor.execute("""
+                    SELECT 1 FROM file_versions WHERE version_id = ?
+                """, (version_id,))
+                
+                if not cursor.fetchone():
+                    # Version doesn't exist, create it
+                    self.create_or_update_workbook(normalized_path)
+                    cursor.execute("""
+                        INSERT INTO file_versions (workbook_id, version_id, change_description, created_at, updated_at)
+                        SELECT w.workbook_id, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                        FROM workbooks w
+                        WHERE w.file_path = ?
+                    """, (version_id, f"Initial version {version_id}", normalized_path))
+                
+                # Update the blob
+                cursor.execute("""
+                    UPDATE file_versions
+                    SET file_blob = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE version_id = ?
+                """, (sqlite3.Binary(file_blob), version_id))
+                
+                self.conn.commit()
+                return True
+                
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Error storing file blob: {e}")
+            return False
+
+
+    def get_file_blob(self, file_path: str, version_id: int) -> Optional[bytes]:
+        """
+        Retrieve the stored Excel file blob for a specific file and version.
+        
+        Args:
+            file_path: Path to the Excel file
+            version_id: The version ID to retrieve
+            
+        Returns:
+            bytes: The file blob if found, None otherwise
+        """
+        normalized_path = str(Path(file_path).resolve())
+        with self._lock:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT v.file_blob 
+                FROM file_versions v
+                JOIN workbooks w ON v.workbook_id = w.workbook_id
+                WHERE w.file_path = ? AND v.version_id = ?
+            """, (normalized_path, version_id))
+            
+            result = cursor.fetchone()
+            return result['file_blob'] if result and result['file_blob'] else None
+
+    def save_blob_to_file(self, file_path: str, version_id: int, output_path: str) -> bool:
+        """
+        Save a stored blob back to a file.
+        
+        Args:
+            file_path: Path to the source Excel file
+            version_id: The version ID to retrieve
+            output_path: Path where to save the file
+            
+        Returns:
+            bool: True if the file was saved successfully, False otherwise
+        """
+        blob = self.get_file_blob(file_path, version_id)
+        if not blob:
+            return False
+            
+        try:
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'wb') as f:
+                f.write(blob)
+            return True
+        except Exception as e:
+            print(f"Error saving blob to file: {e}")
+            return False
+
     def _parse_cell_address(self, address: str) -> tuple:
         """Parse cell address into column letters and row number."""
         match = re.match(r'^([A-Z]+)(\d+)$', address.upper())
