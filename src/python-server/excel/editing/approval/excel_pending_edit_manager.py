@@ -178,15 +178,22 @@ class ExcelPendingEditManager:
             sheet = wb.sheets[sheet_name]
             cell = sheet.range(cell_address)
 
-            # 1. Apply the value or formula
-            if 'formula' in cell_data and cell_data['formula']:
-                cell.formula = cell_data['formula']
-            elif 'value' in cell_data:
-                cell.value = cell_data['value']
-            
-            # 2. Apply all formatting including fill color
-            if cell_data:  # Only apply formatting if cell_data is not empty
-                self._apply_formatting_from_data(cell, cell_data)
+            # Apply the edits to the cell, continuing even if one type of edit fails
+            try:
+                # 1. Apply the value or formula
+                if 'formula' in cell_data and cell_data['formula']:
+                    cell.formula = cell_data['formula']
+                elif 'value' in cell_data:
+                    cell.value = cell_data['value']
+            except Exception as e:
+                print(f"Error applying value to cell {cell_address}: {e}")
+
+            try:
+                # 2. Apply all formatting including fill color
+                if cell_data:  # Only apply formatting if cell_data is not empty
+                    self._apply_formatting_from_data(cell, cell_data)
+            except Exception as e:
+                print(f"Error applying formatting to cell {cell_address}: {e}")                
             
             print(f"Applied pending edit to {cell_address} without indicator color")
             return edit_id
