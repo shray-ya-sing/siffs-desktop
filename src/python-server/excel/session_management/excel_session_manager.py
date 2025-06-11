@@ -30,50 +30,91 @@ class ExcelSessionManager:
         """Ensure we have an Excel app instance, creating if needed"""
         if self._app is None:
             self._app = xw.App(visible=visible, add_book=False)
+        # This means the app instance is set on the session manager.
+        # But we need to check if its still alive or it was terminated before trying to use it
+        try:
+            # Active app object will return an array of 0 or more books
+            books = self._app.books
+            if not books:
+                # If no books, the app is terminated. Create a new one.
+                self._app = xw.App(visible=visible, add_book=False)
+        except:
+            # Error means the app is terminated. Create a new one.
+            self._app = xw.App(visible=visible, add_book=False)
+        
         return self._app
     
     def get_session(self, file_path: str, visible: bool = _visible) -> Optional[xw.Book]:
         """Get or create a workbook session"""
         file_path = str(Path(file_path).resolve())
         
-        # Return existing session if valid
+        # Check if the filepath is in the sessions dictionary. 
+        # If yes, then we need to check if the old app and wb instances are still valid and should be reused
+        # If invalid, we need to reinitialize them for that entry
         if file_path in self._sessions:
+            print(f"Session found for {file_path}")
             app, wb = self._sessions[file_path]
             try:
+                # Check if the app is still valid
+                _ = app.books
+            except:
+                print(f"App is terminated for {file_path}")
+                # If the app is terminated, we need to reinitialize it and the workbook
+                # Remove the invalid session
+                self._sessions.pop(file_path, None)
+                # Reinitialize the app and workbook
+                app = self._ensure_app(visible)
+                wb = app.books.open(file_path)
+                self._sessions[file_path] = (app, wb)
+                print(f"Reinitialized app and workbook for {file_path}")
+                return wb
+            # If app is valid, check if the workbook is still valid
+            try:
                 _ = wb.name  # Check if workbook is still valid
+                print(f"Workbook is valid for {file_path}")
                 return wb
             except:
-                # Clean up invalid session
+                # App is valid but workbook is invalid or terminated. Let's open the workbook again
+                # Remove the invalid session
+                print(f"Workbook is terminated for {file_path}")
                 self._sessions.pop(file_path, None)
-                if app and not any(wb for _, wb in self._sessions.values()):
-                    try:
-                        app.quit()
-                    except:
-                        pass
-                    self._app = None
+                # Reinitialize the workbook
+                app = self._ensure_app(visible)
+                wb = app.books.open(file_path)
+                self._sessions[file_path] = (app, wb)
+                print(f"Reinitialized workbook for {file_path}")
+                return wb
         
-        # Create new session
+        # Filepath was never added to sessions. Create new entry for it in sessions
         try:
+            print(f"Creating new session for {file_path}")
             app = self._ensure_app(visible)
-            
+            print(f"App is valid for {file_path}")
+            # If the file exists, check if it's open in our app
             if Path(file_path).exists():
                 # Check if already open in our app
                 for book in app.books:
                     try:
                         if Path(book.fullname).resolve() == Path(file_path).resolve():
+                            print(f"Workbook is already open for {file_path}, returning existing book")
+                            # If open, just return that workbook
                             wb = book
-                            break
+                            return wb
                     except:
                         continue
-                else:
-                    wb = app.books.open(file_path)
+                print(f"Workbook is not open for {file_path}, opening it")
+                # If we don't have the workbook open, open it
+                wb = app.books.open(file_path)
+            # If it doesn't exist, create it
             else:
+                print(f"Workbook does not exist for {file_path}, creating it")
                 # Create new workbook
                 os.makedirs(Path(file_path).parent, exist_ok=True)
                 wb = app.books.add()
                 wb.save(file_path)
             
             self._sessions[file_path] = (app, wb)
+            print(f"New session created for {file_path}")
             return wb
             
         except Exception as e:
@@ -96,21 +137,39 @@ class ExcelSessionManager:
             
         try:
             app, wb = self._sessions[file_path]
-            
-            if save:
-                wb.save()
-            
-            wb.close()
-            self._sessions.pop(file_path, None)
-            
-            # Clean up app if no more workbooks
-            if app and not any(wb for _, wb in self._sessions.values()):
-                try:
-                    app.quit()
-                except:
-                    pass
-                self._app = None
+            # Verify workbook is still valid
+            try:
+                _ = wb.name
+                print(f"Workbook is valid for {file_path}, saving and closing")
+                if save:
+                    wb.save()
+                wb.close()
+                # Check if the app needs to be closed
+                if app and not any(wb for _, wb in self._sessions.values()):
+                    print(f"No more workbooks for {file_path}, closing app")
+                    # This means the app is still set on the session 
+                    try:
+                        # if the app instance still valid it will quit
+                        app.quit()
+                        self._app = None
+                        print(f"App closed for {file_path}")
+                    except:
+                        print(f"App is terminated for {file_path}")
+                        self._app = None # Set the app to None to prevent it from being used
+                        pass
+
+                self._sessions.pop(file_path, None) 
+                print(f" Session cleared and Workbook closed for {file_path}")
                 
+            except:
+                # Workbook or App is invalid or terminated and can no longer be accessed. Remove the session
+                self._sessions.pop(file_path, None)
+                if self._app:
+                    self._app = None # Clear app instance on class
+                wb = None # Clear workbook instance on class
+                print(f"Workbook or App is invalid or terminated for {file_path}, cleared session and instances")
+                return True
+
             return True
             
         except Exception as e:
@@ -149,7 +208,6 @@ class ExcelSessionManager:
         
         return False
 
-            
     def is_session_valid(self, file_path: str) -> bool:
         """Check if a session is still valid"""
         file_path = str(Path(file_path).resolve())
@@ -158,9 +216,17 @@ class ExcelSessionManager:
             return False
             
         try:
-            _, wb = self._sessions[file_path]
-            _ = wb.name  # This will raise if workbook is closed
-            return True
+            app, wb = self._sessions[file_path]
+            if app is None or wb is None:
+                return False
+            # Check if app is valid
+            try: 
+                books = app.books
+                _ = wb.name
+                return True
+            except:
+                # app is invalid
+                return False
         except:
             # Remove invalid session
             self._sessions.pop(file_path, None)
