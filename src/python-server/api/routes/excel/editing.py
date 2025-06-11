@@ -12,7 +12,7 @@ import logging
 # Get logger instance
 logger = logging.getLogger(__name__)
 import json
-
+import datetime
 router = APIRouter(
     prefix="/api/excel",
     tags=["excel-editing"],
@@ -46,7 +46,7 @@ async def edit_excel(request: dict):
             ]
         },
         "visible": false  # Optional, whether to show Excel during editing
-        "version_id": 1  # Optional, version ID for tracking edits
+        "version_id": int  # Optional, version ID for tracking edits
     }
     """
     logger.info("Received request to edit Excel file")
@@ -56,7 +56,8 @@ async def edit_excel(request: dict):
         file_path = request.get("file_path")
         metadata = request.get("metadata")
         visible = request.get("visible", True)
-        version_id = request.get("version_id", 1)
+        version_id = request.get("version_id")
+        logger.info(f"Extracted {file_path}, {metadata}, {visible}, {version_id}")
         
         if not file_path or not isinstance(file_path, str):
             raise HTTPException(
@@ -71,21 +72,24 @@ async def edit_excel(request: dict):
             )
 
         try:
-            # Create Excel writer instance
+            logger.info(f"Using ExcelWriter instance to write to workbook")
+            # Use the singleton instance to write data to existing workbook
             with ExcelWriter(visible=visible) as writer:
-                success = writer.write_data_to_existing(metadata, file_path, version_id)
-                
-                if not success:
-                    raise HTTPException(
-                        status_code=500,
-                        detail="Failed to write data to Excel"
-                    )
+                success, request_edit_ids_by_sheet = writer.write_data_to_existing(metadata, file_path, version_id)
             
+            if not success:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to write data to Excel"
+                )
+            logger.info(f"Successfully updated {file_path} and retrieved edit ids")
             return {
                 "status": "success",
                 "message": f"Successfully updated {file_path}",
                 "file_path": file_path,
-                "modified_sheets": list(metadata.keys())
+                "modified_sheets": list(metadata.keys()),
+                "request_edit_ids_by_sheet": request_edit_ids_by_sheet,
+                "timestamp": datetime.datetime.now().isoformat()
             }
             
         except PermissionError as pe:
@@ -170,21 +174,22 @@ async def create_excel(request: dict):
             )
 
         try:
-            # Create Excel writer instance
             with ExcelWriter(visible=visible) as writer:
-                success = writer.write_data_to_new(metadata, file_path, version_id)
-                
-                if not success:
-                    raise HTTPException(
-                        status_code=500,
-                        detail="Failed to write data to Excel"
-                    )
+                # Use the singleton instance to write data to existing workbook
+                success, request_edit_ids_by_sheet = writer.write_data_to_new(metadata, file_path, version_id)
+            if not success:
+                logger.error("Failed to write data to Excel")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to write data to Excel"
+                )
             
             return {
                 "status": "success",
                 "message": f"Successfully created new excel at {file_path}",
                 "file_path": file_path,
-                "modified_sheets": list(metadata.keys())
+                "modified_sheets": list(metadata.keys()),
+                "request_edit_ids_by_sheet": request_edit_ids_by_sheet
             }
             
         except PermissionError as pe:
