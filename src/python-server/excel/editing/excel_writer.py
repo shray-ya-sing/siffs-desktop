@@ -119,14 +119,11 @@ class ExcelWriter:
 
             # Process data
             if create_pending and self.edit_manager:
-                
+                request_pending_edits = [] # Array of pending edit dictionaries for the current request 
+                # Append all edit dicts from the pending edit manager method to this array
                 for sheet_name, cells_data in data.items():
                     # Create worksheet
-                    sheet = self.workbook.sheets.add(sheet_name)
-                    # Initialize an empty dictionary to store the edit ids for the current request
-                    # This will be returned to the frontend and used in the accept / reject edit logic
-                    request_edit_ids_by_sheet = {sheet_name: []}
-                    self.edit_ids_by_sheet[sheet_name] = []               
+                    sheet = self.workbook.sheets.add(sheet_name)                           
                     
                     # Apply pending edits
                     for cell_data in cells_data:
@@ -134,26 +131,27 @@ class ExcelWriter:
                             continue
 
                         try:
-                            edit_id = self.edit_manager.apply_pending_edit(
+                            # Returns an edit dict containing deeper metadata about the edit
+                            pending_edit = self.edit_manager.apply_pending_edit(
                                 wb=self.workbook,
                                 sheet_name=sheet_name,
                                 cell_data=cell_data,
                                 version_id=version_id,
                                 file_path=self.file_path
                             )
-                            # Add the edit ids for that sheet to the self.edit_ids_by_sheet dictionary tracking all the pending edits
-                            # Each edit corresponds to a string edit id 
-                            # All pending edits for a single method call are stored in the array corresponding to the name of the sheet
-                            self.edit_ids_by_sheet[sheet_name].append(edit_id)
                             # Add the edit id to the request_edit_ids_by_sheet dictionary
-                            request_edit_ids_by_sheet[sheet_name].append(edit_id)
+                            request_pending_edits.append(pending_edit)
+                            
                         except Exception as e:
                             logger.error(f"Error in pending edit manager apply_pending_edit() function: {e}")
                             # Continue applying to remaining cells even if one fails
                             continue                     
-                
+                # Store the pending edits to the storage
+                self.storage.batch_create_pending_edits(request_pending_edits)
+                # Get an array of only the edit ids. This will be used by the frontend to accept / reject edits.
+                request_edit_ids = [edit['id'] for edit in request_pending_edits]
                 self.workbook.save() # This just saves the workbook without any closing action or integration with the session manager
-                return True, request_edit_ids_by_sheet
+                return True, request_edit_ids
             else:
                 # Direct write without pending edits
                 for sheet_name, cells_data in data.items():
@@ -225,7 +223,10 @@ class ExcelWriter:
                     version_id = 1  # Default to 1 if no version exists
                     logger.info("No existing version found, using default version ID: 1")
             
-            self.version_id = version_id          
+            self.version_id = version_id       
+
+            request_pending_edits = [] # Array of pending edit dictionaries for the current request 
+            # Append all edit dicts from the pending edit manager method to this array   
             
             for sheet_name, cells_data in data.items():
                 # Get or create worksheet
@@ -236,11 +237,6 @@ class ExcelWriter:
                     sheet = self.workbook.sheets.add(sheet_name)
                     logger.info(f"Created new worksheet: {sheet_name}")
                 
-                # Initialize an empty dictionary to store the edit ids for the current request
-                # This will be returned to the frontend and used in the accept / reject edit logic
-                request_edit_ids_by_sheet = {sheet_name: []}
-                self.edit_ids_by_sheet[sheet_name] = []
-                
                 # Iterate through the list of cells to be edited, Apply cell updates
                 for cell_data in cells_data:
                     if 'cell' not in cell_data:
@@ -249,19 +245,15 @@ class ExcelWriter:
                     if create_pending and self.edit_manager:
                         # Create pending edit
                         try:
-                            edit_id = self.edit_manager.apply_pending_edit(
+                            pending_edit = self.edit_manager.apply_pending_edit(
                                 wb=self.workbook,
                                 sheet_name=sheet_name,
                                 cell_data=cell_data,
                                 version_id=version_id,
                                 file_path=self.file_path
                             )
-                            # Add the edit ids for that sheet to the self.edit_ids_by_sheet dictionary tracking all the pending edits
-                            # Each edit corresponds to a string edit id 
-                            # All pending edits for a single method call are stored in the array corresponding to the name of the sheet
-                            self.edit_ids_by_sheet[sheet_name].append(edit_id)
-                            # Add the edit id to the request_edit_ids_by_sheet dictionary
-                            request_edit_ids_by_sheet[sheet_name].append(edit_id)
+                            # Add the pending edit to the request_pending_edits array
+                            request_pending_edits.append(pending_edit)
                         except Exception as e:
                             logger.error(f"Error in pending edit manager apply_pending_edit() function: {e}")
                             # Continue applying to remaining cells even if one fails
@@ -284,8 +276,14 @@ class ExcelWriter:
                 self.workbook.save()
             except Exception as e:
                 logger.error(f"Error saving workbook: {e}")
+
+            # Store the pending edits to the storage
+            self.storage.batch_create_pending_edits(request_pending_edits)
             
-            return True, request_edit_ids_by_sheet # request_edit_ids_by_sheet will be empty if the pending edit manager was not used for editing
+            # Get an array of only the edit ids. This will be used by the frontend to accept / reject edits.
+            request_edit_ids = [edit['id'] for edit in request_pending_edits]
+            
+            return True, request_edit_ids # request_edit_ids will be empty if the pending edit manager was not used for editing
 
         except Exception as e:
             logger.error(f"Error editing existing workbook: {e}")
@@ -389,60 +387,6 @@ class ExcelWriter:
                 self.session_manager.close_session(self.file_path, save=save)
                 self.file_path = None
                 self.workbook = None
-
-    # HELPER METHODS FOR EDIT MANAGEMENT------------------------------------------------------------------------------------------------------------------------------
-    def accept_pending_edit(self, edit_id: str) -> bool:
-        """Accept a specific pending edit.
-        
-        Args:
-            edit_id: ID of the pending edit to accept
-        """
-        if not self.edit_manager or not self.workbook:
-            return False
-        
-        return self.edit_manager.accept_edit(
-            edit_id=edit_id
-        )
-    
-    def reject_pending_edit(self, edit_id: str) -> bool:
-        """Reject a specific pending edit."""
-        if not self.edit_manager or not self.workbook:
-            return False
-        
-        return self.edit_manager.reject_edit(
-            edit_id=edit_id
-        )
-    
-    def accept_all_pending_edits(self, sheet_name: str = None) -> bool:
-        """Accept all pending edits for a sheet or entire workbook."""
-        if not self.edit_manager or not self.workbook:
-            return False
-        
-        success = self.edit_manager.accept_all_edits(
-            wb=self.workbook,
-            version_id=self.version_id,
-            sheet_name=sheet_name
-        )
-        
-        if success:
-            self.save(self.file_path)
-        
-        return success
-
-
-    def reject_all_pending_edits(self, sheet_name: str = None) -> bool:
-        """Reject all pending edits for a sheet or entire workbook."""
-        if not self.edit_manager or not self.workbook:
-            return False
-        
-        success = self.edit_manager.reject_all_edits(
-            wb=self.workbook,
-            version_id=self.version_id,
-            sheet_name=sheet_name
-        )
-
-        return success
-        
     
     # HELPER METHODS FOR XLWINGS-------------------------------------------------------------------------------------------------------------------------------------
     def _hex_to_rgb(self, hex_color: str) -> Optional[tuple]:
