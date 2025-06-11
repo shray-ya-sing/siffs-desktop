@@ -11,6 +11,8 @@ import sys
 folder_path = Path(__file__).parent.parent.parent.absolute()
 sys.path.append(str(folder_path))
 from metadata.storage.excel_metadata_storage import ExcelMetadataStorage
+import logging
+logger = logging.getLogger(__name__)
 
 class StorageUpdater:
     """Handles the final storage update when edits are accepted."""
@@ -62,7 +64,7 @@ class StorageUpdater:
             return target_version_id if success else None
             
         except Exception as e:
-            print(f"Error updating storage: {e}")
+            logger.error(f"Error updating storage: {e}")
             raise
     
     def _transform_to_storage_format(self, cell_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -186,20 +188,20 @@ class ExcelPendingEditManager:
                 elif 'value' in cell_data:
                     cell.value = cell_data['value']
             except Exception as e:
-                print(f"Error applying value to cell {cell_address}: {e}")
+                logger.error(f"Error applying value to cell {cell_address}: {e}")
 
             try:
                 # 2. Apply all formatting including fill color
                 if cell_data:  # Only apply formatting if cell_data is not empty
                     self._apply_formatting_from_data(cell, cell_data)
             except Exception as e:
-                print(f"Error applying formatting to cell {cell_address}: {e}")                
+                logger.error(f"Error applying formatting to cell {cell_address}: {e}")                
             
-            print(f"Applied pending edit to {cell_address} without indicator color")
+            logger.info(f"Applied pending edit to {cell_address} without indicator color")
             return edit_id
             
         except Exception as e:
-            print(f"Error applying pending edit: {e}")
+            logger.error(f"Error applying pending edit: {e}")
             raise
     
     def apply_pending_edit_with_separate_color_indicator(self, 
@@ -256,11 +258,11 @@ class ExcelPendingEditManager:
                 intended_fill_color=intended_fill_color  # Store separately for clarity
             )
             
-            print(f"Applied pending edit to {cell_address} with indicator color")
+            logger.info(f"Applied pending edit to {cell_address} with indicator color")
             return edit_id
             
         except Exception as e:
-            print(f"Error applying pending edit: {e}")
+            logger.error(f"Error applying pending edit: {e}")
             raise
 
 
@@ -309,36 +311,33 @@ class ExcelPendingEditManager:
                 intended_fill_color=intended_fill_color
             )
             
-            print(f"Applied pending edit to {cell_address} with green indicator")
+            logger.info(f"Applied pending edit to {cell_address} with green indicator")
             return edit_id
             
         except Exception as e:
-            print(f"Error applying pending edit: {e}")
+            logger.error(f"Error applying pending edit: {e}")
             raise
     
     
     def accept_edit(self, 
-                    wb: xw.Book,
-                    version_id: int,
-                    sheet_name: str,
-                    cell_address: str,
-                    create_new_version: bool = True) -> bool:
+                    edit_id: str
+                    ) -> bool:
         """Accept a pending edit and apply intended formatting."""
         try:
-            edit = self._get_pending_edit(version_id, sheet_name, cell_address)
+            edit = self._get_pending_edit(edit_id)
             if not edit:
-                print(f"No pending edit found for {sheet_name}!{cell_address}")
+                logger.info(f"No pending edit found for {edit_id}")
                 return False
             
-            sheet = wb.sheets[sheet_name]
-            cell = sheet.range(cell_address)
+            sheet = wb.sheets[edit['sheet_name']]
+            cell = sheet.range(edit['cell_address'])
             
             # Remove indicator color and apply intended color
             intended_color = edit.get('intended_fill_color')
             if intended_color:
                 # Apply the intended fill color
                 cell.color = intended_color
-                print(f"Applied intended color {intended_color} to {cell_address}")
+                logger.info(f"Applied intended color {intended_color} to {cell_address}")
             else:
                 # Restore original color if no color was intended
                 original_color = edit['original_state'].get('fill_color')
@@ -350,42 +349,39 @@ class ExcelPendingEditManager:
             
             # Update storage
             cell_updates = [{
-                'sheet_name': sheet_name,
-                'cell_address': cell_address,
+                'sheet_name': edit['sheet_name'],
+                'cell_address': edit['cell_address'],
                 'cell_data': edit['cell_data']
             }]
             
             updated_version = self.updater.update_storage(
                 file_path=edit['file_path'],
-                version_id=version_id,
+                version_id=edit['version_id'],
                 cell_updates=cell_updates,
                 create_new_version=create_new_version
             )
             
             if updated_version:
-                self._remove_pending_edit(version_id, sheet_name, cell_address)
+                self._remove_pending_edit(edit_id)
                 return True
             
             return False
             
         except Exception as e:
-            print(f"Error accepting edit: {e}")
+            logger.error(f"Error accepting edit: {e}")
             return False
     
     def reject_edit(self,
-                   wb: xw.Book,
-                   version_id: int,
-                   sheet_name: str,
-                   cell_address: str) -> bool:
+                    edit_id: str) -> bool:
         """Reject a pending edit and restore original state."""
         try:
-            edit = self._get_pending_edit(version_id, sheet_name, cell_address)
+            edit = self._get_pending_edit(edit_id)
             if not edit:
-                print(f"No pending edit found for {sheet_name}!{cell_address}")
+                logger.info(f"No pending edit found for {edit_id}")
                 return False
             
-            sheet = wb.sheets[sheet_name]
-            cell = sheet.range(cell_address)
+            sheet = wb.sheets[edit['sheet_name']]
+            cell = sheet.range(edit['cell_address'])
             
             # Restore original state
             original = edit['original_state']
@@ -400,13 +396,13 @@ class ExcelPendingEditManager:
             self._restore_cell_state(cell, original)
             
             # Remove from pending edits
-            self._remove_pending_edit(version_id, sheet_name, cell_address)
+            self._remove_pending_edit(edit_id)
             
-            print(f"Rejected edit and restored original state for {cell_address}")
+            logger.info(f"Rejected edit and restored original state for {edit['cell_address']}")
             return True
             
         except Exception as e:
-            print(f"Error rejecting edit: {e}")
+            logger.error(f"Error rejecting edit: {e}")
             return False
     
     def accept_all_edits(self,
@@ -419,7 +415,7 @@ class ExcelPendingEditManager:
             pending = self._get_all_pending_for_version(version_id, sheet_name)
             
             if not pending:
-                print("No pending edits to accept")
+                logger.info("No pending edits to accept")
                 return True
             
             # Apply all intended colors and prepare updates
@@ -447,7 +443,7 @@ class ExcelPendingEditManager:
                     })
                     
                 except Exception as e:
-                    print(f"Warning: Could not process {edit['cell_address']}: {e}")
+                    logger.warning(f"Warning: Could not process {edit['cell_address']}: {e}")
             
             # Batch update storage
             file_path = pending[0]['file_path'] if pending else None
@@ -471,7 +467,7 @@ class ExcelPendingEditManager:
             return False
             
         except Exception as e:
-            print(f"Error accepting all edits: {e}")
+            logger.error(f"Error accepting all edits: {e}")
             return False
 
     def get_pending_edit_summary(self, wb: xw.Book, version_id: int) -> List[Dict]:
@@ -520,7 +516,7 @@ class ExcelPendingEditManager:
             if 'number_format' in cell_data and cell_data['number_format']:
                 cell.number_format = cell_data['number_format']
         except Exception as e:
-            print(f"Warning: Some formatting could not be applied: {e}")
+            logger.warning(f"Warning: Some formatting could not be applied: {e}")
 
     def _capture_cell_state(self, cell: xw.Range) -> Dict[str, Any]:
         """Capture the current state of a cell before editing."""
@@ -541,7 +537,7 @@ class ExcelPendingEditManager:
                 "fill_color": cell.color
             })
         except Exception as e:
-            print(f"Warning: Some cell properties could not be captured: {e}")
+            logger.warning(f"Warning: Some cell properties could not be captured: {e}")
         
         return state
     
@@ -554,7 +550,7 @@ class ExcelPendingEditManager:
             pending = self._get_all_pending_for_version(version_id, sheet_name)
             
             if not pending:
-                print("No pending edits to reject")
+                logger.info("No pending edits to reject")
                 return True  # Fixed indentation
             
             # Create a copy of the list to avoid modifying it during iteration
@@ -572,12 +568,12 @@ class ExcelPendingEditManager:
                 
                 if not result:
                     success = False
-                    print(f"Failed to reject edit at {edit['sheet_name']}!{edit['cell_address']}")
+                    logger.error(f"Failed to reject edit at {edit['sheet_name']}!{edit['cell_address']}")
             
             return success
             
         except Exception as e:
-            print(f"Error in reject_all_edits: {e}")
+            logger.error(f"Error in reject_all_edits: {e}")
             return False
 
     def _restore_cell_state(self, cell: xw.Range, state: Dict[str, Any]):
@@ -599,7 +595,7 @@ class ExcelPendingEditManager:
             if 'fill_color' in state and state['fill_color']:
                 cell.color = state['fill_color']
         except Exception as e:
-            print(f"Warning: Some formatting could not be restored: {e}") 
+            logger.warning(f"Warning: Some formatting could not be restored: {e}") 
 
     
     def _create_pending_edit(self, **kwargs):
@@ -614,21 +610,21 @@ class ExcelPendingEditManager:
             **kwargs
         }
     
-    def _get_pending_edit(self, version_id: int, sheet_name: str, 
-                         cell_address: str) -> Optional[Dict]:
+    def _get_pending_edit(self, edit_id: str) -> Optional[Dict]:
         """Get a pending edit record."""
-        if version_id not in self.pending_edits:
-            return None
-        
-        key = f"{sheet_name}!{cell_address}"
-        return self.pending_edits[version_id].get(key)
+        for version_id, edits in self.pending_edits.items():
+            for key, edit in edits.items():
+                if edit['edit_id'] == edit_id:
+                    return edit
+        return None
     
-    def _remove_pending_edit(self, version_id: int, sheet_name: str, 
-                            cell_address: str):
+    def _remove_pending_edit(self, edit_id: str):
         """Remove a pending edit record."""
-        if version_id in self.pending_edits:
-            key = f"{sheet_name}!{cell_address}"
-            self.pending_edits[version_id].pop(key, None)
+        for version_id, edits in self.pending_edits.items():
+            for key, edit in edits.items():
+                if edit['edit_id'] == edit_id:
+                    del edits[key]
+                    break
     
     def _get_all_pending_for_version(self, version_id: int, 
                                     sheet_name: str = None) -> List[Dict]:
