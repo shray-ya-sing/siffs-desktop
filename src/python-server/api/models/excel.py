@@ -94,13 +94,13 @@ class GenerateEditMetadataRequest(BaseModel):
 class EditExcelRequest(BaseModel):
     file_path: str
     metadata: dict
-    visible: bool = False
+    visible: bool = True
     version_id: int
 
 class CreateExcelRequest(BaseModel):
     file_path: str
     metadata: dict
-    visible: bool = False
+    visible: bool = True
     version_id: int = 1
 
 #-------------------------------------------ACCEPT/ REJECT EDITS-------------------------------------------
