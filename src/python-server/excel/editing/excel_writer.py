@@ -1,19 +1,28 @@
-import xlwings as xw
-from typing import Dict, List, Any, Optional, Union
-from dataclasses import dataclass
 import os
-from openpyxl.styles import Alignment
 from pathlib import Path
 import sys
-import re
+# Add the project root to Python path
 approval_path = Path(__file__).parent.absolute()
 sys.path.append(str(approval_path))
 from approval.excel_pending_edit_manager import ExcelPendingEditManager
-# Add the project root to Python path
+
 folder_path = Path(__file__).parent.parent.absolute()
 sys.path.append(str(folder_path))
 from metadata.storage.excel_metadata_storage import ExcelMetadataStorage
 from session_management.excel_session_manager import ExcelSessionManager
+import logging
+logger = logging.getLogger(__name__)
+
+logger.info("Imported internal modules. Now importing external ExcelWriter dependencies")
+import atexit
+import threading
+import datetime
+import xlwings as xw
+from typing import Dict, List, Any, Optional, Union, Tuple
+from dataclasses import dataclass
+from openpyxl.styles import Alignment
+import re
+logger.info("Imported external modules. Now initializing ExcelWriter")
 
 @dataclass
 class ExcelCell:
@@ -31,32 +40,46 @@ class ExcelCell:
     fill_color: Optional[str] = None
     wrap_text: bool = False
 
+
 class ExcelWriter:
+
     def __init__(self, 
                  visible: bool = True, 
                  storage: 'ExcelMetadataStorage' = None,
-                 use_session_manager: bool = True,  # Default to True for better resource management
+                 use_session_manager: bool = True,
                  session_manager: 'ExcelSessionManager' = None):
         """
-        Initialize ExcelWriter.
-        
-        Args:
-            visible: Whether to make Excel visible during operations
-            storage: Optional ExcelMetadataStorage instance for metadata tracking
-            use_session_manager: Whether to use ExcelSessionManager for workbook session management
-            session_manager: Optional ExcelSessionManager instance
+        Initialize ExcelWriter as a singleton.
         """
-        self.visible = visible  # Store visibility preference
+        logger.info("Initializing ExcelWriter instance")
+        self.visible = visible
+        logger.info(f"ExcelWriter initialized with visible={visible}")
         self.use_session_manager = use_session_manager
+        logger.info(f"ExcelWriter initialized with use_session_manager={use_session_manager}")
         self.session_manager = session_manager or (ExcelSessionManager() if use_session_manager else None)
-        self.app = None if use_session_manager else xw.App(visible=visible, add_book=False)
+        logger.info(f"ExcelWriter initialized with session_manager={session_manager}")
+        self.app = None
         self.workbook = None
-        self.workbooks = {}  # Track workbooks by filepath
-        self.storage = storage or ExcelMetadataStorage() 
+        self.workbooks = {}
+        self.storage = storage or ExcelMetadataStorage()
+        logger.info(f"ExcelWriter initialized with storage={self.storage}")
         self.edit_manager = ExcelPendingEditManager(self.storage) if self.storage else None
+        logger.info(f"ExcelWriter initialized with edit_manager={self.edit_manager}")
         self.file_path = None
         self.version_id = None
-    
+
+        # Array of all pending edits yet to be approved by the user
+        self.edit_ids_by_sheet = {}
+
+    def __enter__(self):
+        """Context manager entry - return self to be used in the with statement."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - no resource cleanup, just pass through."""
+        # Don't suppress any exceptions
+        return False
+
     # WRITING DATA TO WORKBOOK-------------------------------------------------------------------------------------------------------------------------------------
     def write_data_to_new(
         self,
@@ -64,10 +87,21 @@ class ExcelWriter:
         output_filepath: str,
         version_id: Optional[int] = 1,
         create_pending: bool = True
-    ) -> Union[bool, Dict[str, List[str]]]:
-        """Create a new workbook and write data to it with optional pending edit tracking."""
+    ) -> Tuple[bool, Dict[str, List[str]]]:
+        """
+        Create a new workbook and write data to it with optional pending edit tracking.
+        
+        Args:
+            data: Dictionary mapping sheet names to lists of cell data
+            output_filepath: Path to the Excel file
+            version_id: Optional version ID. If None, will try to get the latest version from metadata.
+            create_pending: Whether to create pending edits or apply directly
+            
+        Returns:
+            Tuple of (success, Dictionary mapping sheet names to lists of edit IDs)
+        """
         if not data:
-            return {} if create_pending else False
+            return False, {}
 
         try:
             # Use unified method to get workbook
@@ -85,12 +119,14 @@ class ExcelWriter:
 
             # Process data
             if create_pending and self.edit_manager:
-                edit_ids_by_sheet = {}
                 
                 for sheet_name, cells_data in data.items():
                     # Create worksheet
                     sheet = self.workbook.sheets.add(sheet_name)
-                    edit_ids_by_sheet[sheet_name] = []
+                    # Initialize an empty dictionary to store the edit ids for the current request
+                    # This will be returned to the frontend and used in the accept / reject edit logic
+                    request_edit_ids_by_sheet = {sheet_name: []}
+                    self.edit_ids_by_sheet[sheet_name] = []               
                     
                     # Apply pending edits
                     for cell_data in cells_data:
@@ -105,14 +141,19 @@ class ExcelWriter:
                                 version_id=version_id,
                                 file_path=self.file_path
                             )
-                            edit_ids_by_sheet[sheet_name].append(edit_id)
+                            # Add the edit ids for that sheet to the self.edit_ids_by_sheet dictionary tracking all the pending edits
+                            # Each edit corresponds to a string edit id 
+                            # All pending edits for a single method call are stored in the array corresponding to the name of the sheet
+                            self.edit_ids_by_sheet[sheet_name].append(edit_id)
+                            # Add the edit id to the request_edit_ids_by_sheet dictionary
+                            request_edit_ids_by_sheet[sheet_name].append(edit_id)
                         except Exception as e:
-                            print(f"Error in pending edit manager apply_pending_edit() function: {e}")
+                            logger.error(f"Error in pending edit manager apply_pending_edit() function: {e}")
                             # Continue applying to remaining cells even if one fails
                             continue                     
                 
                 self.workbook.save() # This just saves the workbook without any closing action or integration with the session manager
-                return edit_ids_by_sheet
+                return True, request_edit_ids_by_sheet
             else:
                 # Direct write without pending edits
                 for sheet_name, cells_data in data.items():
@@ -129,16 +170,16 @@ class ExcelWriter:
                                 # Save the workbook blob to the metadata storage
                                 self.storage.store_file_blob(version_id =1, file_path=self.file_path, overwrite=True)
                         except Exception as e:
-                            print(f"Error formatting cell {cell_data['cell']}: {e}")
+                            logger.error(f"Error formatting cell {cell_data['cell']}: {e}")
                             # Continue applying to remaining cells even if one fails
                             continue
 
                 self.workbook.save()                
-                return True
+                return True, {}
 
         except Exception as e:
-            print(f"Error creating new workbook: {e}")
-            return {} if create_pending else False
+            logger.error(f"Error creating new workbook: {e}")
+            return False, {}
 
     def write_data_to_existing(
         self,
@@ -147,7 +188,7 @@ class ExcelWriter:
         version_id: Optional[int] = None,
         create_pending: bool = True,
         save: bool = False
-    ) -> Dict[str, List[str]]:
+    ) -> Tuple[bool, Dict[str, List[str]]]:
         """Write data to an existing Excel file with pending edit tracking.
     
         Args:
@@ -158,43 +199,47 @@ class ExcelWriter:
             save: Whether to save changes to disk
             
         Returns:
-            Dictionary mapping sheet names to lists of edit IDs
+            Tuple of (success, Dictionary mapping sheet names to lists of edit IDs)
         """
         if not data:
-            return {}
+            return False, {}
 
         if not os.path.exists(output_filepath):
             raise FileNotFoundError(f"File does not exist: {output_filepath}")
 
         try:
+            
             # Use unified method to get workbook
             self.file_path = str(Path(output_filepath).resolve())
             self.workbook = self._get_or_create_workbook(self.file_path)
             self.workbooks[self.file_path] = self.workbook
             # Get the latest version ID if not provided
+            
             if version_id is None and self.storage:
+                logger.info(f"No version id provided. Getting latest version ID from metadata for file: {output_filepath}")
                 latest_version = self.storage.get_latest_version(self.file_path)
                 if latest_version:
                     version_id = latest_version['version_number']
-                    print(f"Using latest version ID from metadata: {version_id}")
+                    logger.info(f"Using latest version ID from metadata: {version_id}")
                 else:
                     version_id = 1  # Default to 1 if no version exists
-                    print("No existing version found, using default version ID: 1")
+                    logger.info("No existing version found, using default version ID: 1")
             
-            self.version_id = version_id
-            
-            edit_ids_by_sheet = {}
+            self.version_id = version_id          
             
             for sheet_name, cells_data in data.items():
                 # Get or create worksheet
                 try:
                     sheet = self.workbook.sheets[sheet_name]
-                    print(f"Found existing worksheet: {sheet_name}")
+                    logger.info(f"Found existing worksheet: {sheet_name}")
                 except:
                     sheet = self.workbook.sheets.add(sheet_name)
-                    print(f"Created new worksheet: {sheet_name}")
+                    logger.info(f"Created new worksheet: {sheet_name}")
                 
-                edit_ids_by_sheet[sheet_name] = []
+                # Initialize an empty dictionary to store the edit ids for the current request
+                # This will be returned to the frontend and used in the accept / reject edit logic
+                request_edit_ids_by_sheet = {sheet_name: []}
+                self.edit_ids_by_sheet[sheet_name] = []
                 
                 # Iterate through the list of cells to be edited, Apply cell updates
                 for cell_data in cells_data:
@@ -202,7 +247,7 @@ class ExcelWriter:
                         continue
                     
                     if create_pending and self.edit_manager:
-
+                        # Create pending edit
                         try:
                             edit_id = self.edit_manager.apply_pending_edit(
                                 wb=self.workbook,
@@ -211,11 +256,17 @@ class ExcelWriter:
                                 version_id=version_id,
                                 file_path=self.file_path
                             )
-                            edit_ids_by_sheet[sheet_name].append(edit_id)
+                            # Add the edit ids for that sheet to the self.edit_ids_by_sheet dictionary tracking all the pending edits
+                            # Each edit corresponds to a string edit id 
+                            # All pending edits for a single method call are stored in the array corresponding to the name of the sheet
+                            self.edit_ids_by_sheet[sheet_name].append(edit_id)
+                            # Add the edit id to the request_edit_ids_by_sheet dictionary
+                            request_edit_ids_by_sheet[sheet_name].append(edit_id)
                         except Exception as e:
-                            print(f"Error in pending edit manager apply_pending_edit() function: {e}")
+                            logger.error(f"Error in pending edit manager apply_pending_edit() function: {e}")
                             # Continue applying to remaining cells even if one fails
                             continue
+
                     else:
                         # Direct update without tracking
                         try:
@@ -225,20 +276,20 @@ class ExcelWriter:
                             if self.storage:
                                 self.storage.store_file_blob(file_path=self.file_path, version_id=self.version_id, overwrite=False)
                         except Exception as e:
-                            print(f"Error updating cell {cell_data['cell']}: {e}")
+                            logger.error(f"Error updating cell {cell_data['cell']}: {e}")
                             # Continue applying to remaining cells even if one fails
                             continue
 
             try:
                 self.workbook.save()
             except Exception as e:
-                print(f"Error saving workbook: {e}")
+                logger.error(f"Error saving workbook: {e}")
             
-            return edit_ids_by_sheet
+            return True, request_edit_ids_by_sheet # request_edit_ids_by_sheet will be empty if the pending edit manager was not used for editing
 
         except Exception as e:
-            print(f"Error editing existing workbook: {e}")
-            return edit_ids_by_sheet
+            logger.error(f"Error editing existing workbook: {e}")
+            return False, {}
     
     # HELPER METHODS FOR WORKBOOK SESSION MANAGEMENT-------------------------------------------------------------------------------------------------------------------------------------
     def _get_or_create_workbook(self, file_path: str, create_new: bool = False) -> xw.Book:
@@ -252,14 +303,14 @@ class ExcelWriter:
                 try:
                     # Option 1: Delete existing file
                     os.remove(file_path)
-                    print(f"Removed existing file: {file_path}")
+                    logger.info(f"Removed existing file: {file_path}")
                 except Exception as e:
-                    print(f"Warning: Could not remove existing file: {e}")
+                    logger.warning(f"Warning: Could not remove existing file: {e}")
                     # Option 2: Create with timestamp
                     base, ext = os.path.splitext(file_path)
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     file_path = f"{base}_{timestamp}{ext}"
-                    print(f"Creating new file with timestamp: {file_path}")
+                    logger.info(f"Creating new file with timestamp: {file_path}")
                 
             # Always use session manager when enabled
             wb = self.session_manager.get_session(file_path, self.visible)
@@ -286,7 +337,7 @@ class ExcelWriter:
             self.workbooks[self.file_path] = self.workbook
             return True
         except Exception as e:
-            print(f"Error opening workbook: {e}")
+            logger.error(f"Error opening workbook: {e}")
             return False
     
     def save(self, file_path: Optional[str] = None) -> bool:
@@ -305,7 +356,7 @@ class ExcelWriter:
                 self.workbook.save(save_path)
                 return True
         except Exception as e:
-            print(f"Error saving workbook: {e}")
+            logger.error(f"Error saving workbook: {e}")
             
         return False
 
@@ -338,39 +389,28 @@ class ExcelWriter:
                 self.session_manager.close_session(self.file_path, save=save)
                 self.file_path = None
                 self.workbook = None
-            
-        
-    # CONTEXT MANAGER METHODS-------------------------------------------------------------------------------------------------------------------------------------------
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-    
 
     # HELPER METHODS FOR EDIT MANAGEMENT------------------------------------------------------------------------------------------------------------------------------
-    def accept_pending_edit(self, sheet_name: str, cell_address: str) -> bool:
-        """Accept a specific pending edit."""
+    def accept_pending_edit(self, edit_id: str) -> bool:
+        """Accept a specific pending edit.
+        
+        Args:
+            edit_id: ID of the pending edit to accept
+        """
         if not self.edit_manager or not self.workbook:
             return False
         
         return self.edit_manager.accept_edit(
-            wb=self.workbook,
-            version_id=self.version_id,
-            sheet_name=sheet_name,
-            cell_address=cell_address
+            edit_id=edit_id
         )
     
-    def reject_pending_edit(self, sheet_name: str, cell_address: str) -> bool:
+    def reject_pending_edit(self, edit_id: str) -> bool:
         """Reject a specific pending edit."""
         if not self.edit_manager or not self.workbook:
             return False
         
         return self.edit_manager.reject_edit(
-            wb=self.workbook,
-            version_id=self.version_id,
-            sheet_name=sheet_name,
-            cell_address=cell_address
+            edit_id=edit_id
         )
     
     def accept_all_pending_edits(self, sheet_name: str = None) -> bool:
@@ -433,7 +473,7 @@ class ExcelWriter:
                 return func(*args, **kwargs)
             except Exception as e:
                 cell_ref = cell.address if hasattr(cell, 'address') else 'unknown'
-                print(f"Error applying {operation_name} to cell {cell_ref}: {e}")
+                logger.error(f"Error applying {operation_name} to cell {cell_ref}: {e}")
 
         #----------------Set these properties directly on the xlwings range
         
@@ -494,28 +534,28 @@ class ExcelWriter:
                             str_value = fixed_value
                     cell.api.Worksheet.Evaluate(str_value[1:])  # Remove the '=' for evaluation
                     cell.formula = str_value
-                    print(f"Set formula '{str_value}' for cell {cell.address}")
+                    logger.info(f"Set formula '{str_value}' for cell {cell.address}")
                 except Exception as e:
-                    print(f"Warning: Invalid formula '{str_value}': {e}")
+                    logger.warning(f"Warning: Invalid formula '{str_value}': {e}")
                     # Fall back to setting as plain text
                     cell.value = str_value
-                    print(f"Set value '{str_value}' for cell {cell.address}")
+                    logger.info(f"Set value '{str_value}' for cell {cell.address}")
             else:
                 pattern = r"(?:'?[^!']+'?!)?\$?[A-Za-z]+\$?\d+"
                 if bool(re.search(pattern, str_value)):
                     cell.formula = f"={str_value}"
-                    print(f"Set formula '{str_value}' for cell {cell.address} without = sign")
+                    logger.info(f"Set formula '{str_value}' for cell {cell.address} without = sign")
                 # Set as plain value
                 cell.value = value
-                print(f"Set value '{str_value}' for cell {cell.address}")
+                logger.info(f"Set value '{str_value}' for cell {cell.address}")
                 
         except Exception as e:
-            print(f"Error setting cell {cell.address} with value '{value}': {e}")
+            logger.error(f"Error setting cell {cell.address} with value '{value}': {e}")
             # Fall back to setting as plain text
             try:
                 cell.value = str(value)
             except:
-                print(f"Critical: Failed to set cell {cell.address} with any value type")
+                logger.error(f"Critical: Failed to set cell {cell.address} with any value type")
 
 
     def _fix_average_formula(self, formula: str) -> str:
@@ -536,7 +576,7 @@ class ExcelWriter:
         fixed_formula = re.sub(pattern, fix_match, formula)
         
         if fixed_formula != formula:
-            print(f"Fixed malformed AVERAGE formula: {formula} -> {fixed_formula}")
+            logger.info(f"Fixed malformed AVERAGE formula: {formula} -> {fixed_formula}")
         
         return fixed_formula
 
@@ -554,7 +594,7 @@ class ExcelWriter:
                 if cell_data['font_style']:  # Only apply if not empty
                     font.name = str(cell_data['font_style'])
             except Exception as e:
-                print(f"Warning: Could not set font style for cell {cell_ref}: {e}")
+                logger.warning(f"Warning: Could not set font style for cell {cell_ref}: {e}")
         
         # Apply font size
         if 'font_size' in cell_data:
@@ -562,7 +602,7 @@ class ExcelWriter:
                 if cell_data['font_size'] is not None:
                     font.size = float(cell_data['font_size'])
             except Exception as e:
-                print(f"Warning: Could not set font size for cell {cell_ref}: {e}")
+                logger.warning(f"Warning: Could not set font size for cell {cell_ref}: {e}")
         
         # Apply bold
         if 'bold' in cell_data:
@@ -570,7 +610,7 @@ class ExcelWriter:
                 if cell_data['bold'] is not None:
                     font.bold = bool(cell_data['bold'])
             except Exception as e:
-                print(f"Warning: Could not set bold for cell {cell_ref}: {e}")
+                logger.warning(f"Warning: Could not set bold for cell {cell_ref}: {e}")
         
         # Apply italic
         if 'italic' in cell_data:
@@ -578,7 +618,7 @@ class ExcelWriter:
                 if cell_data['italic'] is not None:
                     font.italic = bool(cell_data['italic'])
             except Exception as e:
-                print(f"Warning: Could not set italic for cell {cell_ref}: {e}")
+                logger.warning(f"Warning: Could not set italic for cell {cell_ref}: {e}")
         
         # Apply text color
         if 'text_color' in cell_data and cell_data['text_color']:
@@ -587,7 +627,7 @@ class ExcelWriter:
                 if color and hasattr(font, 'color'):
                     font.color = color # color could be hex string or RGB tuple
             except Exception as e:
-                print(f"Warning: Could not set text color for cell {cell_ref}: {e}")
+                logger.warning(f"Warning: Could not set text color for cell {cell_ref}: {e}")
 
     def _apply_alignment(self, cell: xw.Range, cell_data: Dict[str, Any]):
         """Apply cell alignment."""
@@ -604,7 +644,7 @@ class ExcelWriter:
                     xl_cell.HorizontalAlignment = -4131  # xlLeft
         except Exception as e:
             cell_ref = getattr(cell, 'address', 'unknown')
-            print(f"Warning: Could not set horizontal alignment for cell {cell_ref}: {e}")
+            logger.warning(f"Warning: Could not set horizontal alignment for cell {cell_ref}: {e}")
 
         try:
             if 'vertical_alignment' in cell_data:
@@ -618,7 +658,7 @@ class ExcelWriter:
 
         except Exception as e:
             cell_ref = getattr(cell, 'address', 'unknown')
-            print(f"Warning: Could not set vertical alignment for cell {cell_ref}: {e}")
+            logger.warning(f"Warning: Could not set vertical alignment for cell {cell_ref}: {e}")
 
 
     def _apply_fill_color(self, cell: xw.Range, fill_color):
@@ -630,7 +670,7 @@ class ExcelWriter:
             cell.color = fill_color
         except Exception as e:
             cell_ref = getattr(cell, 'address', 'unknown')
-            print(f"Warning: Could not set fill color for cell {cell_ref}: {e}")
+            logger.warning(f"Warning: Could not set fill color for cell {cell_ref}: {e}")
                  
 
     
