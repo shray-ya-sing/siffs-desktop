@@ -96,17 +96,22 @@ class ExcelWriter:
                     for cell_data in cells_data:
                         if 'cell' not in cell_data:
                             continue
-                            
-                        edit_id = self.edit_manager.apply_pending_edit(
-                            wb=self.workbook,
-                            sheet_name=sheet_name,
-                            cell_data=cell_data,
-                            version_id=version_id,
-                            file_path=self.file_path
-                        )
-                        edit_ids_by_sheet[sheet_name].append(edit_id)
+
+                        try:
+                            edit_id = self.edit_manager.apply_pending_edit(
+                                wb=self.workbook,
+                                sheet_name=sheet_name,
+                                cell_data=cell_data,
+                                version_id=version_id,
+                                file_path=self.file_path
+                            )
+                            edit_ids_by_sheet[sheet_name].append(edit_id)
+                        except Exception as e:
+                            print(f"Error in pending edit manager apply_pending_edit() function: {e}")
+                            # Continue applying to remaining cells even if one fails
+                            continue                     
                 
-                self.save() #TODO: Experiment with how to save, leave this in for now
+                self.workbook.save() # This just saves the workbook without any closing action or integration with the session manager
                 return edit_ids_by_sheet
             else:
                 # Direct write without pending edits
@@ -120,19 +125,20 @@ class ExcelWriter:
                         try:
                             cell = sheet.range(cell_data['cell'])
                             self._apply_cell_formatting(cell, cell_data)
+                            if self.storage:
+                                # Save the workbook blob to the metadata storage
+                                self.storage.store_file_blob(version_id =1, file_path=self.file_path, overwrite=True)
                         except Exception as e:
                             print(f"Error formatting cell {cell_data['cell']}: {e}")
+                            # Continue applying to remaining cells even if one fails
                             continue
 
-                self.save()
+                self.workbook.save()                
                 return True
 
         except Exception as e:
             print(f"Error creating new workbook: {e}")
             return {} if create_pending else False
-        finally:
-            if not create_pending:
-                self.close()
 
     def write_data_to_existing(
         self,
@@ -183,44 +189,56 @@ class ExcelWriter:
                 # Get or create worksheet
                 try:
                     sheet = self.workbook.sheets[sheet_name]
+                    print(f"Found existing worksheet: {sheet_name}")
                 except:
                     sheet = self.workbook.sheets.add(sheet_name)
+                    print(f"Created new worksheet: {sheet_name}")
                 
                 edit_ids_by_sheet[sheet_name] = []
                 
-                # Apply cell updates
+                # Iterate through the list of cells to be edited, Apply cell updates
                 for cell_data in cells_data:
                     if 'cell' not in cell_data:
                         continue
                     
                     if create_pending and self.edit_manager:
-                        edit_id = self.edit_manager.apply_pending_edit(
-                            wb=self.workbook,
-                            sheet_name=sheet_name,
-                            cell_data=cell_data,
-                            version_id=version_id,
-                            file_path=self.file_path
-                        )
-                        edit_ids_by_sheet[sheet_name].append(edit_id)
+
+                        try:
+                            edit_id = self.edit_manager.apply_pending_edit(
+                                wb=self.workbook,
+                                sheet_name=sheet_name,
+                                cell_data=cell_data,
+                                version_id=version_id,
+                                file_path=self.file_path
+                            )
+                            edit_ids_by_sheet[sheet_name].append(edit_id)
+                        except Exception as e:
+                            print(f"Error in pending edit manager apply_pending_edit() function: {e}")
+                            # Continue applying to remaining cells even if one fails
+                            continue
                     else:
                         # Direct update without tracking
                         try:
                             cell = sheet.range(cell_data['cell'])
                             self._apply_cell_formatting(cell, cell_data)
+                            # Store file blob to metadata storage as new version
+                            if self.storage:
+                                self.storage.store_file_blob(file_path=self.file_path, version_id=self.version_id, overwrite=False)
                         except Exception as e:
                             print(f"Error updating cell {cell_data['cell']}: {e}")
+                            # Continue applying to remaining cells even if one fails
                             continue
+
+            try:
+                self.workbook.save()
+            except Exception as e:
+                print(f"Error saving workbook: {e}")
             
-            if save:
-                self.save()
             return edit_ids_by_sheet
 
         except Exception as e:
-            print(f"Error updating existing workbook: {e}")
-            raise
-        finally:
-            if not create_pending:
-                self.close()
+            print(f"Error editing existing workbook: {e}")
+            return edit_ids_by_sheet
     
     # HELPER METHODS FOR WORKBOOK SESSION MANAGEMENT-------------------------------------------------------------------------------------------------------------------------------------
     def _get_or_create_workbook(self, file_path: str, create_new: bool = False) -> xw.Book:
