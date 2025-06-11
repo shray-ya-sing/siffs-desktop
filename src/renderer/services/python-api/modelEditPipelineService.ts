@@ -294,10 +294,10 @@ const modelEditPipelineService = {
    * Apply metadata changes to an Excel file
    * @param filePath Path to the Excel file
    * @param metadata Parsed metadata to apply
-   * @param visible Whether to show Excel during editing (default: false)
+   * @param visible Whether to show Excel during editing (default: true)
    * @returns Promise with the edit result
    */
-  async applyEdit(filePath: string, metadata: any, visible: boolean = false): Promise<PipelineResult> {
+  async applyEdit(filePath: string, metadata: any, visible: boolean = true): Promise<PipelineResult> {
     const response = await apiClient.post('/excel/edit-excel', {
       file_path: filePath,
       metadata: metadata,
