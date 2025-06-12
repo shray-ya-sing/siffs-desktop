@@ -268,3 +268,46 @@ async def accept_edits(
     except Exception as e:
         logger.exception(f"Error accepting edits: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to accept edits: {str(e)}")
+
+@router.post("/edits/reject", response_model=Dict[str, Any])
+async def reject_edits(
+    request: dict,
+) -> Dict[str, Any]:
+        """
+        Reject multiple pending edits by their IDs, restoring original cell states.
+        
+        Args:
+            edit_ids: List of edit IDs to reject
+            
+        Returns:
+            Dictionary containing:
+            - success: Whether the operation completed successfully
+            - rejected_count: Number of edits successfully rejected
+            - failed_ids: List of edit IDs that failed to be rejected
+        """
+        try:
+            if not request.get('edit_ids'):
+                raise HTTPException(status_code=400, detail="No edit IDs provided")
+            
+            with ExcelPendingEditManager() as edit_manager:
+                result = edit_manager.reject_edits(
+                    edit_ids=request.get('edit_ids')
+                )
+                
+            if not result.get('success', False):
+                error_msg = str(result.get('error', 'Unknown error'))
+                logger.error(f"Error rejecting edits: {error_msg}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to reject edits: {error_msg}"
+                )
+                
+            return result
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.exception(f"Error in reject_edits endpoint: {error_msg}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to process reject request: {error_msg}"
+            )
