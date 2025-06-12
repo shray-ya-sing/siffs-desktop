@@ -11,42 +11,46 @@ import sys
 folder_path = Path(__file__).parent.parent.parent.absolute()
 sys.path.append(str(folder_path))
 from metadata.storage.excel_metadata_storage import ExcelMetadataStorage
+from session_management.excel_session_manager import ExcelSessionManager
 import logging
 logger = logging.getLogger(__name__)
 
 class StorageUpdater:
     """Handles the final storage update when edits are accepted."""
     
-    def __init__(self, storage: 'ExcelMetadataStorage' = None):
+    def __init__(self, 
+                 storage: 'ExcelMetadataStorage' = None):
         self.storage = storage or ExcelMetadataStorage()
-    
+
+
     def update_storage(self, 
-                      file_path: str,
-                      version_id: int, 
-                      cell_updates: List[Dict[str, Any]],
-                      create_new_version: bool = True) -> int:
+                  file_path: str,
+                  version_ids: List[int], 
+                  cell_updates: List[Dict[str, Any]],
+                  create_new_version: bool = True) -> List[int]:
         """
-        Update storage with accepted cell edits.
+        Update storage with accepted cell edits for multiple versions.
         
+        Args:
+            file_path: Path to the workbook
+            version_ids: List of version IDs to update
+            cell_updates: List of cell updates to apply
+            create_new_version: Whether to create new versions for the updates
+            
         Returns:
-            int: The version_id that was updated
+            List of version IDs that were updated
         """
+        if not version_ids:
+            return []
+            
         try:
             # Ensure workbook exists in storage
             normalized_path = str(Path(file_path).resolve())
             self.storage.create_or_update_workbook(normalized_path)
             
-            if create_new_version:
-                # Create new version
-                new_version_id = self.storage.create_new_version(
-                    file_path=normalized_path,
-                    change_description=f"Accepted {len(cell_updates)} edits at {datetime.now()}"
-                )
-                target_version_id = new_version_id
-            else:
-                target_version_id = version_id
+            updated_versions = []
             
-            # Transform cell updates to storage format
+            # Transform cell updates to storage format once
             storage_updates = []
             for update in cell_updates:
                 storage_updates.append({
@@ -55,16 +59,63 @@ class StorageUpdater:
                     "cell_data": self._transform_to_storage_format(update['cell_data'])
                 })
             
-            # Update cells in storage (triggers propagation)
-            success = self.storage.update_cells(
-                version_id=target_version_id,
-                cell_updates=storage_updates
-            )
-            
-            return target_version_id if success else None
+            # Process each version
+            logger.info(f"Processing {len(version_ids)} versions for storage update")
+            for version_id in version_ids:
+                try:
+                    target_version_id = version_id
+                    
+                    if create_new_version:
+                        # Create new version based on the current version
+                        new_version_id = self.storage.create_new_version(
+                            file_path=normalized_path,
+                            change_description=f"Accepted {len(cell_updates)} edits at {datetime.now()}"
+                        )
+                        target_version_id = new_version_id
+                        logger.info(f"Created new version {new_version_id} for storage update")
+                    
+                    # Update cell metadata in storage
+                    logger.info(f"Updating cells in storage for version {version_id}")
+                    try:
+                        success = self.storage.update_cells(
+                            file_path=normalized_path,
+                            version_id=target_version_id,
+                            cell_updates=storage_updates
+                        )
+                    
+                        if success:
+                            updated_versions.append(target_version_id)
+                            logger.info(f"Successfully updated cells in storage for version {version_id}")
+                        else:
+                            logger.warning(f"Failed to update cells in storage for version {version_id}")
+                    except Exception as e:
+                        logger.error(f"Error updating cells in storage: {e}")
+                        continue
+
+                    try: 
+                        logger.info(f"Storing file blob for version {version_id}")
+                        success = self.storage.store_file_blob(
+                            file_path = normalized_path,
+                            version_id = target_version_id,
+                            overwrite = True
+                        )
+                        
+                        if success:
+                            logger.info(f"Successfully stored file blob for version {version_id}")
+                        else:
+                            logger.warning(f"Failed to store file blob for version {version_id}")
+                    except Exception as e:
+                        logger.error(f"Error storing file blob: {e}")
+                        continue
+                    
+                except Exception as e:
+                    logger.error(f"Error updating version {version_id}: {e}")
+                    continue
+                    
+            return updated_versions
             
         except Exception as e:
-            logger.error(f"Error updating storage: {e}")
+            logger.error(f"Error in update_storage: {e}")
             raise
     
     def _transform_to_storage_format(self, cell_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -145,21 +196,24 @@ class StorageUpdater:
 class ExcelPendingEditManager:
     """Manages temporary edits with cell color indicators."""
     
-    def __init__(self, storage: 'ExcelMetadataStorage' = None):
+    def __init__(self, 
+                 storage: 'ExcelMetadataStorage' = None,
+                 session_manager: 'ExcelSessionManager' = None):
         self.storage = storage or ExcelMetadataStorage()
         self.updater = StorageUpdater(self.storage)
-        self.pending_edits = {}
+        self.session_manager = session_manager or ExcelSessionManager()
         self.edit_indicator_prefix = "PE_"
         # Define indicator colors
         self.PENDING_COLOR = (255, 255, 200)  # Light yellow for pending
         self.PENDING_WITH_COLOR_COLOR = (200, 255, 200)  # Light green if edit includes color change
+        self.visible = True
     
     def apply_pending_edit(self, 
         wb: xw.Book,
         sheet_name: str,
         cell_data: Dict[str, Any],
         version_id: int,
-        file_path: str) -> str:
+        file_path: str) -> Dict[str, Any]:
         """
         Apply an edit directly to the cell without any pending indicators.
         
@@ -198,80 +252,18 @@ class ExcelPendingEditManager:
                 logger.error(f"Error applying formatting to cell {cell_address}: {e}")                
             
             logger.info(f"Applied pending edit to {cell_address} without indicator color")
-            return edit_id
+            return {"edit_id": edit_id}
             
         except Exception as e:
             logger.error(f"Error applying pending edit: {e}")
             raise
     
-    def apply_pending_edit_with_separate_color_indicator(self, 
-        wb: xw.Book,
-        sheet_name: str,
-        cell_data: Dict[str, Any],
-        version_id: int,
-        file_path: str) -> str:
-        """Apply a pending edit with separate color indicator."""
-        edit_id = str(uuid.uuid4())[:8]
-        cell_address = cell_data.get('cell', '')
-        
-        try:
-            sheet = wb.sheets[sheet_name]
-            cell = sheet.range(cell_address)
-            
-            # 1. Capture original state (including original color)
-            original_state = self._capture_cell_state(cell)
-            
-            # 2. Extract intended fill_color from cell_data if present
-            intended_fill_color = cell_data.get('fill_color')
-            
-            # 3. Create a copy of cell_data without fill_color for initial application
-            cell_data_without_color = cell_data.copy()
-            if 'fill_color' in cell_data_without_color:
-                del cell_data_without_color['fill_color']
-            
-            # 4. Apply the edit WITHOUT the fill color
-            if 'formula' in cell_data and cell_data['formula']:
-                cell.formula = cell_data['formula']
-            elif 'value' in cell_data:
-                cell.value = cell_data['value']
-            
-            # Apply formatting EXCEPT fill color
-            self._apply_formatting_from_data(cell, cell_data_without_color)
-            
-            # 5. Apply indicator color instead
-            if intended_fill_color:
-                # Use green indicator if edit includes a color change
-                cell.color = self.PENDING_WITH_COLOR_COLOR
-            else:
-                # Use yellow indicator for edits without color change
-                cell.color = self.PENDING_COLOR
-            
-            # 6. Store the pending edit with all data including intended color
-            self._create_pending_edit(
-                version_id=version_id,
-                sheet_name=sheet_name,
-                cell_address=cell_address,
-                original_state=original_state,
-                cell_data=cell_data,  # This includes the intended fill_color
-                edit_id=edit_id,
-                file_path=file_path,
-                intended_fill_color=intended_fill_color  # Store separately for clarity
-            )
-            
-            logger.info(f"Applied pending edit to {cell_address} with indicator color")
-            return edit_id
-            
-        except Exception as e:
-            logger.error(f"Error applying pending edit: {e}")
-            raise
-
-
     def apply_pending_edit_with_color_indicator(self, 
         wb: xw.Book,
         sheet_name: str,
         cell_data: Dict[str, Any],
         version_id: int,
-        file_path: str) -> str:
+        file_path: str) -> Dict[str, Any]:
         """Apply a pending edit with a green color indicator."""
         edit_id = str(uuid.uuid4())[:8]
         cell_address = cell_data.get('cell', '')
@@ -300,7 +292,7 @@ class ExcelPendingEditManager:
             cell.color = self.PENDING_WITH_COLOR_COLOR  # Always use green
             
             # 6. Store the pending edit with all data
-            self._create_pending_edit(
+            edit_dict = self._create_pending_edit(
                 version_id=version_id,
                 sheet_name=sheet_name,
                 cell_address=cell_address,
@@ -312,193 +304,174 @@ class ExcelPendingEditManager:
             )
             
             logger.info(f"Applied pending edit to {cell_address} with green indicator")
-            return edit_id
+            return edit_dict
             
         except Exception as e:
             logger.error(f"Error applying pending edit: {e}")
             raise
-    
-    
-    def accept_edit(self, 
-                    edit_id: str
-                    ) -> bool:
-        """Accept a pending edit and apply intended formatting."""
-        try:
-            edit = self._get_pending_edit(edit_id)
-            if not edit:
-                logger.info(f"No pending edit found for {edit_id}")
-                return False
-            
-            sheet = wb.sheets[edit['sheet_name']]
-            cell = sheet.range(edit['cell_address'])
-            
-            # Remove indicator color and apply intended color
-            intended_color = edit.get('intended_fill_color')
-            if intended_color:
-                # Apply the intended fill color
-                cell.color = intended_color
-                logger.info(f"Applied intended color {intended_color} to {cell_address}")
-            else:
-                # Restore original color if no color was intended
-                original_color = edit['original_state'].get('fill_color')
-                if original_color:
-                    cell.color = original_color
-                else:
-                    # Clear color if originally had none
-                    cell.color = None
-            
-            # Update storage
-            cell_updates = [{
-                'sheet_name': edit['sheet_name'],
-                'cell_address': edit['cell_address'],
-                'cell_data': edit['cell_data']
-            }]
-            
-            updated_version = self.updater.update_storage(
-                file_path=edit['file_path'],
-                version_id=edit['version_id'],
-                cell_updates=cell_updates,
-                create_new_version=create_new_version
-            )
-            
-            if updated_version:
-                self._remove_pending_edit(edit_id)
-                return True
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error accepting edit: {e}")
-            return False
-    
-    def reject_edit(self,
-                    edit_id: str) -> bool:
-        """Reject a pending edit and restore original state."""
-        try:
-            edit = self._get_pending_edit(edit_id)
-            if not edit:
-                logger.info(f"No pending edit found for {edit_id}")
-                return False
-            
-            sheet = wb.sheets[edit['sheet_name']]
-            cell = sheet.range(edit['cell_address'])
-            
-            # Restore original state
-            original = edit['original_state']
-            
-            # Restore value/formula
-            if original.get('formula'):
-                cell.formula = original['formula']
-            else:
-                cell.value = original.get('value')
-            
-            # Restore ALL formatting including color
-            self._restore_cell_state(cell, original)
-            
-            # Remove from pending edits
-            self._remove_pending_edit(edit_id)
-            
-            logger.info(f"Rejected edit and restored original state for {edit['cell_address']}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error rejecting edit: {e}")
-            return False
-    
-    def accept_all_edits(self,
-                        wb: xw.Book,
-                        version_id: int,
-                        sheet_name: str = None,
-                        create_new_version: bool = True) -> bool:
-        """Accept all pending edits efficiently."""
-        try:
-            pending = self._get_all_pending_for_version(version_id, sheet_name)
-            
-            if not pending:
-                logger.info("No pending edits to accept")
-                return True
-            
-            # Apply all intended colors and prepare updates
-            cell_updates = []
-            for edit in pending:
-                try:
-                    sheet = wb.sheets[edit['sheet_name']]
-                    cell = sheet.range(edit['cell_address'])
-                    
-                    # Apply intended color or restore original
-                    intended_color = edit.get('intended_fill_color')
-                    if intended_color:
-                        cell.color = intended_color
-                    else:
-                        original_color = edit['original_state'].get('fill_color')
-                        if original_color:
-                            cell.color = original_color
-                        else:
-                            cell.color = None
-                    
-                    cell_updates.append({
-                        'sheet_name': edit['sheet_name'],
-                        'cell_address': edit['cell_address'],
-                        'cell_data': edit['cell_data']
-                    })
-                    
-                except Exception as e:
-                    logger.warning(f"Warning: Could not process {edit['cell_address']}: {e}")
-            
-            # Batch update storage
-            file_path = pending[0]['file_path'] if pending else None
-            updated_version = self.updater.update_storage(
-                file_path=file_path,
-                version_id=version_id,
-                cell_updates=cell_updates,
-                create_new_version=create_new_version
-            )
-            
-            if updated_version:
-                # Clear pending edits
-                for edit in pending:
-                    self._remove_pending_edit(
-                        version_id, 
-                        edit['sheet_name'], 
-                        edit['cell_address']
-                    )
-                return True
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error accepting all edits: {e}")
-            return False
 
-    def get_pending_edit_summary(self, wb: xw.Book, version_id: int) -> List[Dict]:
-        """Get a summary of all pending edits with visual status."""
-        pending = self._get_all_pending_for_version(version_id)
-        summary = []
+
+    # ACCEPTING / REJECTING EDITS-------------------------------------------------------------------------------------------------------------------------------------
+
+    def accept_edits(
+        self,
+        edit_ids: List[str],
+        create_new_version: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Accept multiple pending edits by their IDs, update storage, and apply changes to the workbook.
         
-        for edit in pending:
-            try:
-                sheet = wb.sheets[edit['sheet_name']]
-                cell = sheet.range(edit['cell_address'])
-                
-                # Check current color to verify it's still pending
-                current_color = cell.color
-                is_pending = (current_color == self.PENDING_COLOR or 
-                             current_color == self.PENDING_WITH_COLOR_COLOR)
-                
-                summary.append({
-                    'sheet_name': edit['sheet_name'],
-                    'cell_address': edit['cell_address'],
-                    'edit_id': edit['edit_id'],
-                    'has_color_change': bool(edit.get('intended_fill_color')),
-                    'is_pending': is_pending,
-                    'original_value': edit['original_state'].get('value'),
-                    'new_value': edit['cell_data'].get('value') or edit['cell_data'].get('formula')
-                })
-            except:
-                continue
-                
-        return summary
+        Args:
+            edit_ids: List of edit IDs to accept
+            create_new_version: Whether to create a new version in storage
+            
+        Returns:
+            Dictionary containing:
+            - 'success': Whether the operation completed successfully
+            - 'accepted_count': Number of edits successfully accepted
+            - 'failed_ids': List of edit IDs that failed to be accepted
+            - 'accepted_edit_version_ids': The version IDs that were updated
+        """
+        if not edit_ids:
+            return {
+                'success': False,
+                'accepted_count': 0,
+                'failed_ids': [],
+                'accepted_edit_version_ids': None
+            }
+        
+        try:
+            # Batch update status in storage to change status to accepted
+            result = self.storage.batch_update_edit_statuses(
+                edit_ids=edit_ids,
+                new_status='accepted'
+            )
+            
+            if not result or 'updated_count' not in result:
+                return {
+                    'success': False,
+                    'accepted_count': 0,
+                    'failed_ids': edit_ids,
+                    'accepted_edit_version_ids': None
+                }
+            
+            logger.info(f"Batch updated {result['updated_count']} edits to accepted status")
+            # Replace the cell updates preparation with:
+            cell_updates = []
+            successful_edits = result.get('edits', [])
 
+            accepted_edits_version_ids = [] # Account for the scenario where edits across multiple versions get accepted
+            # Multiple versions should never happen but we have to be certain
+
+            # Group edits by file path to minimize session operations
+            edits_by_file = {}
+            for edit in successful_edits:
+                file_path = edit['file_path']
+                if file_path not in edits_by_file:
+                    edits_by_file[file_path] = []
+                edits_by_file[file_path].append(edit)
+
+            for file_path, file_edits in edits_by_file.items():
+                try:
+                    # Process storage updates
+                    version_ids = set()
+                    # Get the xlwings workbook object to perform edits in wb
+                    wb = self.get_workbook_from_session_manager(file_path)
+
+                    for edit in file_edits:
+                        
+                        version_id = edit.get('version_id')
+                        if version_id:
+                            version_ids.add(version_id)
+
+                        try:
+                            cell_updates.append({
+                                'sheet_name': edit['sheet_name'],
+                                'cell_address': edit['cell_address'],
+                                'cell_data': json.loads(edit['cell_data'])
+                            })
+
+                            logger.info(f"Appended cell update for edit {edit.get('edit_id')}")
+                        except (KeyError, json.JSONDecodeError) as e:
+                            logger.error(f"Error appending cell update for edit {edit.get('edit_id')}: {e}")
+                            if 'failed_ids' not in result:
+                                result['failed_ids'] = []
+                            result['failed_ids'].append(edit.get('edit_id'))
+                            result['updated_count'] = max(0, result.get('updated_count', 0) - 1)
+
+                        # Apply changes to the workbook
+                        try:                            
+                            sheet = wb.sheets[edit['sheet_name']]
+                            cell = sheet.range(edit['cell_address'])
+                            
+                            # Apply the intended fill color if it exists
+                            intended_color = edit.get('intended_fill_color')
+                            if intended_color:
+                                cell.color = intended_color
+                                logger.info(f"Applied intended fill color {intended_color} for edit {edit['edit_id']} to cell {cell} on {sheet} in workbook")
+                            else:
+                                # Restore original color if no color was intended
+                                original_state = json.loads(edit.get('original_state', '{}'))
+                                original_color = original_state.get('fill_color')
+                                if original_color:
+                                    cell.color = original_color
+                                    logger.info(f"Applied original fill color {original_color} for edit {edit['edit_id']} to cell {cell} on {sheet} in workbook")
+                                else:
+                                    cell.color = (255, 255, 255)
+                                    logger.info(f"No original fill color found for edit {edit['edit_id']} to cell {cell} on {sheet} in workbook. Applying white color instead.")
+                            
+
+                                    
+                        except Exception as e:
+                            logger.error(f"Error applying original fill color for edit {edit['edit_id']} to workbook: {e}")
+                            if 'failed_ids' not in result:
+                                result['failed_ids'] = []
+                            result['failed_ids'].append(edit.get('edit_id'))
+                            result['updated_count'] = max(0, result.get('updated_count', 0) - 1)
+
+                except Exception as e:
+                    logger.error(f"Error processing accepted edits for file {file_path}: {e}")
+
+                # If we have any successful updates, update the storage metadtaa to reflect updated excel file metadata                
+                if cell_updates and self.storage and version_ids:
+                    try:                                         
+                        # Update storage with the accepted changes
+                        self.updater.update_storage(
+                            file_path=file_path,
+                            version_ids=version_ids,
+                            cell_updates=cell_updates,
+                            create_new_version=create_new_version or True
+                        )
+                        accepted_edits_version_ids.extend(version_ids)
+                        logger.info(f"Successfully updated storage metadata for accepted edits")
+                    except Exception as e:
+                        logger.error(f"Error updating storage metadata for accepted edits: {e}")
+                        # Continue to apply changes to the workbook even if storage update fails
+                        if 'failed_ids' not in result:
+                            result['failed_ids'] = []
+                        result['failed_ids'].append(edit.get('edit_id'))
+                        result['updated_count'] = max(0, result.get('updated_count', 0) - 1)
+            
+            return {
+                'success': True,
+                'accepted_count': result.get('updated_count', 0),
+                'failed_ids': result.get('failed_ids', []),
+                'accepted_edit_version_ids': accepted_edits_version_ids
+            }
+            
+        except Exception as e:
+            logger.error(f"Error accepting edits: {e}")
+            return {
+                'success': False,
+                'accepted_count': 0,
+                'failed_ids': edit_ids,
+                'accepted_edit_version_ids': None,
+                'error': str(e)
+            }
+    
+
+    # HELPER METHODS---------------------------------------------------------------------------------------------------------------------------------------------
+    
     def _apply_formatting_from_data(self, cell: xw.Range, cell_data: Dict):
         """Apply formatting from cell data dict (excluding fill_color if using indicators)."""
         try:
@@ -541,40 +514,7 @@ class ExcelPendingEditManager:
         
         return state
     
-    def reject_all_edits(self,
-                        wb: xw.Book,
-                        version_id: int,
-                        sheet_name: str = None) -> bool:
-        """Reject all pending edits and revert to original state."""
-        try:
-            pending = self._get_all_pending_for_version(version_id, sheet_name)
-            
-            if not pending:
-                logger.info("No pending edits to reject")
-                return True  # Fixed indentation
-            
-            # Create a copy of the list to avoid modifying it during iteration
-            pending_edits = list(pending)
-            success = True
-            
-            for edit in pending_edits:
-                # Reuse the reject_edit method for each pending edit
-                result = self.reject_edit(
-                    wb=wb,
-                    version_id=version_id,
-                    sheet_name=edit['sheet_name'],
-                    cell_address=edit['cell_address']
-                )
-                
-                if not result:
-                    success = False
-                    logger.error(f"Failed to reject edit at {edit['sheet_name']}!{edit['cell_address']}")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"Error in reject_all_edits: {e}")
-            return False
+    
 
     def _restore_cell_state(self, cell: xw.Range, state: Dict[str, Any]):
         """Restore a cell to its original state."""
@@ -599,43 +539,41 @@ class ExcelPendingEditManager:
 
     
     def _create_pending_edit(self, **kwargs):
-        """Store a pending edit record."""
-        version_id = kwargs['version_id']
-        if version_id not in self.pending_edits:
-            self.pending_edits[version_id] = {}
+        """Create and return a pending edit dictionary.
         
-        key = f"{kwargs['sheet_name']}!{kwargs['cell_address']}"
-        self.pending_edits[version_id][key] = {
+        Returns:
+            dict: The created edit dictionary with timestamp
+        """
+        edit_dict = {
             'timestamp': datetime.now().isoformat(),
             **kwargs
         }
-    
-    def _get_pending_edit(self, edit_id: str) -> Optional[Dict]:
-        """Get a pending edit record."""
-        for version_id, edits in self.pending_edits.items():
-            for key, edit in edits.items():
-                if edit['edit_id'] == edit_id:
-                    return edit
-        return None
-    
-    def _remove_pending_edit(self, edit_id: str):
-        """Remove a pending edit record."""
-        for version_id, edits in self.pending_edits.items():
-            for key, edit in edits.items():
-                if edit['edit_id'] == edit_id:
-                    del edits[key]
-                    break
-    
-    def _get_all_pending_for_version(self, version_id: int, 
-                                    sheet_name: str = None) -> List[Dict]:
-        """Get all pending edits for a version."""
-        if version_id not in self.pending_edits:
-            return []
+        return edit_dict
+
+    # This method can only be used for accessing existing workbooks i.e. valid filepaths. 
+    # If the file does not exist, it will raise an error.
+    def get_workbook_from_session_manager(self, file_path: str) -> xw.Book:
+        """Get a workbook from the session manager.
+            
+            Args:
+                file_path (str): The path to the workbook.
+            
+            Returns:
+                xw.Book: The workbook.
+        """
+        file_path = str(Path(file_path).resolve())
+        wb = self.session_manager.get_session(file_path, self.visible)
+        if not wb:
+            raise RuntimeError(f"Failed to get session for {file_path}. Check filepath validity.")
+        return wb
         
-        pending = []
-        for key, edit in self.pending_edits[version_id].items():
-            if sheet_name and edit['sheet_name'] != sheet_name:
-                continue
-            pending.append(edit)
-        
-        return pending
+    # CONTEXT MANAGER METHODS -------------------------------------------------------------------------------------------------------------------------------------
+
+    def __enter__(self):
+        """Context manager entry - return self to be used in the with statement."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - no resource cleanup, just pass through."""
+        # Don't suppress any exceptions
+        return False
