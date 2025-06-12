@@ -2,12 +2,15 @@ from pathlib import Path
 import os
 import sqlite3
 import json
-from typing import Optional, List, Dict, Set
+from typing import Optional, List, Dict, Set, Any
 import atexit
 import threading
 import hashlib
 from datetime import datetime
 import re
+
+import logging
+logger = logging.getLogger(__name__)
 
 # Class-level registry to track initialized databases
 _initialized_dbs = set()
@@ -105,10 +108,10 @@ class ExcelMetadataStorage:
                     self._init_schema()
                 else:
                     # If tables exist, just ensure we have all the necessary tables
-                    required_tables = {'workbooks', 'file_versions', 'chunks', 'cells'}
+                    required_tables = {'workbooks', 'file_versions', 'chunks', 'cells', 'pending_edits'}
                     cursor.execute("""
                         SELECT name FROM sqlite_master 
-                        WHERE type='table' AND name IN (?, ?, ?, ?)
+                        WHERE type='table' AND name IN (?, ?, ?, ?, ?)
                     """, tuple(required_tables))
                     
                     existing_tables = {row[0] for row in cursor.fetchall()}
@@ -213,10 +216,26 @@ class ExcelMetadataStorage:
                     UNIQUE(version_id, sheet_name, cell_address)
                 );
                 
+                -- Pending edits table
+                CREATE TABLE pending_edits (
+                    edit_id TEXT PRIMARY KEY,
+                    version_id INTEGER NOT NULL,
+                    file_path TEXT NOT NULL,
+                    sheet_name TEXT NOT NULL,
+                    cell_address TEXT NOT NULL,
+                    original_state TEXT NOT NULL,
+                    cell_data TEXT NOT NULL,
+                    intended_fill_color TEXT,
+                    timestamp TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending'
+                );
+                
                 -- Create indexes
                 CREATE INDEX idx_chunks_version_id ON chunks(version_id);
                 CREATE INDEX idx_cells_version_sheet ON cells(version_id, sheet_name);
                 CREATE INDEX idx_file_versions_workbook ON file_versions(workbook_id);
+                CREATE INDEX idx_pending_edits_version ON pending_edits(version_id);
+                CREATE INDEX idx_pending_edits_status ON pending_edits(status);
                 
                 -- Set pragmas
                 PRAGMA journal_mode=WAL;
@@ -464,40 +483,40 @@ class ExcelMetadataStorage:
                             
                             chunk_id = cursor.lastrowid
 
-                     # Store cells if present in chunk
-                    if 'cellData' in chunk and isinstance(chunk['cellData'], list):
-                        for row_idx, row in enumerate(chunk['cellData']):
-                            if not isinstance(row, list):
-                                continue
-                                
-                            for col_idx, cell in enumerate(row):
-                                if not isinstance(cell, dict):
-                                    continue
-                                    
-                                cell_address = cell.get('address') or f"{chr(65 + col_idx)}{row_idx + 1}"
-                                cell_json = json.dumps(cell)
-                                cell_hash = self._calculate_hash(cell_json)
-                                
-                                cursor.execute("""
-                                    INSERT INTO cells (
-                                        version_id,
-                                        chunk_id,
-                                        sheet_name,
-                                        cell_address,
-                                        cell_json,
-                                        cell_hash,
-                                        created_at,
-                                        updated_at
-                                    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                                """, (
-                                    new_version_id,
-                                    chunk_id,
-                                    chunk.get('sheetName', ''),
-                                    cell_address,
-                                    cell_json,
-                                    cell_hash
-                                ))  
-                
+                            # Store cells if present in chunk
+                            if 'cellData' in chunk and isinstance(chunk['cellData'], list):
+                                for row_idx, row in enumerate(chunk['cellData']):
+                                    if not isinstance(row, list):
+                                        continue
+                                        
+                                    for col_idx, cell in enumerate(row):
+                                        if not isinstance(cell, dict):
+                                            continue
+                                            
+                                        cell_address = cell.get('address') or f"{chr(65 + col_idx)}{row_idx + 1}"
+                                        cell_json = json.dumps(cell)
+                                        cell_hash = self._calculate_hash(cell_json)
+                                        
+                                        cursor.execute("""
+                                            INSERT INTO cells (
+                                                version_id,
+                                                chunk_id,
+                                                sheet_name,
+                                                cell_address,
+                                                cell_json,
+                                                cell_hash,
+                                                created_at,
+                                                updated_at
+                                            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                        """, (
+                                            new_version_id,
+                                            chunk_id,
+                                            chunk.get('sheetName', ''),
+                                            cell_address,
+                                            cell_json,
+                                            cell_hash
+                                        ))  
+                        
                 self.conn.commit()
                 return new_version_id
                 
@@ -668,6 +687,157 @@ class ExcelMetadataStorage:
             result = result * 26 + (ord(char) - ord('A') + 1)
         return result
 
+    def update_cells(
+        self,
+        version_id: int,
+        cell_updates: List[Dict[str, Any]],
+        file_path: Optional[str] = None
+    ) -> bool:
+        """
+        Update multiple cells in the specified version.
+        
+        Args:
+            version_id: The version ID to update
+            cell_updates: List of cell updates, each containing:
+                - sheet_name: Name of the sheet
+                - cell_address: Address of the cell (e.g., 'A1')
+                - cell_data: Dictionary containing cell data (value, formatting, etc.)
+            file_path: Optional path to the workbook file (for validation)
+            
+        Returns:
+            bool: True if all updates were successful, False otherwise
+        """
+        if not cell_updates:
+            return True
+            
+        with self._lock:
+            cursor = self.conn.cursor()
+            
+            try:
+                cursor.execute("BEGIN TRANSACTION")
+                
+                # Verify the version exists and get workbook info
+                cursor.execute("""
+                    SELECT v.workbook_id, w.file_path
+                    FROM file_versions v
+                    JOIN workbooks w ON v.workbook_id = w.workbook_id
+                    WHERE v.version_id = ?
+                """, (version_id,))
+                
+                version_info = cursor.fetchone()
+                if not version_info:
+                    logger.error(f"Version {version_id} not found")
+                    return False
+                    
+                # If file_path was provided, verify it matches
+                if file_path and str(Path(file_path).resolve()) != version_info['file_path']:
+                    logger.error(f"File path mismatch for version {version_id}")
+                    return False
+                    
+                # Process each cell update
+                for update in cell_updates:
+                    sheet_name = update.get('sheet_name')
+                    cell_address = update.get('cell_address')
+                    cell_data = update.get('cell_data', {})
+                    
+                    if not all([sheet_name, cell_address, cell_data]):
+                        logger.warning(f"Skipping invalid cell update: {update}")
+                        continue
+                        
+                    # Find the chunk containing this cell
+                    cursor.execute("""
+                        SELECT c.chunk_id, c.chunk_json
+                        FROM chunks c
+                        WHERE c.version_id = ? 
+                        AND c.sheet_name = ?
+                        AND c.start_row <= ?
+                        AND c.end_row >= ?
+                    """, (
+                        version_id,
+                        sheet_name,
+                        int(re.search(r'\d+', cell_address).group()),  # Extract row number
+                        int(re.search(r'\d+', cell_address).group())
+                    ))
+                    
+                    chunk = cursor.fetchone()
+                    if not chunk:
+                        logger.warning(f"No chunk found for cell {sheet_name}!{cell_address}")
+                        continue
+                        
+                    # Parse chunk data
+                    chunk_data = json.loads(chunk['chunk_json'])
+                    cell_found = False
+                    
+                    # Update cell in chunk data
+                    for row in chunk_data.get('cellData', []):
+                        for cell in row:
+                            if cell.get('address') == cell_address:
+                                # Update cell data
+                                cell.update(cell_data)
+                                cell_found = True
+                                break
+                        if cell_found:
+                            break
+                            
+                    if not cell_found:
+                        logger.warning(f"Cell {sheet_name}!{cell_address} not found in chunk")
+                        continue
+                        
+                    # Update chunk in database
+                    chunk_json = json.dumps(chunk_data)
+                    chunk_text = self._generate_chunk_text(chunk_data)
+                    chunk_hash = self._calculate_hash(chunk_json)
+                    
+                    cursor.execute("""
+                        UPDATE chunks
+                        SET chunk_json = ?,
+                            chunk_text = ?,
+                            chunk_hash = ?,
+                            is_modified = 1,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE chunk_id = ?
+                    """, (
+                        chunk_json,
+                        chunk_text,
+                        chunk_hash,
+                        chunk['chunk_id']
+                    ))
+                    
+                    # Update cell in cells table
+                    cell_json = json.dumps(cell_data)
+                    cell_hash = self._calculate_hash(cell_json)
+                    
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO cells (
+                            version_id,
+                            chunk_id,
+                            sheet_name,
+                            cell_address,
+                            cell_json,
+                            cell_hash,
+                            created_at,
+                            updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """, (
+                        version_id,
+                        chunk['chunk_id'],
+                        sheet_name,
+                        cell_address,
+                        cell_json,
+                        cell_hash
+                    ))
+                
+                # Update the full metadata for the version
+                self._update_full_metadata(cursor, version_id)
+                
+                self.conn.commit()
+                return True
+                
+            except Exception as e:
+                self.conn.rollback()
+                logger.error(f"Error updating cells: {e}")
+                return False
+    
     def _update_chunk_from_cells(self, cursor, version_id: int, chunk_id: int) -> None:
         """Update a chunk's metadata based on its cells."""
         # Get all cells in this chunk
@@ -930,52 +1100,570 @@ class ExcelMetadataStorage:
 
     def get_all_chunks(self, version_id: int, sheet_name: str = None) -> List[dict]:
         """Get all chunks for a version, optionally filtered by sheet."""
+        try:
+            with self._lock:
+                cursor = self.conn.cursor()
+                
+                query = """
+                    SELECT chunk_id, chunk_json, sheet_name, start_row, end_row
+                    FROM chunks 
+                    WHERE version_id = ?
+                """
+                params = [version_id]
+                
+                if sheet_name:
+                    query += " AND sheet_name = ?"
+                    params.append(sheet_name)
+                    
+                query += " ORDER BY sheet_name, chunk_index"
+                
+                cursor.execute(query, params)
+                
+                results = []
+                for row in cursor.fetchall():
+                    chunk_data = json.loads(row['chunk_json'])
+                    chunk_data['_metadata'] = {
+                        'chunk_id': row['chunk_id'],
+                        'sheet_name': row['sheet_name'],
+                        'start_row': row['start_row'],
+                        'end_row': row['end_row']
+                    }
+                    results.append(chunk_data)
+                    
+                return results
+            
+        except (sqlite3.Error, json.JSONDecodeError) as e:
+            print(f"Error getting chunks: {e}")
+            return []
+    
+    # Pending Edits Management Methods--------------------------------------------------------------------------------------------------------
+    
+    def _ensure_pending_edits_table(self) -> None:
+        """Ensure the pending_edits table exists."""
         with self._lock:
             cursor = self.conn.cursor()
+            try:
+                # Create table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS pending_edits (
+                        edit_id TEXT PRIMARY KEY,
+                        version_id INTEGER NOT NULL,
+                        file_path TEXT NOT NULL,
+                        sheet_name TEXT NOT NULL,
+                        cell_address TEXT NOT NULL,
+                        original_state TEXT NOT NULL,
+                        cell_data TEXT NOT NULL,
+                        intended_fill_color TEXT,
+                        timestamp TEXT NOT NULL,
+                        status TEXT DEFAULT 'pending'
+                    )
+                """)
+                
+                # Create index 1
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_pending_edits_version 
+                    ON pending_edits(version_id)
+                """)
+                
+                # Create index 2
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_pending_edits_status 
+                    ON pending_edits(status)
+                """)
+                
+                self.conn.commit()
+                logger.info("Called _ensure_pending_edits method and verified pending_edits table and indexes exist")
+            except sqlite3.Error as e:
+                self.conn.rollback()
+                logger.error(f"Error ensuring pending_edits table: {e}")
+                raise
+            finally:
+                cursor.close()
+        
+    
+    def create_pending_edit(self, **kwargs) -> str:
+        """
+        Create a new pending edit record.
+        
+        Args:
+            **kwargs: Should contain:
+                - edit_id: Unique ID for the edit
+                - version_id: Version ID this edit belongs to
+                - file_path: Path to the workbook file
+                - sheet_name: Name of the sheet
+                - cell_address: Address of the cell being edited
+                - original_state: Dict containing original cell state
+                - cell_data: Dict containing new cell data
+                - intended_fill_color: Optional fill color for the cell
+                
+        Returns:
+            str: The edit_id if successful, None otherwise
+        """
+        required_fields = ['edit_id', 'version_id', 'file_path', 'sheet_name', 
+                         'cell_address', 'original_state', 'cell_data']
+        
+        if not all(field in kwargs for field in required_fields):
+            raise ValueError(f"Missing required fields. Required: {required_fields}")
+        
+        try:
+            edit_data = {
+                'edit_id': kwargs['edit_id'],
+                'version_id': kwargs['version_id'],
+                'file_path': kwargs['file_path'],
+                'sheet_name': kwargs['sheet_name'],
+                'cell_address': kwargs['cell_address'],
+                'original_state': json.dumps(kwargs['original_state']),
+                'cell_data': json.dumps(kwargs['cell_data']),
+                'intended_fill_color': kwargs.get('intended_fill_color'),
+                'timestamp': kwargs.get('timestamp', datetime.utcnow().isoformat()),
+                'status': 'pending'
+            }
             
-            query = """
-                SELECT chunk_id, chunk_json, sheet_name, start_row, end_row
-                FROM chunks 
-                WHERE version_id = ?
-            """
-            params = [version_id]
+            with self._lock:
+                cursor = self.conn.cursor()
+                cursor.execute('''
+                    INSERT OR REPLACE INTO pending_edits 
+                    (edit_id, version_id, file_path, sheet_name, cell_address, 
+                     original_state, cell_data, intended_fill_color, timestamp, status)
+                    VALUES 
+                    (:edit_id, :version_id, :file_path, :sheet_name, :cell_address,
+                     :original_state, :cell_data, :intended_fill_color, :timestamp, :status)
+                ''', edit_data)
+                
+                self.conn.commit()
+                return edit_data['edit_id']
+                
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            print(f"Error creating pending edit: {e}")
+            raise
+    
+    def get_pending_edit(self, edit_id: str) -> Optional[Dict]:
+        """
+        Retrieve a pending edit by its ID.
+        
+        Args:
+            edit_id: The ID of the edit to retrieve
+            
+        Returns:
+            Dict containing the edit data, or None if not found
+        """
+        try:
+            with self._lock:
+                cursor = self.conn.cursor()
+                cursor.execute('''
+                    SELECT * FROM pending_edits 
+                    WHERE edit_id = ?
+                ''', (edit_id,))
+                
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                
+                # Convert to dict and deserialize JSON fields
+                edit = dict(row)
+                edit['original_state'] = json.loads(edit['original_state'])
+                edit['cell_data'] = json.loads(edit['cell_data'])
+                return edit
+                
+        except (sqlite3.Error, json.JSONDecodeError) as e:
+            print(f"Error getting pending edit: {e}")
+            return None
+    
+    def get_pending_edits_for_version(self, version_id: int, 
+                                     sheet_name: str = None, 
+                                     status: str = 'pending') -> List[Dict]:
+        """
+        Retrieve all pending edits for a specific version and optional sheet.
+        
+        Args:
+            version_id: The version ID to get edits for
+            sheet_name: Optional sheet name to filter by
+            status: Status filter ('pending', 'accepted', 'rejected')
+            
+        Returns:
+            List of edit dictionaries
+        """
+        try:
+            query = '''
+                SELECT * FROM pending_edits 
+                WHERE version_id = ? AND status = ?
+            '''
+            params = [version_id, status]
             
             if sheet_name:
-                query += " AND sheet_name = ?"
+                query += ' AND sheet_name = ?'
                 params.append(sheet_name)
                 
-            query += " ORDER BY sheet_name, chunk_index"
+            query += ' ORDER BY timestamp DESC'
             
-            cursor.execute(query, params)
-            
-            results = []
-            for row in cursor.fetchall():
-                chunk_data = json.loads(row['chunk_json'])
-                chunk_data['_metadata'] = {
-                    'chunk_id': row['chunk_id'],
-                    'sheet_name': row['sheet_name'],
-                    'start_row': row['start_row'],
-                    'end_row': row['end_row']
-                }
-                results.append(chunk_data)
+            with self._lock:
+                cursor = self.conn.cursor()
+                cursor.execute(query, params)
                 
-            return results
+                edits = []
+                for row in cursor.fetchall():
+                    edit = dict(row)
+                    edit['original_state'] = json.loads(edit['original_state'])
+                    edit['cell_data'] = json.loads(edit['cell_data'])
+                    edits.append(edit)
+                    
+                return edits
+                
+        except (sqlite3.Error, json.JSONDecodeError) as e:
+            print(f"Error getting pending edits: {e}")
+            return []
+    
+    def update_edit_status(self, edit_id: str, status: str) -> bool:
+        """
+        Update the status of an edit.
+        
+        Args:
+            edit_id: The ID of the edit to update
+            status: New status ('pending', 'accepted', 'rejected')
+            
+        Returns:
+            bool: True if update was successful, False otherwise
+        """
+        if status not in ('pending', 'accepted', 'rejected'):
+            raise ValueError("Status must be one of: 'pending', 'accepted', 'rejected'")
+            
+        try:
+            with self._lock:
+                cursor = self.conn.cursor()
+                cursor.execute('''
+                    UPDATE pending_edits 
+                    SET status = ?, timestamp = ?
+                    WHERE edit_id = ?
+                ''', (status, datetime.utcnow().isoformat(), edit_id))
+                
+                self.conn.commit()
+                return cursor.rowcount > 0
+                
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            print(f"Error updating edit status: {e}")
+            return False
+    
+    def delete_pending_edit(self, edit_id: str) -> bool:
+        """
+        Delete a pending edit.
+        
+        Args:
+            edit_id: The ID of the edit to delete
+            
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        try:
+            with self._lock:
+                cursor = self.conn.cursor()
+                cursor.execute('''
+                    DELETE FROM pending_edits 
+                    WHERE edit_id = ?
+                ''', (edit_id,))
+                
+                self.conn.commit()
+                return cursor.rowcount > 0
+                
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            print(f"Error deleting pending edit: {e}")
+            return False
+    
+    def get_pending_edits_by_ids(self, edit_ids: List[str]) -> List[Dict]:
+        """
+        Get multiple pending edits by their IDs.
+        
+        Args:
+            edit_ids: List of edit IDs to retrieve
+            
+        Returns:
+            List of edit dictionaries, in the same order as the input IDs.
+            If an edit is not found, it will be omitted from the results.
+        """
+        if not edit_ids:
+            return []
+            
+        try:
+            with self._lock:
+                # Create a parameterized query with the right number of placeholders
+                placeholders = ','.join('?' * len(edit_ids))
+                query = f'''
+                    SELECT * FROM pending_edits 
+                    WHERE edit_id IN ({placeholders})
+                '''
+                
+                cursor = self.conn.cursor()
+                cursor.execute(query, edit_ids)
+                
+                # Create a dict of edit_id -> edit for quick lookup
+                edits_by_id = {}
+                for row in cursor.fetchall():
+                    edit = dict(row)
+                    # Deserialize JSON fields
+                    edit['original_state'] = json.loads(edit['original_state'])
+                    edit['cell_data'] = json.loads(edit['cell_data'])
+                    edits_by_id[edit['edit_id']] = edit
+                
+                # Return results in the order of input IDs, skipping any not found
+                return [edits_by_id[edit_id] for edit_id in edit_ids if edit_id in edits_by_id]
+                
+        except (sqlite3.Error, json.JSONDecodeError) as e:
+            print(f"Error getting batch pending edits: {e}")
+            return []
+    
+    def delete_pending_edits(self, edit_ids: List[str]) -> int:
+        """
+        Delete multiple pending edits by their IDs.
+        
+        Args:
+            edit_ids: List of edit IDs to delete
+            
+        Returns:
+            int: Number of edits successfully deleted
+        """
+        if not edit_ids:
+            return 0
+            
+        try:
+            with self._lock:
+                cursor = self.conn.cursor()
+                
+                # Create a temporary table for batch delete
+                cursor.execute('CREATE TEMP TABLE IF NOT EXISTS temp_edit_ids (edit_id TEXT PRIMARY KEY)')
+                
+                # Insert the IDs to delete
+                cursor.executemany(
+                    'INSERT OR IGNORE INTO temp_edit_ids (edit_id) VALUES (?)',
+                    [(edit_id,) for edit_id in edit_ids]
+                )
+                
+                # Perform the delete using a join with the temp table
+                cursor.execute('''
+                    DELETE FROM pending_edits
+                    WHERE edit_id IN (SELECT edit_id FROM temp_edit_ids)
+                ''')
+                
+                # Clean up
+                cursor.execute('DROP TABLE IF EXISTS temp_edit_ids')
+                
+                count = cursor.rowcount
+                self.conn.commit()
+                return count
+                
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            print(f"Error deleting batch pending edits: {e}")
+            return 0
+    
+    def cleanup_old_edits(self, days_old: int = 30) -> int:
+        """
+        Remove edits older than the specified number of days.
+        
+        Args:
+            days_old: Remove edits older than this many days
+            
+        Returns:
+            int: Number of edits removed
+        """
+        try:
+            cutoff_date = (datetime.utcnow() - timedelta(days=days_old)).isoformat()
+            
+            with self._lock:
+                cursor = self.conn.cursor()
+                cursor.execute('''
+                    DELETE FROM pending_edits 
+                    WHERE timestamp < ?
+                ''', (cutoff_date,))
+                
+                count = cursor.rowcount
+                self.conn.commit()
+                return count
+                
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            print(f"Error cleaning up old edits: {e}")
+            return 0
+    
+    
+    def batch_update_edit_statuses(self, edit_ids: List[str], new_status: str) -> Dict[str, Any]:
+        """
+        Batch update edit statuses and return full edit data.
+        
+        Args:
+            edit_ids: List of edit IDs to update
+            new_status: New status ('accepted' or 'rejected')
+            
+        Returns:
+            Dict containing:
+                - 'updated_count': Number of successfully updated edits
+                - 'failed_ids': List of edit IDs that failed to update
+                - 'edits': List of full edit data for successfully updated edits
+                - 'original_states': Dict mapping edit IDs to original cell states
+        """
+        if not edit_ids:
+            return {
+                'updated_count': 0,
+                'failed_ids': [],
+                'edits': [],
+                'original_states': {}
+            }
+        
+        try:
+            with self._lock:
+                cursor = self.conn.cursor()
+                
+                # Create temp table for batch operations
+                cursor.execute('''
+                    CREATE TEMP TABLE IF NOT EXISTS temp_edits (
+                        edit_id TEXT PRIMARY KEY,
+                        status TEXT,
+                        timestamp TEXT
+                    )
+                ''')
+                
+                # Insert into temp table
+                now = datetime.utcnow().isoformat()
+                cursor.executemany(
+                    'INSERT OR REPLACE INTO temp_edits (edit_id, status, timestamp) VALUES (?, ?, ?)',
+                    [(edit_id, new_status, now) for edit_id in edit_ids]
+                )
+                
+                # Get full edit data before updating
+                cursor.execute('''
+                    SELECT pe.*, te.status as new_status
+                    FROM pending_edits pe
+                    JOIN temp_edits te ON pe.edit_id = te.edit_id
+                ''')
+                
+                # Store full edit data and original states
+                edits = []
+                original_states = {}
+                failed_ids = set(edit_ids)
+                
+                for row in cursor.fetchall():
+                    edit = dict(zip([col[0] for col in cursor.description], row))
+                    edit_id = edit['edit_id']
+                    original_states[edit_id] = json.loads(edit['original_state'])
+                    edits.append(edit)
+                    failed_ids.remove(edit_id)
+                
+                # Update statuses in main table
+                cursor.execute('''
+                    UPDATE pending_edits
+                    SET status = te.status,
+                        timestamp = te.timestamp
+                    FROM temp_edits te
+                    WHERE pending_edits.edit_id = te.edit_id
+                ''')
+                
+                # Clean up
+                cursor.execute('DROP TABLE IF EXISTS temp_edits')
+                self.conn.commit()
+                
+                return {
+                    'updated_count': len(edits),
+                    'failed_ids': list(failed_ids),
+                    'edits': edits,
+                    'original_states': original_states
+                }
+                
+        except (sqlite3.Error, json.JSONDecodeError) as e:
+            self.conn.rollback()
+            print(f"Error batch updating edit statuses: {e}")
+            return {
+                'updated_count': 0,
+                'failed_ids': edit_ids,
+                'edits': [],
+                'original_states': {}
+            }
 
-    def close(self):
+    
+    def batch_create_pending_edits(self, edits: List[Dict]) -> List[str]:
+        """
+        Batch create multiple pending edits in a single transaction.
+        
+        Args:
+            edits: List of edit dictionaries, each containing:
+                - edit_id: Unique ID for the edit
+                - version_id: Version ID this edit belongs to
+                - file_path: Path to the workbook
+                - sheet_name: Name of the sheet
+                - cell_address: Address of the cell being edited
+                - original_state: Dict containing original cell state
+                - cell_data: Dict containing new cell data
+                - intended_fill_color: Optional fill color for the cell
+                
+        Returns:
+            List of edit_ids that were successfully created
+        """
+        if not edits:
+            return []
+
+
+        # Ensure pending edits table exists
+        try: 
+            self._ensure_pending_edits_table()
+        except sqlite3.Error as e:
+            logger.error(f"Failed to ensure pending_edits table: {e}")
+            raise
+            
+        try:
+            with self._lock:
+                cursor = self.conn.cursor()
+                now = datetime.utcnow().isoformat()
+                
+                # Prepare batch data
+                batch_data = []
+                for edit in edits:
+                    batch_data.append((
+                        edit['edit_id'],
+                        edit['version_id'],
+                        edit['file_path'],
+                        edit['sheet_name'],
+                        edit['cell_address'],
+                        json.dumps(edit['original_state']),
+                        json.dumps(edit['cell_data']),
+                        edit.get('intended_fill_color'),
+                        now,
+                        'pending'
+                    ))
+                logger.info(f"Batch created {len(edits)} pending edits")
+                
+                try:
+                    # Execute batch insert
+                    cursor.executemany('''
+                        INSERT OR REPLACE INTO pending_edits 
+                        (edit_id, version_id, file_path, sheet_name, cell_address,
+                        original_state, cell_data, intended_fill_color, timestamp, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', batch_data)
+                except sqlite3.Error as e:
+                    logger.error(f"Execute batch insert failed with SQLITE error: {e}")
+                    raise
+                
+                self.conn.commit()
+                return [edit['edit_id'] for edit in edits]
+                
+        except (sqlite3.Error, json.JSONDecodeError) as e:
+            self.conn.rollback()
+            logger.error(f"Error batch creating pending edits: {e}")
+            return []
+    
+    
+    def close(self) -> None:
         """Close the database connection."""
-        if hasattr(self, 'conn'):
+        if hasattr(self, 'conn') and self.conn:
             try:
-                with self._lock:
-                    if self.conn:
-                        self.conn.close()
-                        self.conn = None
+                self.conn.close()
+                logger.info("Database connection closed")
             except Exception as e:
-                print(f"Error closing database connection: {e}")
+                logger.error(f"Error closing database connection: {e}")
 
     def __enter__(self):
         """Context manager entry."""
         return self
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.close()
