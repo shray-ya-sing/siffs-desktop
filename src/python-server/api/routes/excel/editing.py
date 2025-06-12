@@ -8,15 +8,22 @@ sys.path.append(str(current_dir))
 # Now import using relative path from python-server
 from api.models.excel import AnalyzeMetadataRequest
 from excel.editing.excel_writer import ExcelWriter
+from excel.editing.approval.excel_pending_edit_manager import ExcelPendingEditManager
+from excel.session_management.excel_session_manager import ExcelSessionManager
 import logging
 # Get logger instance
 logger = logging.getLogger(__name__)
 import json
 import datetime
+from typing import Dict, List, Any, Tuple, Union
 router = APIRouter(
     prefix="/api/excel",
     tags=["excel-editing"],
 )
+
+def get_session_manager() -> ExcelSessionManager:
+    """Dependency to get the shared session manager instance."""
+    return ExcelSessionManager()
 
 #------------------------------------ MODEL CREATE OR EDIT---------------------------------------------
 # Endpoint to edit Excel file with metadata
@@ -75,7 +82,7 @@ async def edit_excel(request: dict):
             logger.info(f"Using ExcelWriter instance to write to workbook")
             # Use the singleton instance to write data to existing workbook
             with ExcelWriter(visible=visible) as writer:
-                success, request_edit_ids_by_sheet = writer.write_data_to_existing(metadata, file_path, version_id)
+                success, request_pending_edits = writer.write_data_to_existing(metadata, file_path, version_id)
             
             if not success:
                 raise HTTPException(
@@ -88,7 +95,7 @@ async def edit_excel(request: dict):
                 "message": f"Successfully updated {file_path}",
                 "file_path": file_path,
                 "modified_sheets": list(metadata.keys()),
-                "request_edit_ids_by_sheet": request_edit_ids_by_sheet,
+                "request_pending_edits": request_pending_edits,
                 "timestamp": datetime.datetime.now().isoformat()
             }
             
@@ -225,3 +232,39 @@ async def create_excel(request: dict):
 
 #------------------------------------ EDIT ACCEPTANCE & REJECTION ---------------------------------------------
 
+@router.post("/edits/accept", response_model=Dict[str, Any])
+async def accept_edits(
+    request: dict,
+    ) -> Dict[str, Any]:
+    """
+    Accept multiple pending edits by their IDs.
+    
+    Args:
+        edit_ids: List of edit IDs to accept
+        
+    Returns:
+        Dictionary containing:
+        - success: Whether the operation completed successfully
+        - accepted_count: Number of edits successfully accepted
+        - failed_ids: List of edit IDs that failed to be accepted
+        - accepted_edit_version_ids: The version IDs that were updated
+    """
+    try:
+        if not request.get('edit_ids'):
+            raise HTTPException(status_code=400, detail="No edit IDs provided")
+        
+        with ExcelPendingEditManager() as edit_manager:
+
+            result = edit_manager.accept_edits(
+                edit_ids=request.get('edit_ids')
+            )
+            
+        if not result.get('success', False):
+            logger.exception(f"Error accepting edits: {str(result.get('error', 'Unknown error'))}")
+            raise HTTPException(status_code=500, detail=f"Failed to accept edits: {str(result.get('error', 'Unknown error'))}")
+                
+        return result
+        
+    except Exception as e:
+        logger.exception(f"Error accepting edits: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to accept edits: {str(e)}")
