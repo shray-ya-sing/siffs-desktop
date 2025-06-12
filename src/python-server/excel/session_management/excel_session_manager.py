@@ -4,6 +4,8 @@ import xlwings as xw
 from pathlib import Path
 import threading
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 class ExcelSessionManager:
     _instance = None
@@ -29,20 +31,49 @@ class ExcelSessionManager:
     def _ensure_app(self, visible: bool = _visible) -> xw.App:
         """Ensure we have an Excel app instance, creating if needed"""
         if self._app is None:
+            # First try to get an existing app instance
+            existing_app = self.get_existing_excel_app()
+            if existing_app:
+                self._app = existing_app
+                logger.info("Using existing Excel app instance running on user machine")
+                return self._app
+            
+            # If we got here, there is no existing app instance running on user machine, so create a new one
+            logger.info("Creating new Excel app instance")
             self._app = xw.App(visible=visible, add_book=False)
-        # This means the app instance is set on the session manager.
-        # But we need to check if its still alive or it was terminated before trying to use it
-        try:
-            # Active app object will return an array of 0 or more books
-            books = self._app.books
-            if not books:
-                # If no books, the app is terminated. Create a new one.
+            return self._app
+        else:
+            logger.info("Using existing Excel app instance")
+            # This means the app instance is set on the session manager.
+            # But we need to check if its still alive or it was terminated before trying to use it
+            try:
+                # Active app object will return an array of 0 or more books
+                books = self._app.books
+                if not books:
+                    # If no books, the app is terminated. Create a new one.
+                    logger.info("Existing app is terminated. Creating new Excel app instance")
+                    self._app = xw.App(visible=visible, add_book=False)
+            except:
+                # Error means the app is terminated. Create a new one.
+                logger.info("Error getting books from app. Implies app is terminated. Creating new Excel app instance")
                 self._app = xw.App(visible=visible, add_book=False)
-        except:
-            # Error means the app is terminated. Create a new one.
-            self._app = xw.App(visible=visible, add_book=False)
-        
-        return self._app
+            
+            return self._app
+
+    def get_existing_excel_app(self) -> Optional[xw.App]:
+        """Get an existing Excel application instance or None if none is running."""
+        try:
+            # Get all running Excel instances
+            apps = xw.apps
+            
+            if len(apps) > 0:
+                # Return the first running instance
+                return apps[0]
+            return None
+            
+        except Exception as e:
+            print(f"Error getting Excel instance: {e}")
+            return None
     
     def get_session(self, file_path: str, visible: bool = _visible) -> Optional[xw.Book]:
         """Get or create a workbook session"""
