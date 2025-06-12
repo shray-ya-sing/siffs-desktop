@@ -468,6 +468,106 @@ class ExcelPendingEditManager:
                 'accepted_edit_version_ids': None,
                 'error': str(e)
             }
+
+    def reject_edits(
+        self,
+        edit_ids: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Reject multiple pending edits by their IDs, restoring original cell states.
+        
+        Args:
+            edit_ids: List of edit IDs to reject
+            
+        Returns:
+            Dictionary containing:
+            - 'success': Whether the operation completed successfully
+            - 'rejected_count': Number of edits successfully rejected
+            - 'failed_ids': List of edit IDs that failed to be rejected
+        """
+        if not edit_ids:
+            return {
+                'success': False,
+                'rejected_count': 0,
+                'failed_ids': []
+            }
+        
+        try:
+            # Batch update status in storage to change status to rejected
+            result = self.storage.batch_update_edit_statuses(
+                edit_ids=edit_ids,
+                new_status='rejected'
+            )
+            
+            if not result or 'updated_count' not in result:
+                return {
+                    'success': False,
+                    'rejected_count': 0,
+                    'failed_ids': edit_ids
+                }
+            
+            logger.info(f"Batch updated {result['updated_count']} edits to rejected status")
+            successful_edits = result.get('edits', [])
+            failed_ids = []
+
+            # Group edits by file path to minimize session operations
+            edits_by_file = {}
+            for edit in successful_edits:
+                file_path = edit['file_path']
+                if file_path not in edits_by_file:
+                    edits_by_file[file_path] = []
+                edits_by_file[file_path].append(edit)
+
+            for file_path, file_edits in edits_by_file.items():
+                try:
+                    # Get the xlwings workbook object
+                    wb = self.get_workbook_from_session_manager(file_path)
+                    
+                    for edit in file_edits:
+                        try:
+                            sheet = wb.sheets[edit['sheet_name']]
+                            cell = sheet.range(edit['cell_address'])
+                            
+                            # Restore original state
+                            original_state = json.loads(edit.get('original_state', '{}'))
+                            
+                            # Restore value/formula
+                            if 'formula' in original_state and original_state['formula']:
+                                cell.formula = original_state['formula']
+                            elif 'value' in original_state:
+                                cell.value = original_state['value']
+                                
+                            # Restore formatting
+                            self._restore_cell_state(cell, original_state)
+                            
+                            logger.info(f"Successfully restored original state for cell {edit['cell_address']}")
+                            
+                        except Exception as e:
+                            logger.error(f"Error restoring cell state for edit {edit.get('edit_id')}: {e}")
+                            failed_ids.append(edit.get('edit_id'))
+                            result['updated_count'] = max(0, result.get('updated_count', 0) - 1)
+                            
+                except Exception as e:
+                    logger.error(f"Error processing rejected edits for file {file_path}: {e}")
+                    # Mark all edits for this file as failed
+                    for edit in file_edits:
+                        failed_ids.append(edit.get('edit_id'))
+                    result['updated_count'] = max(0, result.get('updated_count', 0) - len(file_edits))
+            
+            return {
+                'success': True,
+                'rejected_count': result.get('updated_count', 0),
+                'failed_ids': failed_ids
+            }
+            
+        except Exception as e:
+            logger.error(f"Error rejecting edits: {e}")
+            return {
+                'success': False,
+                'rejected_count': 0,
+                'failed_ids': edit_ids,
+                'error': str(e)
+            }
     
 
     # HELPER METHODS---------------------------------------------------------------------------------------------------------------------------------------------
