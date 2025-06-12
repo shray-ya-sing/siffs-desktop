@@ -57,13 +57,13 @@ class ExcelWriter:
         self.use_session_manager = use_session_manager
         logger.info(f"ExcelWriter initialized with use_session_manager={use_session_manager}")
         self.session_manager = session_manager or (ExcelSessionManager() if use_session_manager else None)
-        logger.info(f"ExcelWriter initialized with session_manager={session_manager}")
+        logger.info(f"ExcelWriter initialized with session_manager={self.session_manager}")
         self.app = None
         self.workbook = None
         self.workbooks = {}
         self.storage = storage or ExcelMetadataStorage()
         logger.info(f"ExcelWriter initialized with storage={self.storage}")
-        self.edit_manager = ExcelPendingEditManager(self.storage) if self.storage else None
+        self.edit_manager = ExcelPendingEditManager(self.storage, self.session_manager) if self.storage else None
         logger.info(f"ExcelWriter initialized with edit_manager={self.edit_manager}")
         self.file_path = None
         self.version_id = None
@@ -245,7 +245,7 @@ class ExcelWriter:
                     if create_pending and self.edit_manager:
                         # Create pending edit
                         try:
-                            pending_edit = self.edit_manager.apply_pending_edit(
+                            pending_edit = self.edit_manager.apply_pending_edit_with_color_indicator(
                                 wb=self.workbook,
                                 sheet_name=sheet_name,
                                 cell_data=cell_data,
@@ -279,11 +279,7 @@ class ExcelWriter:
 
             # Store the pending edits to the storage
             self.storage.batch_create_pending_edits(request_pending_edits)
-            
-            # Get an array of only the edit ids. This will be used by the frontend to accept / reject edits.
-            request_edit_ids = [edit['id'] for edit in request_pending_edits]
-            
-            return True, request_edit_ids # request_edit_ids will be empty if the pending edit manager was not used for editing
+            return True, request_pending_edits # request_pending_edits will be empty if the pending edit manager was not used for editing
 
         except Exception as e:
             logger.error(f"Error editing existing workbook: {e}")
