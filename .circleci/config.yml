@@ -168,10 +168,28 @@ workflows:
   version: 2
   
   macos_release:
+  
+  macos_release:
     jobs:
       - build_macos:
           filters:
             branches:
+              only: mac-release
+          post-steps:
+            - run:
+                name: Bump version (patch)
+                command: npm run version:patch
+  
+  windows_release:
+    jobs:
+      - build_windows:
+          filters:
+            branches:
+              only: win-release
+          post-steps:
+            - run:
+                name: Bump version (patch)
+                command: npm run version:patch
               only: mac-release
           post-steps:
             - run:
