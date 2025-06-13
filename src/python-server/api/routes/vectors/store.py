@@ -36,17 +36,18 @@ async def embed_and_store_chunks(
         embeddings, enhanced_chunks = embedder.embed_chunks(request.chunks)
         
         # Store in database
-        workbook_id = storage.add_workbook_embeddings(
+        workbook_id , version_id = storage.add_workbook_embeddings(
             workbook_path=request.workbook_path,
             embeddings=embeddings,
             chunks=enhanced_chunks,
             embedding_model=request.embedding_model,
-            replace_existing=request.replace_existing
+            create_new_version=request.create_new_version
         )
         
         return {
             "status": "success",
             "workbook_id": workbook_id,
+            "version_id": version_id,
             "chunks_stored": len(enhanced_chunks),
             "workbook_path": request.workbook_path
         }
@@ -71,17 +72,18 @@ async def store_workbook_embeddings(
         embeddings = np.array(request.embeddings, dtype=np.float32)
         
         # Store in database
-        workbook_id = storage.add_workbook_embeddings(
+        workbook_id , version_id = storage.add_workbook_embeddings(
             workbook_path=request.workbook_path,
             embeddings=embeddings,
             chunks=request.chunks,
             embedding_model=request.embedding_model,
-            replace_existing=request.replace_existing
+            create_new_version=request.create_new_version
         )
         
         return {
             "status": "success",
             "workbook_id": workbook_id,
+            "version_id": version_id,
             "chunks_stored": len(request.chunks),
             "embedding_dimension": embeddings.shape[1] if len(embeddings) > 0 else 0,
             "workbook_path": request.workbook_path
