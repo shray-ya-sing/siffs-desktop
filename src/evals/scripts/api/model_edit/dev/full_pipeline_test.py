@@ -92,7 +92,7 @@ def test_entire_flow():
                 "metadata": chunk.get("metadata", {})
             } for chunk in chunks],
             "embedding_model": "msmarco-MiniLM-L-6-v3",
-            "replace_existing": True
+            "create_new_version": True
         }
     )
     print("Chunks stored and embedded.\n")

@@ -161,9 +161,6 @@ class ExcelWriter:
                         try:
                             cell = sheet.range(cell_data['cell'])
                             self._apply_cell_formatting(cell, cell_data)
-                            if self.storage:
-                                # Save the workbook blob to the metadata storage
-                                self.storage.store_file_blob(version_id =1, file_path=self.file_path, overwrite=True)
                         except Exception as e:
                             logger.error(f"Error formatting cell {cell_data['cell']}: {e}")
                             # Continue applying to remaining cells even if one fails
@@ -264,9 +261,6 @@ class ExcelWriter:
                             if save:
                                 workbook.save()
                                 logger.info(f"Saved workbook: {self.file_path}")
-                            # Store file blob to metadata storage as new version
-                            if self.storage:
-                                self.storage.store_file_blob(file_path=self.file_path, version_id=self.version_id, overwrite=False)
                         except Exception as e:
                             logger.error(f"Error updating cell {cell_data['cell']}: {e}")
                             # Continue applying to remaining cells even if one fails

@@ -4,9 +4,11 @@ import xlwings as xw
 from datetime import datetime
 import uuid
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 import sys
+import tempfile
 # Add the project root to Python path
 folder_path = Path(__file__).parent.parent.parent.absolute()
 sys.path.append(str(folder_path))
@@ -27,7 +29,8 @@ class StorageUpdater:
                   file_path: str,
                   version_ids: List[int], 
                   cell_updates: List[Dict[str, Any]],
-                  create_new_version: bool = True) -> List[int]:
+                  create_new_version: bool = True,
+                  file_blob_paths_to_store: Dict[int, str] = None) -> List[int]:
         """
         Update storage with accepted cell edits for multiple versions.
         
@@ -36,6 +39,7 @@ class StorageUpdater:
             version_ids: List of version IDs to update
             cell_updates: List of cell updates to apply
             create_new_version: Whether to create new versions for the updates
+            file_blob_paths_to_store: Dict of version IDs to file paths to store
             
         Returns:
             List of version IDs that were updated
@@ -66,16 +70,22 @@ class StorageUpdater:
                     target_version_id = version_id
                     
                     if create_new_version:
+                        if file_blob_paths_to_store:
+                            file_blob_copy_path = file_blob_paths_to_store.get(version_id)
+                        else:
+                            file_blob_copy_path = None
                         # Create new version based on the current version
                         new_version_id = self.storage.create_new_version(
                             file_path=normalized_path,
-                            change_description=f"Accepted {len(cell_updates)} edits at {datetime.now()}"
+                            change_description=f"Accepted {len(cell_updates)} edits at {datetime.now()}",
+                            store_file_blob_copy=True,
+                            file_blob_copy_path=file_blob_copy_path                            
                         )
                         target_version_id = new_version_id
                         logger.info(f"Created new version {new_version_id} for storage update")
                     
                     # Update cell metadata in storage
-                    logger.info(f"Updating cells in storage for version {version_id}")
+                    logger.info(f"Updating cells in storage for version {target_version_id}")
                     try:
                         success = self.storage.update_cells(
                             file_path=normalized_path,
@@ -85,27 +95,11 @@ class StorageUpdater:
                     
                         if success:
                             updated_versions.append(target_version_id)
-                            logger.info(f"Successfully updated cells in storage for version {version_id}")
+                            logger.info(f"Successfully updated cells in storage for version {target_version_id}")
                         else:
-                            logger.warning(f"Failed to update cells in storage for version {version_id}")
+                            logger.warning(f"Failed to update cells in storage for version {target_version_id}")
                     except Exception as e:
                         logger.error(f"Error updating cells in storage: {e}")
-                        continue
-
-                    try: 
-                        logger.info(f"Storing file blob for version {version_id}")
-                        success = self.storage.store_file_blob(
-                            file_path = normalized_path,
-                            version_id = target_version_id,
-                            overwrite = True
-                        )
-                        
-                        if success:
-                            logger.info(f"Successfully stored file blob for version {version_id}")
-                        else:
-                            logger.warning(f"Failed to store file blob for version {version_id}")
-                    except Exception as e:
-                        logger.error(f"Error storing file blob: {e}")
                         continue
                     
                 except Exception as e:
@@ -432,7 +426,24 @@ class ExcelPendingEditManager:
                 except Exception as e:
                     logger.error(f"Error processing accepted edits for file {file_path}: {e}")
 
-                # If we have any successful updates, update the storage metadtaa to reflect updated excel file metadata                
+                file_blob_paths_to_store = {} # Dict with {version id: filepath}
+                for version_id in version_ids:
+                    # Store a copy of the file with the accepted edits to save as a blob for version management in db 
+                    try:
+                        # Create a normalized filename with version and timestamp
+                        copy_version_id = version_id + 1
+                        file_stem = Path(file_path).stem
+                        file_name = f"{file_stem}_version_{copy_version_id}_{int(time.time())}.xlsx"
+                        version_dir = Path(tempfile.gettempdir()) / "excel_versions"
+                        version_dir.mkdir(exist_ok=True)  # Create directory if it doesn't exist
+                        saved_copy_path = str(version_dir / file_name)
+                        wb.save(saved_copy_path)  # Creates copy on disk, doesn't open it
+                        # Immediately close the copy so we can access it later
+
+                        file_blob_paths_to_store[version_id] = saved_copy_path
+                    except Exception as e:
+                        logger.error(f"Error storing file blob for prev version {version_id} new version {copy_version_id}: {e}")
+                # If we have any successful updates, update the storage metadata to reflect updated excel file metadata                
                 if cell_updates and self.storage and version_ids:
                     try:                                         
                         # Update storage with the accepted changes
@@ -440,7 +451,8 @@ class ExcelPendingEditManager:
                             file_path=file_path,
                             version_ids=version_ids,
                             cell_updates=cell_updates,
-                            create_new_version=create_new_version or True
+                            create_new_version=create_new_version or True,
+                            file_blob_paths_to_store=file_blob_paths_to_store
                         )
                         accepted_edits_version_ids.extend(version_ids)
                         logger.info(f"Successfully updated storage metadata for accepted edits")
