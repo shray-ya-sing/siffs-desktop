@@ -5,6 +5,7 @@ import os
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 import logging
+logger = logging.getLogger(__name__)
 from pathlib import Path
 
 class EmbeddingStorage:
@@ -14,7 +15,7 @@ class EmbeddingStorage:
     """
     
     def __init__(self, db_path: str = None, db_name: str = None):
-        """Initialize the embedding storage.
+        """Initialize the embedding storage
         
         Args:
             db_path: Path to the database directory
@@ -65,6 +66,7 @@ class EmbeddingStorage:
                 chunk_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 workbook_id INTEGER NOT NULL,
                 chunk_index INTEGER NOT NULL,
+                version_id INTEGER NOT NULL,                
                 chunk_text TEXT NOT NULL,         -- Natural language format
                 chunk_markdown TEXT NOT NULL,     -- Markdown format
                 embedding BLOB NOT NULL,
@@ -74,13 +76,14 @@ class EmbeddingStorage:
                 UNIQUE(workbook_id, chunk_index)
             )
         """)
-        
+
         # Create indexes
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_workbook_id ON chunks(workbook_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_workbook_chunk ON chunks(workbook_id, chunk_index)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunk_version ON chunks(workbook_id, version_id)")  # For version queries
         
         self.conn.commit()
-        self.logger.info(f"Database initialized at {self.db_path}")
+        self.logger.info(f"Embeddings Database initialized at {self.db_path}")
     
     def add_workbook_embeddings(
         self,
@@ -89,14 +92,22 @@ class EmbeddingStorage:
         chunks: List[Dict[str, str]],
         embedding_model: str = "unknown",
         workbook_metadata: Optional[Dict] = None,
-        replace_existing: bool = True
-    ) -> int:
+        create_new_version: bool = True,
+        version_id: Optional[int] = None
+    ) -> Tuple[int, int]:
         """
         Store embeddings and chunks for a workbook.
         Modified to store both text and markdown formats.
         
         Args:
             chunks: List of dictionaries with 'text', 'markdown', and 'metadata' keys
+            version_id: Version ID for the workbook
+            create_new_version: Whether to create a new version of the workbook
+            workbook_metadata: Metadata for the workbook
+            embedding_model: Embedding model used
+            
+        Returns:
+            Tuple of (workbook_id, version_id)
         """
         cursor = self.conn.cursor()
         
@@ -104,31 +115,26 @@ class EmbeddingStorage:
             cursor.execute("BEGIN TRANSACTION")
             
             # Check if workbook exists
-            cursor.execute("SELECT workbook_id FROM workbooks WHERE file_path = ?", (workbook_path,))
+            cursor.execute("""
+                SELECT workbook_id, COALESCE(MAX(version_id), 0) as latest_version 
+                FROM workbooks 
+                LEFT JOIN chunks USING(workbook_id) 
+                WHERE file_path = ?
+                GROUP BY workbook_id
+            """, (workbook_path,))
             existing = cursor.fetchone()
-            
-            if existing and replace_existing:
-                workbook_id = existing['workbook_id']
-                cursor.execute("DELETE FROM chunks WHERE workbook_id = ?", (workbook_id,))
-                cursor.execute("""
-                    UPDATE workbooks 
-                    SET total_chunks = ?, 
-                        embedding_dimension = ?,
-                        embedding_model = ?,
-                        updated_at = CURRENT_TIMESTAMP,
-                        workbook_metadata = ?
-                    WHERE workbook_id = ?
-                """, (
-                    len(chunks),
-                    embeddings.shape[1],
-                    embedding_model,
-                    json.dumps(workbook_metadata) if workbook_metadata else None,
-                    workbook_id
-                ))
-            elif existing and not replace_existing:
-                self.logger.warning(f"Workbook {workbook_path} already exists. Set replace_existing=True to overwrite.")
-                return existing['workbook_id']
+
+            # Determine the new version ID
+            if version_id is not None:
+                new_version = version_id
+            elif existing:
+                new_version = existing['latest_version'] + 1 if create_new_version else existing['latest_version']
             else:
+                new_version = 1
+
+            # Insert or update workbook
+            if not existing:
+                self.logger.info(f"Inserting new workbook: {workbook_path} with version {new_version}")
                 cursor.execute("""
                     INSERT INTO workbooks (
                         file_path, file_name, total_chunks, 
@@ -144,8 +150,35 @@ class EmbeddingStorage:
                     json.dumps(workbook_metadata) if workbook_metadata else None
                 ))
                 workbook_id = cursor.lastrowid
+                self.logger.info(f"Inserted new workbook: {workbook_path} with version {new_version}")
+            else:
+                workbook_id = existing['workbook_id']
+                if create_new_version:
+                    self.logger.info(f"Versioning enabled. Updating existing workbook: {workbook_path} with version {new_version}")
+                    cursor.execute("""
+                        UPDATE workbooks 
+                        SET total_chunks = ?, 
+                            embedding_dimension = ?,
+                            embedding_model = ?,
+                            updated_at = CURRENT_TIMESTAMP,
+                            workbook_metadata = ?
+                        WHERE workbook_id = ?
+                    """, (
+                        len(chunks),
+                        embeddings.shape[1],
+                        embedding_model,
+                        json.dumps(workbook_metadata) if workbook_metadata else None,
+                        workbook_id
+                    ))
+                else:
+                    # If not creating new version, delete existing chunks for this version
+                    self.logger.info(f"Versioning disabled. Deleting existing chunks for workbook: {workbook_path} with version {new_version}")
+                    cursor.execute("""
+                        DELETE FROM chunks 
+                        WHERE workbook_id = ? AND version_id = ?
+                    """, (workbook_id, new_version))
             
-            # Insert chunks with both formats
+            # Insert chunks with versioning
             chunk_data = []
             for i, (embedding, chunk) in enumerate(zip(embeddings, chunks)):
                 embedding_bytes = embedding.astype(np.float32).tobytes()
@@ -153,92 +186,204 @@ class EmbeddingStorage:
                 chunk_data.append((
                     workbook_id,
                     i,
-                    chunk['text'],      # Natural language text
-                    chunk['markdown'],  # Markdown format
+                    new_version,  # Same version_id for all chunks in this batch
+                    chunk['text'],
+                    chunk['markdown'],
                     embedding_bytes,
                     json.dumps(chunk.get('metadata', {}))
                 ))
             
+            self.logger.info(f"Inserting {len(chunks)} chunks for workbook {workbook_path} (version {new_version})")
             cursor.executemany("""
-                INSERT INTO chunks (workbook_id, chunk_index, chunk_text, chunk_markdown, embedding, chunk_metadata)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO chunks (
+                    workbook_id, chunk_index, version_id, 
+                    chunk_text, chunk_markdown, embedding, chunk_metadata
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, chunk_data)
             
             self.conn.commit()
-            
-            self.logger.info(f"Stored {len(chunks)} chunks for workbook: {os.path.basename(workbook_path)}")
-            return workbook_id
+            self.logger.info(f"Stored {len(chunks)} chunks for workbook {workbook_path} (version {new_version})")
+            return workbook_id, new_version
             
         except Exception as e:
             self.conn.rollback()
             self.logger.error(f"Error storing embeddings: {str(e)}")
             raise
-    
-    def get_workbook_embeddings(
-        self, 
+
+    def get_workbook_embeddings_by_version(
+        self,
         workbook_path: str,
-        return_format: str = 'both'  # 'text', 'markdown', or 'both'
-    ) -> Tuple[np.ndarray, List[Dict[str, any]], Dict[str, any]]:
-        """
-        Retrieve all embeddings and chunks for a workbook.
+        version_id: int,
+        return_format: str = 'both'
+    ) -> Tuple[np.ndarray, List[Dict[str, any]]]:
+        """Retrieve embeddings and chunks for a specific version of a workbook.
         
         Args:
-            workbook_path: Path to the Excel file
-            return_format: Which text format to return
+            workbook_path: Path to the workbook file
+            version_id: Version ID to retrieve
+            return_format: Which text format to return ('text', 'markdown', or 'both')
+            
+        Returns:
+            Tuple of (embeddings, chunks)
         """
         cursor = self.conn.cursor()
         
-        cursor.execute("SELECT * FROM workbooks WHERE file_path = ?", (workbook_path,))
-        workbook_info = cursor.fetchone()
-        if not workbook_info:
-            raise ValueError(f"Workbook not found: {workbook_path}")
+        # Get workbook_id
+        cursor.execute("SELECT workbook_id FROM workbooks WHERE file_path = ?", (workbook_path,))
+        workbook = cursor.fetchone()
+        if not workbook:
+            logger.error(f"Workbook not found: {workbook_path}")
+            return None, None
         
+        workbook_id = workbook['workbook_id']
+        
+        # Get chunks for this version
         cursor.execute("""
-            SELECT chunk_index, chunk_text, chunk_markdown, embedding, chunk_metadata
+            SELECT 
+                chunk_id, chunk_index, 
+                chunk_text, chunk_markdown, 
+                embedding, chunk_metadata
             FROM chunks
-            WHERE workbook_id = ?
+            WHERE workbook_id = ? AND version_id = ?
             ORDER BY chunk_index
-        """, (workbook_info['workbook_id'],))
+        """, (workbook_id, version_id))
         
-        embeddings = []
         chunks = []
+        embeddings = []
         
         for row in cursor:
+            # Convert blob back to numpy array
             embedding = np.frombuffer(row['embedding'], dtype=np.float32)
             embeddings.append(embedding)
             
-            chunk_dict = {
+            chunk_data = {
+                'chunk_id': row['chunk_id'],
                 'chunk_index': row['chunk_index'],
-                'metadata': json.loads(row['chunk_metadata'])
+                'metadata': json.loads(row['chunk_metadata']) if row['chunk_metadata'] else {}
             }
             
-            if return_format == 'text':
-                chunk_dict['text'] = row['chunk_text']
-            elif return_format == 'markdown':
-                chunk_dict['markdown'] = row['chunk_markdown']
-            else:  # 'both'
-                chunk_dict['text'] = row['chunk_text']
-                chunk_dict['markdown'] = row['chunk_markdown']
+            if return_format in ['text', 'both']:
+                chunk_data['text'] = row['chunk_text']
+            if return_format in ['markdown', 'both']:
+                chunk_data['markdown'] = row['chunk_markdown']
+                
+            chunks.append(chunk_data)
+        
+        if not chunks:
+            logger.error(f"No chunks found for workbook {workbook_path} (version {version_id})")
+            return np.array([]), []
+        
+        logger.info(f"Retrieved {len(chunks)} chunks for workbook {workbook_path} (version {version_id})")
+        return np.vstack(embeddings), chunks
+
+    def get_latest_workbook_embeddings(
+        self,
+        workbook_path: str,
+        return_format: str = 'both'
+    ) -> Tuple[np.ndarray, List[Dict[str, any]]]:
+        """Retrieve embeddings and chunks for the latest version of a workbook.
+        
+        Args:
+            workbook_path: Path to the workbook file
+            return_format: Which text format to return ('text', 'markdown', or 'both')
             
-            chunks.append(chunk_dict)
+        Returns:
+            Tuple of (embeddings, chunks)
+        """
+        cursor = self.conn.cursor()
         
-        workbook_dict = {
-            'workbook_id': workbook_info['workbook_id'],
-            'file_path': workbook_info['file_path'],
-            'file_name': workbook_info['file_name'],
-            'total_chunks': workbook_info['total_chunks'],
-            'embedding_dimension': workbook_info['embedding_dimension'],
-            'embedding_model': workbook_info['embedding_model'],
-            'created_at': workbook_info['created_at'],
-            'updated_at': workbook_info['updated_at'],
-            'metadata': json.loads(workbook_info['workbook_metadata']) if workbook_info['workbook_metadata'] else None
-        }
+        # Get workbook_id and latest version
+        cursor.execute("""
+            SELECT w.workbook_id, MAX(c.version_id) as latest_version
+            FROM workbooks w
+            LEFT JOIN chunks c ON w.workbook_id = c.workbook_id
+            WHERE w.file_path = ?
+            GROUP BY w.workbook_id
+        """, (workbook_path,))
         
-        if embeddings:
-            embeddings_array = np.vstack(embeddings)
-            return embeddings_array, chunks, workbook_dict
-        else:
-            return np.array([]), [], workbook_dict
+        result = cursor.fetchone()
+        if not result or result['latest_version'] is None:
+            logger.error(f"No versions found for workbook: {workbook_path}")
+            return np.array([]), []
+        
+        workbook_id = result['workbook_id']
+        latest_version = result['latest_version']
+        
+        # Get chunks for the latest version
+        cursor.execute("""
+            SELECT 
+                chunk_id, chunk_index, 
+                chunk_text, chunk_markdown, 
+                embedding, chunk_metadata
+            FROM chunks
+            WHERE workbook_id = ? AND version_id = ?
+            ORDER BY chunk_index
+        """, (workbook_id, latest_version))
+        
+        chunks = []
+        embeddings = []
+        
+        for row in cursor:
+            # Convert blob back to numpy array
+            embedding = np.frombuffer(row['embedding'], dtype=np.float32)
+            embeddings.append(embedding)
+            
+            chunk_data = {
+                'chunk_id': row['chunk_id'],
+                'chunk_index': row['chunk_index'],
+                'version_id': latest_version,
+                'metadata': json.loads(row['chunk_metadata']) if row['chunk_metadata'] else {}
+            }
+            
+            if return_format in ['text', 'both']:
+                chunk_data['text'] = row['chunk_text']
+            if return_format in ['markdown', 'both']:
+                chunk_data['markdown'] = row['chunk_markdown']
+                
+            chunks.append(chunk_data)
+        
+        if not chunks:
+            logger.error(f"No chunks found for workbook {workbook_path} (latest version {latest_version})")
+            return np.array([]), []
+        
+        logger.info(f"Retrieved {len(chunks)} chunks for workbook {workbook_path} (latest version {latest_version})")
+        return np.vstack(embeddings), chunks
+
+
+    def list_workbook_versions(self, workbook_path: str) -> List[Dict[str, any]]:
+        """List all versions of a workbook.
+        
+        Args:
+            workbook_path: Path to the workbook file
+            
+        Returns:
+            List of version information dictionaries
+        """
+        cursor = self.conn.cursor()
+        
+        cursor.execute("""
+            SELECT 
+                v.version_id,
+                v.chunk_count,
+                v.created_at,
+                w.embedding_model,
+                w.embedding_dimension
+            FROM (
+                SELECT 
+                    version_id,
+                    COUNT(*) as chunk_count,
+                    MIN(created_at) as created_at
+                FROM chunks
+                WHERE workbook_id = (SELECT workbook_id FROM workbooks WHERE file_path = ?)
+                GROUP BY version_id
+            ) v
+            CROSS JOIN workbooks w
+            WHERE w.file_path = ?
+            ORDER BY v.version_id DESC
+        """, (workbook_path, workbook_path))
+        
+        return [dict(row) for row in cursor]
     
     def get_chunks_by_ids(self, chunk_ids: List[int], return_format: str = 'both') -> List[Dict[str, any]]:
         """
@@ -294,12 +439,25 @@ class EmbeddingStorage:
         """Get all embeddings in the database formatted for FAISS indexing."""
         cursor = self.conn.cursor()
         
+        # Get the latest version for each workbook and join with chunks
         cursor.execute("""
-            SELECT chunk_id, embedding
-            FROM chunks
-            ORDER BY chunk_id
+            WITH latest_versions AS (
+                SELECT 
+                    workbook_id,
+                    MAX(version_id) as latest_version
+                FROM chunks
+                GROUP BY workbook_id
+            )
+            SELECT 
+                c.chunk_id, 
+                c.embedding
+            FROM chunks c
+            INNER JOIN latest_versions lv 
+                ON c.workbook_id = lv.workbook_id 
+                AND c.version_id = lv.latest_version
+            ORDER BY c.chunk_id
         """)
-        
+            
         embeddings = []
         chunk_ids = []
         
