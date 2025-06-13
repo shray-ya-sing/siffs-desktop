@@ -93,7 +93,9 @@ class FAISSChunkRetriever:
             return self.indices[workbook_path]['index']
         
         # Get embeddings from storage
-        embeddings, chunks, workbook_info = self.storage.get_workbook_embeddings(workbook_path)
+        embeddings, chunks = self.storage.get_latest_workbook_embeddings(workbook_path)
+
+        latest_version = chunks[0].get('version_id', 1) if chunks else 1
         
         if len(embeddings) == 0:
             raise ValueError(f"No embeddings found for workbook: {workbook_path}")
@@ -131,7 +133,8 @@ class FAISSChunkRetriever:
         self.indices[workbook_path] = {
             'index': index,
             'chunk_ids': chunk_ids,
-            'embedding_dim': dimension
+            'embedding_dim': dimension,
+            'version_id': latest_version
         }
         
         # Save index to disk
@@ -258,7 +261,7 @@ class FAISSChunkRetriever:
             # Get chunk information from storage
             if workbook_path:
                 chunk_id = chunk_ids[idx]  # This is the original chunk ID
-                _, chunks, _ = self.storage.get_workbook_embeddings(workbook_path, return_format=return_format)
+                _, chunks = self.storage.get_latest_workbook_embeddings(workbook_path, return_format=return_format)
                 # Find the chunk with this ID
                 chunk_info = next((c for c in chunks if c['chunk_index'] == chunk_id), None)
                 if chunk_info is None:
@@ -377,6 +380,7 @@ class FAISSChunkRetriever:
                 'index_file': index_filename,
                 'chunk_ids': index_info['chunk_ids'],
                 'embedding_dim': index_info['embedding_dim'],
+                'version_id': index_info.get('version_id', 1),
                 'updated_at': datetime.now().isoformat()
             }
             
@@ -387,8 +391,26 @@ class FAISSChunkRetriever:
         except Exception as e:
             self.logger.warning(f"Could not save index for {workbook_path}: {e}")
     
+    # 3. Add version check in update_workbook_index
     def update_workbook_index(self, workbook_path: str):
         """Update index when workbook embeddings change."""
+        # Get current version from storage
+        cursor = self.storage.conn.cursor()
+        cursor.execute("""
+            SELECT MAX(version_id) as latest_version 
+            FROM chunks 
+            WHERE workbook_id = (SELECT workbook_id FROM workbooks WHERE file_path = ?)
+        """, (workbook_path,))
+        result = cursor.fetchone()
+        current_version = result['latest_version'] if result and result['latest_version'] else 1
+        
+        # Check if we need to update
+        if (workbook_path in self.indices and 
+            self.indices[workbook_path].get('version_id') == current_version):
+            self.logger.info(f"Index for {workbook_path} is up to date (v{current_version})")
+            return
+        
+        # Rebuild if version changed or not in cache
         self.build_index_for_workbook(workbook_path, force_rebuild=True)
         
         # Also rebuild global index if it exists
