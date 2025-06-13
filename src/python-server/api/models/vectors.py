@@ -17,7 +17,7 @@ class StoreEmbeddingsRequest(BaseModel):
     workbook_path: str = Field(..., description="Path to the Excel file")
     chunks: List[Dict[str, Any]] = Field(..., description="List of chunks with text, markdown, and metadata")
     embedding_model: str = Field(..., description="Name of the embedding model used")
-    replace_existing: Optional[bool] = Field(default=True, description="Replace if workbook already exists")
+    create_new_version: Optional[bool] = Field(default=True, description="Replace if workbook already exists")
 
 class SearchRequest(BaseModel):
     query: str = Field(..., description="Search query text")
@@ -30,4 +30,4 @@ class StorePrecomputedEmbeddingsRequest(BaseModel):
     chunks: List[Dict[str, Any]] = Field(..., description="List of chunks with text, markdown, and metadata")
     embeddings: List[List[float]] = Field(..., description="Pre-computed embeddings for the chunks")
     embedding_model: str = Field(..., description="Name of the embedding model used")
-    replace_existing: Optional[bool] = Field(default=True, description="Replace if workbook already exists")
+    create_new_version: Optional[bool] = Field(default=True, description="Replace if workbook already exists")
