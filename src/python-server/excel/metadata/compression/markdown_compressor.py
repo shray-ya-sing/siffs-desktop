@@ -1,13 +1,29 @@
-from typing import Tuple, Dict, Any, Optional
+import os
+import json
+import traceback
+import re
+from typing import Dict, List, Any, Optional, Tuple, Union
+from datetime import datetime
+from collections import defaultdict
+import sys
+from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 from openpyxl.utils import get_column_letter
+
 
 class SpreadsheetMarkdownCompressor:
     """
     Python class for compressing json metadata into spreadsheet style markdown with dependency information
     """
-    def __init__(self, workbook_path: Optional[str] = None):
+    def __init__(
+        self, 
+        workbook_path: Optional[str] = None):
         """
-        Initialize the markdown compressor.        
+        Initialize the markdown compressor.   
+        
+        Args:
+            workbook_path: Path to the Excel file (optional, can be set later)
         """
         self.has_display_values = False
         self.has_dependencies = False
