@@ -82,7 +82,7 @@ jobs:
     executor:
       name: win/default
       shell: bash.exe
-    resource_class: windows.medium
+      
     steps:
       - checkout
 
