@@ -418,7 +418,8 @@ class ExcelMetadataExtractor:
                         version_id = self.storage.create_new_version(
                             file_path=normalized_path,
                             change_description="Initial extraction" if not latest_version else "Updated extraction",
-                            full_metadata_json=json.dumps(metadata)
+                            full_metadata_json=json.dumps(metadata),
+                            store_file_blob=True                            
                         )
                         logger.info(f"Stored metadata in storage for version {version_id}")
                     except Exception as e:
@@ -1375,7 +1376,8 @@ class ExcelMetadataExtractor:
                     new_version_id = self.storage.create_new_version(
                         file_path=normalized_path,
                         change_description=f"Initialized in DB. Chunked extraction with {rows_per_chunk} rows per chunk",
-                        chunks=chunks
+                        chunks=chunks,
+                        store_file_blob=True
                     )
                     logger.info(f"Successfully stored chunks in storage for {normalized_path}, new_version_id: {new_version_id}")
                 except Exception as e:

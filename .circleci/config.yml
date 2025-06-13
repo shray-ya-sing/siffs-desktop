@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   node: circleci/node@5.0.2
   python: circleci/python@2.1.1
+  win: circleci/windows@5.0.0
 
 jobs:
   build_macos:
@@ -77,12 +78,89 @@ jobs:
           path: out/make
           destination: build
 
+  build_windows:
+    executor:
+      name: win/default
+      shell: bash.exe
+    resource_class: windows.medium
+    steps:
+      - checkout
+
+      - run:
+          name: Verify file structure
+          command: |
+            pwd
+            ls -la src/renderer/lib/
+            ls -la src/renderer/pages/
+      
+      - node/install:
+          node-version: '18'
+          install-yarn: false
+      
+      - run:
+          name: Set up Python
+          command: |
+            choco install -y python --version 3.9.0
+            echo "##vso[task.prependpath]C:\\Python39"
+            echo "##vso[task.prependpath]C:\\Python39\\Scripts"
+      
+      - run:
+          name: Install Python dependencies
+          command: |
+            python -m pip install --upgrade pip
+            pip install -r src/python-server/requirements.txt
+            pip install pyinstaller==6.13.0
+      
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies-
+      
+      - run:
+          name: Install dependencies
+          command: npm ci
+
+      - save_cache:
+          paths:
+            - node_modules
+            - ~/.cache/pip
+          key: v1-dependencies-{{ checksum "package-lock.json" }}
+      
+      - run:
+          name: Create .env file
+          command: |
+            echo "API_KEY=${API_KEY}" > .env
+            echo "ANOTHER_VAR=${ANOTHER_VAR}" >> .env
+      
+      - run:
+          name: Build application
+          command: npm run make:win
+
+      - store_artifacts:
+          path: out/make
+          destination: build
+
 workflows:
   version: 2
-  build_and_test:
+  
+  macos_release:
     jobs:
       - build_macos:
           filters:
             branches:
-              only: 
-                - mac-release
+              only: mac-release
+          post-steps:
+            - run:
+                name: Bump version (patch)
+                command: npm run version:patch
+  
+  windows_release:
+    jobs:
+      - build_windows:
+          filters:
+            branches:
+              only: win-release
+          post-steps:
+            - run:
+                name: Bump version (patch)
+                command: npm run version:patch

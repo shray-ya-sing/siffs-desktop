@@ -1,7 +1,7 @@
 {
   "name": "cori_app",
   "productName": "Cori",
-  "version": "0.0.2",
+  "version": "0.3.1",
   "description": "Financial model software",
   "main": ".webpack/main",
   "scripts": {
@@ -17,7 +17,10 @@
     "make:linux": "npm run build:python && npm run compile-inits && electron-forge make --platform=linux",
     "publish": "npm run build:python && npm run compile-inits && electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "clean": "rimraf out"
+    "clean": "rimraf out",
+    "version:patch": "npm version patch -m 'chore: bump version to %s [skip ci]' && git push --follow-tags",
+    "version:minor": "npm version minor -m 'chore: bump version to %s [skip ci]' && git push --follow-tags",
+    "version:major": "npm version major -m 'chore: bump version to %s [skip ci]' && git push --follow-tags"
   },
   "keywords": [],
   "author": {

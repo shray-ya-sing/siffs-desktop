@@ -154,7 +154,7 @@ class RetrievalTester:
                     embeddings=embeddings,
                     chunks=chunks,
                     embedding_model=self.embedding_model,
-                    replace_existing=True
+                    create_new_version=True
                 )
                 
                 # Initialize retriever and build index

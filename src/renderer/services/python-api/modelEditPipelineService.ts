@@ -225,20 +225,20 @@ const modelEditPipelineService = {
        * @param workbookPath Path to the workbook
        * @param chunks Array of chunks with text and markdown
        * @param modelName Name of the embedding model (default: 'msmarco-MiniLM-L-6-v3')
-       * @param replaceExisting Whether to replace existing embeddings (default: true)
+       * @param createNewVersion Whether to create a new version of the workbook (default: true)
        * @returns Promise with storage results
        */
       storeEmbeddings(
         workbookPath: string,
         chunks: Chunk[],
         modelName: string = 'msmarco-MiniLM-L-6-v3',
-        replaceExisting: boolean = true
+        createNewVersion: boolean = true
       ): Promise<AxiosResponse<StoreEmbeddingsResponse>> {
         return apiClient.post<StoreEmbeddingsResponse>('/vectors/storage/embed-and-store-chunks', {
           workbook_path: workbookPath,
           chunks: chunks,
           embedding_model: modelName,
-          replace_existing: replaceExisting
+          create_new_version: createNewVersion
         });
       },
     

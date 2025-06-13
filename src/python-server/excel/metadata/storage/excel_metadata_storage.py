@@ -5,12 +5,19 @@ import json
 from typing import Optional, List, Dict, Set, Any
 import atexit
 import threading
+import contextlib
 import hashlib
 from datetime import datetime
 import re
-
+import sys
 import logging
+import time
 logger = logging.getLogger(__name__)
+import traceback
+
+current_dir = Path(__file__).parent.parent.parent.parent.absolute()
+sys.path.append(str(current_dir))
+from vectors.store_updates.background_processor import get_embedding_worker
 
 # Class-level registry to track initialized databases
 _initialized_dbs = set()
@@ -56,6 +63,7 @@ class ExcelMetadataStorage:
         
         # Add thread lock for thread safety
         self._lock = threading.Lock()
+        self._lock_timeout = 30.0  # seconds
         print("Thread lock added for thread safety")
         try:
             self.conn = sqlite3.connect(
@@ -122,8 +130,11 @@ class ExcelMetadataStorage:
                 # Create any missing indexes
                 cursor.executescript("""
                     CREATE INDEX IF NOT EXISTS idx_chunks_version_id ON chunks(version_id);
+                    CREATE INDEX IF NOT EXISTS idx_chunks_chunk_id ON chunks(chunk_id);
                     CREATE INDEX IF NOT EXISTS idx_cells_version_sheet ON cells(version_id, sheet_name);
                     CREATE INDEX IF NOT EXISTS idx_file_versions_workbook ON file_versions(workbook_id);
+                    CREATE INDEX IF NOT EXISTS idx_chunks_version_chunk_id ON chunks(version_id, chunk_id);
+
                 """)
                 
                 self.conn.commit()
@@ -162,8 +173,6 @@ class ExcelMetadataStorage:
                     workbook_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     file_path TEXT NOT NULL UNIQUE,
                     file_name TEXT NOT NULL,
-                    file_size INTEGER NOT NULL,
-                    file_hash TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
@@ -178,6 +187,8 @@ class ExcelMetadataStorage:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     file_blob BLOB,
                     full_metadata_json TEXT,
+                    -- file_hash: SHA-256 hash of the file contents at the time of version creation
+                    file_hash TEXT,
                     FOREIGN KEY (workbook_id) REFERENCES workbooks(workbook_id) ON DELETE CASCADE,
                     UNIQUE(workbook_id, version_number)
                 );
@@ -255,6 +266,39 @@ class ExcelMetadataStorage:
             raise
         finally:
             cursor.close()
+
+    def _acquire_lock(self):
+        """Acquire lock with timeout and deadlock detection."""
+        start_time = time.time()
+        while time.time() - start_time < self._lock_timeout:
+            if self._lock.acquire(timeout=1):
+                return True
+            logger.warning("Waiting for database lock...")
+        raise TimeoutError("Could not acquire database lock")
+
+    def get_original_stem(self, versioned_path: str) -> str:
+        """
+        Extract the original filename from a versioned path, preserving the extension.
+        Only modifies the filename if it contains the _version_X_TIMESTAMP pattern.
+        
+        Example: 
+            Input: '/tmp/excel_versions/original_version_2_1623600000.xlsx'
+            Output: 'original.xlsx'
+            
+            Input: '/path/to/normal_file.xlsx'
+            Output: 'normal_file.xlsx'  # Unchanged if no version pattern found
+        """
+        path = Path(versioned_path)
+        stem = path.stem
+        suffix = path.suffix  # This includes the dot, e.g. '.xlsx'
+        
+        # First check if the stem contains the version pattern
+        if re.search(r'_version_\d+_\d+$', stem):
+            # If it does, extract the original part
+            match = re.match(r'^(.*?)(?:_version_\d+_\d+)$', stem)
+            base_stem = match.group(1) if match else stem
+            return f"{base_stem}{suffix}"
+        return f"{stem}{suffix}"
     
     def create_or_update_workbook(self, file_path: str) -> int:
         """Create or update a workbook entry."""
@@ -266,22 +310,14 @@ class ExcelMetadataStorage:
                 normalized_path = str(Path(file_path).resolve())
                 file_name = os.path.basename(normalized_path)
                 
-                # Calculate file hash if file exists
-                file_hash = "empty"
-                file_size = 0
-                if os.path.exists(normalized_path):
-                    file_hash = self._calculate_file_hash(normalized_path)
-                    file_size = os.path.getsize(normalized_path)
-                
                 # Insert or update workbook
                 cursor.execute("""
-                    INSERT INTO workbooks (file_path, file_name, file_size, file_hash)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO workbooks (file_path, file_name)
+                    VALUES (?, ?)
                     ON CONFLICT(file_path) DO UPDATE SET
-                        file_size = excluded.file_size,
-                        file_hash = excluded.file_hash,
+                        file_name = excluded.file_name,
                         updated_at = CURRENT_TIMESTAMP
-                """, (normalized_path, file_name, file_size, file_hash))
+                """, (normalized_path, file_name))
                 
                 # Get the workbook_id
                 cursor.execute("SELECT workbook_id FROM workbooks WHERE file_path = ?", (normalized_path,))
@@ -308,6 +344,9 @@ class ExcelMetadataStorage:
         change_description: str = None,
         full_metadata_json: str = None,
         chunks: List[Dict] = None,
+        store_file_blob: bool = False,
+        store_file_blob_copy: bool = False,
+        file_blob_copy_path: str = None,
     ) -> int:
         """
         Create a new version and optionally store full metadata and chunks.
@@ -317,6 +356,9 @@ class ExcelMetadataStorage:
             change_description: Description of changes in this version
             full_metadata_json: Optional JSON string of full metadata
             chunks: Optional list of chunk dictionaries to store
+            store_file_blob: Whether to store the file blob in the database
+            store_file_blob_copy: Whether to store a copy of the file blob in the database
+            file_blob_copy_path: Optional path to store a copy of the file blob
             
         Returns:
             int: The new version ID
@@ -330,15 +372,27 @@ class ExcelMetadataStorage:
                 # Normalize file path
                 normalized_path = str(Path(file_path).resolve())
                 
+                    
                 # Ensure workbook exists
                 cursor.execute("SELECT workbook_id FROM workbooks WHERE file_path = ?", (normalized_path,))
+                logger.info(f"Querying for workbook_id in DB for {normalized_path}")
                 file_row = cursor.fetchone()
-                
+
                 if not file_row:
                     # Create workbook entry if it doesn't exist
+                    logger.info(f"Workbook not found in DB for {normalized_path}, creating new workbook entry")
                     workbook_id = self.create_or_update_workbook(normalized_path)
                 else:
                     workbook_id = file_row['workbook_id']
+
+                logger.info(f"Found workbook_id in DB for {normalized_path}, workbook_id: {workbook_id}")
+
+                # Calculate file hash if file exists
+                file_hash = "empty"
+                file_size = 0
+                if os.path.exists(normalized_path):
+                    file_hash = self._calculate_file_hash(normalized_path)
+                    file_size = os.path.getsize(normalized_path)                
                 
                 # Get latest version number
                 cursor.execute("""
@@ -347,6 +401,7 @@ class ExcelMetadataStorage:
                     WHERE workbook_id = ?
                 """, (workbook_id,))
                 version_number = cursor.fetchone()['next_version']
+                logger.info(f"Found latest version number in DB for {normalized_path}, version_number: {version_number}")
                 
                 # Get previous version ID
                 cursor.execute("""
@@ -358,25 +413,29 @@ class ExcelMetadataStorage:
                 """, (workbook_id,))
                 prev_version = cursor.fetchone()
                 prev_version_id = prev_version['version_id'] if prev_version else None
+                logger.info(f"Found previous version ID in DB for {normalized_path}, prev_version_id: {prev_version_id}")
                 
                 # Create new version record
                 if prev_version_id:
-                    # Copy from previous version
+                    # Copy from previous version. Don't copy the old file blob.
                     cursor.execute("""
                         INSERT INTO file_versions (
                             workbook_id, version_number, change_description, 
-                            file_blob, full_metadata_json
+                            file_blob, full_metadata_json, file_hash
                         ) 
                         SELECT 
                             workbook_id, 
                             ? as version_number, 
                             ? as change_description,
-                            file_blob,
-                            full_metadata_json
+                            NULL as file_blob,
+                            full_metadata_json,
+                            ? as file_hash
                         FROM file_versions
                         WHERE workbook_id = ? AND version_id = ?
                     """, (version_number, change_description or f"Version {version_number}", 
-                          workbook_id, prev_version_id))
+                          file_hash, workbook_id, prev_version_id))
+
+                    logger.info(f"Copied previous version record in DB to create updated version for {normalized_path}, version_id: {cursor.lastrowid}")
                 else:
                     # First version - create new
                     cursor.execute("""
@@ -385,15 +444,19 @@ class ExcelMetadataStorage:
                             version_number, 
                             change_description,
                             full_metadata_json,
+                            file_hash,
                             created_at,
                             updated_at
-                        ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     """, (
                         workbook_id, 
                         version_number, 
                         change_description or "Initial version",
-                        full_metadata_json or '' # store the full metadata_json from the args
+                        full_metadata_json or '', # store the full metadata_json from the args
+                        file_hash,
                     ))
+
+                    logger.info(f"Created first new version record in DB for {normalized_path}, version_id: {cursor.lastrowid}")
                 
                 new_version_id = cursor.lastrowid
                 
@@ -417,6 +480,8 @@ class ExcelMetadataStorage:
                         FROM chunks
                         WHERE version_id = ?
                     """, (new_version_id, prev_version_id))
+
+                    logger.info(f"Copied chunks from previous version in DB for {normalized_path}, prev_version_id: {prev_version_id}, new_version_id: {new_version_id}")
                     
                     # Copy cells
                     cursor.execute("""
@@ -443,6 +508,7 @@ class ExcelMetadataStorage:
                         WHERE cl.version_id = ?
                     """, (new_version_id, new_version_id, prev_version_id))
 
+                    logger.info(f"Copied cells from previous version in DB for {normalized_path}, prev_version_id: {prev_version_id}, new_version_id: {new_version_id}")
                 else:
                     # Store chunks if provided
                     if chunks and isinstance(chunks, list):
@@ -516,113 +582,80 @@ class ExcelMetadataStorage:
                                             cell_json,
                                             cell_hash
                                         ))  
-                        
+
+                                        logger.info(f"Stored cell {cell_address} in row {row_idx} and column {col_idx} for version {new_version_id} in DB for {normalized_path}")
+                
+                # Store file blob if requested
+                if store_file_blob or store_file_blob_copy:
+                    if store_file_blob_copy or file_blob_copy_path:
+                        # Use the provided copy path and store it
+                        if file_blob_copy_path:
+                            try:
+                                if os.path.exists(file_blob_copy_path):
+                                    # Normalize the path
+                                    normalized_copy_path = str(Path(file_blob_copy_path).resolve())
+                                    with open(normalized_copy_path, 'rb') as f:
+                                        file_blob = f.read()
+                                    
+                                    cursor.execute("""
+                                        UPDATE file_versions
+                                        SET file_blob = ?
+                                        WHERE version_id = ?
+                                    """, (sqlite3.Binary(file_blob), new_version_id))
+                                    logger.info(f"Stored file blob for version {new_version_id} of {normalized_path}")
+                                else:
+                                    logger.warning(f"File {file_blob_copy_path} does not exist, cannot store file blob for version {new_version_id}")
+                            except Exception as e:
+                                logger.error(f"Error storing file blob for version {new_version_id}: {e}")
+                        # If no copy path provided, create a temp copy and store it
+                        else:
+                            import shutil
+                            import tempfile
+
+                            try:
+                                # Make a temp copy
+                                with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                                    shutil.copy2(normalized_path, tmp.name)
+                                    with open(tmp.name, 'rb') as f:
+                                        file_blob = f.read()
+
+                                # Store in db
+                                try:                            
+                                    cursor.execute("""
+                                        UPDATE file_versions
+                                        SET file_blob = ?
+                                        WHERE version_id = ?
+                                    """, (sqlite3.Binary(file_blob), new_version_id))
+                                    logger.info(f"Stored file blob for version {new_version_id} of {normalized_path}")
+                                except Exception as e:
+                                    logger.error(f"Error storing file blob for version {new_version_id}: {e}")
+
+                            except Exception as e:
+                                logger.error(f"Error creating temp copy for blob storage: {e}")
+                    # Don't save a copy, just try to access the provided file path
+                    else:                        
+                        try:
+                            if os.path.exists(normalized_path):
+                                with open(normalized_path, 'rb') as f:
+                                    file_blob = f.read()
+                                
+                                cursor.execute("""
+                                    UPDATE file_versions
+                                    SET file_blob = ?
+                                    WHERE version_id = ?
+                                """, (sqlite3.Binary(file_blob), new_version_id))
+                                logger.info(f"Stored file blob for version {new_version_id} of {normalized_path}")
+                            else:
+                                logger.warning(f"File {normalized_path} does not exist, cannot store file blob for version {new_version_id}")
+                        except Exception as e:
+                            logger.error(f"Error storing file blob for version {new_version_id}: {e}")                              
+                
                 self.conn.commit()
                 return new_version_id
                 
             except Exception as e:
                 self.conn.rollback()
                 raise
-
-    def store_file_blob(self, file_path: str, version_id: Optional[int] = None, overwrite: bool = False) -> bool:
-        """
-        Store the Excel file as a blob, with automatic version management.
-        
-        Args:
-            file_path: Path to the Excel file
-            version_id: Optional version ID. If None, will auto-increment from latest version.
-            overwrite: If True and version_id is None, overwrite latest version. 
-                     If False and version_id is None, create new version.
-                     If version_id is provided, overwrite that specific version.
-            
-        Returns:
-            bool: True if blob was stored or already exists, False on error
-        """
-        try:
-            normalized_path = str(Path(file_path).resolve())
-            
-            with self._lock:
-                cursor = self.conn.cursor()
-                
-                # If version_id is not provided, find the latest version for this file
-                if version_id is None:
-                    cursor.execute("""
-                        SELECT v.version_id, v.file_blob
-                        FROM file_versions v
-                        JOIN workbooks w ON v.workbook_id = w.workbook_id
-                        WHERE w.file_path = ?
-                        ORDER BY v.version_id DESC
-                        LIMIT 1
-                    """, (normalized_path,))
-                    
-                    latest = cursor.fetchone()
-                    
-                    if latest and latest['file_blob'] is not None and not overwrite:
-                        # Create new version
-                        new_version_id = self.create_new_version(
-                            file_path=normalized_path,
-                            change_description=f"New version created at {datetime.now().isoformat()}"
-                        )
-                        version_id = new_version_id
-                    elif latest:
-                        # Use existing version (overwrite or no blob exists yet)
-                        version_id = latest['version_id']
-                    else:
-                        # First version of this file
-                        self.create_or_update_workbook(normalized_path)
-                        version_id = 1
-                
-                # If version_id was provided, check if we can overwrite
-                elif not overwrite:
-                    cursor.execute("""
-                        SELECT file_blob 
-                        FROM file_versions 
-                        WHERE version_id = ? AND file_blob IS NOT NULL
-                    """, (version_id,))
-                    
-                    if cursor.fetchone():
-                        # Blob exists and we're not overwriting
-                        return True
-            
-            # Read the file
-            with open(file_path, 'rb') as f:
-                file_blob = f.read()
-            
-            # Ensure the workbook and version exist in the database
-            with self._lock:
-                cursor = self.conn.cursor()
-                
-                # Verify the version exists or create it
-                cursor.execute("""
-                    SELECT 1 FROM file_versions WHERE version_id = ?
-                """, (version_id,))
-                
-                if not cursor.fetchone():
-                    # Version doesn't exist, create it
-                    self.create_or_update_workbook(normalized_path)
-                    cursor.execute("""
-                        INSERT INTO file_versions (workbook_id, version_id, change_description, created_at, updated_at)
-                        SELECT w.workbook_id, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                        FROM workbooks w
-                        WHERE w.file_path = ?
-                    """, (version_id, f"Initial version {version_id}", normalized_path))
-                
-                # Update the blob
-                cursor.execute("""
-                    UPDATE file_versions
-                    SET file_blob = ?,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE version_id = ?
-                """, (sqlite3.Binary(file_blob), version_id))
-                
-                self.conn.commit()
-                return True
-                
-        except Exception as e:
-            self.conn.rollback()
-            print(f"Error storing file blob: {e}")
-            return False
-
 
     def get_file_blob(self, file_path: str, version_id: int) -> Optional[bytes]:
         """
@@ -647,6 +680,54 @@ class ExcelMetadataStorage:
             
             result = cursor.fetchone()
             return result['file_blob'] if result and result['file_blob'] else None
+
+    def get_all_file_blobs(self, file_path: str) -> List[Dict[str, Any]]:
+        """
+        Retrieve all stored Excel file blobs for a specific file, including version metadata.
+        
+        Args:
+            file_path: Path to the Excel file
+            
+        Returns:
+            List of dictionaries, each containing:
+            - version_id: int
+            - version_number: int
+            - created_at: str (ISO format timestamp)
+            - change_description: str
+            - file_blob: bytes
+            - file_hash: str
+        """
+        normalized_path = str(Path(file_path).resolve())
+        with self._lock:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    v.version_id,
+                    v.version_number,
+                    v.created_at,
+                    v.change_description,
+                    v.file_blob,
+                    v.file_hash
+                FROM file_versions v
+                JOIN workbooks w ON v.workbook_id = w.workbook_id
+                WHERE w.file_path = ? 
+                AND v.file_blob IS NOT NULL
+                ORDER BY v.version_number DESC
+            """, (normalized_path,))
+            
+            results = []
+            for row in cursor.fetchall():
+                if row['file_blob']:  # Double-check blob exists
+                    results.append({
+                        'version_id': row['version_id'],
+                        'version_number': row['version_number'],
+                        'created_at': row['created_at'],
+                        'change_description': row['change_description'],
+                        'file_blob': row['file_blob'],
+                        'file_hash': row['file_hash']
+                    })
+            
+            return results
 
     def save_blob_to_file(self, file_path: str, version_id: int, output_path: str) -> bool:
         """
@@ -691,7 +772,8 @@ class ExcelMetadataStorage:
         self,
         version_id: int,
         cell_updates: List[Dict[str, Any]],
-        file_path: Optional[str] = None
+        file_path: Optional[str] = None,
+        trigger_background_worker: bool = True
     ) -> bool:
         """
         Update multiple cells in the specified version.
@@ -703,13 +785,18 @@ class ExcelMetadataStorage:
                 - cell_address: Address of the cell (e.g., 'A1')
                 - cell_data: Dictionary containing cell data (value, formatting, etc.)
             file_path: Optional path to the workbook file (for validation)
+            trigger_background_worker: Whether to trigger the background worker to update embeddings
             
         Returns:
             bool: True if all updates were successful, False otherwise
         """
         if not cell_updates:
             return True
-            
+
+        updated_chunk_ids = set()
+        processed_cells = set()       
+
+
         with self._lock:
             cursor = self.conn.cursor()
             
@@ -733,7 +820,10 @@ class ExcelMetadataStorage:
                 if file_path and str(Path(file_path).resolve()) != version_info['file_path']:
                     logger.error(f"File path mismatch for version {version_id}")
                     return False
-                    
+                
+
+                # Group updates by sheet to reduce queries to db
+                updates_by_sheet = {}
                 # Process each cell update
                 for update in cell_updates:
                     sheet_name = update.get('sheet_name')
@@ -743,10 +833,20 @@ class ExcelMetadataStorage:
                     if not all([sheet_name, cell_address, cell_data]):
                         logger.warning(f"Skipping invalid cell update: {update}")
                         continue
-                        
-                    # Find the chunk containing this cell
+                    
+                    if (sheet_name, cell_address) in processed_cells:
+                        logger.debug(f"Duplicate update for {sheet_name}!{cell_address}, using latest")
+                    
+                    updates_by_sheet.setdefault(sheet_name, []).append(update)
+                    processed_cells.add((sheet_name, cell_address))
+
+                # Process updates by sheet
+                for sheet_name, sheet_updates in updates_by_sheet.items():
+                    # Find all chunks that need updating for this sheet
+                    row_numbers = [int(re.search(r'\d+', u['cell_address']).group()) for u in sheet_updates]
+
                     cursor.execute("""
-                        SELECT c.chunk_id, c.chunk_json
+                        SELECT c.chunk_id, c.chunk_json, c.start_row, c.end_row
                         FROM chunks c
                         WHERE c.version_id = ? 
                         AND c.sheet_name = ?
@@ -755,127 +855,213 @@ class ExcelMetadataStorage:
                     """, (
                         version_id,
                         sheet_name,
-                        int(re.search(r'\d+', cell_address).group()),  # Extract row number
-                        int(re.search(r'\d+', cell_address).group())
+                        max(row_numbers),
+                        min(row_numbers)
                     ))
-                    
-                    chunk = cursor.fetchone()
-                    if not chunk:
-                        logger.warning(f"No chunk found for cell {sheet_name}!{cell_address}")
+
+                    chunks = {row['chunk_id']: row for row in cursor.fetchall()}
+
+                    if not chunks:
+                        logger.warning(f"No chunks found for sheet {sheet_name}")
                         continue
-                        
-                    # Parse chunk data
-                    chunk_data = json.loads(chunk['chunk_json'])
-                    cell_found = False
-                    
-                    # Update cell in chunk data
-                    for row in chunk_data.get('cellData', []):
-                        for cell in row:
-                            if cell.get('address') == cell_address:
-                                # Update cell data
-                                cell.update(cell_data)
-                                cell_found = True
-                                break
-                        if cell_found:
-                            break
+
+                    for update in sheet_updates:
+                        cell_address = update.get('cell_address')
+                        cell_data = update.get('cell_data', {})
+                        row_num = int(re.search(r'\d+', cell_address).group())
+                        # Find the chunk containing this cell
+                        chunk = next(
+                            (c for c in chunks.values() 
+                             if c['start_row'] <= row_num <= c['end_row']),
+                            None
+                        )
+
+                        if not chunk:
+                            logger.warning(f"No chunk found for cell {sheet_name}!{cell_address}")
+                            continue
+
+                        chunk_id = chunk['chunk_id']
+                        updated_chunk_ids.add(chunk_id)
                             
-                    if not cell_found:
-                        logger.warning(f"Cell {sheet_name}!{cell_address} not found in chunk")
-                        continue
+                        # Parse chunk data
+                        chunk_data = json.loads(chunk['chunk_json'])
+                        cell_found = False
                         
-                    # Update chunk in database
-                    chunk_json = json.dumps(chunk_data)
-                    chunk_text = self._generate_chunk_text(chunk_data)
-                    chunk_hash = self._calculate_hash(chunk_json)
-                    
-                    cursor.execute("""
-                        UPDATE chunks
-                        SET chunk_json = ?,
-                            chunk_text = ?,
-                            chunk_hash = ?,
-                            is_modified = 1,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE chunk_id = ?
-                    """, (
-                        chunk_json,
-                        chunk_text,
-                        chunk_hash,
-                        chunk['chunk_id']
-                    ))
-                    
-                    # Update cell in cells table
-                    cell_json = json.dumps(cell_data)
-                    cell_hash = self._calculate_hash(cell_json)
-                    
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO cells (
+                        # Update cell in chunk data
+                        for row in chunk_data.get('cellData', []):
+                            for cell in row:
+                                if cell.get('address') == cell_address:
+                                    # Update cell data
+                                    cell.update(cell_data)
+                                    cell_found = True
+                                    break
+                            if cell_found:
+                                break
+                                
+                        if not cell_found:
+                            logger.warning(f"Cell {sheet_name}!{cell_address} not found in chunk")
+                            continue
+                            
+                        # Update chunk in database
+                        chunk_json = json.dumps(chunk_data)
+                        chunk_text = self._generate_chunk_text(chunk_data)
+                        chunk_hash = self._calculate_hash(chunk_json)
+                        self._update_chunk_from_cells(cursor, version_id, chunk_id, chunk_json, chunk_text, chunk_hash)
+                                            
+                        # Update cell in cells table
+                        cell_json = json.dumps(cell_data)
+                        cell_hash = self._calculate_hash(cell_json)
+                        
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO cells (
+                                version_id,
+                                chunk_id,
+                                sheet_name,
+                                cell_address,
+                                cell_json,
+                                cell_hash,
+                                created_at,
+                                updated_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        """, (
                             version_id,
-                            chunk_id,
+                            chunk['chunk_id'],
                             sheet_name,
                             cell_address,
                             cell_json,
-                            cell_hash,
-                            created_at,
-                            updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    """, (
-                        version_id,
-                        chunk['chunk_id'],
-                        sheet_name,
-                        cell_address,
-                        cell_json,
-                        cell_hash
-                    ))
+                            cell_hash
+                        ))
+
+
+                #------END OF LOOP
                 
                 # Update the full metadata for the version
                 self._update_full_metadata(cursor, version_id)
                 
                 self.conn.commit()
-                return True
                 
             except Exception as e:
                 self.conn.rollback()
                 logger.error(f"Error updating cells: {e}")
                 return False
+
+        try:
+            # Trigger background embedding if requested
+            if trigger_background_worker and updated_chunk_ids:
+                self._trigger_background_embedding(
+                    version_id=version_id,
+                    file_path=version_info['file_path'],
+                    chunk_ids=list(updated_chunk_ids),
+                    blocking=False
+                )
+        except Exception as e:
+            logger.error(f"Error triggering background embedding: {e}")
+            return False
+
+        return True
+
+    def _trigger_background_embedding(
+        self,
+        version_id: int,
+        file_path: str,
+        chunk_ids: Optional[List[int]] = None,
+        blocking: bool = False
+    ) -> bool:
+        """
+        Trigger background embedding for the specified version and chunks.
+        
+        Args:
+            version_id: The version ID that was updated
+            file_path: Path to the workbook file
+            chunk_ids: Optional list of chunk IDs that were modified
+
+        Returns:
+            bool: True if the embedding was triggered successfully, False otherwise
+        """
+        try:
+            logger.info(f"Triggering background embedding for version {version_id}")            
+            worker = get_embedding_worker(blocking=blocking)
+            if not worker:
+                logger.warning("Embedding worker not available")
+                return False
+
+            logger.info(f"Fetching chunks for version {version_id} for {len(chunk_ids)} chunk ids")
+            chunks = self.get_chunks_batch(version_id, chunk_ids)
+            if not chunks:
+                logger.warning(f"No chunks found for version {version_id}. Cannot run embedding worker.")
+                return False
+
+            # Validate chunk format
+            logger.info(f"Validating chunk format for version {version_id}")
+            chunk_list = list(chunks.values())
+            if not all(isinstance(chunk, dict) for chunk in chunk_list):
+                logger.error("Invalid chunk format - expected list of dictionaries")
+                return False
+
+            # Queue embedding task with updated chunks
+            logger.info(f"Queueing embedding task for version {version_id}")
+            worker.queue_embedding_task(
+                version_id=version_id,
+                file_path=file_path,
+                chunks=list(chunks.values())
+            )
+            logger.info(f"Queued embedding task for version {version_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error triggering background embedding: {e}")
+            return False
+
+    def get_chunks_batch(self, version_id: int, chunk_ids: List[int]) -> Dict[int, Optional[dict]]:
+        """Get multiple chunks by their IDs in a single batch operation.
+        
+        Args:
+            version_id: The version ID to get chunks from
+            chunk_ids: List of chunk IDs to retrieve
+            
+        Returns:
+            Dictionary mapping chunk IDs to their JSON data (or None if not found)
+        """
+        if not chunk_ids:
+            return {}
+
+        with self._lock:
+            cursor = self.conn.cursor()
+            
+            # Create a parameter string with the right number of placeholders
+            placeholders = ','.join(['?'] * len(chunk_ids))
+            params = [version_id] + chunk_ids
+            logger.info(f"Fetching chunks for placeholder chunk id: {placeholders} with params {params}")
+            
+            query = f"""
+                SELECT chunk_id, chunk_json 
+                FROM chunks 
+                WHERE version_id = ? 
+                AND chunk_id IN ({placeholders})
+            """
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            # Create a dictionary to store the results
+            chunks = {chunk_id: None for chunk_id in chunk_ids}
+            for row in results:
+                if row['chunk_json']:
+                    chunks[row['chunk_id']] = json.loads(row['chunk_json'])
+            
+            return chunks
     
-    def _update_chunk_from_cells(self, cursor, version_id: int, chunk_id: int) -> None:
+    def _update_chunk_from_cells(
+        self, 
+        cursor,
+        version_id: int, 
+        chunk_id: int,
+        chunk_json: str,
+        chunk_text: str,
+        chunk_hash: str) -> None:
         """Update a chunk's metadata based on its cells."""
-        # Get all cells in this chunk
-        cursor.execute("""
-            SELECT cell_address, cell_json 
-            FROM cells 
-            WHERE version_id = ? AND chunk_id = ?
-        """, (version_id, chunk_id))
-        
-        cells = []
-        for row in cursor.fetchall():
-            cell_data = json.loads(row['cell_json'])
-            cell_data['address'] = row['cell_address']
-            cells.append(cell_data)
-        
-        if not cells:
-            return
-        
-        # Sort cells properly
-        cells.sort(key=lambda c: (
-            self._parse_cell_address(c['address'])[1],  # Row number
-            self._column_to_number(self._parse_cell_address(c['address'])[0])  # Column number
-        ))
-        
-        # Get chunk metadata
-        chunk_metadata = self._get_chunk_metadata(cursor, version_id, chunk_id)
-        
-        # Reconstruct chunk data
-        chunk_data = {
-            'chunkId': f"chunk_{chunk_id}",
-            'cellData': self._organize_cells_into_rows(cells),
-            **chunk_metadata
-        }
-        
-        # Update chunk
-        chunk_text = self._generate_chunk_text(chunk_data)
-        chunk_json = json.dumps(chunk_data)
-        chunk_hash = self._calculate_hash(chunk_json)
+
+        logger.info(f"Updating chunk {chunk_id} from cells")
         
         cursor.execute("""
             UPDATE chunks
@@ -898,7 +1084,7 @@ class ExcelMetadataStorage:
                     rows[row_num] = []
                 rows[row_num].append(cell)
             except ValueError:
-                print(f"Warning: Skipping cell with invalid address: {cell.get('address', 'unknown')}")
+                logger.warning(f"Warning: Skipping cell with invalid address: {cell.get('address', 'unknown')}")
                 continue
         
         # Sort rows and cells within rows
@@ -1041,6 +1227,8 @@ class ExcelMetadataStorage:
         """Get the workbook ID for a given file path."""
         with self._lock:
             cursor = self.conn.cursor()
+            # Strip the file_path of the known system format in case there was a change up with the system's saved as version
+
             normalized_path = str(Path(file_path).resolve())
             cursor.execute("""
                 SELECT workbook_id 
@@ -1669,8 +1857,11 @@ class ExcelMetadataStorage:
         self.close()
 
     def __del__(self):
-        """Ensure connection is closed when object is destroyed."""
-        try:
-            self.close()
-        except:
-            pass
+        """Ensure resources are cleaned up."""
+        if hasattr(self, 'conn'):
+            self.conn.close()
+        if hasattr(self, '_lock') and self._lock.locked():
+            try:
+                self._lock.release()
+            except RuntimeError:  # If the lock is not acquired
+                pass

@@ -181,7 +181,7 @@ class MarcosRetrievalEvaluator:
                 embeddings=embeddings,
                 chunks=chunks,
                 embedding_model=self.model_name,
-                replace_existing=True
+                create_new_version=True
             )
             
             # Initialize retriever

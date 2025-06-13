@@ -186,7 +186,7 @@ class MultiModelRetrievalEvaluator:
                 embeddings=embeddings,
                 chunks=chunks,
                 embedding_model=model_name,
-                replace_existing=True
+                create_new_version=True
             )
             
             # Initialize retriever
