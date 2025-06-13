@@ -160,13 +160,13 @@ import axios, {
       workbookPath: string,
       chunks: Chunk[],
       modelName: string = 'msmarco-MiniLM-L-6-v3',
-      replaceExisting: boolean = true
+      createNewVersion: boolean = true
     ): Promise<AxiosResponse<StoreEmbeddingsResponse>> {
       return apiClient.post<StoreEmbeddingsResponse>('/vectors/storage/embed-and-store-chunks', {
         workbook_path: workbookPath,
         chunks,
         embedding_model: modelName,
-        replace_existing: replaceExisting
+        create_new_version: createNewVersion
       });
     },
   
