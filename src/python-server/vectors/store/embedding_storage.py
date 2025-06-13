@@ -77,6 +77,14 @@ class EmbeddingStorage:
             )
         """)
 
+        # Add version_id column if it doesn't exist
+        cursor.execute("PRAGMA table_info(chunks)")
+        columns = [column[1] for column in cursor.fetchall()]
+        if 'version_id' not in columns:
+            self.logger.info("Adding version_id column to chunks table")
+            cursor.execute("ALTER TABLE chunks ADD COLUMN version_id INTEGER NOT NULL DEFAULT 1")
+
+
         # Create indexes
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_workbook_id ON chunks(workbook_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_workbook_chunk ON chunks(workbook_id, chunk_index)")
