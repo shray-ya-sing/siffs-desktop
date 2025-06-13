@@ -632,8 +632,12 @@ class ExcelPendingEditManager:
                 cell.font.italic = state['font_italic']
             if 'font_color' in state and state['font_color']:
                 cell.font.color = state['font_color']
-            if 'fill_color' in state and state['fill_color']:
-                cell.color = state['fill_color']
+            if 'fill_color' in state:
+                if state['fill_color']:
+                    cell.color = state['fill_color']
+                else:
+                    cell.color = (255, 255, 255) # Set to white
+            
         except Exception as e:
             logger.warning(f"Warning: Some formatting could not be restored: {e}") 
 
