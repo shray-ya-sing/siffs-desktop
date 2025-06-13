@@ -7,6 +7,8 @@ from datetime import datetime
 from collections import defaultdict
 import sys
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 
 # Add the project parent to Python path
 project_root = Path(__file__).parent.parent.absolute()
@@ -21,14 +23,14 @@ try:
     OPENPYXL_AVAILABLE = True
 except ImportError as e:
     OPENPYXL_AVAILABLE = False
-    print(f"Warning: openpyxl import failed - Excel metadata extraction will not be available: {str(e)}")
+    logger.warning(f"Warning: openpyxl import failed - Excel metadata extraction will not be available: {str(e)}")
 
 try:
     import xlwings as xw
     XLWINGS_AVAILABLE = True
 except ImportError:
     XLWINGS_AVAILABLE = False
-    print("Warning: xlwings not available - display values will not be extracted")
+    logger.warning("Warning: xlwings not available - display values will not be extracted")
 
 class ExcelDependencyExtractor:
     """Helper class for extracting cell dependencies from Excel formulas"""
@@ -98,7 +100,7 @@ class ExcelDependencyExtractor:
             range_size = (end_row - start_row + 1) * (end_col - start_col + 1)
             
             if range_size > max_cells:
-                print(f"Warning: Range {start_cell}:{end_cell} too large ({range_size} cells), skipping expansion")
+                logger.warning(f"Warning: Range {start_cell}:{end_cell} too large ({range_size} cells), skipping expansion")
                 continue
             
             # Expand the range
@@ -151,13 +153,13 @@ class ExcelDependencyExtractor:
             individual_cells = self.extract_individual_cells(modified_formula, current_sheet)
             all_references.update(individual_cells)
         except Exception as e:
-            print(f"Warning: Error extracting references from formula '{formula}': {str(e)}")
+            logger.warning(f"Warning: Error extracting references from formula '{formula}': {str(e)}")
         
         return all_references
     
     def build_dependency_maps(self, all_cells_metadata):
         """Build complete dependency maps from all cell metadata"""
-        print("Building dependency maps...")
+        logger.info("Building dependency maps...")
         
         # Reset maps
         self.dependency_map.clear()
@@ -186,10 +188,10 @@ class ExcelDependencyExtractor:
                 total_dependencies += len(precedents)
                 
             except Exception as e:
-                print(f"Warning: Error processing dependencies for {cell_address}: {str(e)}")
+                logger.warning(f"Warning: Error processing dependencies for {cell_address}: {str(e)}")
                 continue
         
-        print(f"Built dependency maps for {formula_count} formula cells with {total_dependencies} total dependencies")
+        logger.info(f"Built dependency maps for {formula_count} formula cells with {total_dependencies} total dependencies")
         return self.dependency_map, self.dependent_map
 
 class ExcelMetadataExtractor:
@@ -215,14 +217,14 @@ class ExcelMetadataExtractor:
         self.xlwings_extractor = None
         self.dependency_extractor = ExcelDependencyExtractor()
         self._initialize_xlwings()
-        print("ExcelMetadataExtractor initialized, initialized storage for extractor")
+        logger.info("ExcelMetadataExtractor initialized, initialized storage for extractor")
         self.use_storage = use_storage
         if self.use_storage:
             try:
                 self.storage = storage or ExcelMetadataStorage()
-                print("Storage initialized, ExcelMetadataExtractor class initialization complete. ")
+                logger.info("Storage initialized, ExcelMetadataExtractor class initialization complete.")
             except Exception as e:
-                print(f"Error initializing storage: {str(e)}")
+                logger.error(f"Error initializing storage: {str(e)}")
                 self.storage = None
                 self.use_storage = False
             
@@ -230,17 +232,17 @@ class ExcelMetadataExtractor:
     def _initialize_xlwings(self) -> None:
         """Initialize xlwings extractor if available."""
         if not XLWINGS_AVAILABLE:
-            print("Warning: xlwings not available - display values will not be extracted")
+            logger.warning("Warning: xlwings not available - display values will not be extracted")
             return
             
         try:
             from .xlwings_extractor import XlwingsMetadataExtractor
             self.xlwings_extractor = XlwingsMetadataExtractor()
         except ImportError as e:
-            print(f"Warning: Failed to initialize xlwings extractor: {str(e)}")
+            logger.warning(f"Warning: Failed to initialize xlwings extractor: {str(e)}")
         except Exception as e:
-            print(f"Warning: Unexpected error initializing xlwings: {str(e)}")
-            print(traceback.format_exc())
+            logger.warning(f"Warning: Unexpected error initializing xlwings: {str(e)}")
+            logger.error(traceback.format_exc())
 
     def open_workbook(self, workbook_path: Optional[str] = None) -> None:
         """Open the Excel workbook with comprehensive error handling."""
@@ -291,7 +293,7 @@ class ExcelMetadataExtractor:
             if self.workbook:
                 self.workbook.close()
         except Exception as e:
-            print(f"Warning: Error closing workbook: {str(e)}")
+            logger.warning(f"Warning: Error closing workbook: {str(e)}")
         finally:
             self.workbook = None
             
@@ -299,7 +301,7 @@ class ExcelMetadataExtractor:
             if self.workbook_values:
                 self.workbook_values.close()
         except Exception as e:
-            print(f"Warning: Error closing values workbook: {str(e)}")
+            logger.warning(f"Warning: Error closing values workbook: {str(e)}")
         finally:
             self.workbook_values = None
 
@@ -359,23 +361,23 @@ class ExcelMetadataExtractor:
                             
                             # If the file hasn't changed, return stored metadata
                             if latest_version.get('file_hash') == current_hash:
-                                print(f"Using cached metadata for {normalized_path}")
-                                stored_metadata = json.loads(latest_version.get('full_metadata_json', '{}'))
+                                logger.info(f"Using cached metadata for {normalized_path}")
+                                stored_metadata = latest_version.get('full_metadata_json')
                                 if stored_metadata:
                                     try:
                                         metadata = json.loads(stored_metadata)
                                         # Validate the metadata structure
                                         if self._is_valid_metadata(metadata):
-                                            print(f"Using cached metadata for {normalized_path}")
-                                            return metadata, {}
+                                            logger.info(f"Using cached metadata for {normalized_path}")
+                                            return metadata
                                         else:
-                                            print("Cached metadata is invalid, forcing re-extraction")
+                                            logger.info("Cached metadata is invalid, forcing re-extraction")
                                     except (json.JSONDecodeError, TypeError) as e:
-                                        print(f"Error parsing stored metadata: {str(e)}")
+                                        logger.warning(f"Error parsing stored metadata: {str(e)}")
                                 else:
-                                    print("No metadata found in storage, forcing extraction")
+                                    logger.info("No metadata found in storage, forcing extraction")
                     except Exception as e:
-                        print(f"Warning: Error checking storage for existing metadata: {str(e)}")
+                        logger.warning(f"Warning: Error checking storage for existing metadata: {str(e)}, forcing extraction")
             
             # If we get here, either:
             # 1. No existing version found in storage
@@ -401,7 +403,7 @@ class ExcelMetadataExtractor:
                         metadata
                     )
                 except Exception as e:
-                    print(f"Warning: Failed to extract display values: {str(e)}")
+                    logger.warning(f"Warning: Failed to extract display values: {str(e)}")
                     display_values = {"error": str(e)}
 
 
@@ -418,9 +420,9 @@ class ExcelMetadataExtractor:
                             change_description="Initial extraction" if not latest_version else "Updated extraction",
                             full_metadata_json=json.dumps(metadata)
                         )
-                        
+                        logger.info(f"Stored metadata in storage for version {version_id}")
                     except Exception as e:
-                        print(f"Warning: Failed to store metadata in storage: {str(e)}")
+                        logger.warning(f"Warning: Failed to store metadata in storage: {str(e)}")
                         import traceback
                         traceback.print_exc()
 
@@ -429,8 +431,8 @@ class ExcelMetadataExtractor:
             
         except Exception as e:
             error_msg = f"Failed to extract workbook metadata: {str(e)}"
-            print(error_msg)
-            print(traceback.format_exc())
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
             raise RuntimeError(error_msg) from e
 
     def extract_workbook_metadata_openpyxl(
@@ -481,8 +483,8 @@ class ExcelMetadataExtractor:
                     
                 except Exception as e:
                     error_msg = f"Error processing sheet '{sheet.title}': {str(e)}"
-                    print(f"Warning: {error_msg}")
-                    print(traceback.format_exc())
+                    logger.warning(f"Warning: {error_msg}")
+                    logger.error(traceback.format_exc())
                     workbook_metadata["sheets"].append({
                         "name": sheet.title,
                         "error": error_msg,
@@ -491,7 +493,7 @@ class ExcelMetadataExtractor:
             
             # Second pass: Build dependency relationships if requested
             if include_dependencies and all_cells_metadata:
-                print("Building dependency relationships...")
+                logger.info("Building dependency relationships...")
                 try:
                     dependency_map, dependent_map = self.dependency_extractor.build_dependency_maps(all_cells_metadata)
                     
@@ -508,15 +510,16 @@ class ExcelMetadataExtractor:
                     
                 except Exception as e:
                     error_msg = f"Error building dependencies: {str(e)}"
-                    print(f"Warning: {error_msg}")
+                    logger.warning(f"Warning: {error_msg}")
+                    logger.error(traceback.format_exc())
                     workbook_metadata["dependencyError"] = error_msg
             
             return workbook_metadata
             
         except Exception as e:
             error_msg = f"Failed to extract workbook metadata: {str(e)}"
-            print(error_msg)
-            print(traceback.format_exc())
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
             raise RuntimeError(error_msg) from e
 
     def _extract_sheet_metadata_with_cells(
@@ -568,8 +571,8 @@ class ExcelMetadataExtractor:
                 )
             except Exception as e:
                 sheet_metadata["error"] = f"Error extracting cell data: {str(e)}"
-                print(f"Warning: {sheet_metadata['error']}")
-                print(traceback.format_exc())
+                logger.warning(f"Warning: {sheet_metadata['error']}")
+                logger.error(traceback.format_exc())
                 sheet_metadata["cellData"] = []
             
             # Extract tables and named ranges
@@ -577,7 +580,8 @@ class ExcelMetadataExtractor:
                 sheet_metadata["tables"] = self._extract_tables_metadata(sheet)
             except Exception as e:
                 sheet_metadata["error"] = sheet_metadata.get("error", "") + f" Tables: {str(e)}"
-                print(f"Warning: Error extracting tables: {str(e)}")
+                logger.warning(f"Warning: Error extracting tables: {str(e)}")
+                logger.error(traceback.format_exc())
                 sheet_metadata["tables"] = []
 
             # TODO: Extract named ranges
@@ -586,8 +590,8 @@ class ExcelMetadataExtractor:
             
         except Exception as e:
             error_msg = f"Critical error extracting sheet '{sheet.title}': {str(e)}"
-            print(error_msg)
-            print(traceback.format_exc())
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
             sheet_metadata.update({
                 "error": error_msg,
                 "isEmpty": True
@@ -622,7 +626,8 @@ class ExcelMetadataExtractor:
                             cell_dict[full_address] = cell_metadata
                             
                     except Exception as e:
-                        print(f"Warning: Error processing cell ({row_idx},{col_idx}): {str(e)}")
+                        logger.warning(f"Warning: Error processing cell ({row_idx},{col_idx}): {str(e)}")
+                        logger.error(traceback.format_exc())
                         row_data.append({
                             "row": row_idx,
                             "column": col_idx,
@@ -633,8 +638,8 @@ class ExcelMetadataExtractor:
                 cell_data.append(row_data)
                 
         except Exception as e:
-            print(f"Error extracting cell data: {str(e)}")
-            print(traceback.format_exc())
+            logger.error(f"Error extracting cell data: {str(e)}")
+            logger.error(traceback.format_exc())
             raise
             
         return cell_data, cell_dict
@@ -691,8 +696,8 @@ class ExcelMetadataExtractor:
             return cell_metadata
             
         except Exception as e:
-            print(f"Error extracting metadata for cell ({row},{col}): {str(e)}")
-            print(traceback.format_exc())
+            logger.error(f"Error extracting metadata for cell ({row},{col}): {str(e)}")
+            logger.error(traceback.format_exc())
             return {
                 "row": row,
                 "column": col,
@@ -715,7 +720,7 @@ class ExcelMetadataExtractor:
         dependent_map: Dict[str, set]
     ):
         """Update all cells in workbook metadata with dependency information."""
-        print("Updating cells with dependency information...")
+        logger.info("Updating cells with dependency information...")
         
         for sheet_data in workbook_metadata["sheets"]:
             if sheet_data.get("isEmpty") or "cellData" not in sheet_data:
@@ -783,7 +788,7 @@ class ExcelMetadataExtractor:
             "mostReferencedCells": [{"cell": cell, "dependents": count} for cell, count in most_dependents if count > 0]
         }
         
-        print(f"Added dependency summary: {total_dependencies} total dependencies across {formula_cells} formula cells")
+        logger.info(f"Added dependency summary: {total_dependencies} total dependencies across {formula_cells} formula cells")
 
     def _get_cell_formula(self, cell) -> Optional[str]:
         """Safely get cell formula."""
@@ -930,8 +935,8 @@ class ExcelMetadataExtractor:
                 
         except Exception as e:
             formatting["error"] = f"Error extracting formatting: {str(e)}"
-            print(f"Warning: {formatting['error']}")
-            print(traceback.format_exc())
+            logger.warning(f"Warning: {formatting['error']}")
+            logger.error(traceback.format_exc())
             
         return formatting
 
@@ -968,7 +973,8 @@ class ExcelMetadataExtractor:
                 
             return str(color)
         except Exception as e:
-            print(f"Warning: Error converting color to hex: {str(e)}")
+            logger.warning(f"Warning: Error converting color to hex: {str(e)}")
+            logger.error(traceback.format_exc())
             return None
 
     def _get_border_info(self, border_side) -> Dict[str, Any]:
@@ -982,7 +988,8 @@ class ExcelMetadataExtractor:
                 "color": self._get_color_hex(border_side.color)
             }
         except Exception as e:
-            print(f"Warning: Error getting border info: {str(e)}")
+            logger.warning(f"Warning: Error getting border info: {str(e)}")
+            logger.error(traceback.format_exc())
             return {"style": None, "color": None, "error": str(e)}
 
     def _serialize_value(self, value: Any) -> Any:
@@ -997,7 +1004,8 @@ class ExcelMetadataExtractor:
             else:
                 return str(value)
         except Exception as e:
-            print(f"Warning: Error serializing value: {str(e)}")
+            logger.warning(f"Warning: Error serializing value: {str(e)}")
+            logger.error(traceback.format_exc())
             return None
 
     def _extract_tables_metadata(self, sheet) -> List[Dict[str, Any]]:
@@ -1035,12 +1043,13 @@ class ExcelMetadataExtractor:
                     tables.append(table_data)
                     
                 except Exception as e:
-                    print(f"Warning: Error processing table {table_name}: {str(e)}")
+                    logger.warning(f"Warning: Error processing table {table_name}: {str(e)}")
+                    logger.error(traceback.format_exc())
                     continue
                     
         except Exception as e:
-            print(f"Warning: Error extracting tables: {str(e)}")
-            print(traceback.format_exc())
+            logger.warning(f"Warning: Error extracting tables: {str(e)}")
+            logger.error(traceback.format_exc())
             
         return tables
 
@@ -1081,12 +1090,13 @@ class ExcelMetadataExtractor:
                         named_ranges.append(named_range)
                         
                 except Exception as e:
-                    print(f"Warning: Error processing named range: {str(e)}")
+                    logger.warning(f"Warning: Error processing named range: {str(e)}")
+                    logger.error(traceback.format_exc())
                     continue
                     
         except Exception as e:
-            print(f"Warning: Error extracting named ranges: {str(e)}")
-            print(traceback.format_exc())
+            logger.warning(f"Warning: Error extracting named ranges: {str(e)}")
+            logger.error(traceback.format_exc())
             
         return named_ranges
 
@@ -1099,7 +1109,8 @@ class ExcelMetadataExtractor:
                 # extract colors from the theme XML
                 pass
         except Exception as e:
-            print(f"Warning: Error getting theme colors: {str(e)}")
+            logger.warning(f"Warning: Error getting theme colors: {str(e)}")
+            logger.error(traceback.format_exc())
         
         # Default theme colors (Office theme) as fallback
         return {
@@ -1156,7 +1167,7 @@ class ExcelMetadataExtractor:
                     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
                     with open(output_path, 'w', encoding='utf-8') as f:
                         f.write(json_str)
-                    print(f"Metadata successfully saved to: {output_path}")
+                    logger.info(f"Metadata successfully saved to: {output_path}")
                 except Exception as e:
                     raise IOError(f"Failed to write output file: {str(e)}")
                     
@@ -1165,8 +1176,8 @@ class ExcelMetadataExtractor:
         except Exception as e:
             # Prepare error response
             error_msg = f"Failed to extract metadata to JSON: {str(e)}"
-            print(error_msg)
-            print(traceback.format_exc())
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
             
             error_result = {
                 "metadata": None,
@@ -1207,23 +1218,32 @@ class ExcelMetadataExtractor:
         
             # Check storage first if not forcing extraction
             if self.use_storage and not force_extract and normalized_path:
+                logger.info(f"Checking storage for existing metadata for {normalized_path}")
                 try:
                     # Get the latest version from storage
                     latest_version = self.storage.get_latest_version(normalized_path)
-                    if latest_version and latest_version.get('file_hash') == self._calculate_file_hash(normalized_path):
-                        print(f"Using cached metadata for {normalized_path}")
+                    if latest_version:
+                        logger.info(f"Latest version found for {normalized_path}: {latest_version}")
+                        # Check the file hash:
+                        stored_hash = latest_version.get('file_hash')
+                        current_hash = self._calculate_file_hash(normalized_path)
+                        is_hash_match = stored_hash == current_hash
+                        logger.info(f"Hash comparison - Match: {is_hash_match}")                  
+                        logger.info(f"Using cached metadata for {normalized_path}")
                         # Get all chunks for this version from db storage
                         chunks = self.storage.get_all_chunks(latest_version['version_id'])
+                        
                         if chunks and len(chunks) > 0:
+                            logger.info(f"Found {len(chunks)} chunks for {normalized_path}")
                             # check that each chunk is a valid json object
                             if self._are_valid_chunks(chunks):
-                                print(f"Using {len(chunks)} cached metadata chunks for {normalized_path}")
+                                logger.info(f"Chunks validated. Using {len(chunks)} cached metadata chunks for {normalized_path}")
                                 return chunks
 
-                            print(f"Invalid chunks found for {normalized_path}, reverting to forced extraction")
-                        print(f"No chunks found for {normalized_path}, reverting to forced extraction")
+                            logger.warning(f"Invalid chunks found for {normalized_path}, reverting to forced extraction")
+                        logger.warning(f"No chunks found for {normalized_path}, reverting to forced extraction")
                 except Exception as e:
-                    print(f"Warning: Error checking storage for existing metadata: {str(e)}")
+                    logger.warning(f"Warning: Error checking storage for existing metadata: {str(e)}")
                     import traceback
                     traceback.print_exc()
                     
@@ -1234,6 +1254,7 @@ class ExcelMetadataExtractor:
                 raise RuntimeError("Workbook is not open")
 
             # Extract metadata chunks from xl file
+            logger.info("No cached chunks available. Extracting metadata chunks from xl file...")
             
             chunks = []
             all_cells_metadata = {}  # For dependency analysis across all chunks
@@ -1312,8 +1333,8 @@ class ExcelMetadataExtractor:
                         
                 except Exception as e:
                     error_msg = f"Error processing sheet '{sheet.title}': {str(e)}"
-                    print(f"Warning: {error_msg}")
-                    print(traceback.format_exc())
+                    logger.warning(f"Warning: {error_msg}")
+                    logger.error(traceback.format_exc())
                     
                     # Add error chunk
                     chunks.append({
@@ -1326,7 +1347,7 @@ class ExcelMetadataExtractor:
             
             # Build dependencies if requested
             if include_dependencies and all_cells_metadata:
-                print(f"Building dependencies for {len(chunks)} chunks...")
+                logger.info(f"Building dependencies for {len(chunks)} chunks...")
                 try:
                     dependency_map, dependent_map = self.dependency_extractor.build_dependency_maps(all_cells_metadata)
                     
@@ -1340,31 +1361,33 @@ class ExcelMetadataExtractor:
                         )
                         
                 except Exception as e:
-                    print(f"Warning: Error building dependencies: {str(e)}")
+                    logger.warning(f"Warning: Error building dependencies: {str(e)}")
+                    logger.error(traceback.format_exc())
             
             # Store the chunks if storage is enabled
             if self.use_storage and normalized_path:
                 try:
                     # Create or update workbook in storage
-                    self.storage.create_or_update_workbook(normalized_path)
+                    logger.info(f"Storing workbook metadata in storage for {normalized_path}")
+                    workbook_id = self.storage.create_or_update_workbook(normalized_path)
                     
                     # Create a new version with the extracted chunks
-                    self.storage.create_new_version(
+                    new_version_id = self.storage.create_new_version(
                         file_path=normalized_path,
                         change_description=f"Initialized in DB. Chunked extraction with {rows_per_chunk} rows per chunk",
                         chunks=chunks
                     )
+                    logger.info(f"Successfully stored chunks in storage for {normalized_path}, new_version_id: {new_version_id}")
                 except Exception as e:
-                    print(f"Warning: Failed to store chunks in storage: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
+                    logger.warning(f"Warning: Failed to store chunks in storage: {str(e)}")
+                    logger.error(traceback.format_exc())
 
             return chunks
             
         except Exception as e:
             error_msg = f"Failed to extract chunk metadata: {str(e)}"
-            print(error_msg)
-            print(traceback.format_exc())
+            logger.warning(error_msg)
+            logger.error(traceback.format_exc())
             raise RuntimeError(error_msg) from e
 
     def _extract_chunk_cell_data(
@@ -1399,7 +1422,8 @@ class ExcelMetadataExtractor:
                             cell_dict[full_address] = cell_metadata
                             
                     except Exception as e:
-                        print(f"Warning: Error processing cell ({row_idx},{col_idx}): {str(e)}")
+                        logger.warning(f"Warning: Error processing cell ({row_idx},{col_idx}): {str(e)}")
+                        logger.error(traceback.format_exc())
                         row_data.append({
                             "row": row_idx,
                             "column": col_idx,
@@ -1410,8 +1434,8 @@ class ExcelMetadataExtractor:
                 cell_data.append(row_data)
                 
         except Exception as e:
-            print(f"Error extracting chunk cell data: {str(e)}")
-            print(traceback.format_exc())
+            logger.warning(f"Error extracting chunk cell data: {str(e)}")
+            logger.error(traceback.format_exc())
             raise
             
         return cell_data, cell_dict
@@ -1477,11 +1501,13 @@ class ExcelMetadataExtractor:
                             tables.append(table_data)
                             
                 except Exception as e:
-                    print(f"Warning: Error processing table {table_name} for chunk: {str(e)}")
+                    logger.warning(f"Warning: Error processing table {table_name} for chunk: {str(e)}")
+                    logger.error(traceback.format_exc())
                     continue
                     
         except Exception as e:
-            print(f"Warning: Error extracting tables for chunk: {str(e)}")
+            logger.warning(f"Warning: Error extracting tables for chunk: {str(e)}")
+            logger.error(traceback.format_exc())
             
         return tables
 
