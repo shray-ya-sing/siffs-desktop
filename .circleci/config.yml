@@ -5,13 +5,33 @@ orbs:
   python: circleci/python@2.1.1
   win: circleci/windows@5.0.0
 
+commands:
+  configure_git:
+    description: "Configure Git to use the GitLab token"
+    parameters:
+      token:
+        type: string
+        default: $GITLAB_TOKEN
+    steps:
+      - run:
+          name: Configure Git authentication
+          command: |
+            git config --global url."https://gitlab-ci-token:<< parameters.token >>@gitlab.com/".insteadOf "https://gitlab.com/"
+            git config --global url."https://gitlab-ci-token:<< parameters.token >>@gitlab.com/".insteadOf "git@gitlab.com:"
+            git config --global url."https://".insteadOf git://
+
+
 jobs:
   build_macos:
     macos:
       xcode: "16.4.0"
     resource_class: m2pro.medium
     steps:
-      - checkout
+      - checkout:
+          token: $GITLAB_TOKEN
+
+      - configure_git:
+          token: $GITLAB_TOKEN
 
       - run:
           name: Verify file structure
@@ -84,7 +104,11 @@ jobs:
       shell: bash.exe
       
     steps:
-      - checkout
+      - checkout:
+          token: $GITLAB_TOKEN
+
+      - configure_git:
+          token: $GITLAB_TOKEN
 
       - run:
           name: Verify file structure
@@ -144,10 +168,28 @@ workflows:
   version: 2
   
   macos_release:
+  
+  macos_release:
     jobs:
       - build_macos:
           filters:
             branches:
+              only: mac-release
+          post-steps:
+            - run:
+                name: Bump version (patch)
+                command: npm run version:patch
+  
+  windows_release:
+    jobs:
+      - build_windows:
+          filters:
+            branches:
+              only: win-release
+          post-steps:
+            - run:
+                name: Bump version (patch)
+                command: npm run version:patch
               only: mac-release
           post-steps:
             - run:
