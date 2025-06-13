@@ -1,6 +1,7 @@
 // src/renderer/services/tools/modelEditService.ts
 import modelEditPipelineService from '../python-api/modelEditPipelineService';
 import qaPipelineService from '../python-api/qaPipelineService';
+import { AcceptEditsResponse, RejectEditsResponse } from '../python-api/modelEditPipelineService';
 
 // Types
 interface ChunkInfo {
@@ -17,15 +18,82 @@ interface ModelEditCallbacks {
   onTypingEnd: () => void;
   onDataReady: (isReady: boolean) => void;
   onEditComplete: (result: any) => void;
+  onEditsAccepted: (result: AcceptEditsResponse) => void;
+  onEditsRejected: (result: RejectEditsResponse) => void;
 }
 
 export class ModelEditService {
   private callbacks: ModelEditCallbacks;
   private isDataReady = false;
   private currentWorkbookPath: string | null = null;
+  private pendingEditIds: string[] = [];
+
+  private storePendingEdits(editResult: any): void {
+    if (editResult?.request_pending_edits?.length) {
+      this.pendingEditIds = editResult.request_pending_edits
+        .map((edit: any) => edit.edit_id)
+        .filter(Boolean);
+      this.callbacks.onMessage(`✓ ${this.pendingEditIds.length} edits pending acceptance`);
+    }
+  }
 
   constructor(callbacks: ModelEditCallbacks) {
     this.callbacks = callbacks;
+  }
+
+  // Call this to accept all pending edits
+  async acceptPendingEdits(): Promise<void> {
+    if (!this.pendingEditIds.length) {
+      this.callbacks.onMessage('No pending edits to accept');
+      return;
+    }
+
+    try {
+      this.callbacks.onMessage('Accepting edits...');
+      const result = await modelEditPipelineService.acceptEdits(this.pendingEditIds);
+      
+      if (result.success) {
+        this.callbacks.onMessage(`✓ Accepted ${result.accepted_count} edits`);
+        this.pendingEditIds = []; // Clear accepted edits
+      } else {
+        throw new Error('Failed to accept some edits');
+      }
+      
+      this.callbacks.onEditsAccepted(result);
+    } catch (error: any) {
+      const errorMessage = typeof error === 'string' ? error : 
+                         error?.message || 'Failed to accept edits';
+      this.callbacks.onError(errorMessage);
+      throw error;
+    }
+  }
+
+
+  // Call this to reject all pending edits
+  async rejectPendingEdits(): Promise<void> {
+    if (!this.pendingEditIds.length) {
+      this.callbacks.onMessage('No pending edits to reject');
+      return;
+    }
+
+    try {
+      this.callbacks.onMessage('Rejecting edits...');
+      const result = await modelEditPipelineService.rejectEdits(this.pendingEditIds);
+      
+      if (result.success) {
+        this.callbacks.onMessage(`✓ Rejected ${result.rejected_count} edits`);
+        this.pendingEditIds = []; // Clear rejected edits
+      } else {
+        throw new Error('Failed to reject some edits');
+      }
+      
+      this.callbacks.onEditsRejected(result);
+    } catch (error: any) {
+      const errorMessage = typeof error === 'string' ? error : 
+                         error?.message || 'Failed to reject edits';
+      this.callbacks.onError(errorMessage);
+      throw error;
+    }
   }
 
   // Process Excel file and store embeddings
@@ -134,6 +202,9 @@ async processEditRequest(editRequest: string): Promise<void> {
         this.currentWorkbookPath,
         parsedMetadata
       );
+
+      // Store pending edits
+      this.storePendingEdits(result);
 
       // Notify completion
       this.callbacks.onMessage('✓ Changes applied successfully!');

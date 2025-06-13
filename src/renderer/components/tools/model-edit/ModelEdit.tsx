@@ -5,6 +5,9 @@ import { FilePathInput } from '../../conversation/FilePathInput';
 import { ToolInstructions } from '../ToolInstructions';
 import { Message } from '../../../types/message';
 import { ModelEditService } from '../../../services/tools/modelEditService';
+import { AcceptEditsButton } from './AcceptEditsButton';
+import { RejectEditsButton } from './RejectEditsButton';
+
 
 interface ModelEditCallbacks {
   onMessage: (message: string) => void;
@@ -14,6 +17,8 @@ interface ModelEditCallbacks {
   onTypingEnd: () => void;
   onDataReady: (isReady: boolean) => void;
   onEditComplete: (result: any) => void;
+  onEditsAccepted: (result: any) => void;
+  onEditsRejected: (result: any) => void;
 }
 
 
@@ -34,6 +39,8 @@ export const ModelEdit: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState('');
   const [isDataReady, setIsDataReady] = useState(false);
+  const [pendingEditCount, setPendingEditCount] = React.useState(0);
+
 
   // Initialize service
   const initializeService = useCallback(() => {
@@ -62,16 +69,60 @@ export const ModelEdit: React.FC = () => {
         onDataReady: setIsDataReady,
         onEditComplete: (result) => {
           console.log('Edit completed:', result);
+          if (result?.request_pending_edits?.length) {
+            setPendingEditCount(prev => prev + result.request_pending_edits.length);
+          }
           setMessages(prev => [...prev, {
             id: `msg-${Date.now()}`,
             role: 'assistant',
             content: '✓ Edit completed successfully!',
             timestamp: Date.now().toString()
           }]);
-        }
+        },
+        onEditsAccepted: (result) => {
+          console.log('Edits accepted:', result);
+          setPendingEditCount(0);
+          setMessages(prev => [...prev, {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: '✓ Edits accepted successfully!',
+            timestamp: Date.now().toString()
+          }]);
+        },
+        onEditsRejected: (result) => {
+          console.log('Edits rejected:', result);
+          setPendingEditCount(0);
+          setMessages(prev => [...prev, {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: '✓ Edits rejected successfully!',
+            timestamp: Date.now().toString()
+          }]);
+        },
       });
     }
     return modelEditServiceRef.current;
+  }, []);
+
+
+  // Accept edits
+  const handleAcceptEdits = useCallback(async () => {
+    if (!modelEditServiceRef.current) return;
+    try {
+      await modelEditServiceRef.current.acceptPendingEdits();
+    } catch (error) {
+      console.error('Error accepting edits:', error);
+    }
+  }, []);
+
+  // Reject edits
+  const handleRejectEdits = useCallback(async () => {
+    if (!modelEditServiceRef.current) return;
+    try {
+      await modelEditServiceRef.current.rejectPendingEdits();
+    } catch (error) {
+      console.error('Error rejecting edits:', error);
+    }
   }, []);
 
   // Handle file path submission
@@ -211,6 +262,23 @@ export const ModelEdit: React.FC = () => {
             />
           )}
         </div>
+
+        {isDataReady && (
+          <div className="flex gap-2">
+            <AcceptEditsButton
+              onAccept={handleAcceptEdits}
+              pendingCount={pendingEditCount}
+              disabled={isProcessing || pendingEditCount === 0}
+              className="flex-1"
+            />
+            <RejectEditsButton
+              onReject={handleRejectEdits}
+              pendingCount={pendingEditCount}
+              disabled={isProcessing || pendingEditCount === 0}
+              className="flex-1"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

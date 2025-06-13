@@ -131,6 +131,19 @@ interface StoreEmbeddingsResponse {
   embedding_model: string;
 }
 
+export interface AcceptEditsResponse {
+  success: boolean;
+  accepted_count: number;
+  failed_ids: string[];
+  accepted_edit_version_ids: number[];
+}
+
+export interface RejectEditsResponse {
+  success: boolean;
+  rejected_count: number;
+  failed_ids: string[];
+}
+
 const modelEditPipelineService = {
 
     /**
@@ -305,6 +318,31 @@ const modelEditPipelineService = {
     });
     return response.data;
   },
+
+  /**
+   * Accept pending edits by their IDs
+   * @param editIds Array of edit IDs to accept
+   * @returns Promise with accept operation result
+   */
+  async acceptEdits(editIds: string[]): Promise<AcceptEditsResponse> {
+    const response = await apiClient.post('/excel/edits/accept', {
+      edit_ids: editIds
+    });
+    return response.data;
+  },
+
+    /**
+   * Reject pending edits by their IDs
+   * @param editIds Array of edit IDs to reject
+   * @returns Promise with reject operation result
+   */
+  async rejectEdits(editIds: string[]): Promise<RejectEditsResponse> {
+    const response = await apiClient.post('/excel/edits/reject', {
+      edit_ids: editIds
+    });
+    return response.data;
+  },
+
 
   /**
    * Stream edit metadata generation for real-time updates
