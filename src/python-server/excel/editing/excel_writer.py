@@ -58,15 +58,13 @@ class ExcelWriter:
         logger.info(f"ExcelWriter initialized with use_session_manager={use_session_manager}")
         self.session_manager = session_manager or (ExcelSessionManager() if use_session_manager else None)
         logger.info(f"ExcelWriter initialized with session_manager={self.session_manager}")
-        self.app = None
-        self.workbook = None
-        self.workbooks = {}
         self.storage = storage or ExcelMetadataStorage()
         logger.info(f"ExcelWriter initialized with storage={self.storage}")
         self.edit_manager = ExcelPendingEditManager(self.storage, self.session_manager) if self.storage else None
         logger.info(f"ExcelWriter initialized with edit_manager={self.edit_manager}")
         self.file_path = None
         self.version_id = None
+        self.app = None # ONLY IF SESSION MANAGER NOT ENABLED. OTHERWISE AVOID ANY EXCEL APP OR WORKBOOK OBJECT MANAGEMENT AND DELEGATE IT TO THE SESSION MANAGER.
 
         # Array of all pending edits yet to be approved by the user
         self.edit_ids_by_sheet = {}
@@ -106,14 +104,13 @@ class ExcelWriter:
         try:
             # Use unified method to get workbook
             self.file_path = str(Path(output_filepath).resolve())
-            self.workbook = self._get_or_create_workbook(self.file_path, create_new=True)
-            self.workbooks[self.file_path] = self.workbook
+            workbook = self._get_or_create_workbook(self.file_path, create_new=True)
             self.version_id = version_id
 
             # Delete default sheet if it exists
             try:
-                if len(self.workbook.sheets) == 1 and self.workbook.sheets[0].name in ['Sheet', 'Sheet1']:
-                    self.workbook.sheets[0].delete()
+                if len(workbook.sheets) == 1 and workbook.sheets[0].name in ['Sheet', 'Sheet1']:
+                    workbook.sheets[0].delete()
             except:
                 pass
 
@@ -123,7 +120,7 @@ class ExcelWriter:
                 # Append all edit dicts from the pending edit manager method to this array
                 for sheet_name, cells_data in data.items():
                     # Create worksheet
-                    sheet = self.workbook.sheets.add(sheet_name)                           
+                    sheet = workbook.sheets.add(sheet_name)                           
                     
                     # Apply pending edits
                     for cell_data in cells_data:
@@ -133,7 +130,7 @@ class ExcelWriter:
                         try:
                             # Returns an edit dict containing deeper metadata about the edit
                             pending_edit = self.edit_manager.apply_pending_edit(
-                                wb=self.workbook,
+                                wb=workbook,
                                 sheet_name=sheet_name,
                                 cell_data=cell_data,
                                 version_id=version_id,
@@ -150,12 +147,12 @@ class ExcelWriter:
                 self.storage.batch_create_pending_edits(request_pending_edits)
                 # Get an array of only the edit ids. This will be used by the frontend to accept / reject edits.
                 request_edit_ids = [edit['id'] for edit in request_pending_edits]
-                self.workbook.save() # This just saves the workbook without any closing action or integration with the session manager
+                workbook.save() # This just saves the workbook without any closing action or integration with the session manager
                 return True, request_edit_ids
             else:
                 # Direct write without pending edits
                 for sheet_name, cells_data in data.items():
-                    sheet = self.workbook.sheets.add(sheet_name)
+                    sheet = workbook.sheets.add(sheet_name)
                     
                     for cell_data in cells_data:
                         if 'cell' not in cell_data:
@@ -172,7 +169,7 @@ class ExcelWriter:
                             # Continue applying to remaining cells even if one fails
                             continue
 
-                self.workbook.save()                
+                workbook.save()                
                 return True, {}
 
         except Exception as e:
@@ -209,10 +206,9 @@ class ExcelWriter:
             
             # Use unified method to get workbook
             self.file_path = str(Path(output_filepath).resolve())
-            self.workbook = self._get_or_create_workbook(self.file_path)
-            self.workbooks[self.file_path] = self.workbook
-            # Get the latest version ID if not provided
-            
+            workbook = self._get_or_create_workbook(self.file_path)
+
+            # Get the latest version ID if not provided            
             if version_id is None and self.storage:
                 logger.info(f"No version id provided. Getting latest version ID from metadata for file: {output_filepath}")
                 latest_version = self.storage.get_latest_version(self.file_path)
@@ -231,10 +227,10 @@ class ExcelWriter:
             for sheet_name, cells_data in data.items():
                 # Get or create worksheet
                 try:
-                    sheet = self.workbook.sheets[sheet_name]
+                    sheet = workbook.sheets[sheet_name]
                     logger.info(f"Found existing worksheet: {sheet_name}")
                 except:
-                    sheet = self.workbook.sheets.add(sheet_name)
+                    sheet = workbook.sheets.add(sheet_name)
                     logger.info(f"Created new worksheet: {sheet_name}")
                 
                 # Iterate through the list of cells to be edited, Apply cell updates
@@ -246,7 +242,7 @@ class ExcelWriter:
                         # Create pending edit
                         try:
                             pending_edit = self.edit_manager.apply_pending_edit_with_color_indicator(
-                                wb=self.workbook,
+                                wb=workbook,
                                 sheet_name=sheet_name,
                                 cell_data=cell_data,
                                 version_id=version_id,
@@ -260,10 +256,14 @@ class ExcelWriter:
                             continue
 
                     else:
+                        logger.info(f"Direct update without tracking")
                         # Direct update without tracking
                         try:
                             cell = sheet.range(cell_data['cell'])
                             self._apply_cell_formatting(cell, cell_data)
+                            if save:
+                                workbook.save()
+                                logger.info(f"Saved workbook: {self.file_path}")
                             # Store file blob to metadata storage as new version
                             if self.storage:
                                 self.storage.store_file_blob(file_path=self.file_path, version_id=self.version_id, overwrite=False)
@@ -271,18 +271,13 @@ class ExcelWriter:
                             logger.error(f"Error updating cell {cell_data['cell']}: {e}")
                             # Continue applying to remaining cells even if one fails
                             continue
-
-            try:
-                self.workbook.save()
-            except Exception as e:
-                logger.error(f"Error saving workbook: {e}")
-
+            
             # Store the pending edits to the storage
             self.storage.batch_create_pending_edits(request_pending_edits)
             return True, request_pending_edits # request_pending_edits will be empty if the pending edit manager was not used for editing
 
         except Exception as e:
-            logger.error(f"Error editing existing workbook: {e}")
+            logger.error(f"Error editing existing workbook {file_path}: {str(e)}")
             return False, {}
     
     # HELPER METHODS FOR WORKBOOK SESSION MANAGEMENT-------------------------------------------------------------------------------------------------------------------------------------
@@ -310,8 +305,11 @@ class ExcelWriter:
             wb = self.session_manager.get_session(file_path, self.visible)
             if not wb:
                 raise RuntimeError(f"Failed to get session for {file_path}")
+
+            logger.info(f"Got workbook from session manager for {file_path}")
             return wb
         else:
+            logger.warning("Session manager not enabled. Using direct workbook management")
             # Direct management
             if create_new:
                 return self.app.books.add()
@@ -322,68 +320,7 @@ class ExcelWriter:
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 wb.save(file_path)
                 return wb
-    
-    def open_workbook(self, file_path: str) -> bool:
-        """Open a workbook, either from session or create new"""
-        try:
-            self.file_path = str(Path(file_path).resolve())
-            self.workbook = self._get_or_create_workbook(self.file_path)
-            self.workbooks[self.file_path] = self.workbook
-            return True
-        except Exception as e:
-            logger.error(f"Error opening workbook: {e}")
-            return False
-    
-    def save(self, file_path: Optional[str] = None) -> bool:
-        """Save the workbook"""
-        save_path = file_path or self.file_path
-        if not save_path:
-            return False
-            
-        save_path = str(Path(save_path).resolve())
-        
-        try:
-            if self.use_session_manager:
-                return self.session_manager.save_session(save_path)
-            elif self.workbook:
-                os.makedirs(os.path.dirname(save_path), exist_ok=True)
-                self.workbook.save(save_path)
-                return True
-        except Exception as e:
-            logger.error(f"Error saving workbook: {e}")
-            
-        return False
-
-    def close(self, save: bool = True) -> None:
-        """Close the workbook and clean up resources"""
-        if not self.use_session_manager:
-            if save and self.file_path:
-                self.save()
-            # Original behavior for direct management
-            for path in list(self.workbooks.keys()):
-                try:
-                    wb = self.workbooks[path]
-                    if wb:
-                        wb.close()
-                except:
-                    pass
-                self.workbooks.pop(path, None)
-
-            if self.app:
-                try:
-                    self.app.quit()
-                except:
-                    pass
-                self.app = None
-
-        else:
-            if self.file_path:
-                if save:
-                    self.session_manager.save_session(self.file_path)
-                self.session_manager.close_session(self.file_path, save=save)
-                self.file_path = None
-                self.workbook = None
-    
+     
     # HELPER METHODS FOR XLWINGS-------------------------------------------------------------------------------------------------------------------------------------
     def _hex_to_rgb(self, hex_color: str) -> Optional[tuple]:
         """Convert hex color to RGB tuple (0-1 scale for xlwings)."""
