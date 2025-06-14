@@ -59,6 +59,56 @@ class EmbeddingStorage:
                 workbook_metadata TEXT
             )
         """)
+
+        # Check if we need to drop and recreate the chunks table
+        cursor.execute("PRAGMA table_info(chunks)")
+        if cursor.fetchall():  # Table exists
+            # Check if the unique constraint exists
+            cursor.execute("""
+                SELECT sql 
+                FROM sqlite_master 
+                WHERE type = 'table' 
+                AND name = 'chunks'
+            """)
+            create_table_sql = cursor.fetchone()[0]
+            
+            # If the unique constraint exists in the table definition
+            if 'UNIQUE(workbook_id, chunk_index)' in create_table_sql.upper():
+                self.logger.info("Dropping and recreating chunks table to remove unique constraint")
+                
+                # Create a backup of the chunks table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS chunks_backup AS 
+                    SELECT * FROM chunks
+                """)
+                
+                # Drop the old table
+                cursor.execute("DROP TABLE IF EXISTS chunks")
+                
+                # Create the new table without the unique constraint
+                cursor.execute("""
+                    CREATE TABLE chunks (
+                        chunk_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        workbook_id INTEGER NOT NULL,
+                        chunk_index INTEGER NOT NULL,
+                        version_id INTEGER NOT NULL,                
+                        chunk_text TEXT NOT NULL,
+                        chunk_markdown TEXT NOT NULL,
+                        embedding BLOB NOT NULL,
+                        chunk_metadata TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (workbook_id) REFERENCES workbooks(workbook_id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Copy data back from backup
+                cursor.execute("""
+                    INSERT INTO chunks 
+                    SELECT * FROM chunks_backup
+                """)
+                
+                # Drop the backup
+                cursor.execute("DROP TABLE chunks_backup")
         
         # Chunks table with both text formats
         cursor.execute("""
@@ -72,8 +122,7 @@ class EmbeddingStorage:
                 embedding BLOB NOT NULL,
                 chunk_metadata TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (workbook_id) REFERENCES workbooks(workbook_id) ON DELETE CASCADE,
-                UNIQUE(workbook_id, chunk_index)
+                FOREIGN KEY (workbook_id) REFERENCES workbooks(workbook_id) ON DELETE CASCADE
             )
         """)
 
