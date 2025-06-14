@@ -188,19 +188,3 @@ workflows:
             - run:
                 name: Bump version (patch)
                 command: npm run version:patch
-              only: mac-release
-          post-steps:
-            - run:
-                name: Bump version (patch)
-                command: npm run version:patch
-  
-  windows_release:
-    jobs:
-      - build_windows:
-          filters:
-            branches:
-              only: win-release
-          post-steps:
-            - run:
-                name: Bump version (patch)
-                command: npm run version:patch
