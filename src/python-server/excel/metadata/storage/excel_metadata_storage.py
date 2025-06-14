@@ -23,6 +23,13 @@ from vectors.store_updates.background_processor import get_embedding_worker
 _initialized_dbs = set()
 _initialization_lock = threading.Lock()
 
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 class ExcelMetadataStorage:
     _instances = {}
     _instances_lock = threading.Lock()
@@ -1811,8 +1818,8 @@ class ExcelMetadataStorage:
                         edit['file_path'],
                         edit['sheet_name'],
                         edit['cell_address'],
-                        json.dumps(edit['original_state']),
-                        json.dumps(edit['cell_data']),
+                        json.dumps(edit['original_state'], cls=DateTimeEncoder),
+                        json.dumps(edit['cell_data'], cls=DateTimeEncoder),
                         edit.get('intended_fill_color'),
                         now,
                         'pending'
