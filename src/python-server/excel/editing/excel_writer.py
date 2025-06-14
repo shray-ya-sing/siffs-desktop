@@ -271,7 +271,7 @@ class ExcelWriter:
             return True, request_pending_edits # request_pending_edits will be empty if the pending edit manager was not used for editing
 
         except Exception as e:
-            logger.error(f"Error editing existing workbook {file_path}: {str(e)}")
+            logger.error(f"Error editing existing workbook {self.file_path}: {str(e)}")
             return False, {}
     
     # HELPER METHODS FOR WORKBOOK SESSION MANAGEMENT-------------------------------------------------------------------------------------------------------------------------------------
