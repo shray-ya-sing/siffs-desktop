@@ -168,8 +168,6 @@ workflows:
   version: 2
   
   macos_release:
-  
-  macos_release:
     jobs:
       - build_macos:
           filters:
