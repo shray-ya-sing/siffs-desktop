@@ -10,11 +10,6 @@ from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
-# Add the project parent to Python path
-project_root = Path(__file__).parent.parent.absolute()
-sys.path.append(str(project_root))
-from storage.excel_metadata_storage import ExcelMetadataStorage
-
 # Handle import errors gracefully
 try:
     import openpyxl
@@ -31,6 +26,13 @@ try:
 except ImportError:
     XLWINGS_AVAILABLE = False
     logger.warning("Warning: xlwings not available - display values will not be extracted")
+
+
+# Add the project parent to Python path
+project_root = Path(__file__).parent.parent.absolute()
+sys.path.append(str(project_root))
+from storage.excel_metadata_storage import ExcelMetadataStorage
+
 
 class ExcelDependencyExtractor:
     """Helper class for extracting cell dependencies from Excel formulas"""

@@ -58,25 +58,25 @@ from typing import Dict, Any, Optional, List
 current_dir = Path(__file__).parent.absolute()
 sys.path.append(str(current_dir))
 
-# Import routes
-from api.routes.health import router as health_router
-from api.routes.excel.metadata import router as excel_metadata_router
-from api.routes.excel.analysis import router as excel_analysis_router
-from api.routes.excel.qa import router as excel_qa_router
-from api.routes.vectors.embed import router as vectors_embed_router
-from api.routes.vectors.search import router as vectors_search_router
-from api.routes.vectors.store import router as vectors_store_router
-from api.routes.excel.editing import router as excel_editing_router
-
+# websocket manager
+from api.websocket_manager import manager
+from core.events import event_bus
+from fastapi import WebSocket, WebSocketDisconnect
 
 # Create FastAPI app
 app = FastAPI(title="Cori API")
 
 @app.on_event("startup")
 async def startup_event():
+    from excel.orchestration.excel_orchestrator import ExcelOrchestrator
+    logger.info("Starting up...Excel orchestrator initialized")
     # Print all registered routes
     for route in app.routes:
-        print(f"{route.methods} {route.path}")
+        if hasattr(route, 'methods'):
+            print(f"HTTP {route.methods} {route.path}")
+        else:
+            # This is likely a WebSocket route
+            print(f"WebSocket {route.path}")
         
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -99,15 +99,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(health_router)
-app.include_router(excel_metadata_router)
-app.include_router(excel_analysis_router)
-app.include_router(excel_qa_router)
-app.include_router(vectors_embed_router)
-app.include_router(vectors_search_router)
-app.include_router(vectors_store_router)
-app.include_router(excel_editing_router)
+# Add WebSocket endpoint after your existing routers
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
+    """Main WebSocket endpoint"""
+    # Accept connection
+    client_id = await manager.connect(websocket, client_id)
+    
+    try:
+        while True:
+            # Receive messages
+            data = await websocket.receive_json()
+            
+            # Emit event for received message
+            await event_bus.emit(
+                "ws_message_received",
+                {
+                    "client_id": client_id,
+                    "message": data
+                }
+            )
+            
+    except WebSocketDisconnect:
+        manager.disconnect(client_id)
+    except Exception as e:
+        logger.error(f"WebSocket error for {client_id}: {e}")
+        manager.disconnect(client_id)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
