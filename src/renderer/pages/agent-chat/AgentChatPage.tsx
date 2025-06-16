@@ -62,7 +62,7 @@ return (
         <div className="h-full flex flex-col">
           {/* Sidebar header */}
           <div className="flex items-center justify-between p-3 border-b border-gray-700/50">
-            <h2 className="text-lg font-medium text-gray-200">Workspace Files</h2>
+            <h2 className="text-base font-medium text-gray-200">Workspace</h2>
             <button
               onClick={toggleSidebar}
               className="p-1 rounded-md hover:bg-gray-700/50 text-gray-400 hover:text-gray-200"
@@ -92,7 +92,7 @@ return (
           </div>
   
           {/* Status bar */}
-          <div className="p-2 text-xs text-gray-400 border-t border-gray-700/50">
+          <div className="p-1.5 text-xs text-gray-400/80 border-t border-gray-700/50">  // More subtle text
             {fileTree.length} items
           </div>
         </div>
