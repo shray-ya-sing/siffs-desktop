@@ -190,15 +190,17 @@ function startPythonServer() {
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    height: 1280,
-    width: 800,
-    minWidth: 1024,
-    minHeight: 768,
-    backgroundColor: '#0a0a0a',
-    titleBarStyle: 'default',
+    width: 1280,              // Default width for non-fullscreen
+    height: 800,             // Default height for non-fullscreen
+    minWidth: 1024,          // Minimum width when resized
+    minHeight: 600,          // Minimum height when resized
+    backgroundColor: '#0a0a0a', // Match your app's background color
+    titleBarStyle: 'hidden', // Hide the default title bar
+    frame: false, // Remove the default frame
     titleBarOverlay: {
-      color: '#0a0a0a',
-      symbolColor: '#e5e5e5'
+      color: '#0a0a0a', // Title bar color
+      symbolColor: '#e5e5e5', // Title text and buttons color
+      height: 30 // Height of the title bar
     },
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
@@ -246,7 +248,7 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const csp = [
       "default-src 'self'",
-      "connect-src 'self' http://localhost:3001 http://127.0.0.1:3001 http://localhost:5001 http://127.0.0.1:5001 https://*.supabase.co https://otnlburbcvilvzgbjzqi.supabase.co",
+      "connect-src 'self' ws://localhost:3001 ws://127.0.0.1:3001 ws://localhost:5001 ws://127.0.0.1:5001 http://localhost:3001 http://127.0.0.1:3001 http://localhost:5001 http://127.0.0.1:5001 https://*.supabase.co https://otnlburbcvilvzgbjzqi.supabase.co",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
