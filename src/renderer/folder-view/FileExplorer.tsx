@@ -110,14 +110,14 @@ const FileItem = ({
         {item.isDirectory ? (
           <div className="flex items-center text-gray-300">
             {item.expanded ? (
-              <ChevronDown className="w-4 h-4 mr-1.5 text-gray-400" />
+              <ChevronDown className="w-3 h-3 mr-1.5 text-gray-400" />
             ) : (
-              <ChevronRight className="w-4 h-4 mr-1.5 text-gray-400" />
+              <ChevronRight className="w-3 h-3 mr-1.5 text-gray-400" />
             )}
             {item.expanded ? (
-              <FolderOpen className="w-4 h-4 mr-2 text-amber-400/80" />
+              <FolderOpen className="w-3 h-3 mr-2 text-amber-400/80" />
             ) : (
-              <Folder className="w-4 h-4 mr-2 text-amber-400/80" />
+              <Folder className="w-3 h-3 mr-2 text-amber-400/80" />
             )}
           </div>
         ) : (
@@ -125,7 +125,7 @@ const FileItem = ({
             {getFileIcon(item.name)}
           </div>
         )}
-        <span className="text-sm text-gray-200 truncate">{item.name}</span>
+        <span className="text-xs text-gray-200 truncate">{item.name}</span>
       </div>
       
       {item.expanded && item.children && (
