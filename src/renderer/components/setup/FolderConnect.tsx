@@ -237,7 +237,7 @@ interface FileItem {
       const onError = (error: any) => {
         console.error('WebSocket error:', error);
         setDiscoveryMessages(prev => [...prev, "Connection error. Please try again."]);
-        setIsDiscovering(false);
+        setIsDiscovering(true);
       };
     
       webSocketService.on('connect', onConnect);
@@ -260,14 +260,14 @@ interface FileItem {
     
       const onExtractionComplete = (data: any) => {
         setDiscoveryMessages(prev => [...prev, `Extraction complete: ${data.totalChunks} chunks processed`]);
-        setIsDiscovering(false);
+        setIsDiscovering(true);
         onConnect(); // Navigate to next page when done
       };
     
       const onExtractionError = (error: any) => {
         console.error('Extraction error:', error);
-        setDiscoveryMessages(prev => [...prev, `Error: ${error.message || 'Failed to process file'}`]);
-        setIsDiscovering(false);
+        setDiscoveryMessages(prev => [...prev, `Error: ${'Failed to process file'}`]);
+        setIsDiscovering(true);
       };
     
       // Register event listeners
@@ -314,7 +314,7 @@ interface FileItem {
       }
     };
     
-    const processDirectory = async (dirHandle: any) => {
+    const processDirectory = async (dirHandle: any, dirName: string) => {
       setIsConnecting(true);
       setIsDiscovering(true);
       setDiscoveryMessages(prev => [...prev, "Scanning directory..."]);
@@ -348,13 +348,22 @@ interface FileItem {
             
             // Convert ArrayBuffer to base64
             const base64Content = arrayBufferToBase64(arrayBuffer);
+            const requestId = uuidv4();
+
+            // Debug log
+            console.log('Sending file for extraction:', {
+              client_id: clientId,
+              request_id: requestId,
+              file_path: `${dirName}/${file.path}`,
+              file_content: base64Content ? `[${base64Content.length} chars]` : 'EMPTY'
+            });
             
             // Send extraction request
             webSocketService.emit('EXTRACT_METADATA', {
-              clientId,
-              filePath: file.path,
-              fileContent: base64Content,
-              requestId: uuidv4()
+              client_id: clientId,
+              request_id: requestId,
+              file_path: `${dirName}/${file.path}`,
+              file_content: base64Content
             });
     
             // Small delay between files
@@ -368,7 +377,7 @@ interface FileItem {
       } catch (error) {
         console.error('Error processing directory:', error);
         setDiscoveryMessages(prev => [...prev, "Error processing directory"]);
-        setIsDiscovering(false);
+        setIsDiscovering(true);
       }
     };
     
@@ -391,13 +400,30 @@ interface FileItem {
       try {
         // @ts-ignore - showDirectoryPicker is not in TypeScript types yet
         const dirHandle = await window.showDirectoryPicker();
-        await processDirectory(dirHandle);
+        const dirName = dirHandle.name;
+        const fullPath = await getFullPath(dirHandle);
+        await processDirectory(dirHandle, fullPath);
       } catch (err) {
         console.log("User cancelled folder selection");
         setIsConnecting(false);
         setIsDiscovering(false);
       }
     };
+
+    const getFullPath = async (dirHandle: any): Promise<string> => {
+  try {
+    // Get the directory entry
+    const dirEntry = await dirHandle.getDirectoryHandle('.');
+    // Get the full path using the directory handle's resolve method
+    const fullPath = await dirEntry.resolve();
+    // Convert the path segments to a string
+    return fullPath.join('/');
+  } catch (error) {
+    console.error('Error getting full path:', error);
+    // Fallback to just the directory name if we can't get the full path
+    return dirHandle.name;
+  }
+};
   
     return (
       <div
