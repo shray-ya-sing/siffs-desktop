@@ -3,10 +3,9 @@ import { FolderOpen, FileText, Folder, Check } from "lucide-react";
 import FileDiscoveryProgress from "./FileDiscoveryProgress"
 import { v4 as uuidv4 } from 'uuid';
 import { webSocketService } from '../../services/websocket/websocket.service';
+import { useNavigate } from "react-router-dom";
 
-interface FolderConnectProps {
-  onConnect: () => void
-}
+
 
 const WatermarkLogo = () => (
   <svg
@@ -212,17 +211,27 @@ const MainLogo = () => (
   </svg>
 )
 
-interface FileItem {
+  export interface FileItem {
     name: string;
     path: string;
     isDirectory: boolean;
+    children?: FileItem[];
+    expanded?: boolean;
   }
+
+  interface FolderConnectProps {
+    onFolderConnect: (files: FileItem[]) => void;
+  }
+
   
-  export default function FolderConnect({ onConnect }: FolderConnectProps) {
+  export default function FolderConnect({ onFolderConnect }: FolderConnectProps) {
     const [isConnecting, setIsConnecting] = useState(false);
     const [discoveryMessages, setDiscoveryMessages] = useState<string[]>([]);
     const [isDiscovering, setIsDiscovering] = useState(false);
     const [clientId] = useState(uuidv4()); // Generate a unique client ID
+    const [files, setFiles] = useState<FileItem[]>([]);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
       const onConnect = () => {
@@ -261,7 +270,6 @@ interface FileItem {
       const onExtractionComplete = (data: any) => {
         setDiscoveryMessages(prev => [...prev, `Extraction complete: ${data.totalChunks} chunks processed`]);
         setIsDiscovering(true);
-        onConnect(); // Navigate to next page when done
       };
     
       const onExtractionError = (error: any) => {
@@ -281,9 +289,9 @@ interface FileItem {
         webSocketService.off('EXTRACTION_COMPLETE', onExtractionComplete);
         webSocketService.off('EXTRACTION_ERROR', onExtractionError);
       };
-    }, [onConnect]);
+    }, [onFolderConnect]);
 
-    // Add this function inside your FolderConnect component, before the processDirectory function
+
     const scanDirectory = async (dirHandle: any, fileList: FileItem[] = [], path: string[] = []) => {
       try {
         // @ts-ignore - TypeScript doesn't have types for File System Access API
@@ -322,6 +330,7 @@ interface FileItem {
       try {
         const fileList: FileItem[] = [];
         await scanDirectory(dirHandle, fileList, []);
+        console.log("File list:", fileList);
         
         // Filter only Excel files
         const excelFiles = fileList.filter(file => 
@@ -330,8 +339,6 @@ interface FileItem {
         
         if (excelFiles.length === 0) {
           setDiscoveryMessages(prev => [...prev, "No Excel files found in the selected directory"]);
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Show message briefly
-          onConnect(); // Navigate to chat since there's nothing to process
           return;
         }
     
@@ -373,6 +380,14 @@ interface FileItem {
             setDiscoveryMessages(prev => [...prev, `Error processing ${file.name}`]);
           }
         }
+
+         // Build file tree
+         const fileTree = buildFileTree(fileList);
+         console.log("File tree:", fileTree);
+         setFiles(fileTree);
+         
+         // Call onConnect with the files
+         onFolderConnect(fileTree);
     
       } catch (error) {
         console.error('Error processing directory:', error);
@@ -389,6 +404,33 @@ interface FileItem {
         binary += String.fromCharCode(bytes[i]);
       }
       return btoa(binary);
+    };
+
+    // Helper function to build the file tree
+    const buildFileTree = (files: FileItem[]): FileItem[] => {
+      const fileMap: Record<string, FileItem> = {};
+      const tree: FileItem[] = [];
+
+      // First pass: Create a map of all files/directories
+      files.forEach(file => {
+        fileMap[file.path] = { ...file, children: [] };
+      });
+
+      // Second pass: Build the tree
+      files.forEach(file => {
+        const pathParts = file.path.split('/');
+        if (pathParts.length > 1) {
+          const parentPath = pathParts.slice(0, -1).join('/');
+          if (fileMap[parentPath]) {
+            fileMap[parentPath].children = fileMap[parentPath].children || [];
+            fileMap[parentPath].children?.push(fileMap[file.path]);
+          }
+        } else {
+          tree.push(fileMap[file.path]);
+        }
+      });
+
+      return tree;
     };
 
   
@@ -411,19 +453,14 @@ interface FileItem {
     };
 
     const getFullPath = async (dirHandle: any): Promise<string> => {
-  try {
-    // Get the directory entry
-    const dirEntry = await dirHandle.getDirectoryHandle('.');
-    // Get the full path using the directory handle's resolve method
-    const fullPath = await dirEntry.resolve();
-    // Convert the path segments to a string
-    return fullPath.join('/');
-  } catch (error) {
-    console.error('Error getting full path:', error);
-    // Fallback to just the directory name if we can't get the full path
-    return dirHandle.name;
-  }
-};
+      try {
+        // Just return the directory name instead of trying to resolve the full path
+        return dirHandle.name;
+      } catch (error) {
+        console.error('Error getting full path:', error);
+        return dirHandle.name || 'workspace';
+      }
+    };
   
     return (
       <div

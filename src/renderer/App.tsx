@@ -17,16 +17,21 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordEmailSent from './pages/auth/ResetPasswordEmailSent';
 import AuthLoading from './components/loading/AuthLoading';
 import { AgentChatPage } from './pages/agent-chat/AgentChatPage';
-
+import { FileItem } from './hooks/useFileTree';
 
 // Extend the Location interface to include state
 type LocationState = {
   from?: Location;
   message?: string;
+  files?: FileItem[];  // Add this line
 };
 
 type LocationWithState = Location & {
   state: LocationState | null;
+};
+
+type AgentChatLocationState = {
+  files?: FileItem[];
 };
 
 // Component to handle auth state and routing
@@ -82,6 +87,12 @@ function AppRouter() {
                 <SettingsPage />
               </ProtectedRoute>
             } />
+
+            <Route path="/agent-chat" element={
+              <ProtectedRoute>
+                <AgentChatPage />
+              </ProtectedRoute>
+            } />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/signup" element={<SignupPage />} />
             <Route path="/auth/verify-email" element={<VerifyEmail />} />
@@ -89,7 +100,6 @@ function AppRouter() {
             <Route path="/404" element={<NotFound />} />
             <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/auth/reset-email-sent" element={<ResetPasswordEmailSent />} />
-            <Route path="/agent-chat" element={<AgentChatPage />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AIChatUI from '../../components/agent-chat/agent-chat-ui';
 import { FileExplorer } from '../../folder-view/FileExplorer';
 import { FileItem } from '../../folder-view/FileExplorer';
@@ -7,10 +7,15 @@ import { useFileTree } from '../../hooks/useFileTree';
 import { webSocketService } from '../../services/websocket/websocket.service';
 import { NavIcons } from '../../components/navigation/NavIcons';
 
+
 export function AgentChatPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { fileTree, toggleExpand, addFiles } = useFileTree([]);
+  
+  // Get initial files from route state or default to empty array
+  const initialFiles = (location.state as { files?: FileItem[] })?.files || [];
+  const { fileTree, toggleExpand, addFiles } = useFileTree(initialFiles);
 
   useEffect(() => {
     const electron = (window as any).electron;

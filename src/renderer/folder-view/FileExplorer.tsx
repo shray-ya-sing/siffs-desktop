@@ -176,6 +176,8 @@ export const FileExplorer = ({
     }
   };
 
+  console.log("Rendering File tree:", fileTree);
+
   return (
     <div className={`h-full overflow-y-auto bg-transparent ${className}`}>
       <div className="py-2">
