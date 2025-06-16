@@ -222,30 +222,176 @@ interface FileItem {
     const [isConnecting, setIsConnecting] = useState(false);
     const [discoveryMessages, setDiscoveryMessages] = useState<string[]>([]);
     const [isDiscovering, setIsDiscovering] = useState(false);
+    const [clientId] = useState(uuidv4()); // Generate a unique client ID
+
+    useEffect(() => {
+      const onConnect = () => {
+        setDiscoveryMessages(prev => [...prev, "Connected to processing service"]);
+      };
+    
+      const onDisconnect = () => {
+        setDiscoveryMessages(prev => [...prev, "Disconnected from processing service"]);
+        setIsDiscovering(false);
+      };
+    
+      const onError = (error: any) => {
+        console.error('WebSocket error:', error);
+        setDiscoveryMessages(prev => [...prev, "Connection error. Please try again."]);
+        setIsDiscovering(false);
+      };
+    
+      webSocketService.on('connect', onConnect);
+      webSocketService.on('disconnect', onDisconnect);
+      webSocketService.on('connect_error', onError);
+    
+      return () => {
+        webSocketService.off('connect', onConnect);
+        webSocketService.off('disconnect', onDisconnect);
+        webSocketService.off('connect_error', onError);
+      };
+    }, []);
+    
+    
+    useEffect(() => {
+      // Set up WebSocket listeners when component mounts
+      const onChunkExtracted = (data: any) => {
+        setDiscoveryMessages(prev => [...prev, `Processed chunk from ${data.sheetName}`]);
+      };
+    
+      const onExtractionComplete = (data: any) => {
+        setDiscoveryMessages(prev => [...prev, `Extraction complete: ${data.totalChunks} chunks processed`]);
+        setIsDiscovering(false);
+        onConnect(); // Navigate to next page when done
+      };
+    
+      const onExtractionError = (error: any) => {
+        console.error('Extraction error:', error);
+        setDiscoveryMessages(prev => [...prev, `Error: ${error.message || 'Failed to process file'}`]);
+        setIsDiscovering(false);
+      };
+    
+      // Register event listeners
+      webSocketService.on('CHUNK_EXTRACTED', onChunkExtracted);
+      webSocketService.on('EXTRACTION_COMPLETE', onExtractionComplete);
+      webSocketService.on('EXTRACTION_ERROR', onExtractionError);
+    
+      // Clean up on unmount
+      return () => {
+        webSocketService.off('CHUNK_EXTRACTED', onChunkExtracted);
+        webSocketService.off('EXTRACTION_COMPLETE', onExtractionComplete);
+        webSocketService.off('EXTRACTION_ERROR', onExtractionError);
+      };
+    }, [onConnect]);
+
+    // Add this function inside your FolderConnect component, before the processDirectory function
+    const scanDirectory = async (dirHandle: any, fileList: FileItem[] = [], path: string[] = []) => {
+      try {
+        // @ts-ignore - TypeScript doesn't have types for File System Access API
+        for await (const entry of dirHandle.values()) {
+          const entryPath = [...path, entry.name];
+          
+          if (entry.kind === 'file') {
+            fileList.push({
+              name: entry.name,
+              path: entryPath.join('/'),
+              isDirectory: false
+            });
+          } else if (entry.kind === 'directory') {
+            // Add directory to the list
+            fileList.push({
+              name: entry.name,
+              path: entryPath.join('/'),
+              isDirectory: true
+            });
+            
+            // Recursively scan subdirectories
+            await scanDirectory(entry, fileList, entryPath);
+          }
+        }
+      } catch (error) {
+        console.error('Error scanning directory:', error);
+        throw error;
+      }
+    };
+    
+    const processDirectory = async (dirHandle: any) => {
+      setIsConnecting(true);
+      setIsDiscovering(true);
+      setDiscoveryMessages(prev => [...prev, "Scanning directory..."]);
+    
+      try {
+        const fileList: FileItem[] = [];
+        await scanDirectory(dirHandle, fileList, []);
+        
+        // Filter only Excel files
+        const excelFiles = fileList.filter(file => 
+          !file.isDirectory && file.name.endsWith('.xlsx')
+        );
+        
+        if (excelFiles.length === 0) {
+          setDiscoveryMessages(prev => [...prev, "No Excel files found in the selected directory"]);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Show message briefly
+          onConnect(); // Navigate to chat since there's nothing to process
+          return;
+        }
+    
+        // Trigger extraction for each Excel file
+        for (const file of excelFiles) {
+          const message = `Found file: ${file.name}`;
+          setDiscoveryMessages(prev => [...prev, message]);
+          
+          try {
+            // Get file content as ArrayBuffer
+            const fileHandle = await dirHandle.getFileHandle(file.name);
+            const fileContent = await fileHandle.getFile();
+            const arrayBuffer = await fileContent.arrayBuffer();
+            
+            // Convert ArrayBuffer to base64
+            const base64Content = arrayBufferToBase64(arrayBuffer);
+            
+            // Send extraction request
+            webSocketService.emit('EXTRACT_METADATA', {
+              clientId,
+              filePath: file.path,
+              fileContent: base64Content,
+              requestId: uuidv4()
+            });
+    
+            // Small delay between files
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } catch (fileError) {
+            console.error(`Error processing file ${file.name}:`, fileError);
+            setDiscoveryMessages(prev => [...prev, `Error processing ${file.name}`]);
+          }
+        }
+    
+      } catch (error) {
+        console.error('Error processing directory:', error);
+        setDiscoveryMessages(prev => [...prev, "Error processing directory"]);
+        setIsDiscovering(false);
+      }
+    };
+    
+    // Helper function to convert ArrayBuffer to base64
+    const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    };
+
   
     const handleOpenFolder = async () => {
       setIsConnecting(true);
       setIsDiscovering(true);
       setDiscoveryMessages([]);
-  
+    
       try {
         // @ts-ignore - showDirectoryPicker is not in TypeScript types yet
         const dirHandle = await window.showDirectoryPicker();
-        
-        // Simulate file discovery
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        
-        // Add some sample file discovery messages
-        const sampleFiles = ['data1.xlsx', 'reports.xlsx', 'analysis.xlsx'];
-        for (const file of sampleFiles) {
-          setDiscoveryMessages(prev => [...prev, `Found file: ${file}`]);
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-        
-        // Complete the process
-        setIsConnecting(false);
-        setIsDiscovering(false);
-        onConnect();
+        await processDirectory(dirHandle);
       } catch (err) {
         console.log("User cancelled folder selection");
         setIsConnecting(false);
@@ -315,7 +461,7 @@ interface FileItem {
         {/* File discovery progress */}
         <FileDiscoveryProgress 
           messages={discoveryMessages} 
-          isActive={isDiscovering || discoveryMessages.length > 0} 
+          isActive={isDiscovering} 
         />
       </div>
     );
