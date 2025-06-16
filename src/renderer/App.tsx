@@ -15,11 +15,9 @@ import { Toaster } from './components/ui/toaster';
 import { useToast } from './components/ui/use-toast';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordEmailSent from './pages/auth/ResetPasswordEmailSent';
-import { ModelAuditPage } from './pages/tools/ModelAuditPage';
 import AuthLoading from './components/loading/AuthLoading';
-import ModelQAPage from './pages/tools/ModelQAPage';
-import ModelCreatePage from './pages/tools/ModelCreatePage';
-import ModelEditPage from './pages/tools/ModelEditPage';
+import { AgentChatPage } from './pages/agent-chat/AgentChatPage';
+
 
 // Extend the Location interface to include state
 type LocationState = {
@@ -71,7 +69,7 @@ function AppRouter() {
   return (
     <>
       <Toaster />
-      <div className="flex h-screen bg-[#0a0f1a] text-gray-200 font-sans font-thin overflow-hidden">
+      <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden">
           <Routes>
             <Route path="/" element={
@@ -91,10 +89,7 @@ function AppRouter() {
             <Route path="/404" element={<NotFound />} />
             <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/auth/reset-email-sent" element={<ResetPasswordEmailSent />} />
-            <Route path="/tools/model-audit" element={<ModelAuditPage />} />
-            <Route path="/tools/model-qa" element={<ModelQAPage />} />
-            <Route path="/tools/model-create" element={<ModelCreatePage />} />
-            <Route path="/tools/model-edit" element={<ModelEditPage />} />
+            <Route path="/agent-chat" element={<AgentChatPage />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </div>

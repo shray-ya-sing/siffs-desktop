@@ -35,7 +35,7 @@ export default function AppLoading({ onComplete, message = 'Preparing your exper
   }, [onComplete]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0f1a] p-6">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6">
       <div className="w-full max-w-md space-y-6">
         {/* Modern rectangular progress bar */}
         <div className="w-full">
