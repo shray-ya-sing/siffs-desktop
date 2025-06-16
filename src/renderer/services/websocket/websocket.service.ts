@@ -90,7 +90,8 @@ class WebSocketService {
   }
 
   public emit(event: string, data: any): void {
-    this.sendMessage({ type: event, data });
+    const message = { type: event, data };
+    this.sendMessage(message);
   }
 
   public disconnect(): void {
