@@ -194,6 +194,12 @@ const createWindow = (): void => {
     width: 800,
     minWidth: 1024,
     minHeight: 768,
+    backgroundColor: '#0a0a0a',
+    titleBarStyle: 'default',
+    titleBarOverlay: {
+      color: '#0a0a0a',
+      symbolColor: '#e5e5e5'
+    },
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,  // Disable Node.js integration in the renderer

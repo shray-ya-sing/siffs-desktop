@@ -1,3 +1,4 @@
+/* src/index.css */
 body, #root {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   margin: 0;
@@ -5,9 +6,30 @@ body, #root {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  background-color: #0a0a0a; /* Add this line */
+  color: #e5e5e5; /* Default text color */
 }
 
 #root {
   width: 100%;
   height: 100%;
+}
+
+/* Add this to src/index.css */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
 }
