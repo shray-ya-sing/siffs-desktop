@@ -42,6 +42,7 @@ export function AgentChatPage() {
   }, []);
 
   const toggleSidebar = useCallback(() => {
+    console.log('Toggling sidebar');
     setIsSidebarOpen(prev => !prev);
   }, []);
 
@@ -57,7 +58,7 @@ return (
         fixed left-0 top-0 h-[95%] bg-[#0f0f0f]/80 backdrop-blur-sm
         transition-all duration-300 ease-in-out overflow-hidden
         border-r border-gray-700/50 mt-[5%]
-        ${isSidebarOpen ? 'w-72' : 'w-0'}
+        ${isSidebarOpen ? 'w-72' : 'w-0 pointer-events-none'}
         `}>
         <div className="h-full flex flex-col">
           {/* Sidebar header */}
@@ -105,26 +106,29 @@ return (
         <AIChatUI />
       </div>
   
-      {/* Toggle button when sidebar is closed */}
+      {/* Toggle button when sidebar is closed - Add delay to match animation */}
       {!isSidebarOpen && (
+
+        <div className="fixed left-0 top-1/2 -translate-y-1/2 z-50">
         <button
-          onClick={toggleSidebar}
-          className="fixed left-0 top-1/2 -translate-y-1/2 bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 p-2 rounded-r-md shadow-lg backdrop-blur-sm"
-          aria-label="Show sidebar"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+            onClick={toggleSidebar}
+            className="bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 p-2 rounded-r-md shadow-lg backdrop-blur-sm"
+            aria-label="Show sidebar"
           >
-            <path
-              fillRule="evenodd"
-              d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   );
