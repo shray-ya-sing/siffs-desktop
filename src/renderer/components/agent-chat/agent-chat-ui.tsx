@@ -1,6 +1,4 @@
-import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { ArrowRight, Square } from "lucide-react"
 
 interface Message {
@@ -116,36 +114,22 @@ const WatermarkLogo = () => (
 )
 
 export default function AIChatUI() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content:
-        "create a tree of the python-server dir to represent all its sub components (skip the venv and evals folders)",
-      role: "user",
-      timestamp: new Date(),
-    },
-    {
-      id: "2",
-      content:
-        "Let me help you create a tree view of the python-server directory, excluding the venv and evals folders. I'll check the directory structure first.\n\nHere's the directory tree for the python-server, excluding the venv and evals folders:\n\n```\npython-server/\n├── __init__.py\n├── ai_services/\n│   ├── __init__.py\n│   ├── anthropic_service.py\n│   └── openai_service.py\n├── api/\n│   ├── __init__.py\n│   ├── dependencies.py\n│   ├── models/\n│   │   ├── __init__.py\n│   │   ├── excel.py\n│   │   └── vectors.py\n│   └── routes/\n```",
-      role: "assistant",
-      timestamp: new Date(),
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>(null)
 
-  // Initial load animation
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialLoad(false)
-    }, 100)
-    return () => clearTimeout(timer)
+  // Mock function for AI response
+  const generateAIResponse = useCallback(async (userInput: string): Promise<string> => {
+    return new Promise((resolve) => {
+      // Simulate API call delay
+      setTimeout(() => {
+        resolve(`I received your message: "${userInput}". This is a mock response.`)
+      }, 1000)
+    })
   }, [])
 
   // Auto-resize textarea
@@ -157,16 +141,16 @@ export default function AIChatUI() {
   }, [input])
 
   // Smooth scroll to bottom
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, scrollToBottom])
 
   // Typing animation
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value)
 
     if (!isTyping && e.target.value.length > 0) {
@@ -180,9 +164,9 @@ export default function AIChatUI() {
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false)
     }, 1000)
-  }
+  }, [isTyping])
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!input.trim()) return
 
     const userMessage: Message = {
@@ -192,55 +176,49 @@ export default function AIChatUI() {
       timestamp: new Date(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    setMessages(prev => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
     setIsTyping(false)
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await generateAIResponse(input)
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content:
-          "I understand your request. Let me help you with that. This is a simulated response to demonstrate the chat interface with the beautiful gradient styling from your Volute logo.",
+        content: response,
         role: "assistant",
         timestamp: new Date(),
       }
-      setMessages((prev) => [...prev, assistantMessage])
+      
+      setMessages(prev => [...prev, assistantMessage])
+    } catch (error) {
+      console.error("Error generating response:", error)
+    } finally {
       setIsLoading(false)
-    }, 1500)
-  }
+    }
+  }, [input, generateAIResponse])
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setIsLoading(false)
     setIsTyping(false)
-  }
+  }, [])
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      if (e.ctrlKey) {
-        // Ctrl+Enter adds newline
-        return
-      } else {
-        // Enter sends message
-        e.preventDefault()
-        handleSend()
-      }
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
     }
-  }
+  }, [handleSend])
 
   return (
     <div
-      className={`flex flex-col h-screen text-white pb-20 relative overflow-hidden transition-all duration-1000 ${
-        isInitialLoad ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
-      }`}
+      className="flex flex-col h-screen text-white pb-20 relative overflow-hidden"
       style={{ backgroundColor: "#0a0a0a" }}
     >
       {/* Circular gradient background */}
       <div
-        className={`absolute inset-0 pointer-events-none transition-all duration-1200 delay-200 ${
-          isInitialLoad ? "opacity-0 scale-95" : "opacity-100 scale-100"
-        }`}
+        className="absolute inset-0 pointer-events-none"
         style={{
           background: `radial-gradient(circle at center, rgba(20, 20, 20, 0.3) 0%, rgba(10, 10, 10, 0.8) 40%, rgba(10, 10, 10, 1) 70%)`,
           zIndex: 1,
@@ -248,26 +226,14 @@ export default function AIChatUI() {
       />
 
       {/* Watermark logo */}
-      <div
-        className={`transition-all duration-1500 delay-400 ${isInitialLoad ? "opacity-0 scale-90" : "opacity-100 scale-100"}`}
-      >
+      <div>
         <WatermarkLogo />
       </div>
 
       {/* Messages */}
-      <div
-        className={`flex-1 overflow-y-auto p-4 space-y-6 relative z-10 transition-all duration-800 delay-300 ${
-          isInitialLoad ? "opacity-0 translate-x-8" : "opacity-100 translate-x-0"
-        }`}
-      >
-        {messages.map((message, index) => (
-          <div
-            key={message.id}
-            className={`space-y-2 transition-all duration-500 ${
-              isInitialLoad ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
-            }`}
-            style={{ transitionDelay: `${600 + index * 100}ms` }}
-          >
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 relative z-10">
+        {messages.map((message) => (
+          <div key={message.id} className="space-y-2">
             {message.role === "user" ? (
               <div className="flex justify-start">
                 <div className="max-w-3xl">
@@ -346,18 +312,14 @@ export default function AIChatUI() {
       </div>
 
       {/* Input - Fixed at bottom center */}
-      <div
-        className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20 transition-all duration-1000 delay-500 ${
-          isInitialLoad ? "opacity-0 translate-y-8" : "opacity-100 translate-y-0"
-        }`}
-      >
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20">
         <div className="relative">
           <textarea
             ref={textareaRef}
             value={input}
             onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask anything... (Ctrl+Enter for new line)"
+            onKeyDown={handleKeyPress}
+            placeholder="Ask anything... (Shift+Enter for new line)"
             className="w-full rounded-3xl px-3 py-2 pr-16 text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-gray-600 text-sm transition-all duration-200 hover:shadow-lg focus:shadow-xl"
             style={{
               background: "linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%)",
