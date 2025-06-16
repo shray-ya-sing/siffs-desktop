@@ -8,6 +8,7 @@ interface FileDiscoveryProgressProps {
 
 export default function FileDiscoveryProgress({ messages, isActive }: FileDiscoveryProgressProps) {
   const [displayedMessage, setDisplayedMessage] = useState('');
+  const displayText = displayedMessage || "Discovering files...";
 
   // Update the displayed message when messages array changes
   useEffect(() => {
@@ -16,7 +17,7 @@ export default function FileDiscoveryProgress({ messages, isActive }: FileDiscov
     }
   }, [messages]);
 
-  if (!isActive || !displayedMessage) return null;
+  if (!isActive) return null;
 
   return (
     <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full px-4">
@@ -59,9 +60,9 @@ export default function FileDiscoveryProgress({ messages, isActive }: FileDiscov
           <p 
             className="text-sm text-gray-200 truncate" 
             style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-            title={displayedMessage}
+            title={displayText}
           >
-            {displayedMessage}
+            {displayText}
           </p>
         </div>
       </div>
