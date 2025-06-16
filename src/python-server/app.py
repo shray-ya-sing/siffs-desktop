@@ -110,7 +110,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
         while True:
             # Receive messages
             data = await websocket.receive_json()
-            
+
+            event_message = {
+                "client_id": client_id,
+                "message": data
+            }
+     
             # Emit event for received message
             await event_bus.emit(
                 "ws_message_received",
@@ -130,15 +135,15 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
 async def log_requests(request: Request, call_next):
     # Log request details
     body = await request.body()
-    print(f"\n=== INCOMING REQUEST ===")
-    print(f"Method: {request.method}")
-    print(f"URL: {request.url}")
-    print(f"Headers: {dict(request.headers)}")
+    logger.info(f"\n=== INCOMING REQUEST ===")
+    logger.info(f"Method: {request.method}")
+    logger.info(f"URL: {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
     try:
-        print(f"Body: {body.decode()}")
+        logger.info(f"Body: {body.decode()}")
     except:
-        print("Could not decode body")
-    print("=======================\n")
+        logger.info("Could not decode body")
+    logger.info("=======================\n")
     
     # Reset body for downstream processing
     request._body = body
@@ -146,10 +151,10 @@ async def log_requests(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception as e:
-        print(f"Error processing request: {str(e)}")
+        logger.error(f"Error processing request: {str(e)}")
         raise
     
-    print(f"=== RESPONSE: {response.status_code} ===")
+    logger.info(f"=== RESPONSE: {response.status_code} ===")
     return response
 
 if __name__ == '__main__':
