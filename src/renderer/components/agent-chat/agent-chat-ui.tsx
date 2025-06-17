@@ -4,13 +4,37 @@ import { ProviderDropdown, ModelOption } from './ProviderDropdown'
 import WatermarkLogo from '../logo/WaterMarkLogo'
 import { webSocketService } from '../../services/websocket/websocket.service';
 import { v4 as uuidv4 } from 'uuid';
+import { useMention } from '../../hooks/useMention'
+import MentionDropdown from './MentionDropdown'
+import { useFileTree, FileItem } from '../../hooks/useFileTree'
+import { EventCard } from '../events/EventCard'
 
-interface Message {
-  id: string
-  content: string
-  role: "user" | "assistant"
-  timestamp: Date
+type MessageType = 'user' | 'assistant' | 'tool_call';
+
+interface BaseMessage {
+  id: string;
+  content: string;
+  role: MessageType;
+  timestamp: Date;
 }
+
+interface UserMessage extends BaseMessage {
+  role: 'user';
+}
+
+interface AssistantMessage extends BaseMessage {
+  role: 'assistant';
+}
+
+interface ToolCallMessage extends BaseMessage {
+  role: 'tool_call';
+  toolName: string;
+  status: 'started' | 'completed';
+  requestId: string;
+  result?: any;
+}
+
+type Message = UserMessage | AssistantMessage | ToolCallMessage;
 
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
@@ -34,6 +58,19 @@ export default function AIChatUI() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [selectedModel, setSelectedModel] = useState("claude-sonnet-4")
   const [socket, setSocket] = useState<WebSocket | null>(null)
+
+  const { fileTree } = useFileTree()
+  const {
+    showMentions,
+    mentionQuery,
+    selectedMentionIndex,
+    mentionPosition,
+    mentionResults,
+    handleMentionInput,
+    handleMentionKeyDown,
+    setShowMentions
+  } = useMention(fileTree)
+
 
   // Mock function for AI response
   const generateAIResponse = useCallback(async (userInput: string): Promise<string> => {
@@ -65,6 +102,7 @@ export default function AIChatUI() {
   // Typing animation
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value)
+    handleMentionInput(e, textareaRef.current)
 
     if (!isTyping && e.target.value.length > 0) {
       setIsTyping(true)
@@ -111,11 +149,20 @@ export default function AIChatUI() {
   }, [])
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    handleMentionKeyDown(e, handleMentionSelect)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
   }, [handleSend])
+
+  const handleMentionSelect = (file: FileItem) => {
+    const atIndex = input.lastIndexOf('@')
+    const newInput = input.substring(0, atIndex) + `@${file.name} `
+    setInput(newInput)
+    setShowMentions(false)
+    textareaRef.current?.focus()
+  }
 
   const handleModelChange = useCallback((modelId: string) => {
     setSelectedModel(modelId);
@@ -124,19 +171,62 @@ export default function AIChatUI() {
 
   useEffect(() => {
     const handleChatResponse = (response: any) => {
-      const assistantMessage = {
+      const assistantMessage: AssistantMessage = {
         id: `msg_${Date.now()}`,
         content: response.data.content,
-        role: "assistant" as const,
+        role: "assistant",
         timestamp: new Date(response.timestamp),
       };
       setMessages(prev => [...prev, assistantMessage]);
       setIsLoading(false);
     };
+
+    const handleToolCall = (data: any) => {
+      const toolCallMessage: ToolCallMessage = {
+        id: `tool_${Date.now()}`,
+        content: data.query || `Using ${data.toolName}...`,
+        role: 'tool_call',
+        toolName: data.toolName,
+        status: data.status,
+        requestId: data.requestId,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, toolCallMessage]);
+    };
+
+    const handleToolResult = (data: any) => {
+      setMessages(prev => {
+        // Find the corresponding tool call message
+        const updatedMessages = [...prev];
+        const toolCallIndex = updatedMessages.findIndex(
+          msg => msg.role === 'tool_call' && 
+                'requestId' in msg && 
+                msg.requestId === data.requestId
+        );
+
+        if (toolCallIndex !== -1) {
+          // Update the existing tool call message
+          const updatedToolCall = {
+            ...updatedMessages[toolCallIndex],
+            status: 'completed' as const,
+            content: `Completed: ${updatedMessages[toolCallIndex].content}`,
+            result: data.result
+          };
+          updatedMessages[toolCallIndex] = updatedToolCall as ToolCallMessage;
+        }
+        return updatedMessages;
+      });
+    };
   
     webSocketService.on('CHAT_RESPONSE', handleChatResponse);
+    webSocketService.on('TOOL_CALL', handleToolCall);
+    webSocketService.on('TOOL_RESULT', handleToolResult);
+    
     return () => {
       webSocketService.off('CHAT_RESPONSE', handleChatResponse);
+      webSocketService.off('TOOL_CALL', handleToolCall);
+      webSocketService.off('TOOL_RESULT', handleToolResult);
     };
   }, []);
 
@@ -177,6 +267,18 @@ export default function AIChatUI() {
                   >
                     {message.content}
                   </div>
+                </div>
+              </div>
+            ) : message.role === 'tool_call' ? (
+              <div className="flex justify-start">
+                <div className="max-w-4xl w-full">
+                  <EventCard
+                    type={message.status === 'completed' ? 'completed' : 'executing'}
+                    message={message.content}
+                    className="w-full"
+                    isStreaming={message.status !== 'completed'}
+                    timestamp={message.timestamp.getTime()}
+                  />
                 </div>
               </div>
             ) : (
@@ -255,6 +357,15 @@ export default function AIChatUI() {
             className="w-full"
           />
         </div>
+
+        {showMentions && (
+          <MentionDropdown
+            files={mentionResults}
+            selectedIndex={selectedMentionIndex}
+            position={mentionPosition}
+            onSelect={handleMentionSelect}
+          />
+        )}
         
         {/* Message input */}
         <div className="relative">
