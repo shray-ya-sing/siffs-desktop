@@ -70,8 +70,8 @@ app = FastAPI(title="Cori API")
 async def startup_event():
     from excel.orchestration.excel_orchestrator import ExcelOrchestrator
     logger.info("Starting up...Excel orchestrator initialized")
-    from ai_services.orchestration.agent_orchestrator import AgentOrchestrator
-    logger.info("Starting up...Agent orchestrator initialized")
+    from ai_services.orchestration.prebuilt_agent_orchestrator import PrebuiltAgentOrchestrator
+    logger.info("Starting up...PrebuiltAgent orchestrator initialized")
     # Print all registered routes
     for route in app.routes:
         if hasattr(route, 'methods'):
