@@ -1,4 +1,6 @@
 import sys
+import base64
+import tempfile
 import os
 from pathlib import Path
 
@@ -40,40 +42,115 @@ class ExcelOrchestrator:
         message = event.data["message"]
         
         if message.get("type") == "EXTRACT_METADATA":
-            # Start metadata extraction
+            # Get data from the nested 'data' field
+            data = message.get("data", {})
             await event_bus.emit("EXTRACT_METADATA_REQUESTED", {
-                "file_path": message.get("filePath"),
+                "file_path": data.get("file_path") or data.get("filePath"),
+                "file_content": data.get("file_content") or data.get("fileContent"),
                 "client_id": client_id,
-                "request_id": message.get("id"),
-                "force_refresh": message.get("forceRefresh", False)
+                "request_id": data.get("request_id") or data.get("requestId"),
+                "force_refresh": data.get("force_refresh") or data.get("forceRefresh", False)
             })
             
             # Send immediate acknowledgment
             await manager.send_message(client_id, {
                 "type": "STATUS",
                 "message": "Starting metadata extraction...",
-                "requestId": message.get("id")
+                "requestId": data.get("request_id") or data.get("requestId")
             })
             
     async def handle_extraction_request(self, event):
         """Main entry point - coordinates the extraction"""
-        file_path = event.data["file_path"]
-        client_id = event.data["client_id"]
-        request_id = event.data["request_id"]
+        # Extract data from event
+        message = event.data if hasattr(event, 'data') else event
+
+        # Get file content and path from the message
+        file_content = message.get('fileContent') or message.get('file_content')
+        file_path = message.get('filePath') or message.get('file_path')
+        client_id = message.get('clientId') or message.get('client_id')
+        request_id = message.get('requestId') or message.get('request_id')
         
-        logger.info(f"Extraction requested for {file_path}")
+        logger.debug(f"Received extraction request with client_id: {client_id}, request_id: {request_id}")
+        logger.debug(f"File path: {file_path}, content present: {bool(file_content)}")
         
-        # Check cache first
-        await event_bus.emit("CHECK_CACHE_FOR_METADATA", {
-            "file_path": file_path,
-            "client_id": client_id,
-            "request_id": request_id,
-            "force_refresh": event.data.get("force_refresh", False)
-        })
+        logger.info(f"Extraction requested for file {file_path}")
+
+        # Validate required parameters
+        missing = []
+        if not client_id:
+            missing.append('client_id')
+        if not file_content:
+            missing.append('file_content')
+        if not file_path:
+            missing.append('file_path')
+            
+        if missing:
+            error_msg = f"Missing required parameters: {', '.join(missing)}"
+            logger.error(error_msg)
+            # Try to send error back to client if we have the client_id
+            if client_id:
+                try:
+                    await manager.send_message(client_id, {
+                        "type": "EXTRACTION_ERROR",
+                        "error": error_msg,
+                        "requestId": request_id
+                    })
+                except Exception as e:
+                    logger.error(f"Failed to send error to client: {str(e)}")
+            return
+
+        try:
+            original_filename = os.path.basename(file_path)
+            # Create a temporary file with the same name in the system temp directory
+            fd, temp_file_path = tempfile.mkstemp(
+                prefix=f"tmp_{os.path.splitext(original_filename)[0]}_",  # Keep original name as prefix
+                suffix=os.path.splitext(original_filename)[1] or '.xlsx',  # Keep original extension
+                dir=None  # Uses system temp directory
+            )
+            
+            try:
+                # Write the decoded content
+                with os.fdopen(fd, 'wb') as temp_file:
+                    file_data = base64.b64decode(file_content)
+                    temp_file.write(file_data)
+                
+                logger.info(f"Temporary file copy of {file_path} created at {temp_file_path}")
+                
+                # Rest of your code remains the same
+                await event_bus.emit("CHECK_CACHE_FOR_METADATA", {
+                    "file_path": file_path,
+                    "temp_file_path": temp_file_path,
+                    "client_id": client_id,
+                    "request_id": request_id,
+                    "force_refresh": message.get("force_refresh", False)
+                })
+                
+                # Cleanup function remains the same
+                def cleanup():
+                    try:
+                        if os.path.exists(temp_file_path):
+                            os.unlink(temp_file_path)
+                    except Exception as e:
+                        logger.error(f"Error cleaning up temp file {temp_file_path}: {e}")
+                
+                asyncio.create_task(self.cleanup_after_delay(cleanup))
+                
+            except Exception as e:
+                logger.error(f"Error processing file upload: {e}")
+                # Make sure to clean up if there's an error after file creation
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+                raise
         
-        # Cache handler will emit either:
-        # - CACHED_METADATA_FOUND (if cache hit)
-        # - START_FRESH_EXTRACTION (if cache miss)
+        except Exception as e:
+            logger.error(f"Error processing file upload: {e}")
+            await self.emit("EXTRACTION_ERROR", {
+                "client_id": client_id,
+                "error": str(e),
+                "request_id": message.get("requestId")
+            })
         
     async def forward_progress_to_client(self, event):
         """Forward extraction progress to WebSocket client"""
@@ -137,6 +214,14 @@ class ExcelOrchestrator:
         })
         
         logger.error(f"Extraction error for client {client_id}: {event.data.get('error')}")
+
+    async def cleanup_after_delay(self, cleanup):
+        """Cleanup after a delay"""
+        try:
+            await asyncio.sleep(5)
+            cleanup()
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
 
 # Create global orchestrator instance
 orchestrator = ExcelOrchestrator()
