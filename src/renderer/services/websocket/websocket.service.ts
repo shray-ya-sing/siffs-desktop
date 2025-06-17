@@ -89,6 +89,22 @@ class WebSocketService {
     }
   }
 
+  sendChatMessage(message: string, model: string, metadata: Record<string, any> = {}) {
+    const payload = {
+      type: 'CHAT_MESSAGE',
+      timestamp: new Date().toISOString(),
+      data: {
+        message,
+        model,
+        ...metadata
+      }
+    };
+    this.sendMessage(payload);
+    return payload; // Return the payload in case you need the ID/timestamp
+  }
+
+
+
   public emit(event: string, data: any): void {
     const message = { type: event, data };
     this.sendMessage(message);

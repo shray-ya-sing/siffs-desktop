@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { ArrowRight, Square } from "lucide-react"
 import { ProviderDropdown, ModelOption } from './ProviderDropdown'
 import WatermarkLogo from '../logo/WaterMarkLogo'
+import { webSocketService } from '../../services/websocket/websocket.service';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Message {
   id: string
@@ -13,7 +15,7 @@ interface Message {
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
   { id: "openai-o3", name: "OpenAI o-3", provider: "OpenAI" },
-  { id: "claude-sonnet-4", name: "Claude sonnet 4", provider: "Anthropic" },
+  { id: "claude-sonnet-4-20250514", name: "Claude sonnet 4", provider: "Anthropic" },
   { id: "claude-sonnet-3.7", name: "Claude sonnet 3.7", provider: "Anthropic" },
   { id: "xai-grok-3", name: "Grok-3", provider: "xAI" },
   { id: "deepseek-v3", name: "DeepSeek v3", provider: "DeepSeek" },
@@ -93,22 +95,15 @@ export default function AIChatUI() {
     setIsTyping(false)
 
     try {
-      const response = await generateAIResponse(input)
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        role: "assistant",
-        timestamp: new Date(),
-      }
-      
-      setMessages(prev => [...prev, assistantMessage])
+      webSocketService.sendChatMessage(input, selectedModel, {
+        // Any additional metadata
+        messageId: userMessage.id,
+      });
     } catch (error) {
-      console.error("Error generating response:", error)
-    } finally {
-      setIsLoading(false)
+      console.error("Error sending message:", error);
+      setIsLoading(false);
     }
-  }, [input, generateAIResponse])
+  }, [input, selectedModel]);
 
   const handleCancel = useCallback(() => {
     setIsLoading(false)
@@ -125,6 +120,24 @@ export default function AIChatUI() {
   const handleModelChange = useCallback((modelId: string) => {
     setSelectedModel(modelId);
     setIsDropdownOpen(false);
+  }, []);
+
+  useEffect(() => {
+    const handleChatResponse = (response: any) => {
+      const assistantMessage = {
+        id: `msg_${Date.now()}`,
+        content: response.data.content,
+        role: "assistant" as const,
+        timestamp: new Date(response.timestamp),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsLoading(false);
+    };
+  
+    webSocketService.on('CHAT_RESPONSE', handleChatResponse);
+    return () => {
+      webSocketService.off('CHAT_RESPONSE', handleChatResponse);
+    };
   }, []);
 
   
@@ -219,7 +232,7 @@ export default function AIChatUI() {
                       style={{ animationDelay: "0.2s" }}
                     ></div>
                   </div>
-                  <span className="text-xs">AI is preparing to respond...</span>
+                  <span className="text-xs">User is typing...</span>
                 </div>
               </div>
             </div>
