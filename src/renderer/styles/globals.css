@@ -126,4 +126,27 @@ html, body, #root {
     );
     background-size: 200% 100%;
   }
+
+  .mention-dropdown {
+    z-index: 1000;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  
+  .mention-item {
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  
+  .mention-item:hover {
+    background-color: #374151;
+  }
+  
+  .mention-item.selected {
+    background-color: #4b5563;
+  }
 }
