@@ -103,7 +103,33 @@ class WebSocketService {
     return payload; // Return the payload in case you need the ID/timestamp
   }
 
+  sendToolCallEvent(toolName: string, query: string, requestId: string) {
+    const payload = {
+      type: 'TOOL_CALL',
+      timestamp: new Date().toISOString(),
+      data: {
+        toolName,
+        query,
+        requestId,
+        status: 'started'
+      }
+    };
+    this.sendMessage(payload);
+  }
 
+  sendToolResultEvent(toolName: string, result: any, requestId: string) {
+    const payload = {
+      type: 'TOOL_RESULT',
+      timestamp: new Date().toISOString(),
+      data: {
+        toolName,
+        result,
+        requestId,
+        status: 'completed'
+      }
+    };
+    this.sendMessage(payload);
+  }
 
   public emit(event: string, data: any): void {
     const message = { type: event, data };
