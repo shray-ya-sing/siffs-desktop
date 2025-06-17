@@ -1,8 +1,8 @@
 {
-  "name": "cori_app",
-  "productName": "Cori",
-  "version": "0.3.1",
-  "description": "Financial model software",
+  "name": "volute",
+  "productName": "Volute",
+  "version": "0.5.0",
+  "description": "Spreadsheet modelling agent",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
