@@ -59,7 +59,11 @@ export default function AIChatUI() {
   const [selectedModel, setSelectedModel] = useState("claude-sonnet-4")
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [threadId, setThreadId] = useState<string>(() => localStorage.getItem('threadId') || uuidv4());
-
+  const [streamingMessage, setStreamingMessage] = useState<{
+    requestId: string | null;
+    content: string;
+  }>({ requestId: null, content: '' });
+  
 
   const { fileTree } = useFileTree()
   const {
@@ -184,6 +188,29 @@ export default function AIChatUI() {
       setIsLoading(false);
     };
 
+    const handleAssistantChunk = (chunk: any) => {
+      if (chunk.type === 'ASSISTANT_MESSAGE_CHUNK') {
+        setStreamingMessage(prev => ({
+          requestId: chunk.requestId,
+          content: prev.requestId === chunk.requestId 
+            ? prev.content + (chunk.content || '')
+            : (chunk.content || '')
+        }));
+      } else if (chunk.type === 'ASSISTANT_MESSAGE_DONE') {
+        if (streamingMessage.content) {
+          const assistantMessage: AssistantMessage = {
+            id: chunk.requestId,
+            content: streamingMessage.content,
+            role: "assistant",
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+        setStreamingMessage({ requestId: null, content: '' });
+        setIsLoading(false);
+      }
+    };
+
     const handleToolCall = (data: any) => {
       const toolCallMessage: ToolCallMessage = {
         id: `tool_${Date.now()}`,
@@ -225,11 +252,16 @@ export default function AIChatUI() {
     webSocketService.on('CHAT_RESPONSE', handleChatResponse);
     webSocketService.on('TOOL_CALL', handleToolCall);
     webSocketService.on('TOOL_RESULT', handleToolResult);
+    webSocketService.on('ASSISTANT_MESSAGE_CHUNK', handleAssistantChunk);
+    webSocketService.on('ASSISTANT_MESSAGE_DONE', handleAssistantChunk);
+    
     
     return () => {
       webSocketService.off('CHAT_RESPONSE', handleChatResponse);
       webSocketService.off('TOOL_CALL', handleToolCall);
       webSocketService.off('TOOL_RESULT', handleToolResult);
+      webSocketService.off('ASSISTANT_MESSAGE_CHUNK', handleAssistantChunk);
+      webSocketService.off('ASSISTANT_MESSAGE_DONE', handleAssistantChunk);
     };
   }, []);
 
@@ -292,9 +324,10 @@ export default function AIChatUI() {
               <div className="flex justify-start">
                 <div className="max-w-4xl">
                   <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20">
-                    <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
-                      {message.content}
-                    </pre>
+                  <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
+                    {streamingMessage.content}
+                    <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
+                  </pre>
                   </div>
                 </div>
               </div>
