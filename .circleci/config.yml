@@ -5,22 +5,6 @@ orbs:
   python: circleci/python@2.1.1
   win: circleci/windows@5.0.0
 
-commands:
-  configure_git:
-    description: "Configure Git to use the GitLab token"
-    parameters:
-      token:
-        type: string
-        default: $GITLAB_TOKEN
-    steps:
-      - run:
-          name: Configure Git authentication
-          command: |
-            git config --global url."https://gitlab-ci-token:<< parameters.token >>@gitlab.com/".insteadOf "https://gitlab.com/"
-            git config --global url."https://gitlab-ci-token:<< parameters.token >>@gitlab.com/".insteadOf "git@gitlab.com:"
-            git config --global url."https://".insteadOf git://
-
-
 jobs:
   build_macos:
     macos:
@@ -29,9 +13,11 @@ jobs:
     steps:
       - checkout:
           token: $GITLAB_TOKEN
-
-      - configure_git:
-          token: $GITLAB_TOKEN
+          path: ~/project
+          git_config:
+            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=https://gitlab.com/"
+            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=git@gitlab.com:"
+            - "url.https://.insteadOf=git://"
 
       - run:
           name: Verify file structure
@@ -106,9 +92,11 @@ jobs:
     steps:
       - checkout:
           token: $GITLAB_TOKEN
-
-      - configure_git:
-          token: $GITLAB_TOKEN
+          path: ~/project
+          git_config:
+            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=https://gitlab.com/"
+            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=git@gitlab.com:"
+            - "url.https://.insteadOf=git://"
 
       - run:
           name: Verify file structure
@@ -191,17 +179,6 @@ workflows:
                 name: Bump version (patch)
                 command: npm run version:patch
               only: mac-release
-          post-steps:
-            - run:
-                name: Bump version (patch)
-                command: npm run version:patch
-  
-  windows_release:
-    jobs:
-      - build_windows:
-          filters:
-            branches:
-              only: win-release
           post-steps:
             - run:
                 name: Bump version (patch)
