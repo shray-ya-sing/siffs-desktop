@@ -58,6 +58,8 @@ export default function AIChatUI() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [selectedModel, setSelectedModel] = useState("claude-sonnet-4")
   const [socket, setSocket] = useState<WebSocket | null>(null)
+  const [threadId, setThreadId] = useState<string>(() => localStorage.getItem('threadId') || uuidv4());
+
 
   const { fileTree } = useFileTree()
   const {
@@ -135,13 +137,14 @@ export default function AIChatUI() {
     try {
       webSocketService.sendChatMessage(input, selectedModel, {
         // Any additional metadata
+        threadId: threadId,
         messageId: userMessage.id,
       });
     } catch (error) {
       console.error("Error sending message:", error);
       setIsLoading(false);
     }
-  }, [input, selectedModel]);
+  }, [input, selectedModel, threadId]);
 
   const handleCancel = useCallback(() => {
     setIsLoading(false)
@@ -229,6 +232,10 @@ export default function AIChatUI() {
       webSocketService.off('TOOL_RESULT', handleToolResult);
     };
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('threadId', threadId);
+  }, [threadId]);
 
   
 
