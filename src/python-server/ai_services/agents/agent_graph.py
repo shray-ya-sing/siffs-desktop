@@ -13,6 +13,8 @@ from llm_service import LLMService
 from agents.agent_state import AgentState
 from base_provider import Message, ToolCall, ChatResponse
 from prompts.system_prompts import VOLUTE_SYSTEM_PROMPT
+import logging
+logger = logging.getLogger(__name__)
 
 class AgentGraph:
     def __init__(self, llm_service: LLMService):
@@ -84,7 +86,11 @@ class AgentGraph:
     
     async def generate_response(self, state: AgentState) -> Dict[str, str]:
         """Generate final response to user with streaming support"""
-        messages = state["messages"]
+        if "messages" not in state:
+            logger.warning("Required key 'messages' is missing from state.")
+            messages = []
+        else:
+            messages = state["messages"]
         
         # Stream the response
         full_response = ""
@@ -186,11 +192,59 @@ class AgentGraph:
         """Route to next node based on decision"""
         return state.get("next", "end")
     
-    async def astream(self, state: Dict, yield_chunk=None):
-        """Async stream through the agent's execution"""
-        state = state.copy()
+    async def astream(self, state: Dict, yield_chunk=None, **kwargs):
+        """Async stream through the agent's execution
+        
+        Args:
+            state: Dictionary containing the agent state
+            yield_chunk: Optional callback for streaming chunks
+            **kwargs: Additional parameters to include in the state
+            
+        Raises:
+            ValueError: If required 'messages' key is missing from state
+        """
+        
+        # Check for required keys in the state argument passed
+        if "messages" not in state:
+            raise ValueError(
+                "Required key 'messages' is missing from state. "
+                f"Current state keys: {list(state.keys())}"
+            )
+        else:
+            logger.info("Required key 'messages' is present in state.")
+        
+        # Create a new state dictionary with the original state and any kwargs
+        state = {**state, **kwargs}
+        
+        # Check for required keys
+        if "messages" not in state:
+            raise ValueError(
+                "Required key 'messages' is missing from state (copy). "
+                f"Current state keys: {list(state.keys())}"
+            )
+        else:
+            logger.info("Required key 'messages' is present in state (copy).")
+        
+        # Add yield_chunk to state if provided
         if yield_chunk:
             state["yield_chunk"] = yield_chunk
         
+        # Log state for debugging (you can remove this in production)
+        print(f"[DEBUG] astream state keys: {list(state.keys())}")
+        print(f"[DEBUG] messages exists: {'messages' in state}")
+        print(f"[DEBUG] messages content: {state.get('messages')}")
+        
         async for step in self.runnable.astream(state):
             yield step
+
+
+    def _wrap_with_error_handling(self, func):
+        """Wrapper to add error handling to node functions"""
+        async def wrapper(state: Dict) -> Dict:
+            try:
+                return await func(state)
+            except Exception as e:
+                logger.error(f"Error in node {func.__name__}: {str(e)}", exc_info=True)
+                # Return a safe state that will end the execution
+                return {"next": "end", "error": str(e)}
+        return wrapper
