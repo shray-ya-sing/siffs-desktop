@@ -1,5 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 type EventHandler = (data: any) => void;
+type ConnectionHandler = (isConnected: boolean) => void;
+type ErrorHandler = (error: Error) => void;
+
+
+export interface AssistantChunkMessage {
+  type: 'ASSISTANT_MESSAGE_CHUNK';
+  content: string;
+  done: boolean;
+  requestId: string;
+}
 
 class WebSocketService {
   private socket: WebSocket | null = null;
@@ -7,6 +17,48 @@ class WebSocketService {
   private eventHandlers: Map<string, EventHandler[]> = new Map();
   private messageQueue: string[] = [];
   private isConnected = false;
+
+  private connectionHandlers: Set<ConnectionHandler> = new Set();
+  private errorHandlers: Set<ErrorHandler> = new Set();
+
+  // Add these new methods
+  onConnectionChange(handler: ConnectionHandler): void {
+    this.connectionHandlers.add(handler);
+  }
+
+  offConnectionChange(handler: ConnectionHandler): void {
+    this.connectionHandlers.delete(handler);
+  }
+
+  onError(handler: ErrorHandler): void {
+    this.errorHandlers.add(handler);
+  }
+
+  offError(handler: ErrorHandler): void {
+    this.errorHandlers.delete(handler);
+  }
+
+  serviceIsConnected(): boolean {
+    return this.isConnected;
+  }
+
+  async reconnect(): Promise<void> {
+    if (this.socket) {
+      this.socket.close();
+    }
+    return new Promise((resolve, reject) => {
+      this.initialize();
+      // You might want to add a timeout here
+      const checkConnected = () => {
+        if (this.isConnected) {
+          resolve();
+        } else {
+          setTimeout(checkConnected, 100);
+        }
+      };
+      checkConnected();
+    });
+  }
 
   private constructor() {
     this.initialize();
@@ -129,6 +181,26 @@ class WebSocketService {
       }
     };
     this.sendMessage(payload);
+  }
+
+  private handleIncomingMessage(event: MessageEvent) {
+    try {
+      const message = JSON.parse(event.data);
+      const handlers = this.eventHandlers.get(message.type) || [];
+      
+      // Special handling for chunked messages
+      if (message.type === 'ASSISTANT_MESSAGE_CHUNK' || 
+          message.type === 'ASSISTANT_MESSAGE_DONE') {
+        // Forward the message with its data
+        handlers.forEach(handler => handler(message));
+        return;
+      }
+      
+      // Normal message handling
+      handlers.forEach(handler => handler(message.data));
+    } catch (error) {
+      console.error('Error processing message:', error);
+    }
   }
 
   public emit(event: string, data: any): void {
