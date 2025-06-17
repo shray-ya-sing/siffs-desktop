@@ -38,6 +38,7 @@ class AgentOrchestrator:
     async def handle_ws_message(self, event):
         """Route incoming WebSocket messages to appropriate handlers"""
         client_id = event.data["client_id"]
+        thread_id = event.data["metadata"].get("thread_id")
         message = event.data["message"]
         
         if message.get("type") == "CHAT_MESSAGE":
@@ -45,6 +46,7 @@ class AgentOrchestrator:
                 "client_id": client_id,
                 "message": message.get("data", {}),
                 "request_id": message.get("requestId")
+                "thread_id": thread_id
             })
     
     async def handle_chat_message(self, event):
@@ -52,6 +54,7 @@ class AgentOrchestrator:
         client_id = event.data["client_id"]
         message_data = event.data["message"]
         request_id = event.data.get("request_id")
+        thread_id = event.data.get("thread_id")
         
         try:
             # Get message content and model
