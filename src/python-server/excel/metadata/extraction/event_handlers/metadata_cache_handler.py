@@ -30,7 +30,8 @@ class MetadataCacheHandler:
     ):
         """Check if we have cached metadata for the file"""
         try:
-            file_path = event.data["file_path"]
+            file_path = event.data.get("file_path")
+            temp_file_path = event.data.get("temp_file_path")
             client_id = event.data.get("client_id")
             request_id = event.data.get("request_id")
             force_refresh = event.data.get("force_refresh", False)
