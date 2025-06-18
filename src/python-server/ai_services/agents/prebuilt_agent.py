@@ -3,13 +3,19 @@ from typing import AsyncGenerator, Dict, Any, List, Optional
 import os
 import sys
 import logging
-from langchain_core.tools import tool
-from langchain.chat_models import init_chat_model
-from langchain.embeddings import init_embeddings
+
+# Import tools from the tools module
+from .tools import ALL_TOOLS
+
 import langgraph
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from langgraph.prebuilt import create_react_agent
+
+from langchain_core.tools import tool
+from langchain.chat_models import init_chat_model
+from langchain.embeddings import init_embeddings
+
 ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
 from llm_service import LLMService
@@ -45,6 +51,17 @@ class PrebuiltAgent:
         self.llm_with_tools = None
         self.agent = None
         self.conversation_history = []
+        self.provider_models= {
+            "anthropic": {
+                "claude-sonnet-4-20250514",
+                "claude-sonnet-4",
+                "claude-3-7-sonnet-latest"
+            },
+            "openai": {
+                "gpt-4o",
+                "gpt-4o-mini"
+            }
+        }
         _initialized = True
         
     def with_model(self, model_name: str) -> 'PrebuiltAgent':
@@ -74,7 +91,7 @@ class PrebuiltAgent:
         self.llm_service = LLMService()
         
         # Get the provider name for the model
-        provider_name = self.llm_service._model_to_provider.get(model_name)
+        provider_name = self._get_provider_name(model_name)
         if not provider_name:
             raise ValueError(f"Provider not found for model: {model_name}")
             
@@ -84,15 +101,15 @@ class PrebuiltAgent:
             model_provider=provider_name
         )
         
-        # Add tools to the LLM
-        tools = [add, multiply, divide]  
-        self.llm_with_tools = self.llm.bind_tools(tools)
+        # Use the imported tools
+        self.llm_with_tools = self.llm.bind_tools(ALL_TOOLS)
         
         # Create the agent
+        logger.info(f"Creating agent with model: {provider_name}:{model_name}")
         self.agent = create_react_agent(
-            model=self.llm_with_tools, 
-            tools=tools,
-            system_prompt=VOLUTE_SYSTEM_PROMPT,
+            model=f"{provider_name}:{model_name}", 
+            tools=ALL_TOOLS,
+            prompt=VOLUTE_SYSTEM_PROMPT,
             store=self.in_memory_store,
             checkpointer=self.checkpointer
         )
@@ -100,10 +117,17 @@ class PrebuiltAgent:
         self.current_model = model_name
         logger.info(f"Initialized new agent with model: {model_name}")
 
+    def _get_provider_name(self, model_name: str) -> str:
+        for provider, models in self.provider_models.items():
+            if model_name in models:
+                return provider
+        return None
+
     async def stream_agent_response(
         self, 
         messages: List[Dict[str, str]],
-        thread_id: Optional[str] = None
+        thread_id: Optional[str] = None,
+        request_id: Optional[str] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Stream the agent's response for real-time UI updates.
@@ -129,21 +153,61 @@ class PrebuiltAgent:
                 config=config
             ):
                 try:
-                    if "messages" in chunk and chunk["messages"]:
-                        last_message = chunk["messages"][-1]
-                        if hasattr(last_message, "content"):
+                    if isinstance(chunk, tuple):
+                        # Handle tuple case - likely a tool call or other system message
+                        self._parse_tuple_chunk(chunk)
+                    if hasattr(chunk, 'tool_call_chunks'):
+                        tool_calls = chunk.tool_call_chunks
+                        logger.info(f"Received tool calls: {tool_calls}")
+                        yield {
+                            "type": "tool_calls",
+                            "tool_calls": tool_calls,
+                            "requestId": request_id
+                        }
+                    # Handle dictionary case
+                    if isinstance(chunk, dict):
+                        agent_data = chunk.get('agent')
+                        if agent_data:
+                            messages = agent_data.get('messages', [])
+                            if messages:
+                                message = messages[0]
+                                # Existing message processing
+                                if hasattr(message, 'text') and callable(message.text):
+                                    message_content = message.text()
+                                elif isinstance(message, dict):
+                                    message_content = message.get('content', '')
+                                    # Check for tool calls in the message
+                                    tool_calls = message.get('tool_calls') or message.get('tool_call_chunks')
+                                    if tool_calls:
+                                        logger.info(f"Processing tool calls: {tool_calls}")
+                                        yield {
+                                            "type": "tool_calls",
+                                            "tool_calls": tool_calls,
+                                            "requestId": request_id
+                                        }
+                                else:
+                                    message_content = str(message)
+                                    
+                                if message_content:
+                                    logger.info(f"Chunk message received: {message_content}")
+                                    yield {
+                                        "type": "content",
+                                        "content": message_content,
+                                        "done": False,
+                                        "requestId": request_id
+                                    }
+                    # Handle case where chunk is a message-like object
+                    elif hasattr(chunk, 'text') and callable(chunk.text):
+                        message_content = chunk.text()
+                        logger.info(f"Chunk message received: {message_content}")
+                        if message_content:
                             yield {
                                 "type": "content",
-                                "content": last_message.content,
-                                "done": False
+                                "content": message_content,
+                                "done": False,
+                                "requestId": request_id
                             }
-                        # Handle tool calls if present
-                        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-                            yield {
-                                "type": "tool_calls",
-                                "tool_calls": last_message.tool_calls,
-                                "done": False
-                            }
+
                 except Exception as chunk_error:
                     logger.error(f"Error processing chunk: {str(chunk_error)}", exc_info=True)
                     yield {
@@ -166,38 +230,89 @@ class PrebuiltAgent:
             }
             raise
 
-    # Define tools
-    @tool
-    def multiply(a: int, b: int) -> int:
-        """Multiply a and b.
+    def _parse_tuple_chunk(self, chunk):
+        try:
+            chunk_type, chunk_content = chunk
+            
+            # Handle message chunks
+            if chunk_type == 'messages':                    
+                message, metadata = chunk_content
+                
+                # Handle tool call messages
+                if hasattr(message, 'tool_calls') and message.tool_calls:
+                    logger.info(f"Yielding tool calls: {message.tool_calls}")
+                    yield {
+                        "type": "tool_calls",
+                        "tool_calls": message.tool_calls,
+                        "requestId": request_id
+                    }
+                # Handle regular text content
+                if hasattr(message, 'content') and message.content:
+                    if isinstance(message.content, str):
+                        yield {
+                            "type": "content",
+                            "content": message.content,
+                            "done": False,
+                            "requestId": request_id
+                        }
+                    elif isinstance(message.content, list):
+                        for content_item in message.content:
+                            if isinstance(content_item, dict) and content_item.get('type') == 'text':
+                                yield {
+                                    "type": "content",
+                                    "content": content_item.get('text', ''),
+                                    "done": False,
+                                    "requestId": request_id
+                                }
+            
+            # Handle updates that contain the final assembled message
+            elif chunk_type == 'updates' and 'agent' in chunk_content:
+                agent_messages = chunk_content['agent'].get('messages', [])
+                for msg in agent_messages:
+                    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                        logger.info(f"Yielding tool calls: {msg.tool_calls}")
+                        yield {
+                            "type": "tool_calls",
+                            "tool_calls": msg.tool_calls,
+                            "requestId": request_id
+                        }
+                    
+                    if hasattr(msg, 'content'):
+                        if isinstance(msg.content, str):
+                            logger.info(f"Yielding content: {msg.content}")
+                            yield {
+                                "type": "content",
+                                "content": msg.content,
+                                "done": False,
+                                "requestId": request_id
+                            }
+                        elif isinstance(msg.content, list):
+                            for content_item in msg.content:
+                                if isinstance(content_item, dict) and content_item.get('type') == 'text':
+                                    logger.info(f"Yielding content: {content_item.get('text', '')}")
+                                    yield {
+                                        "type": "content",
+                                        "content": content_item.get('text', ''),
+                                        "done": False,
+                                        "requestId": request_id
+                                    }
+            
+        except Exception as chunk_error:
+            logger.error(f"Error processing chunk: {str(chunk_error)}", exc_info=True)
+            yield {
+                "type": "error",
+                "error": f"Error processing response: {str(chunk_error)}",
+                "requestId": request_id,
+                "done": True
+            }
 
-        Args:
-            a: first int
-            b: second int
-        """
-        return a * b
-
-
-    @tool
-    def add(a: int, b: int) -> int:
-        """Adds a and b.
-
-        Args:
-            a: first int
-            b: second int
-        """
-        return a + b
-
-
-    @tool
-    def divide(a: int, b: int) -> float:
-        """Divide a and b.
-
-        Args:
-            a: first int
-            b: second int
-        """
-        return a / b
-
+        
+        # Signal completion
+        yield {
+            "type": "done",
+            "requestId": request_id,
+            "done": True
+        }
+        
 # Create global instance
 prebuilt_agent = PrebuiltAgent()
