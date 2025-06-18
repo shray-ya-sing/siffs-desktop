@@ -44,6 +44,7 @@ class ExcelOrchestrator:
         if message.get("type") == "EXTRACT_METADATA":
             # Get data from the nested 'data' field
             data = message.get("data", {})
+            logger.info(f"Emitting extraction request for file {data.get('file_path') or data.get('filePath')}")
             await event_bus.emit("EXTRACT_METADATA_REQUESTED", {
                 "file_path": data.get("file_path") or data.get("filePath"),
                 "file_content": data.get("file_content") or data.get("fileContent"),
@@ -114,7 +115,7 @@ class ExcelOrchestrator:
                     file_data = base64.b64decode(file_content)
                     temp_file.write(file_data)
                 
-                logger.info(f"Temporary file copy of {file_path} created at {temp_file_path}")
+                logger.info(f"Temporary file copy of {file_path} created at {temp_file_path}.Emitting check cache for metadata event.")
                 
                 # Rest of your code remains the same
                 await event_bus.emit("CHECK_CACHE_FOR_METADATA", {
