@@ -172,7 +172,3 @@ workflows:
           filters:
             branches:
               only: win-release
-          post-steps:
-            - run:
-                name: Bump version (patch)
-                command: npm run version:patch
