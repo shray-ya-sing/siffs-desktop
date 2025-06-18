@@ -88,15 +88,14 @@ jobs:
     executor:
       name: win/default
       shell: bash.exe
-
+      
     steps:
-      - checkout:
-          token: $GITLAB_TOKEN
-          path: ~/project
-          git_config:
-            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=https://gitlab.com/"
-            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=git@gitlab.com:"
-            - "url.https://.insteadOf=git://"
+
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:Gj3EuyITE9FEtYg9JuC7rIRtPAHO6SzKCheZSCOJaFY"
+      
+      - checkout
 
       - run:
           name: Verify file structure
@@ -147,6 +146,7 @@ jobs:
       - run:
           name: Build application
           command: npm run make:win
+          no_output_timeout: 1.5h
 
       - store_artifacts:
           path: out/make
@@ -154,8 +154,6 @@ jobs:
 
 workflows:
   version: 2
-  
-  macos_release:
   
   macos_release:
     jobs:
@@ -174,12 +172,3 @@ workflows:
           filters:
             branches:
               only: win-release
-          post-steps:
-            - run:
-                name: Bump version (patch)
-                command: npm run version:patch
-              only: mac-release
-          post-steps:
-            - run:
-                name: Bump version (patch)
-                command: npm run version:patch
