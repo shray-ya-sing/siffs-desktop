@@ -39,7 +39,7 @@ class MetadataCacheHandler:
             logger.info(f"Checking cache for: {file_path} (force_refresh={force_refresh})")
             
             # Normalize the file path
-            normalized_path = str(Path(file_path).resolve())
+            normalized_path = str(Path(temp_file_path).resolve())
             
             # Check if file exists
             if not os.path.exists(normalized_path):
