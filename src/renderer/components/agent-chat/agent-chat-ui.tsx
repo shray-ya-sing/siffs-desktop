@@ -37,13 +37,13 @@ interface ToolCallMessage extends BaseMessage {
 type Message = UserMessage | AssistantMessage | ToolCallMessage;
 
 const MODEL_OPTIONS: ModelOption[] = [
-  { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
-  { id: "openai-o3", name: "OpenAI o-3", provider: "OpenAI" },
+//  { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
+//  { id: "openai-o3", name: "OpenAI o-3", provider: "OpenAI" },
   { id: "claude-sonnet-4-20250514", name: "Claude sonnet 4", provider: "Anthropic" },
-  { id: "claude-sonnet-3.7", name: "Claude sonnet 3.7", provider: "Anthropic" },
-  { id: "xai-grok-3", name: "Grok-3", provider: "xAI" },
-  { id: "deepseek-v3", name: "DeepSeek v3", provider: "DeepSeek" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 pro", provider: "Google" },
+  { id: "claude-3-7-sonnet-latest", name: "Claude sonnet 3.7", provider: "Anthropic" },
+//  { id: "xai-grok-3", name: "Grok-3", provider: "xAI" },
+//  { id: "deepseek-v3", name: "DeepSeek v3", provider: "DeepSeek" },
+//  { id: "gemini-2.5-pro", name: "Gemini 2.5 pro", provider: "Google" },
 ]
 
 
@@ -76,17 +76,6 @@ export default function AIChatUI() {
     handleMentionKeyDown,
     setShowMentions
   } = useMention(fileTree)
-
-
-  // Mock function for AI response
-  const generateAIResponse = useCallback(async (userInput: string): Promise<string> => {
-    return new Promise((resolve) => {
-      // Simulate API call delay
-      setTimeout(() => {
-        resolve(`I received your message: "${userInput}". This is a mock response.`)
-      }, 1000)
-    })
-  }, [])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -126,6 +115,8 @@ export default function AIChatUI() {
   const handleSend = useCallback(async () => {
     if (!input.trim()) return
 
+    const requestId = uuidv4();
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: input,
@@ -139,11 +130,7 @@ export default function AIChatUI() {
     setIsTyping(false)
 
     try {
-      webSocketService.sendChatMessage(input, selectedModel, {
-        // Any additional metadata
-        threadId: threadId,
-        messageId: userMessage.id,
-      });
+      webSocketService.sendChatMessage(input, selectedModel, threadId, requestId);
     } catch (error) {
       console.error("Error sending message:", error);
       setIsLoading(false);
@@ -188,25 +175,34 @@ export default function AIChatUI() {
       setIsLoading(false);
     };
 
-    const handleAssistantChunk = (chunk: any) => {
-      if (chunk.type === 'ASSISTANT_MESSAGE_CHUNK') {
-        setStreamingMessage(prev => ({
-          requestId: chunk.requestId,
-          content: prev.requestId === chunk.requestId 
-            ? prev.content + (chunk.content || '')
-            : (chunk.content || '')
-        }));
-      } else if (chunk.type === 'ASSISTANT_MESSAGE_DONE') {
-        if (streamingMessage.content) {
-          const assistantMessage: AssistantMessage = {
-            id: chunk.requestId,
-            content: streamingMessage.content,
-            role: "assistant",
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-        setStreamingMessage({ requestId: null, content: '' });
+    const handleAssistantChunk = (message: any) => {
+      console.log('handleAssistantChunk received message', message);
+      if (!message || typeof message !== 'object') {
+        console.error('Invalid message format:', message);
+        return;
+      }
+    
+      if (message.type === 'ASSISTANT_MESSAGE_CHUNK' && message.content) {
+        setMessages(prev => {
+          // If last message is from assistant, update it
+          if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1] = {
+              ...newMessages[newMessages.length - 1],
+              content: newMessages[newMessages.length - 1].content + '\n' + message.content
+            };
+            return newMessages;
+          }
+          // Otherwise add new assistant message
+          return [...prev, { 
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: message.content,
+            timestamp: new Date()
+          }];
+        });
+      }
+      else if (message.type === 'ASSISTANT_MESSAGE_DONE') {
         setIsLoading(false);
       }
     };
@@ -325,8 +321,10 @@ export default function AIChatUI() {
                 <div className="max-w-4xl">
                   <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20">
                   <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
-                    {streamingMessage.content}
-                    <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
+                    {message.content}
+                    {isLoading && messages[messages.length - 1]?.id === message.id && (
+                      <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
+                    )}
                   </pre>
                   </div>
                 </div>
