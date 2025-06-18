@@ -87,10 +87,21 @@ class WebSocketService {
     this.socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log('Raw WebSocket message received:', message); // Debug log
+        
+        // Special handling for chunked messages
+        if (message.type === 'ASSISTANT_MESSAGE_CHUNK' || 
+            message.type === 'ASSISTANT_MESSAGE_DONE') {
+          const handlers = this.eventHandlers.get(message.type) || [];
+          handlers.forEach(handler => handler(message)); // Pass the entire message
+          return;
+        }
+        
+        // Normal message handling
         const handlers = this.eventHandlers.get(message.type) || [];
-        handlers.forEach(handler => handler(message.data));
+        handlers.forEach(handler => handler(message.data || message)); // Handle both formats
       } catch (error) {
-        console.error('Error processing WebSocket message:', error);
+        console.error('Error processing WebSocket message:', error, event.data);
       }
     };
 
@@ -141,14 +152,15 @@ class WebSocketService {
     }
   }
 
-  sendChatMessage(message: string, model: string, metadata: Record<string, any> = {}) {
+  sendChatMessage(message: string, model: string, threadId: string, requestId: string) {
     const payload = {
       type: 'CHAT_MESSAGE',
       timestamp: new Date().toISOString(),
       data: {
         message,
         model,
-        ...metadata
+        threadId,
+        requestId
       }
     };
     this.sendMessage(payload);
@@ -185,6 +197,7 @@ class WebSocketService {
 
   private handleIncomingMessage(event: MessageEvent) {
     try {
+      console.log('handleIncomingMessage received message', event.data)
       const message = JSON.parse(event.data);
       const handlers = this.eventHandlers.get(message.type) || [];
       
@@ -192,6 +205,7 @@ class WebSocketService {
       if (message.type === 'ASSISTANT_MESSAGE_CHUNK' || 
           message.type === 'ASSISTANT_MESSAGE_DONE') {
         // Forward the message with its data
+        const handlers = this.eventHandlers.get(message.type) || [];
         handlers.forEach(handler => handler(message));
         return;
       }
