@@ -64,7 +64,7 @@ from core.events import event_bus
 from fastapi import WebSocket, WebSocketDisconnect
 
 # Create FastAPI app
-app = FastAPI(title="Cori API")
+app = FastAPI(title="Volute API")
 
 @app.on_event("startup")
 async def startup_event():
