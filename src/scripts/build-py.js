@@ -83,7 +83,12 @@ function buildPython() {
         '--hidden-import=transformers',
         '--hidden-import=tokenizers',
         '--hidden-import=torch',
-        '--hidden-import=regex._regex',        
+        '--hidden-import=regex._regex',     
+        '--hidden-import=langgraph',
+        '--hidden-import=langchain',
+        '--hidden-import=langchain-anthropic',
+        '--hidden-import=langchain-openai',   
+        '--hidden-import=voyageai',
         // copy metadata needed by transformers lib
         '--copy-metadata', 'regex',
         '--copy-metadata', 'requests',
@@ -106,6 +111,11 @@ function buildPython() {
         '--copy-metadata', 'charset_normalizer',
         '--copy-metadata', 'idna',
         '--copy-metadata', 'urllib3',    
+        '--copy-metadata', 'langgraph',
+        '--copy-metadata', 'langchain',
+        '--copy-metadata', 'langchain-anthropic',
+        '--copy-metadata', 'langchain-openai',
+        '--copy-metadata', 'voyageai',
         // Add the python-server directory to the path
         '--paths', pythonDir,
         // Collect all Flask components
@@ -138,6 +148,12 @@ function buildPython() {
         '--collect-all', 'packaging',
         '--collect-all', 'filelock',
         '--collect-all', 'huggingface_hub',
+        '--collect-all', 'langgraph',
+        '--collect-all', 'langchain',
+        '--collect-all', 'langchain-anthropic',
+        '--collect-all', 'langchain-openai',
+        '--collect-all', 'voyageai',
+        // Name of the main python server dir
         '--name=python-server',        
         // Add all Python files in the python-server directory
         '--add-data', `${path.join(pythonDir, 'app.py')}${path.delimiter}.`,
