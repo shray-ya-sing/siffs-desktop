@@ -90,13 +90,12 @@ jobs:
       shell: bash.exe
       
     steps:
-      - checkout:
-          token: $GITLAB_TOKEN
-          path: ~/project
-          git_config:
-            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=https://gitlab.com/"
-            - "url.https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/.insteadOf=git@gitlab.com:"
-            - "url.https://.insteadOf=git://"
+
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:Gj3EuyITE9FEtYg9JuC7rIRtPAHO6SzKCheZSCOJaFY"
+      
+      - checkout
 
       - run:
           name: Verify file structure
