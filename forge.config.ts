@@ -33,7 +33,7 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     new MakerDMG({
       // Basic configuration
-      name: 'Cori',
+      name: 'Volute',
       icon: './src/assets/icons/icon.icns', // Path to your .icns file
       // Format and compression
       format: 'ULFO', // ULFO, UDZO, UDBZ, ULMO, etc.
@@ -77,8 +77,8 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'Cori',  // Replace with your GitHub username
-          name: 'cori_app'         // Replace with your repository name
+          owner: 'Volute',  // Replace with your GitHub username
+          name: 'Volute'         // Replace with your repository name
         },
         prerelease: true,  // Set to false if you don't want releases marked as pre-release
         authToken: process.env.GITHUB_TOKEN  // You'll need to set this environment variable
