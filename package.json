@@ -1,6 +1,6 @@
 {
-  "name": "cori_app",
-  "productName": "Cori",
+  "name": "volute-app",
+  "productName": "Volute",
   "version": "0.3.1",
   "description": "Financial model software",
   "main": ".webpack/main",
@@ -24,7 +24,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "Cori",
+    "name": "Volute",
     "email": "github.suggest277@passinbox.com"
   },
   "license": "MIT",
