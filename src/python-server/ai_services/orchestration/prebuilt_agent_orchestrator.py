@@ -31,39 +31,37 @@ class PrebuiltAgentOrchestrator:
     async def handle_ws_message(self, event):
         """Route incoming WebSocket messages to appropriate handlers"""
         client_id = event.data["client_id"]
-        thread_id = event.data["metadata"].get("thread_id")
         message = event.data["message"]
-        
+
         if message.get("type") == "CHAT_MESSAGE":
             await self.handle_chat_message(
                 client_id=client_id,
-                message_data=message.get("data", {}),
-                request_id=message.get("requestId"),
-                thread_id=thread_id
+                message_data=message.get("data", {})
             )
     
     async def handle_chat_message(
         self,
         client_id: str,
         message_data: Dict[str, Any],
-        request_id: Optional[str] = None,
-        thread_id: Optional[str] = None
     ):
         """Process incoming chat messages and generate responses with streaming"""
         try:
             # Get message content and model
             message_content = message_data.get("message", "").strip()
-            model_name = message_data.get("model_id")
+            model = message_data.get("model")
+            thread_id = message_data.get("threadId")
+            request_id = message_data.get("requestId")
+            logger.info(f"Prebuilt agent orchestrator received message from client {client_id}: {message_content}, model: {model}, threadId: {thread_id}, requestId: {request_id}")
             
             if not message_content:
                 logger.warning(f"Empty message received from client {client_id}")
                 return
                 
-            if not model_name:
+            if not model:
                 raise ValueError("No model specified in the request")
 
             # Initialize the agent with the specified model
-            agent_wrapper = PrebuiltAgent().with_model(model_name)
+            agent_wrapper = PrebuiltAgent().with_model(model)
             
             # Prepare messages for the agent
             messages = [{"role": "user", "content": message_content}]
@@ -71,11 +69,13 @@ class PrebuiltAgentOrchestrator:
             # Stream the agent's response
             async for chunk in agent_wrapper.stream_agent_response(
                 messages,
-                thread_id=thread_id
+                thread_id=thread_id,
+                request_id=request_id
             ):
                 chunk_type = chunk.get("type")
                 
                 if chunk_type == "content":
+                    logger.info(f"Content chunk received: {chunk.get('content')}")
                     await self._send_to_client(
                         client_id=client_id,
                         data={
@@ -130,6 +130,7 @@ class PrebuiltAgentOrchestrator:
         if request_id and "requestId" not in data:
             data["requestId"] = request_id
         try:
+            logger.info(f"Sending message to client {client_id}: {data}")
             await manager.send_message(client_id, data)
         except Exception as e:
             logger.error(f"Failed to send message to client {client_id}: {str(e)}")
