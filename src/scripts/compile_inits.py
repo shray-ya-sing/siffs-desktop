@@ -9,9 +9,13 @@ def compile_py_files():
     Specifically targets __init__.py and modeling_bert.py files.
     Uses a hardcoded path to the transformers directory.
     """
-    # Hardcoded path to the transformers directory
-    transformers_path = Path("C:/Users/shrey/projects/cori-apps/cori_app/resources/python/python-server/_internal/transformers")
-    
+
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+
+    # Navigate to the transformers directory relative to the script
+    transformers_path = script_dir.parent.parent / "resources" / "python" / "python-server" / "_internal" / "transformers"
+
     if not transformers_path.exists() or not transformers_path.is_dir():
         print(f"Error: Transformers directory not found at {transformers_path}")
         return
