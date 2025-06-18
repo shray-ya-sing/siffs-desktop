@@ -56,9 +56,9 @@ def setup_logging():
 
     # Create logs directory in a cross-platform way
     if sys.platform == 'win32':
-        log_dir = os.path.join(os.environ.get('APPDATA', ''), 'Cori', 'logs')
+        log_dir = os.path.join(os.environ.get('APPDATA', ''), 'Volute', 'logs')
     else:
-        log_dir = os.path.join(os.path.expanduser('~'), '.cori', 'logs')
+        log_dir = os.path.join(os.path.expanduser('~'), '.volute', 'logs')
     
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, 'python.log')
