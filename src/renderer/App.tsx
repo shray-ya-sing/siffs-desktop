@@ -36,7 +36,6 @@ type AgentChatLocationState = {
 
 // Component to handle auth state and routing
 function AppRouter() {
-  const { isLoading, user } = useAuth();
   const location = useLocation() as LocationWithState;
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -53,23 +52,6 @@ function AppRouter() {
     }
   }, [location.state, location.pathname, navigate, toast]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <AuthLoading />
-      </div>
-    );
-  }
-
-  // If user is not authenticated and not on an auth page, redirect to login
-  if (!user && !location.pathname.startsWith('/auth')) {
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
-  }
-
-  // If user is authenticated and on an auth page, redirect to home
-  if (user && location.pathname.startsWith('/auth') && !location.pathname.startsWith('/auth/callback')) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <>
@@ -78,28 +60,16 @@ function AppRouter() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <Routes>
             <Route path="/" element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
+               <HomePage />
             } />
             <Route path="/settings" element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
+              <SettingsPage />
             } />
 
             <Route path="/agent-chat" element={
-              <ProtectedRoute>
-                <AgentChatPage />
-              </ProtectedRoute>
+              <AgentChatPage />
             } />
-            <Route path="/auth/login" element={<LoginPage />} />
-            <Route path="/auth/signup" element={<SignupPage />} />
-            <Route path="/auth/verify-email" element={<VerifyEmail />} />
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/404" element={<NotFound />} />
-            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/auth/reset-email-sent" element={<ResetPasswordEmailSent />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
         </div>
@@ -120,8 +90,6 @@ export function App() {
   }
 
   return (
-    <AuthProvider>
       <AppRouter />
-    </AuthProvider>
   );
 }
