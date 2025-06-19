@@ -349,7 +349,7 @@ export default function AIChatUI() {
                       style={{ animationDelay: "0.4s" }}
                     ></div>
                   </div>
-                  <span className="text-xs">Thinking...</span>
+                  <span className="text-xs">Generating...</span>
                 </div>
               </div>
             </div>
