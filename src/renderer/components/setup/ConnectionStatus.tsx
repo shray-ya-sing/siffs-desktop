@@ -1,6 +1,6 @@
 // src/renderer/components/connection/ConnectionStatus.tsx
 import { useEffect, useState } from 'react';
-import { AlertCircle, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { AlertCircle, Wifi, WifiOff, RefreshCw, XCircle } from 'lucide-react';
 import { webSocketService } from '../../services/websocket/websocket.service';
 import './styles/ConnectionStatus.css';
 
@@ -8,6 +8,8 @@ export const ConnectionStatus = () => {
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const [isRetrying, setIsRetrying] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [retryTimeout, setRetryTimeout] = useState<NodeJS.Timeout | null>(null);
+
 
   useEffect(() => {
     const handleConnectionChange = (isConnected: boolean) => {
@@ -26,6 +28,10 @@ export const ConnectionStatus = () => {
     webSocketService.onConnectionChange(handleConnectionChange);
     webSocketService.onError(handleError);
 
+    if (retryTimeout) {
+      clearTimeout(retryTimeout);
+    }
+
     // Initial status check
     setStatus(webSocketService.serviceIsConnected() ? 'connected' : 'disconnected');
 
@@ -33,19 +39,35 @@ export const ConnectionStatus = () => {
       webSocketService.offConnectionChange(handleConnectionChange);
       webSocketService.offError(handleError);
     };
-  }, []);
+  }, [retryTimeout]);
 
   const handleRetry = async () => {
     if (isRetrying) return;
     
     setIsRetrying(true);
+    
+    // Clear any existing timeout
+    if (retryTimeout) {
+      clearTimeout(retryTimeout);
+    }
+    
+    // Set a 30 second timeout
+    const timeout = setTimeout(() => {
+      setIsRetrying(false);
+      setStatus('error');
+      setLastError('Connection timed out');
+    }, 30000);
+    
+    setRetryTimeout(timeout);
+  
     try {
       await webSocketService.reconnect();
-      // The status will update automatically through the event listeners
+      // Clear the timeout if connection succeeds
+      clearTimeout(timeout);
     } catch (error) {
+      clearTimeout(timeout);
       setStatus('error');
       setLastError(error instanceof Error ? error.message : 'Failed to reconnect');
-    } finally {
       setIsRetrying(false);
     }
   };
@@ -79,6 +101,8 @@ export const ConnectionStatus = () => {
         >
           {isRetrying ? (
             <RefreshCw className="spin" size={16} />
+          ) : retryTimeout ? (
+            <XCircle size={16} />
           ) : (
             'Retry'
           )}
