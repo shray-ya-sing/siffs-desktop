@@ -10,25 +10,31 @@ import sys
 current_path = Path(__file__).parent.parent
 sys.path.append(str(current_path))
 from excel_metadata_extractor import ExcelMetadataExtractor
-
+parent_path = Path(__file__).parent.parent.parent.parent.parent
+sys.path.append(str(parent_path))
+from core.events import event_bus
+from api.websocket_manager import manager
 logger = logging.getLogger(__name__)
 
 class ChunkExtractorHandler:
     """Handles progressive chunk extraction using existing ExcelMetadataExtractor"""
     
-    def __init__(self, event_bus, rows_per_chunk=10, max_cols_per_sheet=50):
-        self.event_bus = event_bus
-        self.rows_per_chunk = rows_per_chunk
-        self.max_cols_per_sheet = max_cols_per_sheet
+    def __init__(self):
+        self.setup_event_handlers()
+
+    def setup_event_handlers(self):
+        """Register event handlers for extraction flow"""
+        self.rows_per_chunk = 10
+        self.max_cols_per_sheet = 50
         
         # Track extraction sessions
         self.extraction_sessions = {}  # workbook_id -> extractor instance
         
         # Register event handlers
-        self.event_bus.on_async("START_FRESH_EXTRACTION", self.handle_fresh_extraction)
-        self.event_bus.on_async("CACHED_METADATA_FOUND", self.handle_cached_metadata)
+        event_bus.on_async("START_FRESH_EXTRACTION", self.handle_fresh_extraction)
+        event_bus.on_async("CACHED_METADATA_FOUND", self.handle_cached_metadata)
         
-        logger.info(f"ChunkExtractorHandler initialized (chunk size: {rows_per_chunk} rows)")
+        logger.info(f"ChunkExtractorHandler initialized (chunk size: {self.rows_per_chunk} rows)")
         
     async def handle_fresh_extraction(self, event):
         """Handle fresh extraction request"""
@@ -47,7 +53,7 @@ class ChunkExtractorHandler:
             self.extraction_sessions[session_id] = extractor
             
             # Send initial status
-            await self.event_bus.emit("EXTRACTION_PROGRESS", {
+            await event_bus.emit("EXTRACTION_PROGRESS", {
                 "client_id": client_id,
                 "request_id": request_id,
                 "stage": "initializing",
@@ -66,7 +72,7 @@ class ChunkExtractorHandler:
             
         except Exception as e:
             logger.error(f"Extraction failed: {str(e)}", exc_info=True)
-            await self.event_bus.emit("EXTRACTION_ERROR", {
+            await event_bus.emit("EXTRACTION_ERROR", {
                 "error": f"Extraction failed: {str(e)}",
                 "client_id": client_id,
                 "request_id": request_id
@@ -91,7 +97,7 @@ class ChunkExtractorHandler:
         
         # Emit chunks progressively even if from cache
         for idx, chunk in enumerate(chunks):
-            await self.event_bus.emit("CHUNK_EXTRACTED", {
+            await event_bus.emit("CHUNK_EXTRACTED", {
                 "chunk": chunk,
                 "chunk_index": idx,
                 "total_chunks": len(chunks),
@@ -104,7 +110,7 @@ class ChunkExtractorHandler:
             await asyncio.sleep(0.01)
             
         # Emit completion
-        await self.event_bus.emit("ALL_CHUNKS_EXTRACTED", {
+        await event_bus.emit("ALL_CHUNKS_EXTRACTED", {
             "total_chunks": len(chunks),
             "client_id": client_id,
             "request_id": request_id,
@@ -118,7 +124,13 @@ class ChunkExtractorHandler:
             extractor.open_workbook(file_path)
             
             if not extractor.workbook:
-                raise RuntimeError("Failed to open workbook")
+                logger.error(f"Failed to open workbook: {file_path}")
+                await event_bus.emit("EXTRACTION_ERROR", {
+                    "error": f"Failed to open workbook: {file_path}",
+                    "client_id": client_id,
+                    "request_id": request_id
+                })
+                return
                 
             # Send workbook info
             workbook_info = {
@@ -127,7 +139,7 @@ class ChunkExtractorHandler:
                 "total_sheets": len(extractor.workbook.worksheets)
             }
             
-            await self.event_bus.emit("WORKBOOK_INFO", {
+            await event_bus.emit("WORKBOOK_INFO", {
                 "info": workbook_info,
                 "client_id": client_id,
                 "request_id": request_id
@@ -151,7 +163,7 @@ class ChunkExtractorHandler:
             for sheet_idx, sheet in enumerate(extractor.workbook.worksheets):
                 sheet_name = sheet.title
                 
-                await self.event_bus.emit("EXTRACTION_PROGRESS", {
+                await event_bus.emit("EXTRACTION_PROGRESS", {
                     "client_id": client_id,
                     "request_id": request_id,
                     "stage": "extracting_sheet",
@@ -223,7 +235,7 @@ class ChunkExtractorHandler:
                     chunks_processed += 1
                     
                     # Emit chunk immediately
-                    await self.event_bus.emit("CHUNK_EXTRACTED", {
+                    await event_bus.emit("CHUNK_EXTRACTED", {
                         "chunk": chunk_metadata,
                         "chunk_index": chunk_metadata["chunkIndex"],
                         "total_chunks_estimate": total_chunks_estimate,
@@ -234,7 +246,7 @@ class ChunkExtractorHandler:
                     
                     # Update progress
                     progress = int((chunks_processed / max(total_chunks_estimate, 1)) * 100)
-                    await self.event_bus.emit("EXTRACTION_PROGRESS", {
+                    await event_bus.emit("EXTRACTION_PROGRESS", {
                         "client_id": client_id,
                         "request_id": request_id,
                         "stage": "extracting_chunks",
@@ -247,7 +259,7 @@ class ChunkExtractorHandler:
                     
             # Build dependencies using existing logic
             if all_cells_metadata:
-                await self.event_bus.emit("EXTRACTION_PROGRESS", {
+                await event_bus.emit("EXTRACTION_PROGRESS", {
                     "client_id": client_id,
                     "request_id": request_id,
                     "stage": "building_dependencies",
@@ -272,7 +284,7 @@ class ChunkExtractorHandler:
                         
                     # Emit updated chunks with dependencies
                     for chunk in all_chunks:
-                        await self.event_bus.emit("CHUNK_DEPENDENCIES_UPDATED", {
+                        await event_bus.emit("CHUNK_DEPENDENCIES_UPDATED", {
                             "chunk_id": chunk["chunkId"],
                             "dependencies": chunk.get("dependencySummary", {}),
                             "client_id": client_id,
@@ -283,14 +295,14 @@ class ChunkExtractorHandler:
                     logger.warning(f"Failed to build dependencies: {str(e)}")
                     
             # Emit completion
-            await self.event_bus.emit("ALL_CHUNKS_EXTRACTED", {
+            await event_bus.emit("ALL_CHUNKS_EXTRACTED", {
                 "total_chunks": len(all_chunks),
                 "client_id": client_id,
                 "request_id": request_id,
                 "from_cache": False
             })
             
-            await self.event_bus.emit("EXTRACTION_PROGRESS", {
+            await event_bus.emit("EXTRACTION_PROGRESS", {
                 "client_id": client_id,
                 "request_id": request_id,
                 "stage": "completed",
@@ -299,7 +311,7 @@ class ChunkExtractorHandler:
             })
             
             # Store chunks if needed
-            await self.event_bus.emit("STORE_EXTRACTED_CHUNKS", {
+            await event_bus.emit("STORE_EXTRACTED_CHUNKS", {
                 "chunks": all_chunks,
                 "file_path": file_path,
                 "client_id": client_id,
@@ -308,4 +320,13 @@ class ChunkExtractorHandler:
             
         except Exception as e:
             logger.error(f"Progressive extraction failed: {str(e)}", exc_info=True)
-            raise
+        finally:
+            try:
+                if hasattr(extractor, 'workbook') and extractor.workbook is not None:
+                    extractor.workbook.close()
+                    logger.debug(f"Closed workbook for session {session_id}")
+            except Exception as e:
+                logger.error(f"Error closing workbook: {e}")
+
+
+chunk_extractor_handler = ChunkExtractorHandler()
