@@ -6,28 +6,36 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 from datetime import datetime
 import json
-
-# Import the existing storage class
 import sys
-current_path = Path(__file__).parent
+import os
+# Import the existing storage class
+current_path = Path(__file__).parent.parent
 sys.path.append(str(current_path))
 from embedding_storage import EmbeddingStorage
 
+parent_path = Path(__file__).parent.parent.parent.parent
+sys.path.append(str(parent_path))
+from core.events import event_bus
+from api.websocket_manager import manager
 logger = logging.getLogger(__name__)
 
 class EmbeddingStorageHandler:
     """Handles storing embedded chunks to database - supports both immediate and batch modes"""
     
     def __init__(
+        self
+    ):
+        self.setup_storage()
+        self.setup_event_handlers()
+            
+    def setup_storage(
         self,
-        event_bus,
         db_path: Optional[str] = None,
         db_name: Optional[str] = None,
         use_batch: bool = True,
         batch_size: int = 100,
         create_new_version: bool = True
     ):
-        self.event_bus = event_bus
         self.use_batch = use_batch
         self.batch_size = batch_size
         self.create_new_version = create_new_version
@@ -38,21 +46,23 @@ class EmbeddingStorageHandler:
             logger.info(f"EmbeddingStorage initialized at: {self.storage.db_path}")
         except Exception as e:
             logger.error(f"Failed to initialize storage: {str(e)}")
-            raise
+            
             
         # Track storage sessions
         self.sessions = {}  # request_id -> session data
         
         # Batch mode storage
         if self.use_batch:
-            self.pending_batches = {}  # request_id -> pending embeddings
-            
-        # Register event handlers
-        self.event_bus.on_async("CHUNK_EMBEDDED", self.handle_embedded_chunk)
-        self.event_bus.on_async("ALL_CHUNKS_EMBEDDED", self.finalize_storage_session)
-        self.event_bus.on_async("STORE_EMBEDDINGS_BATCH", self.handle_batch_storage_request)
+            self.pending_batches = {}  # request_id -> pending embeddings       
         
-        logger.info(f"EmbeddingStorageHandler initialized in {'batch' if use_batch else 'immediate'} mode")
+    
+    def setup_event_handlers(self):    
+        # Register event handlers
+        event_bus.on_async("CHUNK_EMBEDDED", self.handle_embedded_chunk)
+        event_bus.on_async("ALL_CHUNKS_EMBEDDED", self.finalize_storage_session)
+        event_bus.on_async("STORE_EMBEDDINGS_BATCH", self.handle_batch_storage_request)
+        
+        logger.info(f"EmbeddingStorageHandler initialized in {'batch' if self.use_batch else 'immediate'} mode")
         
     async def handle_embedded_chunk(self, event):
         """Handle embedded chunk - store immediately or batch"""
@@ -153,7 +163,7 @@ class EmbeddingStorageHandler:
         session = self.sessions[request_id]
         duration = (datetime.now() - session["start_time"]).total_seconds()
         
-        await self.event_bus.emit("EMBEDDINGS_STORED", {
+        await event_bus.emit("EMBEDDINGS_STORED", {
             "workbook_path": session["workbook_path"],
             "workbook_id": session["workbook_id"],
             "version_id": session["version_id"],
@@ -276,7 +286,7 @@ class EmbeddingStorageHandler:
             session["stored_count"] += len(embeddings)
             
             # Emit batch stored event
-            await self.event_bus.emit("EMBEDDING_BATCH_STORED", {
+            await event_bus.emit("EMBEDDING_BATCH_STORED", {
                 "workbook_id": workbook_id,
                 "version_id": version_id,
                 "batch_size": len(embeddings),
@@ -291,7 +301,7 @@ class EmbeddingStorageHandler:
             logger.error(f"Failed to store embedding batch: {str(e)}", exc_info=True)
             
             # Emit error for the batch
-            await self.event_bus.emit("STORAGE_BATCH_ERROR", {
+            await event_bus.emit("STORAGE_BATCH_ERROR", {
                 "error": str(e),
                 "batch_size": len(embedding_pairs),
                 "workbook_path": session["workbook_path"],
@@ -301,28 +311,37 @@ class EmbeddingStorageHandler:
             
     def _extract_workbook_path(self, embedding_pair: Dict[str, Any]) -> Optional[str]:
         """Extract workbook path from embedding pair metadata"""
-        # Try to get from metadata
+        # First try to get from metadata
         metadata = embedding_pair.get("metadata", {})
         
-        # Try different possible fields
+        # Try different possible fields in metadata
         for field in ["workbook_path", "file_path", "source"]:
             if field in metadata:
                 return metadata[field]
                 
         # Try to extract from chunk_id if it contains path info
         chunk_id = embedding_pair.get("chunk_id", "")
-        if chunk_id and "_" in chunk_id:
-            # Assuming format like "workbook_name_Sheet1_rows_1_10"
+        if not chunk_id:
+            return None
+            
+        # Look for .xlsx in chunk_id
+        xlsx_pos = chunk_id.lower().find('.xlsx')
+        if xlsx_pos != -1:
+            # Extract everything up to and including .xlsx
+            return chunk_id[:xlsx_pos + 5]  # +5 to include '.xlsx'
+            
+        # Fallback to original behavior if no .xlsx found
+        if "_" in chunk_id:
             parts = chunk_id.split("_")
             if parts:
-                return parts[0]  # This is a fallback, not ideal
+                return parts[0]
                 
         return None
         
     async def _emit_storage_error(self, chunk_id: str, error: str, 
                                 client_id: str, request_id: str):
         """Emit storage error event"""
-        await self.event_bus.emit("EMBEDDING_STORAGE_ERROR", {
+        await event_bus.emit("EMBEDDING_STORAGE_ERROR", {
             "chunk_id": chunk_id,
             "error": error,
             "client_id": client_id,
@@ -364,3 +383,7 @@ class EmbeddingStorageHandler:
         """Close storage connection"""
         if hasattr(self, 'storage'):
             self.storage.close()
+
+
+
+embedding_storage_handler = EmbeddingStorageHandler()
