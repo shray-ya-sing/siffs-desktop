@@ -3,6 +3,7 @@ import base64
 import tempfile
 import os
 from pathlib import Path
+import json
 
 parent_path = Path(__file__).parent.parent.parent
 sys.path.append(str(parent_path))
@@ -19,7 +20,7 @@ class ExcelOrchestrator:
     
     def __init__(self):
         self.setup_event_handlers()
-        
+    
     def setup_event_handlers(self):
         """Register event handlers for extraction flow"""
         # WebSocket message handler
@@ -115,8 +116,10 @@ class ExcelOrchestrator:
                     file_data = base64.b64decode(file_content)
                     temp_file.write(file_data)
                 
-                logger.info(f"Temporary file copy of {file_path} created at {temp_file_path}.Emitting check cache for metadata event.")
-                
+                logger.info(f"Temporary file copy of {file_path} created at {temp_file_path}. Updating file mapping.")
+                self.update_file_mapping(file_path, temp_file_path)
+
+                logger.info(f"Emitting check cache for metadata event.")
                 # Rest of your code remains the same
                 await event_bus.emit("CHECK_CACHE_FOR_METADATA", {
                     "file_path": file_path,
@@ -126,16 +129,6 @@ class ExcelOrchestrator:
                     "force_refresh": message.get("force_refresh", False)
                 })
                 
-                # Cleanup function remains the same
-                def cleanup():
-                    try:
-                        if os.path.exists(temp_file_path):
-                            os.unlink(temp_file_path)
-                    except Exception as e:
-                        logger.error(f"Error cleaning up temp file {temp_file_path}: {e}")
-                
-                asyncio.create_task(self.cleanup_after_delay(cleanup))
-                
             except Exception as e:
                 logger.error(f"Error processing file upload: {e}")
                 # Make sure to clean up if there's an error after file creation
@@ -143,11 +136,11 @@ class ExcelOrchestrator:
                     os.unlink(temp_file_path)
                 except:
                     pass
-                raise
+                
         
         except Exception as e:
             logger.error(f"Error processing file upload: {e}")
-            await self.emit("EXTRACTION_ERROR", {
+            await event_bus.emit("EXTRACTION_ERROR", {
                 "client_id": client_id,
                 "error": str(e),
                 "request_id": message.get("requestId")
@@ -223,6 +216,32 @@ class ExcelOrchestrator:
             cleanup()
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
+
+
+    def update_file_mapping(self, original_path: str, temp_path: str):
+        """Update the file mappings with a new entry."""
+        MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+        MAPPINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize empty mappings
+        mappings = {}
+        
+        # Only try to read if file exists and has content
+        if MAPPINGS_FILE.exists() and MAPPINGS_FILE.stat().st_size > 0:
+            try:
+                with open(MAPPINGS_FILE, 'r') as f:
+                    mappings = json.load(f)
+            except json.JSONDecodeError:
+                logger.warning("Invalid JSON in mappings file, initializing new mappings")
+        
+        # Update with new mapping
+        mappings[original_path] = temp_path
+        
+        # Write back to file
+        with open(MAPPINGS_FILE, 'w') as f:
+            json.dump(mappings, f, indent=2)
+        
+        logger.info(f"Updated file mapping: {original_path} -> {temp_path}")
 
 # Create global orchestrator instance
 orchestrator = ExcelOrchestrator()
