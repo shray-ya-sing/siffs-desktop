@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import AsyncGenerator, Dict, Any, List, Optional
+import json
 import os
 import sys
 import logging
@@ -93,7 +94,9 @@ class PrebuiltAgent:
         # Get the provider name for the model
         provider_name = self._get_provider_name(model_name)
         if not provider_name:
-            raise ValueError(f"Provider not found for model: {model_name}")
+            logger.error(f"Provider not found for model: {model_name}")
+            provider_name = "anthropic"
+            model_name = "claude-sonnet-4-20250514"
             
         # Initialize the LLM with the specified model
         self.llm = init_chat_model(
@@ -103,13 +106,19 @@ class PrebuiltAgent:
         
         # Use the imported tools
         self.llm_with_tools = self.llm.bind_tools(ALL_TOOLS)
+
+        enhanced_system_prompt = VOLUTE_SYSTEM_PROMPT
+        workspace_excel_files = self.view_files_in_workspace()
+        enhanced_system_prompt += f"\n\nHere are the files the user added to the workspace that you have access to:\n{workspace_excel_files}"
+
+
         
         # Create the agent
         logger.info(f"Creating agent with model: {provider_name}:{model_name}")
         self.agent = create_react_agent(
             model=f"{provider_name}:{model_name}", 
             tools=ALL_TOOLS,
-            prompt=VOLUTE_SYSTEM_PROMPT,
+            prompt=enhanced_system_prompt,
             store=self.in_memory_store,
             checkpointer=self.checkpointer
         )
@@ -313,6 +322,36 @@ class PrebuiltAgent:
             "requestId": request_id,
             "done": True
         }
+
+    
+    def view_files_in_workspace(self) -> str:
+        """Return a list of all user workbook files in the workspace with their original paths.
+
+        Args:
+            None
+        
+        Returns:
+            A string of the original paths of the files in the workspace
+        """
+        MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+        
+        if not MAPPINGS_FILE.exists():
+            return "No files found in workspace"
+        
+        try:
+            with open(MAPPINGS_FILE, 'r') as f:
+                mappings = json.load(f)
+            
+            if not mappings:
+                return "No files found in workspace"
+
+            # Return just the original paths
+            file_list = "\n".join([f"- {path}" for path in mappings.keys()])
+            return f"Files in workspace:\n{file_list}"
+        
+        except Exception as e:
+            return f"Failed to read workspace files: {str(e)}"
+
         
 # Create global instance
 prebuilt_agent = PrebuiltAgent()
