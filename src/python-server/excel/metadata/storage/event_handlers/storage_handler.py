@@ -4,23 +4,29 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Any, List
 from pathlib import Path
-
+import sys
+parent_path = Path(__file__).parent.parent.parent.parent.parent
+sys.path.append(str(parent_path))
+from core.events import event_bus
+from api.websocket_manager import manager
+from excel.metadata.storage.excel_metadata_storage import ExcelMetadataStorage
 logger = logging.getLogger(__name__)
 
 class StorageHandler:
     """Handles storing extracted chunks to storage as complete versions"""
     
-    def __init__(self, event_bus, storage):
-        self.event_bus = event_bus
-        self.storage = storage
+    def __init__(self):
+        self.storage = ExcelMetadataStorage()
         
         # Track extraction sessions
         self.extraction_sessions = {}  # request_id -> chunks list
-        
+        self.setup_event_handlers()
+
+    def setup_event_handlers(self):
         # Register event handlers
-        self.event_bus.on_async("CHUNK_EXTRACTED", self.accumulate_chunk)
-        self.event_bus.on_async("ALL_CHUNKS_EXTRACTED", self.store_all_chunks)
-        self.event_bus.on_async("STORE_EXTRACTED_CHUNKS", self.handle_store_request)
+        event_bus.on_async("CHUNK_EXTRACTED", self.accumulate_chunk)
+        event_bus.on_async("ALL_CHUNKS_EXTRACTED", self.store_all_chunks)
+        event_bus.on_async("STORE_EXTRACTED_CHUNKS", self.handle_store_request)
         
         logger.info("StorageHandler initialized")
         
@@ -118,7 +124,7 @@ class StorageHandler:
             logger.info(f"Successfully stored chunks as version {version_id}")
             
             # Emit success event
-            await self.event_bus.emit("CHUNKS_STORED", {
+            await event_bus.emit("CHUNKS_STORED", {
                 "version_id": version_id,
                 "workbook_id": workbook_id,
                 "chunk_count": len(chunks),
@@ -139,7 +145,7 @@ class StorageHandler:
             logger.error(f"Failed to store chunks: {str(e)}", exc_info=True)
             
             # Emit error event but don't crash the main flow
-            await self.event_bus.emit("STORAGE_ERROR", {
+            await event_bus.emit("STORAGE_ERROR", {
                 "error": f"Failed to store chunks: {str(e)}",
                 "client_id": event_data.get("client_id"),
                 "request_id": event_data.get("request_id")
