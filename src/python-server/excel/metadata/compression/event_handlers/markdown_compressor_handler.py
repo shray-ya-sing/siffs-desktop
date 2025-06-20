@@ -1,4 +1,3 @@
-# excel/handlers/markdown_compressor_handler.py
 import logging
 import asyncio
 from typing import Dict, Any, List
@@ -6,26 +5,31 @@ from pathlib import Path
 
 # Import the existing compressor
 import sys
-current_path = Path(__file__).parent.parent
-sys.path.append(str(current_path))
-from metadata.compression.spreadsheet_markdown_compressor import SpreadsheetMarkdownCompressor
 
+parent_path = Path(__file__).parent.parent.parent.parent.parent
+sys.path.append(str(parent_path))
+from excel.metadata.compression.markdown_compressor import SpreadsheetMarkdownCompressor
+from core.events import event_bus
+from api.websocket_manager import manager
 logger = logging.getLogger(__name__)
 
 class MarkdownCompressorHandler:
     """Handles compressing extracted chunks to markdown format"""
     
-    def __init__(self, event_bus):
-        self.event_bus = event_bus
+    def __init__(self):
+
         self.compressor = SpreadsheetMarkdownCompressor()
         
         # Track compression sessions
         self.sessions = {}  # request_id -> session data
+        self.setup_event_handlers()
         
+        
+    def setup_event_handlers(self):
         # Register event handlers
-        self.event_bus.on_async("CHUNK_EXTRACTED", self.accumulate_chunk)
-        self.event_bus.on_async("ALL_CHUNKS_EXTRACTED", self.compress_all_chunks)
-        self.event_bus.on_async("COMPRESS_CHUNKS_TO_MARKDOWN", self.handle_compression_request)
+        event_bus.on_async("CHUNK_EXTRACTED", self.accumulate_chunk)
+        event_bus.on_async("ALL_CHUNKS_EXTRACTED", self.compress_all_chunks)
+        event_bus.on_async("COMPRESS_CHUNKS_TO_MARKDOWN", self.handle_compression_request)
         
         logger.info("MarkdownCompressorHandler initialized")
         
@@ -92,7 +96,7 @@ class MarkdownCompressorHandler:
             logger.info(f"Compressing {len(chunks)} chunks to markdown")
             
             # Send progress update
-            await self.event_bus.emit("COMPRESSION_PROGRESS", {
+            await event_bus.emit("COMPRESSION_PROGRESS", {
                 "client_id": client_id,
                 "request_id": request_id,
                 "stage": "compressing",
@@ -118,7 +122,7 @@ class MarkdownCompressorHandler:
             for idx, markdown in enumerate(markdown_chunks):
                 chunk_id = chunks[idx].get("chunkId", f"chunk_{idx}")
                 
-                await self.event_bus.emit("CHUNK_COMPRESSED", {
+                await event_bus.emit("CHUNK_COMPRESSED", {
                     "chunk_id": chunk_id,
                     "markdown": markdown,
                     "chunk_index": idx,
@@ -131,7 +135,7 @@ class MarkdownCompressorHandler:
                 # Update progress
                 progress = int(((idx + 1) / len(markdown_chunks)) * 100)
                 if progress % 10 == 0:  # Update every 10%
-                    await self.event_bus.emit("COMPRESSION_PROGRESS", {
+                    await event_bus.emit("COMPRESSION_PROGRESS", {
                         "client_id": client_id,
                         "request_id": request_id,
                         "stage": "compressing",
@@ -143,7 +147,7 @@ class MarkdownCompressorHandler:
                 await asyncio.sleep(0.01)
                 
             # Emit completion event
-            await self.event_bus.emit("ALL_CHUNKS_COMPRESSED", {
+            await event_bus.emit("ALL_CHUNKS_COMPRESSED", {
                 "total_chunks": len(markdown_chunks),
                 "total_size_bytes": total_size,
                 "average_size_bytes": avg_size,
@@ -152,7 +156,7 @@ class MarkdownCompressorHandler:
             })
             
             # Also emit combined markdown if needed for downstream processing
-            await self.event_bus.emit("MARKDOWN_READY", {
+            await event_bus.emit("MARKDOWN_READY", {
                 "markdown_chunks": markdown_chunks,
                 "combined_markdown": "\n\n---\n\n".join(markdown_chunks),
                 "client_id": client_id,
@@ -164,7 +168,7 @@ class MarkdownCompressorHandler:
         except Exception as e:
             logger.error(f"Compression failed: {str(e)}", exc_info=True)
             
-            await self.event_bus.emit("COMPRESSION_ERROR", {
+            await event_bus.emit("COMPRESSION_ERROR", {
                 "error": f"Failed to compress chunks: {str(e)}",
                 "client_id": client_id,
                 "request_id": request_id
@@ -178,3 +182,7 @@ class MarkdownCompressorHandler:
         except Exception as e:
             logger.error(f"Failed to compress single chunk: {str(e)}")
             return f"# Compression Error\nError: {str(e)}"
+
+
+
+markdown_compressor_handler = MarkdownCompressorHandler()
