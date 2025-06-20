@@ -266,7 +266,7 @@ class EmbeddingStorage:
         except Exception as e:
             self.conn.rollback()
             self.logger.error(f"Error storing embeddings: {str(e)}")
-            raise
+            
 
     def get_workbook_embeddings_by_version(
         self,
