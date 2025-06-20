@@ -26,7 +26,7 @@ class QueryEmbedderHandler:
             logger.info(f"QueryEmbedderHandler initialized: {model_name}")
         except Exception as e:
             logger.error(f"Failed to initialize query embedder: {str(e)}")
-            raise
+            
             
         # Cache for recent queries (optional optimization)
         self.query_cache = {}  # query_text -> embedding
