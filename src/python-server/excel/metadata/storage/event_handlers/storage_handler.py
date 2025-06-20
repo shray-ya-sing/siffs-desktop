@@ -164,3 +164,6 @@ class StorageHandler:
         for request_id in stale_sessions:
             logger.warning(f"Cleaning up stale session: {request_id}")
             del self.extraction_sessions[request_id]
+
+
+excel_metadata_storage_handler = StorageHandler()
