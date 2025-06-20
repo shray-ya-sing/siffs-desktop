@@ -72,6 +72,20 @@ async def startup_event():
     logger.info("Starting up...Excel orchestrator initialized")
     from ai_services.orchestration.prebuilt_agent_orchestrator import PrebuiltAgentOrchestrator
     logger.info("Starting up...PrebuiltAgent orchestrator initialized")
+    from excel.metadata.extraction.event_handlers.metadata_cache_handler import MetadataCacheHandler
+    logger.info("Starting up...MetadataCacheHandler initialized")
+    from excel.metadata.extraction.event_handlers.chunk_extractor_handler import ChunkExtractorHandler
+    logger.info("Starting up...ChunkExtractorHandler initialized")
+    from excel.metadata.compression.event_handlers.markdown_compressor_handler import MarkdownCompressorHandler
+    logger.info("Starting up...MarkdownCompressorHandler initialized")
+    from excel.metadata.storage.event_handlers.storage_handler import StorageHandler
+    logger.info("Starting up...StorageHandler initialized")    
+    from vectors.embeddings.event_handler.chunk_embedder_handler import ChunkEmbedderHandler
+    logger.info("Starting up...ChunkEmbedderHandler initialized")    
+    from vectors.store.event_handlers.embedding_storage_handler import EmbeddingStorageHandler
+    logger.info("Starting up...EmbeddingStorageHandler initialized")
+    
+    
     # Print all registered routes
     for route in app.routes:
         if hasattr(route, 'methods'):
@@ -112,6 +126,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
         while True:
             # Receive messages
             data = await websocket.receive_json()
+
+            manager.update_last_seen(client_id)
+
+            if data.get("type") == "pong":
+                logger.debug(f"Received pong from {client_id}")
+                continue
 
             event_message = {
                 "client_id": client_id,
