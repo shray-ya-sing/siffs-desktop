@@ -6,25 +6,38 @@ from typing import Dict, Any, List, Optional, Literal
 from sentence_transformers import SentenceTransformer
 import voyageai
 import os
-
+import sys
+from pathlib import Path
+parent_path = Path(__file__).parent.parent.parent.parent
+sys.path.append(str(parent_path))
+from core.events import event_bus
+from api.websocket_manager import manager
 logger = logging.getLogger(__name__)
 
 class ChunkEmbedderHandler:
     """Handles embedding compressed markdown chunks using either sentence-transformers or VoyageAI"""
     
     def __init__(
+        self
+    ):
+        # Track sessions
+        self.sessions = {}  # request_id -> session data
+
+        self.setup_embedding_model()
+
+        self.setup_event_handlers()
+    
+    def setup_embedding_model(
         self, 
-        event_bus,
-        provider: Literal["sentence-transformers", "voyage"] = "sentence-transformers",
-        model_name: str = "all-MiniLM-L6-v2",  # For sentence-transformers
-        voyage_model: str = "voyage-3",  # For VoyageAI
-        voyage_api_key: Optional[str] = None,
+        provider: Literal["sentence-transformers", "voyage"] = "voyage",
+        model_name: Optional[str] = "all-MiniLM-L6-v2",  # For sentence-transformers
+        voyage_model: Optional[str] = "voyage-3",  # For VoyageAI
+        voyage_api_key: Optional[str] = None,  # For VoyageAI
         output_dimension: Optional[int] = None,  # For VoyageAI
         device: Optional[str] = None,  # For sentence-transformers
-        use_batch: bool = False,
+        use_batch: bool = True,
         batch_size: int = 32
     ):
-        self.event_bus = event_bus
         self.provider = provider
         self.use_batch = use_batch
         self.batch_size = batch_size
@@ -35,20 +48,20 @@ class ChunkEmbedderHandler:
         elif provider == "voyage":
             self._init_voyage(voyage_model, voyage_api_key, output_dimension)
         else:
-            raise ValueError(f"Unknown provider: {provider}")
-            
-        # Track sessions
-        self.sessions = {}  # request_id -> session data
-        
+            logger.error(f"Unknown provider: {provider}")
+
         # Batch mode storage
         if self.use_batch:
             self.pending_batches = {}  # request_id -> list of pending chunks
             
+
+
+    def setup_event_handlers(self):
         # Register event handlers
-        self.event_bus.on_async("CHUNK_COMPRESSED", self.handle_compressed_chunk)
-        self.event_bus.on_async("ALL_CHUNKS_COMPRESSED", self.finalize_session)
+        event_bus.on_async("CHUNK_COMPRESSED", self.handle_compressed_chunk)
+        event_bus.on_async("ALL_CHUNKS_COMPRESSED", self.finalize_session)
         
-        logger.info(f"ChunkEmbedderHandler initialized: provider={provider}, model={self.model_name}, mode={'batch' if use_batch else 'immediate'}")
+        logger.info(f"ChunkEmbedderHandler initialized: provider={self.provider}, model={self.model_name}, mode={'batch' if self.use_batch else 'immediate'}")
         
     def _init_sentence_transformers(self, model_name: str, device: Optional[str]):
         """Initialize sentence-transformers model"""
@@ -58,15 +71,15 @@ class ChunkEmbedderHandler:
             self.embedding_dimension = self.model.get_sentence_embedding_dimension()
         except Exception as e:
             logger.error(f"Failed to initialize sentence-transformers: {str(e)}")
-            raise
+            
             
     def _init_voyage(self, model_name: str, api_key: Optional[str], output_dimension: Optional[int]):
         """Initialize VoyageAI client"""
         try:
             # Use provided API key or environment variable
-            api_key = api_key or os.getenv("VOYAGE_API_KEY")
+            api_key = api_key or os.getenv("VOYAGEAI_API_KEY")
             if not api_key:
-                raise ValueError("VoyageAI API key not provided. Set VOYAGE_API_KEY environment variable or pass api_key parameter.")
+                logger.error("VoyageAI API key not provided. Set VOYAGEAI_API_KEY environment variable or pass api_key parameter.")
                 
             self.voyage_client = voyageai.Client(api_key=api_key)
             self.model_name = model_name
@@ -81,7 +94,7 @@ class ChunkEmbedderHandler:
                 
         except Exception as e:
             logger.error(f"Failed to initialize VoyageAI: {str(e)}")
-            raise
+            
             
     async def handle_compressed_chunk(self, event):
         """Handle compressed chunk - route to appropriate mode"""
@@ -148,7 +161,7 @@ class ChunkEmbedderHandler:
             session["embeddings"].append(embedding_pair)
             
             # Emit result
-            await self.event_bus.emit("CHUNK_EMBEDDED", {
+            await event_bus.emit("CHUNK_EMBEDDED", {
                 "chunk_id": chunk_id,
                 "embedding_pair": embedding_pair,
                 "client_id": client_id,
@@ -214,7 +227,7 @@ class ChunkEmbedderHandler:
         avg_time_ms = total_time_ms / total_embedded if total_embedded > 0 else 0
         
         # Emit completion
-        await self.event_bus.emit("ALL_CHUNKS_EMBEDDED", {
+        await event_bus.emit("ALL_CHUNKS_EMBEDDED", {
             "total_chunks": total_embedded,
             "total_embeddings": len(session["embeddings"]),
             "total_time_ms": total_time_ms,
@@ -289,7 +302,7 @@ class ChunkEmbedderHandler:
                 session["embeddings"].append(embedding_pair)
                 
                 # Emit individual result
-                await self.event_bus.emit("CHUNK_EMBEDDED", {
+                await event_bus.emit("CHUNK_EMBEDDED", {
                     "chunk_id": chunk_data["chunk_id"],
                     "embedding_pair": embedding_pair,
                     "client_id": session["client_id"],
@@ -353,7 +366,7 @@ class ChunkEmbedderHandler:
             
     async def _emit_error(self, chunk_id: str, error: str, client_id: str, request_id: str):
         """Emit error event"""
-        await self.event_bus.emit("CHUNK_EMBEDDING_ERROR", {
+        await event_bus.emit("CHUNK_EMBEDDING_ERROR", {
             "chunk_id": chunk_id,
             "error": error,
             "client_id": client_id,
@@ -383,3 +396,7 @@ class ChunkEmbedderHandler:
             })
             
         return info
+
+
+
+chunk_embedder_handler = ChunkEmbedderHandler()
