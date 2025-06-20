@@ -2,6 +2,8 @@ from langchain.tools import tool
 import os
 from pathlib import Path
 import sys
+import json
+import logging
 
 # Add the current directory to Python path
 current_dir = Path(__file__).parent.parent.parent.absolute()
@@ -10,7 +12,10 @@ sys.path.append(str(current_dir))
 from vectors.search.faiss_chunk_retriever import FAISSChunkRetriever
 from vectors.embeddings.chunk_embedder import ChunkEmbedder
 from vectors.store.embedding_storage import EmbeddingStorage
-from typing import List, Dict, Optional, Tuple, Union
+from typing import List, Dict, Optional, Tuple, Union, Any
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 @tool
 def add(a: int, b: int) -> int:
@@ -55,25 +60,44 @@ def divide(a: int, b: int) -> float:
 
 
 @tool 
-def search(query: str, workbook_path: str) -> List[str]:
+def search(query: str, workbook_path: str) -> List[Dict[str, Any]]:
     """Search for relevant information related to the contents of excel files.
     
     Args:
         query: The search query
-        workbook_path: The path to the workbook to search within
+        workbook_path: The path to the workbook to search within. Use the full path including the folder name. 
+        So folder/file.xlsx, not just file.xlsx. If you use file.xlsx, the function logic not work.
     Returns:
-        A list of search results
+        A list of Dict[str, Any] containing the search results
     """
 
-    top_k: int = 5,
-    min_score: float = 0.2
+    top_k = 5
+    min_score = 0.2
 
-    MAPPINGS_FILE = Path(__file__).parent.parent.parent / "excel" / "metadata" / "__cache" / "files_mappings.json"
-    temp_file_path = get_temp_path(workbook_path)
-    if temp_file_path:
-        logger.info(f"Using temporary file {temp_file_path} for workbook {workbook_path}")
-    else:
+    MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+    try:
+        temp_file_path = None
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+            
+        # Try exact match first
+        if workbook_path in mappings:
+            temp_file_path = mappings[workbook_path]
+        else:            
+            # Try with just the filename
+            filename = Path(workbook_path).name
+            for key, value in mappings.items():
+                if key.endswith(filename):
+                    temp_file_path = value
+        
+    except (json.JSONDecodeError, OSError) as e:
+        return [{"error": f"Search failed: {str(e)}"}]
+    
+    if not temp_file_path:
         temp_file_path = workbook_path
+        logger.info(f"Using original file path: {workbook_path}")
+    else:
+        logger.info(f"Using temporary file {temp_file_path} for workbook {workbook_path}")
 
 
     try:
@@ -85,9 +109,11 @@ def search(query: str, workbook_path: str) -> List[str]:
             embedder=ChunkEmbedder()
         )
         
+        # Use just the filename for searching embeddings (without path)
+        temp_filename = Path(temp_file_path).name if temp_file_path else workbook_path
         results = retriever.search(
             query=query,
-            workbook_path=temp_file_path,
+            workbook_path=temp_filename,  # Use just the filename for searching
             top_k=top_k,
             score_threshold=min_score
         )
@@ -106,30 +132,6 @@ def search(query: str, workbook_path: str) -> List[str]:
     except Exception as e:
         return [{"error": f"Search failed: {str(e)}"}]
 
-@tool
-def view_files_in_workspace() -> List[Dict[str, str]]:
-    """Return a list of all user workbook files in the workspace with their original paths.
-
-    Args:
-        None
-    
-    Returns:
-        A list of dictionaries containing the original paths of the files in the workspace
-    """
-    MAPPINGS_FILE = Path(__file__).parent.parent.parent / "excel" / "metadata" / "__cache" / "files_mappings.json"
-    
-    if not MAPPINGS_FILE.exists():
-        return [{"error": "No files found in workspace"}]
-    
-    try:
-        with open(MAPPINGS_FILE, 'r') as f:
-            mappings = json.load(f)
-        
-        # Return just the original paths
-        return [{"path": path} for path in mappings.keys()]
-    
-    except Exception as e:
-        return [{"error": f"Failed to read workspace files: {str(e)}"}]
 
 @tool
 def get_audit_rules() -> str:
