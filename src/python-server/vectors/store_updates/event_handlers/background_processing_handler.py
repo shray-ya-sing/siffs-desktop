@@ -149,7 +149,8 @@ class BackgroundProcessingHandler:
             # Use the blocking worker
             worker_func = self.embedding_worker
             if not worker_func:
-                raise ValueError("No embedding worker available")
+                logger.error("No embedding worker available")
+                return
             
             # Get chunks if not provided
             if chunk_ids:
