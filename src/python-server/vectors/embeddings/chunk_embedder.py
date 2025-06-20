@@ -4,6 +4,11 @@ from sentence_transformers import SentenceTransformer
 import torch
 from tqdm import tqdm
 import logging
+import os
+import voyageai
+from pathlib import Path
+import sys
+import json
 
 class ChunkEmbedder:
     """
@@ -13,13 +18,16 @@ class ChunkEmbedder:
     
     def __init__(
         self, 
-        model_name: str = 'all-MiniLM-L6-v2',
+        model_name: Optional[str] = 'all-MiniLM-L6-v2',
         device: Optional[str] = None,
         cache_folder: Optional[str] = None,
-        use_auth_token: Optional[Union[bool, str]] = None
+        use_auth_token: Optional[Union[bool, str]] = None,
+        voyageai_api_key: Optional[str] = None
     ):
         """Initialize the embedder with a sentence-transformers model."""
         self.logger = logging.getLogger(__name__)
+        self.voyageai_initialized = False
+        self.voyageai_client = None
         
         try:
             self.model = SentenceTransformer(
@@ -28,11 +36,29 @@ class ChunkEmbedder:
                 cache_folder=cache_folder,
                 use_auth_token=use_auth_token
             )            
-            self.model_name = model_name                            
+            self.model_name = model_name
+            
+            # Initialize VoyageAI client if API key is provided
+            if voyageai_api_key or os.getenv("VOYAGEAI_API_KEY"):
+                self._init_voyageai(voyageai_api_key or os.getenv("VOYAGEAI_API_KEY"))
         
         except Exception as e:
             self.logger.error(f"Failed to initialize model {model_name}: {str(e)}")
-            raise
+    
+    def _init_voyageai(self, api_key: str):
+        """Initialize the VoyageAI client."""
+        if not api_key:
+            self.logger.error("VoyageAI API key not provided. Set VOYAGEAI_API_KEY environment variable or pass voyageai_api_key parameter.")
+            return
+            
+        try:
+            self.voyageai_client = voyageai.Client(api_key=api_key)
+            self.voyageai_initialized = True
+            self.logger.info("VoyageAI client initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize VoyageAI client: {str(e)}")
+            self.voyageai_initialized = False
+            
     
     def embed_chunks(
         self,
@@ -87,23 +113,59 @@ class ChunkEmbedder:
             
         except Exception as e:
             self.logger.error(f"Error embedding chunks: {str(e)}")
-            raise
+            
     
     def embed_single_text(
         self,
         text: str,
+        use_voyageai: bool = False,
         normalize_embedding: bool = True,
-        convert_to_numpy: bool = True
+        convert_to_numpy: bool = True,
+        model_name: str = "voyage-3",
+        output_dimension: Optional[int] = 1024
     ) -> np.ndarray:
-        """Embed a single text string."""
-        embedding = self.model.encode(
-            text,
-            normalize_embeddings=normalize_embedding,
-            convert_to_numpy=convert_to_numpy,
-            convert_to_tensor=not convert_to_numpy
-        )
+        """Embed a single text string.
         
-        return embedding
+        Args:
+            text: The text to embed
+            use_voyageai: Whether to use VoyageAI for embedding
+            normalize_embedding: Whether to normalize the embedding
+            convert_to_numpy: Whether to convert the result to numpy array
+            model_name: The name of the VoyageAI model to use
+            output_dimension: The dimension of the output embedding
+            
+        Returns:
+            The embedding as a numpy array
+        """
+        if use_voyageai:
+            if not self.voyageai_initialized:
+                self._init_voyageai(os.getenv("VOYAGEAI_API_KEY"))
+                if not self.voyageai_initialized:
+                    self.logger.error("VoyageAI client not initialized. Please provide a valid API key.")
+            
+            try:
+                result = self.voyageai_client.embed(
+                    texts=[text],
+                    model=model_name,
+                    input_type="document",
+                    output_dimension=output_dimension or 1024
+                )
+                return np.array(result.embeddings[0], dtype=np.float32)
+            except Exception as e:
+                self.logger.error(f"Error embedding text with VoyageAI: {str(e)}")
+                
+        else:
+            try:
+                embedding = self.model.encode(
+                    text,
+                    normalize_embeddings=normalize_embedding,
+                    convert_to_numpy=convert_to_numpy,
+                    convert_to_tensor=not convert_to_numpy
+                )
+                return embedding
+            except Exception as e:
+                self.logger.error(f"Error embedding text with local model: {str(e)}")
+                
     
     def get_model_info(self) -> Dict[str, any]:
         """Get information about the current model."""
