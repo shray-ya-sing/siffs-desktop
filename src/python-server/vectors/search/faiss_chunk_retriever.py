@@ -218,7 +218,8 @@ class FAISSChunkRetriever:
         query_embedding = self.embedder.embed_single_text(
             query,
             normalize_embedding=True,
-            convert_to_numpy=True
+            convert_to_numpy=True,
+            use_voyageai=True
         )
         
         if query_embedding.ndim == 1:
