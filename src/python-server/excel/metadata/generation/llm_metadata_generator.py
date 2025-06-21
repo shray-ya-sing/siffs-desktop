@@ -738,6 +738,142 @@ Create Excel metadata for the following request. Return ONLY the metadata string
     6. If removing content, set the cell value to empty string ("") and remove other properties
     7. For new cells, include all necessary formatting to match the existing document style
     8. Be careful with formula dependencies - update all related formulas if needed
+
+    # LIST OF CORRECT FORMULAE TO USE AND ANTI-PATTERNS TO AVOID    
+    1. AVERAGE
+    Correct: =AVERAGE(A1:A10), =AVERAGE(A1,B1,C1)
+    Incorrect: =AVERAGE(A1:A10:2), =AVERAGE(A1 A10), =AVERAGE(A1;A10)
+    When you need the average of separate cells, use =AVERAGE(A1,B1,C1) instead of =AVERAGE(A1:A10:2)
+    2. SUM
+    Correct: =SUM(A1:A10), =SUM(A1,B1,C1), =SUM(A1+B1+C1)
+    Incorrect: =SUM A1:A10, =SUM(A1-A10), =SUM(A1;A10)
+    When you need the sum of separate cells, use =SUM(A1,B1,C1) instead of =SUM(A1:A10:2)
+    3. VLOOKUP
+    Correct: =VLOOKUP(value, table, col_index, [range_lookup])
+    =VLOOKUP("John", A2:B10, 2, FALSE)
+    Incorrect:
+    =VLOOKUP("John", A2:B10, 2) (missing range_lookup)
+    =VLOOKUP(John, A2:B10, 2, FALSE) (text without quotes)
+    =VLOOKUP("John", A2:B10, "2", FALSE) (col_index as text)
+    4. IF
+    Correct: =IF(A1>10, "Yes", "No"), =IF(AND(A1>10, B1<5), "OK", "Not OK")
+    Incorrect:
+    =IF A1>10 "Yes" "No" (missing parentheses and commas)
+    =IF(A1>10, "Yes") (missing false value)
+    =IF("A1>10", "Yes", "No") (condition as text)
+    5. SUMIF/SUMIFS
+    Correct:
+    =SUMIF(A1:A10, ">10")
+    =SUMIFS(C1:C10, A1:A10, ">10", B1:B10, "<5")
+    Incorrect:
+    =SUMIF(A1:A10 > 10) (incorrect syntax)
+    =SUMIFS(C1:C10, A1:A10, ">10", B1:B10) (unpaired criteria)
+    6. INDEX-MATCH
+    Correct:
+    =INDEX(B1:B10, MATCH("John", A1:A10, 0))
+    =INDEX(A1:C10, MATCH("John", A1:A10, 0), 3)
+    Incorrect:
+    =INDEX(B1:B10, MATCH("John", A1:A10)) (missing match_type)
+    =INDEX(B1:B10, MATCH(John, A1:A10, 0)) (text without quotes)
+    7. COUNTIF/COUNTIFS
+    Correct:
+    =COUNTIF(A1:A10, ">10")
+    =COUNTIFS(A1:A10, ">10", B1:B10, "<5")
+    Incorrect:
+    =COUNTIF(A1:A10 > 10) (incorrect syntax)
+    =COUNTIF("A1:A10", ">10") (range as text)
+    8. CONCATENATE/CONCAT/TEXTJOIN
+    Correct:
+    =CONCATENATE(A1, " ", B1)
+    =A1 & " " & B1
+    =TEXTJOIN(" ", TRUE, A1, B1)
+    Incorrect:
+    =CONCATENATE A1 B1 (missing parentheses)
+    =A1 + " " + B1 (using + for text concatenation)
+    9. DATE
+    Correct: =DATE(2023, 12, 31), =DATE(YEAR(A1), MONTH(A1), DAY(A1))
+    Incorrect:
+    =DATE("2023", "12", "31") (text instead of numbers)
+    =DATE(31, 12, 2023) (wrong order of arguments)
+    10. IFERROR/IFNA
+    Correct:
+    =IFERROR(VLOOKUP(A1, B:C, 2, FALSE), "Not found")
+    =IFNA(VLOOKUP(A1, B:C, 2, FALSE), "Not found")
+    Incorrect:
+    =IFERROR VLOOKUP(A1, B:C, 2, FALSE), "Not found" (missing parentheses)
+    =IFERROR("VLOOKUP(A1, B:C, 2, FALSE)", "Not found") (formula as text)
+    11. XLOOKUP (Excel 365+)
+    Correct:
+    =XLOOKUP(A1, B1:B10, C1:C10, "Not found")
+    =XLOOKUP(A1, B1:B10, C1:C10, "", 0, -1)
+    Incorrect:
+    =XLOOKUP(A1, B1:B10, C1:C10) (missing default value)
+    =XLOOKUP(A1, B1:B10) (missing return_array)
+    12. UNIQUE/FILTER (Excel 365+)
+    Correct:
+    =UNIQUE(A1:A100)
+    =FILTER(A1:B10, B1:B10>10)
+    Incorrect:
+    =UNIQUE("A1:A100") (range as text)
+    =FILTER(A1:B10, "B1:B10>10") (condition as text)
+    13. OFFSET
+    Correct:
+    =OFFSET(A1, 2, 3)                     // 2 rows down, 3 columns right from A1
+    =OFFSET(A1, 0, 0, 5, 3)               // 5 rows by 3 columns range starting at A1
+    =SUM(OFFSET(A1, 1, 0, 3, 1))          // Sum of A2:A4
+    =OFFSET($A$1, ROW()-1, 0)             // Dynamic reference in a table
+    Incorrect:
+    =OFFSET("A1", 2, 3)                   // Reference as text
+    =OFFSET(A1, "2", 3)                   // Rows parameter as text
+    =OFFSET(A1, , , , )                   // Missing required parameters
+    =OFFSET(A1, -1, 0)                    // Negative offset that goes before row 1
+    =OFFSET(A1, 1048576, 0)               // Offset beyond worksheet limits
+    =OFFSET(A1, 0, 0, 0, 1)               // Height of 0 is invalid
+    14. HLOOKUP
+    Correct:
+    =HLOOKUP("Product", A1:Z2, 2, FALSE)  // Exact match
+    =HLOOKUP("Q1", A1:Z4, 3, TRUE)       // Approximate match (requires sorted data)
+    =HLOOKUP(A1, B1:Z100, 5, FALSE)       // Using cell reference for lookup value
+    Incorrect:
+    =HLOOKUP(Product, A1:Z2, 2, FALSE)    // Text without quotes
+    =HLOOKUP("Product", A1:Z2, 2)         // Missing range_lookup parameter
+    =HLOOKUP("Product", "A1:Z2", 2, FALSE) // Range as text
+    =HLOOKUP("Product", A1:Z2, "2", FALSE) // Row_index_num as text
+    =HLOOKUP("Product", A1:Z2, 0, FALSE)  // Row_index_num less than 1
+
+
+    # HOW TO LINK TO OTHER TABS
+    Correct:
+    ='Sheet Name'!A1 (sheet name enclosed in commas, exclamation mark after sheet name)
+    ='Sheet Name'!A1:A10 (sheet name enclosed in commas, exclamation mark after sheet name)
+    ='Sheet Name'!A1:A10 (sheet name enclosed in commas, exclamation mark after sheet name)
+    =VLOOKUP(A1, 'Data Sheet'!Table1, 2, FALSE) (sheet name enclosed in commas, exclamation mark after sheet name)
+    Incorrect:
+    =Sheet2.A1 (missing exclamation mark, period is invalid)
+    =Sheet2:A1:A10 (missing exclamation mark, colon is invalid)
+    =Sheet2,A1:A10 (missing exclamation mark, comma is invalid)
+    =VLOOKUP(A1, 'Data Sheet'.Table1, 2, FALSE) (missing exclamation mark, period is invalid)
+    =VLOOKUP(A1, 'Data Sheet',Table1, 2, FALSE) (missing exclamation mark, comma is invalid)
+    
+    # HOW TO LINK TO OTHER WORKBOOK
+    Correct:
+    ='C:\Reports\[Q1.xlsx]Sheet1'!$A$1 (brackets around workbook name, exclamation mark)
+    Incorrect:
+    ='C:\Reports\Q1.xlsx]Sheet1'.$A$1 (missing opening bracket around workbook name,missing exclamation mark, period is invalid)
+
+    # IMPORTANT GUIDELINES
+    General Formula Best Practices:
+    Always start with =
+    Match all opening and closing parentheses
+    Use correct argument separators (comma or semicolon based on locale)
+    Enclose text in double quotes
+    Don't use text formatting in formulas (e.g., bold, italics)
+    Avoid circular references unless intentional
+    Use absolute/relative references appropriately ($A$1 vs A1)
+    Favor using XLOOKUPS instead of VLOOKUPS and HLOOKUPS
+    For HLOOKUP, always include the range_lookup parameter (FALSE for exact match, TRUE for approximate)
+    For OFFSET, be cautious with volatile functions as they recalculate with every worksheet change
+    Consider using INDEX/MATCH as a non-volatile alternative to OFFSET
     """
 
     def _compose_chunks_context(self, search_results: List[Dict[str, Any]]) -> str:
