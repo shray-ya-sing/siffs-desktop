@@ -147,7 +147,6 @@ class ExcelWriter:
                 self.storage.batch_create_pending_edits(request_pending_edits)
                 # Get an array of only the edit ids. This will be used by the frontend to accept / reject edits.
                 request_edit_ids = [edit['id'] for edit in request_pending_edits]
-                workbook.save() # This just saves the workbook without any closing action or integration with the session manager
                 return True, request_edit_ids
             else:
                 # Direct write without pending edits
@@ -166,7 +165,7 @@ class ExcelWriter:
                             # Continue applying to remaining cells even if one fails
                             continue
 
-                workbook.save()                
+           
                 return True, {}
 
         except Exception as e:
@@ -267,7 +266,8 @@ class ExcelWriter:
                             continue
             
             # Store the pending edits to the storage
-            self.storage.batch_create_pending_edits(request_pending_edits)
+            if create_pending:
+                self.storage.batch_create_pending_edits(request_pending_edits)
             return True, request_pending_edits # request_pending_edits will be empty if the pending edit manager was not used for editing
 
         except Exception as e:
