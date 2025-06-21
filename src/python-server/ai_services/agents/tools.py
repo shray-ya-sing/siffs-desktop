@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import json
 import logging
+from typing import List, Dict, Optional, Tuple, Union, Any
 
 # Add the current directory to Python path
 current_dir = Path(__file__).parent.parent.parent.absolute()
@@ -12,7 +13,11 @@ sys.path.append(str(current_dir))
 from vectors.search.faiss_chunk_retriever import FAISSChunkRetriever
 from vectors.embeddings.chunk_embedder import ChunkEmbedder
 from vectors.store.embedding_storage import EmbeddingStorage
-from typing import List, Dict, Optional, Tuple, Union, Any
+from excel.metadata.parsing.llm_metadata_parser import LLMMetadataParser
+from excel.editing.excel_writer import ExcelWriter
+from excel.editing.approval.excel_pending_edit_manager import ExcelPendingEditManager
+from excel.session_management.excel_session_manager import ExcelSessionManager
+from excel.metadata.generation.llm_metadata_generator import LLMMetadataGenerator
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -60,7 +65,7 @@ def divide(a: int, b: int) -> float:
 
 
 @tool 
-def search(query: str, workbook_path: str) -> List[Dict[str, Any]]:
+def search_relevant_information(query: str, workbook_path: str) -> List[Dict[str, Any]]:
     """Search for relevant information related to the contents of excel files.
     
     Args:
@@ -133,6 +138,183 @@ def search(query: str, workbook_path: str) -> List[Dict[str, Any]]:
         return [{"error": f"Search failed: {str(e)}"}]
 
 
+@tool 
+async def edit_existing_excel(workbook_path: str, user_request: str) -> str:
+    """Edit an existing excel file in the user loaded workspace.
+    This tool is set up to automatically collect the context for the edit so you don't have to search for it yourself with a tool call, you only have to provide the correct parameters.
+    
+    Args:
+        workbook_path: The path to the workbook to edit or create. Use the full path including the folder name. 
+        So folder/file.xlsx, not just file.xlsx. If you use file.xlsx, the function logic not work.
+        Internally, the system works by creating tmp copies of the user's workspace files so as to not overwrite them directly, but the mapping to the tmp file relies on you putting the full workspace path as an argument so it is correctly mapped to the corresponding locally created file. 
+
+        user_request: The user's request to edit the workbook with. Provide the full request so the system can process it correctly.
+    
+    Returns:
+        A string of the result of the edit
+    """
+    MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+    try:
+        temp_file_path = None
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+            
+        # Try exact match first
+        if workbook_path in mappings:
+            temp_file_path = mappings[workbook_path]
+        else:            
+            # Try with just the filename
+            filename = Path(workbook_path).name
+            for key, value in mappings.items():
+                if key.endswith(filename):
+                    temp_file_path = value
+        
+    except (json.JSONDecodeError, OSError) as e:
+        return f"Search failed: {str(e)}"
+    
+    if not temp_file_path:
+        temp_file_path = workbook_path
+        logger.info(f"Using original file path: {workbook_path}")
+    else:
+        logger.info(f"Using temporary file {temp_file_path} for workbook {workbook_path}")
+
+    try:
+        if not user_request:
+            return "No user request provided"
+
+        retriever = FAISSChunkRetriever(
+            storage=EmbeddingStorage(),
+            embedder=ChunkEmbedder()
+        )
+        
+        # Use just the filename for searching embeddings (without path)
+        temp_filename = Path(temp_file_path).name if temp_file_path else workbook_path
+        results = retriever.search(
+            query=user_request,
+            workbook_path=temp_filename,  # Use just the filename for searching
+            top_k=5,
+            score_threshold=0.2
+        )
+        
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                "score": result["score"],
+                "content": result.get("text", result.get("markdown", "")),
+                "workbook_name": result.get("workbook_name", "Unknown"),
+                "metadata": result.get("metadata", {})
+            })
+        
+        search_results = formatted_results
+        
+    except Exception as e:
+        return f"Search failed: {str(e)}"
+    
+    try:
+        # generate the edit metadata
+
+         # Initialize the LLM metadata generator
+        metadata_generator = LLMMetadataGenerator()
+        
+        # Generate metadata using the LLM
+        edit_metadata = await metadata_generator.generate_metadata_for_edit(
+            user_request=user_request,
+            search_results=search_results,
+            stream=False
+        )
+
+        if not edit_metadata:
+            return "Error: Could not get the edit actions from metadata generator. Editing failed"
+
+
+        #parse
+        parsed_data = LLMMetadataParser.parse(edit_metadata)       
+
+        if not parsed_data:
+            return "Error: Couldnot parse metadata from LLM. Editing failed"
+        
+        logger.info(f"Parsed metadata in edit_excel tool: {parsed_data}")
+
+        # edit
+
+        with ExcelWriter(visible=True) as writer:
+            success, request_pending_edits = writer.write_data_to_existing(
+                data=parsed_data,
+                output_filepath=temp_file_path,
+                create_pending=False,
+            )
+
+        if not success:
+            return "Error: Failed to edit workbook"
+        
+        logger.info(f"Successfully edited workbook at {temp_file_path}")
+        return "Success: Workbook edited successfully"
+        
+    except Exception as e:
+        logger.error(f"Failed to edit workbook at {temp_file_path}: {str(e)}")
+        return f"Edit failed. Cannot edit workbook: {str(e)}"
+
+@tool 
+async def create_new_excel(workbook_path: str, user_request: str) -> str:
+    """Create a new excel file per user specifications.
+    
+    Args:
+        workbook_path: The path to the workbook to create. Use the full system path. 
+        When creating a new file, the user may specify a specific full path they wish to create the workbook at, in that case, use that path, since an equivalent is not equivalent in your workspace. 
+        If the path supplied is not a full path, ask the user for a full path. Without a proper full system path, the workbook cannot be created. You need a path like C:\\Users\\username\\Documents\\workbooks\\test.xlsx and NOT like test.xlsx. 
+        
+        user_request: The user's request to create a new excel file. Provide the full request so the system can process it correctly.
+    
+    Returns:
+        A string of the result of the edit
+    """
+
+    try:
+
+        #generate metadata
+
+         # Initialize the LLM metadata generator
+        metadata_generator = LLMMetadataGenerator()
+        
+        # Generate metadata using the LLM
+        edit_metadata = await metadata_generator.generate_metadata_from_request(
+            user_request=user_request,
+            stream=False
+        )
+
+        if not edit_metadata:
+            return "Error: Could not get the edit actions. Editing failed"
+
+        #parse
+        parsed_data = LLMMetadataParser.parse(edit_metadata)       
+
+        if not parsed_data:
+            return "Error: No valid metadata found in input"
+        
+        logger.info(f"Parsed metadata in edit_excel tool: {parsed_data}")
+
+        # edit
+
+        with ExcelWriter(visible=True) as writer:
+            success, request_pending_edits = writer.write_data_to_new(
+                data=parsed_data,
+                output_filepath=workbook_path,
+                create_pending=True
+            )
+
+        if not success:
+            return "Error: Error in writing to excel. Failed to create new workbook"
+        
+        logger.info(f"Successfully created new excel at {workbook_path}")
+        return "Success: Successfully created new workbook"
+        
+    except Exception as e:
+        logger.error(f"Failed to create new excel at {workbook_path}: {str(e)}")
+        return f"Failed to create new excel at {workbook_path}: {str(e)}"
+
+
+
+
 @tool
 def get_audit_rules() -> str:
     """Return a string of common error patterns for financial models.
@@ -194,4 +376,4 @@ Circular references are common in interest expense / cash flow / debt balance ca
 """
 
 # Export all tools in a list for easy importing
-ALL_TOOLS = [add, multiply, divide, search, get_audit_rules]
+ALL_TOOLS = [add, multiply, divide, search_relevant_information, edit_existing_excel, create_new_excel, get_audit_rules]
