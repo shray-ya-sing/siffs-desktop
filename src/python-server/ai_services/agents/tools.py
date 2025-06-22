@@ -67,7 +67,6 @@ def divide(a: int, b: int) -> float:
 #This tool is meant for getting quick answers for basic things. Make the judgement call based on your knowledge whether the query can be satisfied with the general info or semantic search.
 #You may need to first call this tool to get the basic info like sheet names and cell addresses before calling the semantic search tool to get more detailed information. This tool will help you understand the right keywords to semantic search on.
 
-
 @tool 
 def get_excel_general_info(
     workspace_path: str,
@@ -78,46 +77,26 @@ def get_excel_general_info(
 ) -> str:
     """
     Retrieve workbook overview data from the hotcache with optional filtering.
-    This tool is used in general scenarios when the user asks for broad overviews or basic information about the workbook.
-    Use when: 
-    - User asks for description, summary, basic information, sheet names, non empty rows in sheets of workbook.
-    - User asks for values in certain cells or ranges of cells.
-    - User asks for info about tabs
-    - User asks for info on row ranges or cell ranges
-    - user asks for info about the excel that isn't available in your conversation memory
-
+    If you need the context around a cell or cell range use the start_row and end_row params to get the data for the row section.
+    You can use the tool in repeated calls to get the data for different row sections. This is more efficient when you need info over a large section. 
     
     Args:
-        workspace_path: (REQUIRED) Full path to the workbook in the format 'folder/workbook.xlsx'.
-                   Always use the full path, not just the filename, to ensure accurate mapping.
-    
-        sheet_names: optional: List of specific sheet names to include. Example: ['Sheet1', 'Data'].
-                    If not specified or empty, tool returns data for all sheets. Useful when you only need specific tabs AND you know the exact names of the tabs.
-                    If you don't know the exact names of the tabs, use the tool with only the workspace_path to get the list of sheet names.
-        
-        start_row: optional: Starting row number (1-based) for row range filtering. 
-                Use with end_row to get a vertical slice of the data.
-                Example: start_row=5 gets rows 5 and below when used alone.
-        
-        end_row: optional: Ending row number (1-based) for row range filtering.
-                Use with start_row to get a specific range of rows.
-                Example: start_row=5, end_row=10 gets rows 5 through 10.
-        
-        cells: optional: List of specific cell addresses to retrieve. Example: ['A1', 'B2', 'C3'].
-            Use this when you only need specific cells rather than ranges.
-            Overrides row-based filtering if both are provided.
+        workspace_path: Full path to the workbook in the format 'folder/workbook.xlsx'
+        sheet_names: List of specific sheet names to include (required for cell/row filtering)
+        start_row: Starting row number (1-based) - requires sheet_names
+        end_row: Ending row number (1-based) - requires sheet_names
+        cells: List of specific cell addresses to retrieve (e.g., ['A1', 'B2'])
+               Takes precedence over row filtering if both are provided
     
     Returns:
-        A compressed JSON string containing the filtered workbook data
+        A JSON string containing only the requested data
     """
     try:
-        # Get the cache file path
+        # Get the cache file
         python_server_path = Path(__file__).parent.parent.parent
-        cache_dir = os.path.join(python_server_path, "metadata", "_cache")
-        cache_path = os.path.join(cache_dir, "excel_metadata_hotcache.json")
+        cache_path = python_server_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
         
-        if not os.path.exists(cache_path):
-            logger.warning(f"Cache file not found at {cache_path}")
+        if not cache_path.exists():
             return 'Cache file not found'
 
         # Load the cache
@@ -127,78 +106,94 @@ def get_excel_general_info(
         # Get the workbook data
         workbook_data = cache_data.get(workspace_path)
         if not workbook_data:
-            logger.warning(f"No data found for workspace: {workspace_path}")
             return 'No data found for workspace'
 
-        # Make a deep copy to avoid modifying the cache
-        result = json.loads(json.dumps(workbook_data))
-
-        if not any([sheet_names, start_row is not None, end_row is not None, cells]):
-            result.pop("sheets", None)
+        # If no sheet names provided, return just the top-level info
+        if not sheet_names:
+            result = {k: v for k, v in workbook_data.items() if k != "sheets"}
             return json.dumps(result, separators=(',', ':'))
-
         
-        # Filter by sheet names if specified
-        if sheet_names:
-            result["sheets"] = {
-                sheet_name: sheet_data 
-                for sheet_name, sheet_data in result.get("sheets", {}).items()
-                if sheet_name in sheet_names
+        # Initialize result with basic info
+        result = {
+            "workbook_name": workbook_data.get("workbook_name"),
+            "total_sheets": workbook_data.get("total_sheets"),
+            "sheet_names": sheet_names,  # Only include requested sheets
+            "sheets": {}
+        }
+        
+        # Process each requested sheet
+        for sheet_name in sheet_names:
+            if sheet_name not in workbook_data.get("sheets", {}):
+                continue
+                
+            sheet_data = workbook_data["sheets"][sheet_name]
+            result_sheet = {
+                "non_empty_rows": sheet_data.get("non_empty_rows"),
+                "non_empty_columns": sheet_data.get("non_empty_columns"),
+                "chunks": []
             }
             
-        
-        # Filter by rows and cells if needed
-        if start_row is not None or end_row is not None or cells:
-            for sheet_name, sheet_data in result.get("sheets", {}).items():
-                filtered_chunks = []
+            # If cells are specified, they take precedence over row ranges
+            if cells:
+                cell_addresses = set(cells)
+                result_sheet["cells"] = []
+                
+                for chunk in sheet_data.get("chunks", []):
+                    for cell in chunk.get("cells", []):
+                        if cell["a"] in cell_addresses:
+                            result_sheet["cells"].append(cell)
+                
+                # If we found any cells, add the sheet to results
+                if result_sheet["cells"]:
+                    result["sheets"][sheet_name] = result_sheet
+                    
+            # If no cells but row range is specified
+            elif start_row is not None or end_row is not None:
+                result_sheet["row_range"] = {
+                    "start": start_row,
+                    "end": end_row
+                }
                 
                 for chunk in sheet_data.get("chunks", []):
                     chunk_start = chunk.get("startRow", 1)
                     chunk_end = chunk.get("endRow", chunk_start + chunk.get("rowCount", 0) - 1)
                     
                     # Check if chunk overlaps with row range
-                    row_match = True
-                    if start_row is not None and chunk_end < start_row:
-                        row_match = False
-                    if end_row is not None and chunk_start > end_row:
-                        row_match = False
-                    
-                    if not row_match:
+                    if (start_row is not None and chunk_end < start_row) or \
+                       (end_row is not None and chunk_start > end_row):
                         continue
                         
-                    # If cells are specified, filter the cells in the chunk
-                    if cells:
-                        filtered_cells = []
-                        cell_addresses = set(cells)  # For faster lookup
-                        
-                        for cell in chunk.get("cells", []):
-                            cell_row = _get_row_number(cell["a"])
-                            cell_col = _get_column_letter(cell["a"])
-                            
-                            # Check if cell is in the specified range
-                            if ((start_row is None or cell_row >= start_row) and
-                                (end_row is None or cell_row <= end_row) and
-                                (not cells or cell["a"] in cell_addresses)):
-                                filtered_cells.append(cell)
-                        
-                        if filtered_cells or not cells:  # Keep chunk if no cell filter or has matching cells
-                            chunk_copy = chunk.copy()
-                            chunk_copy["cells"] = filtered_cells
-                            filtered_chunks.append(chunk_copy)
-                    else:
-                        # Just filter by row range
-                        filtered_chunks.append(chunk)
+                    # Create a filtered chunk
+                    filtered_chunk = {
+                        "startRow": max(chunk_start, start_row) if start_row else chunk_start,
+                        "endRow": min(chunk_end, end_row) if end_row else chunk_end,
+                        "cells": []
+                    }
+                    
+                    # Filter cells by row range
+                    for cell in chunk.get("cells", []):
+                        cell_row = _get_row_number(cell["a"])
+                        if (start_row is None or cell_row >= start_row) and \
+                           (end_row is None or cell_row <= end_row):
+                            filtered_chunk["cells"].append(cell)
+                    
+                    if filtered_chunk["cells"]:
+                        result_sheet["chunks"].append(filtered_chunk)
                 
-                # Update the sheet with filtered chunks
-                sheet_data["chunks"] = filtered_chunks
+                # If we found any chunks in the row range, add the sheet to results
+                if result_sheet["chunks"]:
+                    result["sheets"][sheet_name] = result_sheet
+            
+            # If no cells or row range, include the entire sheet
+            else:
+                result["sheets"][sheet_name] = sheet_data
         
-        return json.dumps(result, separators=(',', ':')) # return a compressed json string to save tokens
-
+        return json.dumps(result, separators=(',', ':'))
+        
     except json.JSONDecodeError:
-        logger.error("Failed to parse cache file")
-        return 'Failed to get data from cache'
+        return 'Failed to parse cache file'
     except Exception as e:
-        logger.error(f"Error retrieving data from cache: {str(e)}", exc_info=True)
+        logger.error(f"Error retrieving data: {str(e)}", exc_info=True)
         return 'Failed to get data from cache'
 
 def _get_row_number(cell_address: str) -> int:
