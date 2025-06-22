@@ -425,9 +425,10 @@ class SpreadsheetMarkdownCompressor:
                 row_count = chunk.get('rowCount', 0)
                 col_count = chunk.get('columnCount', 0)
                 
-                markdown_lines.append(f"# Chunk: {workbook_name} - {sheet_name}")
-                markdown_lines.append(f"Rows: {start_row}-{end_row} ({row_count} rows) | Columns: {col_count}")
-                
+                markdown_lines.append(f"# Chunk header and descriptive overview:\n")
+                markdown_lines.append(f"# Chunk from workbook of name {workbook_name} on sheet {sheet_name} of workbook")
+                markdown_lines.append(f"Chunk covers rows: {start_row}-{end_row} ({row_count} rows) and columns: {col_count}")
+                markdown_lines.append("\n Chunk cell data:\n")
                 # Process cell data if available
                 cell_data = chunk.get('cellData', [])
                 if cell_data:
