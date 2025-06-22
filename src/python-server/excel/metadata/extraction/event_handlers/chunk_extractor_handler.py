@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from typing import Dict, Any, List
 from pathlib import Path
+import json
 import asyncio
 import sys
 
@@ -41,6 +42,7 @@ class ChunkExtractorHandler:
         file_path = event.data["file_path"]
         client_id = event.data.get("client_id")
         request_id = event.data.get("request_id")
+        workspace_path = event.data.get("workspace_path")
         
         logger.info(f"Starting fresh extraction for: {file_path}")
         
@@ -67,7 +69,8 @@ class ChunkExtractorHandler:
                 file_path, 
                 client_id, 
                 request_id,
-                session_id
+                session_id,
+                workspace_path
             )
             
         except Exception as e:
@@ -117,7 +120,7 @@ class ChunkExtractorHandler:
             "from_cache": True
         })
         
-    async def _extract_chunks_progressively(self, extractor, file_path, client_id, request_id, session_id):
+    async def _extract_chunks_progressively(self, extractor, file_path, client_id, request_id, session_id, workspace_path):
         """Extract chunks progressively using the existing extractor"""
         try:
             # Open workbook
@@ -136,8 +139,16 @@ class ChunkExtractorHandler:
             workbook_info = {
                 "workbook_name": os.path.basename(file_path),
                 "sheet_names": [sheet.title for sheet in extractor.workbook.worksheets],
-                "total_sheets": len(extractor.workbook.worksheets)
+                "total_sheets": len(extractor.workbook.worksheets),
             }
+
+            # this is the overview json that will be saved to the hotcache
+            hotcache_data = {
+                workspace_path: workbook_info,
+            }
+            overview= hotcache_data[workspace_path]
+            overview["sheets"] = {}       
+
             
             await event_bus.emit("WORKBOOK_INFO", {
                 "info": workbook_info,
@@ -174,6 +185,15 @@ class ChunkExtractorHandler:
                 # Get sheet dimensions
                 actual_row_count = min(sheet.max_row or 0, 1048576)
                 actual_col_count = min(sheet.max_column or 0, 16384)
+
+                # update cache overview
+                if sheet_name not in overview["sheets"]:
+                    overview["sheets"][sheet_name] = {
+                        "sheet_index": len(overview["sheets"]),
+                        "non_empty_rows": actual_row_count,
+                        "non_empty_columns": actual_col_count,
+                        "chunks": []
+                    }
                 
                 if actual_row_count == 0 or actual_col_count == 0:
                     continue
@@ -189,6 +209,7 @@ class ChunkExtractorHandler:
                         "chunkId": f"{workbook_info['workbook_name']}_{sheet_name}_rows_{chunk_start_row}_{chunk_end_row}",
                         "workbookName": workbook_info['workbook_name'],
                         "workbookPath": file_path,
+                        "workspacePath": workspace_path,
                         "sheetName": sheet_name,
                         "startRow": chunk_start_row,
                         "endRow": chunk_end_row,
@@ -198,6 +219,16 @@ class ChunkExtractorHandler:
                         "cellData": [],
                         "chunkIndex": len(all_chunks),
                         "includeDependencies": True
+                    }
+
+                    # Update cache data
+                    concise_chunk_metadata = {
+                        "startRow": chunk_metadata["startRow"],
+                        "endRow": chunk_metadata["endRow"],
+                        "rowCount": chunk_metadata["rowCount"],
+                        "columnCount": chunk_metadata["columnCount"],
+                        "chunkIndex": chunk_metadata["chunkIndex"],
+                        "cells": []
                     }
                     
                     # Use existing extraction method
@@ -217,7 +248,17 @@ class ChunkExtractorHandler:
                         continue
                         
                     chunk_metadata["cellData"] = chunk_cells
-                    
+
+                    # Track non-empty cells and collect formulas
+                    for row_idx, row in enumerate(chunk_metadata["cellData"], start=chunk_start_row):
+                        for col_idx, cell in enumerate(row, start=1):
+                            if cell.get("value") is not None or cell.get("formula"):                                
+                                if cell.get("formula"):
+                                    concise_chunk_metadata["cells"].append({
+                                        "a": cell.get("address"),
+                                        "f": cell.get("formula")
+                                    })
+
                     # Store for dependency analysis
                     all_cells_metadata.update(chunk_cells_dict)
                     chunk_to_cells_map[len(all_chunks)] = list(chunk_cells_dict.keys())
@@ -234,6 +275,7 @@ class ChunkExtractorHandler:
                     all_chunks.append(chunk_metadata)
                     chunks_processed += 1
                     
+                    overview["sheets"][sheet_name]["chunks"].append(concise_chunk_metadata)
                     # Emit chunk immediately
                     await event_bus.emit("CHUNK_EXTRACTED", {
                         "chunk": chunk_metadata,
@@ -310,7 +352,11 @@ class ChunkExtractorHandler:
                 "progress": 100
             })
             
-            # Store chunks if needed
+
+            # store overview to cache
+            self.save_excel_hotcache(overview, workspace_path)            
+
+            # store full data to sqlite db
             await event_bus.emit("STORE_EXTRACTED_CHUNKS", {
                 "chunks": all_chunks,
                 "file_path": file_path,
@@ -328,5 +374,37 @@ class ChunkExtractorHandler:
             except Exception as e:
                 logger.error(f"Error closing workbook: {e}")
 
+    def save_excel_hotcache(self, overview, workspace_path):
+        # Load existing cache or initialize an empty one
+        try:
+            python_server_path = Path(__file__).parent.parent.parent.parent.parent
+            cache_dir = os.path.join(python_server_path, "metadata", "_cache")
+            os.makedirs(cache_dir, exist_ok=True)
+            cache_path = os.path.join(cache_dir, f"excel_metadata_hotcache.json")
+
+            cache_data = {}
+            if os.path.exists(cache_path):
+                try:
+                    with open(cache_path, 'r') as f:
+                        cache_data = json.load(f)
+                except json.JSONDecodeError:
+                    logger.warning("Cache file corrupted, creating a new one")
+                    cache_data = {}
+
+            # Update the cache with the new workbook data
+            workbook_key = workspace_path
+            cache_data[workbook_key] = overview
+
+            # Save the updated cache back to the file
+            try:
+                with open(cache_path, 'w') as f:
+                    json.dump(cache_data, f, indent=2)
+                logger.info(f"Updated workbook overview in cache at {cache_path}")
+            except Exception as e:
+                logger.error(f"Failed to update cache file: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Failed to save cache, error finding dir: {str(e)}")
+            return
 
 chunk_extractor_handler = ChunkExtractorHandler()

@@ -63,20 +63,176 @@ def divide(a: int, b: int) -> float:
         raise ValueError("Cannot divide by zero")
     return a / b
 
+#    It is a pair tool to the semantic_search_excel tool which is a semantic search based tool for getting contextually rich metadata chunks with detailed cell information.
+#This tool is meant for getting quick answers for basic things. Make the judgement call based on your knowledge whether the query can be satisfied with the general info or semantic search.
+#You may need to first call this tool to get the basic info like sheet names and cell addresses before calling the semantic search tool to get more detailed information. This tool will help you understand the right keywords to semantic search on.
+
 
 @tool 
-def search_relevant_information(query: str, workbook_path: str) -> List[Dict[str, Any]]:
-    """Search for relevant information related to the contents of excel files.
+def get_excel_general_info(
+    workspace_path: str,
+    sheet_names: Optional[List[str]] = None,
+    start_row: Optional[int] = None,
+    end_row: Optional[int] = None,
+    cells: Optional[List[str]] = None
+) -> str:
+    """
+    Retrieve workbook overview data from the hotcache with optional filtering.
+    This tool is used in general scenarios when the user asks for broad overviews or basic information about the workbook.
+    Use when: 
+    - User asks for description, summary, basic information, sheet names, non empty rows in sheets of workbook.
+    - User asks for values in certain cells or ranges of cells.
+    - User asks for info about tabs
+    - User asks for info on row ranges or cell ranges
+    - user asks for info about the excel that isn't available in your conversation memory
+
     
     Args:
-        query: The search query
+        workspace_path: (REQUIRED) Full path to the workbook in the format 'folder/workbook.xlsx'.
+                   Always use the full path, not just the filename, to ensure accurate mapping.
+    
+        sheet_names: optional: List of specific sheet names to include. Example: ['Sheet1', 'Data'].
+                    If not specified or empty, tool returns data for all sheets. Useful when you only need specific tabs AND you know the exact names of the tabs.
+                    If you don't know the exact names of the tabs, use the tool with only the workspace_path to get the list of sheet names.
+        
+        start_row: optional: Starting row number (1-based) for row range filtering. 
+                Use with end_row to get a vertical slice of the data.
+                Example: start_row=5 gets rows 5 and below when used alone.
+        
+        end_row: optional: Ending row number (1-based) for row range filtering.
+                Use with start_row to get a specific range of rows.
+                Example: start_row=5, end_row=10 gets rows 5 through 10.
+        
+        cells: optional: List of specific cell addresses to retrieve. Example: ['A1', 'B2', 'C3'].
+            Use this when you only need specific cells rather than ranges.
+            Overrides row-based filtering if both are provided.
+    
+    Returns:
+        A compressed JSON string containing the filtered workbook data
+    """
+    try:
+        # Get the cache file path
+        python_server_path = Path(__file__).parent.parent.parent
+        cache_dir = os.path.join(python_server_path, "metadata", "_cache")
+        cache_path = os.path.join(cache_dir, "excel_metadata_hotcache.json")
+        
+        if not os.path.exists(cache_path):
+            logger.warning(f"Cache file not found at {cache_path}")
+            return 'Cache file not found'
+
+        # Load the cache
+        with open(cache_path, 'r') as f:
+            cache_data = json.load(f)
+        
+        # Get the workbook data
+        workbook_data = cache_data.get(workspace_path)
+        if not workbook_data:
+            logger.warning(f"No data found for workspace: {workspace_path}")
+            return 'No data found for workspace'
+
+        # Make a deep copy to avoid modifying the cache
+        result = json.loads(json.dumps(workbook_data))
+
+        if not any([sheet_names, start_row is not None, end_row is not None, cells]):
+            result.pop("sheets", None)
+            return json.dumps(result, separators=(',', ':'))
+
+        
+        # Filter by sheet names if specified
+        if sheet_names:
+            result["sheets"] = {
+                sheet_name: sheet_data 
+                for sheet_name, sheet_data in result.get("sheets", {}).items()
+                if sheet_name in sheet_names
+            }
+            
+        
+        # Filter by rows and cells if needed
+        if start_row is not None or end_row is not None or cells:
+            for sheet_name, sheet_data in result.get("sheets", {}).items():
+                filtered_chunks = []
+                
+                for chunk in sheet_data.get("chunks", []):
+                    chunk_start = chunk.get("startRow", 1)
+                    chunk_end = chunk.get("endRow", chunk_start + chunk.get("rowCount", 0) - 1)
+                    
+                    # Check if chunk overlaps with row range
+                    row_match = True
+                    if start_row is not None and chunk_end < start_row:
+                        row_match = False
+                    if end_row is not None and chunk_start > end_row:
+                        row_match = False
+                    
+                    if not row_match:
+                        continue
+                        
+                    # If cells are specified, filter the cells in the chunk
+                    if cells:
+                        filtered_cells = []
+                        cell_addresses = set(cells)  # For faster lookup
+                        
+                        for cell in chunk.get("cells", []):
+                            cell_row = _get_row_number(cell["a"])
+                            cell_col = _get_column_letter(cell["a"])
+                            
+                            # Check if cell is in the specified range
+                            if ((start_row is None or cell_row >= start_row) and
+                                (end_row is None or cell_row <= end_row) and
+                                (not cells or cell["a"] in cell_addresses)):
+                                filtered_cells.append(cell)
+                        
+                        if filtered_cells or not cells:  # Keep chunk if no cell filter or has matching cells
+                            chunk_copy = chunk.copy()
+                            chunk_copy["cells"] = filtered_cells
+                            filtered_chunks.append(chunk_copy)
+                    else:
+                        # Just filter by row range
+                        filtered_chunks.append(chunk)
+                
+                # Update the sheet with filtered chunks
+                sheet_data["chunks"] = filtered_chunks
+        
+        return json.dumps(result, separators=(',', ':')) # return a compressed json string to save tokens
+
+    except json.JSONDecodeError:
+        logger.error("Failed to parse cache file")
+        return 'Failed to get data from cache'
+    except Exception as e:
+        logger.error(f"Error retrieving data from cache: {str(e)}", exc_info=True)
+        return 'Failed to get data from cache'
+
+def _get_row_number(cell_address: str) -> int:
+    """Extract row number from cell address (e.g., 'A1' -> 1)"""
+    import re
+    match = re.match(r"^[A-Za-z]+(\d+)$", cell_address)
+    return int(match.group(1)) if match else 0
+
+def _get_column_letter(cell_address: str) -> str:
+    """Extract column letters from cell address (e.g., 'A1' -> 'A')"""
+    import re
+    match = re.match(r"^([A-Za-z]+)\d*$", cell_address)
+    return match.group(1) if match else ""
+
+@tool 
+def semantic_search_excel(query: str, workbook_path: str) -> List[Dict[str, Any]]:
+    """Search for relevant information related to the contents of excel files.
+    This is a pair tool to the get_excel_general_info tool. If the question asks for summaries, overviews, or exact cell values, se the get_excel_general_info tool. You may have to use the get_excel_general_info tool to get the basic info like sheet names and cell addresses before calling this tool to get more detailed information.
+    This method only fetches 3 chunks. As each chunk is a sizable piece of text, getting more than three at at time will blow the llm token limits. 
+    When the user requests to understand a lot of data or a full excel file, you may have to break it down into multiple steps and call the tool multiple times with specific step queries instead of relying on one tool call to give you all the information you need. 
+    However, if the user requests to understand a small amount of data or a small section of the excel file, one tool call to this tool will suffice.
+    
+
+    Args:
+        query: The search query. This is the query that we will use to semantic search for the chunks of metadata most relevant to this query.
+        When certain cells or tabs are relevant, the query can include those specific cell addresses or sheet names to bemore accurate. It can also be a series of comma separated keywords or cell locations to fetch the context of those specific cells. It should be a single text string, never a list or dictionary of strings.
+
         workbook_path: The path to the workbook to search within. Use the full path including the folder name. 
         So folder/file.xlsx, not just file.xlsx. If you use file.xlsx, the function logic not work.
     Returns:
         A list of Dict[str, Any] containing the search results
     """
 
-    top_k = 5
+    top_k = 3
     min_score = 0.2
 
     MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
@@ -139,20 +295,28 @@ def search_relevant_information(query: str, workbook_path: str) -> List[Dict[str
 
 
 @tool 
-async def edit_existing_excel(workbook_path: str, user_request: str) -> str:
+async def edit_existing_excel(workbook_path: str, context_search_query: str, exact_user_query: str, edit_instruction: str) -> str:
     """Edit an existing excel file in the user loaded workspace.
     This tool is set up to automatically collect the context for the edit so you don't have to search for it yourself with a tool call, you only have to provide the correct parameters.
+    This tool works best when used for targeted edits. When the user's request is very long, complex or broad, you will have to break it down into sub steps and call this tool multiple times for each step. For each tool call, you have to be clear about the edit that is intended to be accomplished and generate paramters accordingly.
+    For simple or medium edit requests one tool call will suffice. 
     
     Args:
         workbook_path: The path to the workbook to edit or create. Use the full path including the folder name. 
         So folder/file.xlsx, not just file.xlsx. If you use file.xlsx, the function logic not work.
         Internally, the system works by creating tmp copies of the user's workspace files so as to not overwrite them directly, but the mapping to the tmp file relies on you putting the full workspace path as an argument so it is correctly mapped to the corresponding locally created file. 
 
-        user_request: The user's request to edit the workbook with. Provide the full request so the system can process it correctly.
+        context_search_query: A query to get the context for the edit. May be the users full request or you may have to generate it yourself to fetch the relevant context for the edit so the system can view the existing contents before implementing edit.
+        When certain cells or tabs are relevant, the context_search_query can include those specific cell addresses or sheet names to bemore accurate. It can also be a series of comma separated keywords or cell locations to fetch the context of those specific cells. It should be a single text string, never a list or dictionary of strings.
+
+        exact_user_query: The exact user query that was given to you. This is the query that will be given to the system to perform the edit. Don't alter the user's message.
+
+        edit_instruction: The instruction for the edit. This is the instruction that will be given to the system to perform the edit. Generate it based on your understanding of the conversation context and the user's request. Give pointed instructions to help the system implement the edit successfully, focusing on what changes should be made to which cells or tabs. Be as concise as possible and not verbose.
     
     Returns:
         A string of the result of the edit
     """
+    user_request = context_search_query
     MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
     try:
         temp_file_path = None
@@ -179,6 +343,7 @@ async def edit_existing_excel(workbook_path: str, user_request: str) -> str:
         logger.info(f"Using temporary file {temp_file_path} for workbook {workbook_path}")
 
     try:
+        
         if not user_request:
             return "No user request provided"
 
@@ -192,7 +357,7 @@ async def edit_existing_excel(workbook_path: str, user_request: str) -> str:
         results = retriever.search(
             query=user_request,
             workbook_path=temp_filename,  # Use just the filename for searching
-            top_k=5,
+            top_k=2,
             score_threshold=0.2
         )
         
@@ -215,10 +380,12 @@ async def edit_existing_excel(workbook_path: str, user_request: str) -> str:
 
          # Initialize the LLM metadata generator
         metadata_generator = LLMMetadataGenerator()
+
+        enhanced_user_request = f"The user's query: {exact_user_query}\n\nEdit Instruction: {edit_instruction}"
         
         # Generate metadata using the LLM
         edit_metadata = await metadata_generator.generate_metadata_for_edit(
-            user_request=user_request,
+            user_request=enhanced_user_request,
             search_results=search_results,
             stream=False
         )
@@ -376,4 +543,4 @@ Circular references are common in interest expense / cash flow / debt balance ca
 """
 
 # Export all tools in a list for easy importing
-ALL_TOOLS = [add, multiply, divide, search_relevant_information, edit_existing_excel, create_new_excel, get_audit_rules]
+ALL_TOOLS = [add, multiply, divide, get_excel_general_info, edit_existing_excel, create_new_excel, get_audit_rules]

@@ -4,7 +4,8 @@ import json
 import os
 import sys
 import logging
-
+import asyncio
+import time
 # Import tools from the tools module
 from .tools import ALL_TOOLS
 
@@ -149,95 +150,125 @@ class PrebuiltAgent:
             Dict containing chunk data with 'content', 'tool_calls', or 'error' keys
         """
         try:
+            # Create a callback handler
+            callback = UsageMetadataCallbackHandler()
+        except Exception as e:
+            logger.error(f"Error creating callback handler, proceeding without: {str(e)}")
+            callback = None
 
-            # Run the agent
-            config = {
-                "configurable": {
-                    "thread_id": thread_id  
+        retry_attempt = 0
+        retry_delay = 0 #initial delay in seconds -- 0 to make the first attempt immediately
+        while retry_attempt < 2:
+        
+            try:
+
+                if callback:
+                    config = {
+                        "configurable": {
+                            "thread_id": thread_id  
+                        },
+                        "callbacks": [callback]
+                    }
+
+                else:
+                    config = {
+                    "configurable": {
+                        "thread_id": thread_id  
+                    }
                 }
-            }
-            async for chunk in self.agent.astream(
-                {"messages": messages},
-                stream_mode="updates",
-                config=config
-            ):
-                try:
-                    if isinstance(chunk, tuple):
-                        # Handle tuple case - likely a tool call or other system message
-                        self._parse_tuple_chunk(chunk)
-                    if hasattr(chunk, 'tool_call_chunks'):
-                        tool_calls = chunk.tool_call_chunks
-                        logger.info(f"Received tool calls: {tool_calls}")
-                        yield {
-                            "type": "tool_calls",
-                            "tool_calls": tool_calls,
-                            "requestId": request_id
-                        }
-                    # Handle dictionary case
-                    if isinstance(chunk, dict):
-                        agent_data = chunk.get('agent')
-                        if agent_data:
-                            messages = agent_data.get('messages', [])
-                            if messages:
-                                message = messages[0]
-                                # Existing message processing
-                                if hasattr(message, 'text') and callable(message.text):
-                                    message_content = message.text()
-                                elif isinstance(message, dict):
-                                    message_content = message.get('content', '')
-                                    # Check for tool calls in the message
-                                    tool_calls = message.get('tool_calls') or message.get('tool_call_chunks')
-                                    if tool_calls:
-                                        logger.info(f"Processing tool calls: {tool_calls}")
-                                        yield {
-                                            "type": "tool_calls",
-                                            "tool_calls": tool_calls,
-                                            "requestId": request_id
-                                        }
-                                else:
-                                    message_content = str(message)
-                                    
-                                if message_content:
-                                    logger.info(f"Chunk message received: {message_content}")
-                                    yield {
-                                        "type": "content",
-                                        "content": message_content,
-                                        "done": False,
-                                        "requestId": request_id
-                                    }
-                    # Handle case where chunk is a message-like object
-                    elif hasattr(chunk, 'text') and callable(chunk.text):
-                        message_content = chunk.text()
-                        logger.info(f"Chunk message received: {message_content}")
-                        if message_content:
+
+                async for chunk in self.agent.astream(
+                    {"messages": messages},
+                    stream_mode="updates",
+                    config=config,
+                ):
+                    try:
+                        if isinstance(chunk, tuple):
+                            # Handle tuple case - likely a tool call or other system message
+                            self._parse_tuple_chunk(chunk)
+                        if hasattr(chunk, 'tool_call_chunks'):
+                            tool_calls = chunk.tool_call_chunks
+                            logger.info(f"Received tool calls: {tool_calls}")
                             yield {
-                                "type": "content",
-                                "content": message_content,
-                                "done": False,
+                                "type": "tool_calls",
+                                "tool_calls": tool_calls,
                                 "requestId": request_id
                             }
+                        # Handle dictionary case
+                        if isinstance(chunk, dict):
+                            agent_data = chunk.get('agent')
+                            if agent_data:
+                                messages = agent_data.get('messages', [])
+                                if messages:
+                                    message = messages[0]
+                                    # Existing message processing
+                                    if hasattr(message, 'text') and callable(message.text):
+                                        message_content = message.text()
+                                    elif isinstance(message, dict):
+                                        message_content = message.get('content', '')
+                                        # Check for tool calls in the message
+                                        tool_calls = message.get('tool_calls') or message.get('tool_call_chunks')
+                                        if tool_calls:
+                                            logger.info(f"Processing tool calls: {tool_calls}")
+                                            yield {
+                                                "type": "tool_calls",
+                                                "tool_calls": tool_calls,
+                                                "requestId": request_id
+                                            }
+                                    else:
+                                        message_content = str(message)
+                                        
+                                    if message_content:
+                                        logger.info(f"Chunk message received: {message_content}")
+                                        yield {
+                                            "type": "content",
+                                            "content": message_content,
+                                            "done": False,
+                                            "requestId": request_id
+                                        }
+                        # Handle case where chunk is a message-like object
+                        elif hasattr(chunk, 'text') and callable(chunk.text):
+                            message_content = chunk.text()
+                            logger.info(f"Chunk message received: {message_content}")
+                            if message_content:
+                                yield {
+                                    "type": "content",
+                                    "content": message_content,
+                                    "done": False,
+                                    "requestId": request_id
+                                }
 
-                except Exception as chunk_error:
-                    logger.error(f"Error processing chunk: {str(chunk_error)}", exc_info=True)
+                    except Exception as chunk_error:
+                        logger.error(f"Error processing chunk: {str(chunk_error)}", exc_info=True)
+                        yield {
+                            "type": "error",
+                            "error": f"Error processing response: {str(chunk_error)}",
+                            "done": True
+                        }
+                        break
+                        
+                # Signal completion
+                yield {"type": "done", "done": True}
+                return
+                        
+            except Exception as e:
+                # check if rate limiting error:
+                if 'Error code: 429' in str(e):
+                    # need to wait and try again
+                    retry_attempt+=1
+                    retry_delay+= 90
+                    asyncio.sleep(retry_delay)
+                    continue
+                else:
+                    error_msg = f"Error in agent response stream: {str(e)}"
+                    logger.error(error_msg, exc_info=True)
                     yield {
-                        "type": "error",
-                        "error": f"Error processing response: {str(chunk_error)}",
+                        "type": "error in agent response. Need to wait and try again",
+                        "error": error_msg,
                         "done": True
                     }
-                    break
-                    
-            # Signal completion
-            yield {"type": "done", "done": True}
-                    
-        except Exception as e:
-            error_msg = f"Error in agent response stream: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            yield {
-                "type": "error",
-                "error": error_msg,
-                "done": True
-            }
-            raise
+                    return
+            
 
     def _parse_tuple_chunk(self, chunk):
         try:

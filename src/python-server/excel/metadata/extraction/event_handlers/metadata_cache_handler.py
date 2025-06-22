@@ -32,11 +32,12 @@ class MetadataCacheHandler:
     ):
         """Check if we have cached metadata for the file"""
         try:
-            file_path = event.data.get("file_path")
+            file_path = event.data.get("file_path") #this will be the workspace path going forward
             temp_file_path = event.data.get("temp_file_path")
             client_id = event.data.get("client_id")
             request_id = event.data.get("request_id")
             force_refresh = event.data.get("force_refresh", False)
+            workspace_path = file_path
             
             logger.info(f"Checking cache for: {file_path} (force_refresh={force_refresh})")
             
@@ -56,7 +57,7 @@ class MetadataCacheHandler:
             # If force refresh is requested, skip cache
             if force_refresh:
                 logger.info("Force refresh requested - skipping cache")
-                await self._emit_cache_miss(event.data, normalized_path)
+                await self._emit_cache_miss(event.data, normalized_path, workspace_path)
                 return
             
             # Get latest version from storage
@@ -86,10 +87,10 @@ class MetadataCacheHandler:
                     })
                 else:
                     logger.warning("No valid chunks found in cached version")
-                    await self._emit_cache_miss(event.data, normalized_path)
+                    await self._emit_cache_miss(event.data, normalized_path, workspace_path)
             else:
                 logger.info(f"No cached version found. Starting fresh extraction.")
-                await self._emit_cache_miss(event.data, normalized_path)
+                await self._emit_cache_miss(event.data, normalized_path, workspace_path)
                 
         except Exception as e:
             logger.error(f"Error checking cache: {str(e)}", exc_info=True)
@@ -137,12 +138,13 @@ class MetadataCacheHandler:
                 
         return True
     
-    async def _emit_cache_miss(self, event_data: dict, normalized_path: str):
+    async def _emit_cache_miss(self, event_data: dict, normalized_path: str, workspace_path: str):
         """Emit cache miss event with normalized path"""
         await event_bus.emit("START_FRESH_EXTRACTION", {
             **event_data,
             "file_path": normalized_path,
-            "from_cache": False
+            "from_cache": False,
+            "workspace_path": workspace_path
         })
 
 

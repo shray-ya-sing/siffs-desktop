@@ -1192,6 +1192,78 @@ class ExcelMetadataExtractor:
             
             return json.dumps(error_result, indent=2)
 
+
+    def _generate_workbook_overview(
+        self,
+        chunks: List[Dict[str, Any]],
+        workbook_path: str
+    ) -> Dict[str, Any]:
+        """
+        Generate a lightweight overview of the workbook structure and content.
+        
+        Args:
+            chunks: List of chunk metadata from extract_workbook_metadata_chunks
+            workbook_path: Path to the Excel file
+            
+        Returns:
+            Dictionary containing workbook overview
+        """
+        overview = {
+            "workbook_name": os.path.basename(workbook_path),
+            "workbook_path": str(workbook_path),
+            "extracted_at": datetime.now().isoformat(),
+            "sheets": {}
+        }
+        
+        # Process chunks to build sheet overviews
+        for chunk in chunks:
+            sheet_name = chunk.get("sheetName")
+            if not sheet_name:
+                continue
+                
+            if sheet_name not in overview["sheets"]:
+                overview["sheets"][sheet_name] = {
+                    "sheet_index": len(overview["sheets"]),
+                    "non_empty_rows": set(),
+                    "non_empty_columns": set(),
+                    "chunks": []
+                }
+            
+            # Update non-empty rows and columns
+            sheet_data = overview["sheets"][sheet_name]
+            for row_idx, row in enumerate(chunk.get("cellData", []), start=chunk["startRow"]):
+                for col_idx, cell in enumerate(row, start=1):
+                    if cell.get("value") is not None or cell.get("formula"):
+                        sheet_data["non_empty_rows"].add(row_idx)
+                        sheet_data["non_empty_columns"].add(col_idx)
+            
+            # Add chunk info
+            chunk_info = {
+                "start_row": chunk["startRow"],
+                "end_row": chunk["endRow"],
+                "row_count": chunk["rowCount"],
+                "col_count": chunk["columnCount"],
+                "cells": []
+            }
+            
+            # Add cell info (only formula cells)
+            for row in chunk.get("cellData", []):
+                for cell in row:
+                    if cell.get("formula"):
+                        chunk_info["cells"].append({
+                            "address": cell.get("address"),
+                            "formula": cell.get("formula")
+                        })
+            
+            sheet_data["chunks"].append(chunk_info)
+        
+        # Convert sets to sorted lists
+        for sheet in overview["sheets"].values():
+            sheet["non_empty_rows"] = sorted(sheet["non_empty_rows"])
+            sheet["non_empty_columns"] = sorted(sheet["non_empty_columns"])
+        
+        return overview
+
     def extract_workbook_metadata_chunks(
         self,
         workbook_path: Optional[str] = None,
