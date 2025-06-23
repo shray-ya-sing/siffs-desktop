@@ -256,8 +256,10 @@ class ChunkExtractorHandler:
                                 if cell.get("formula"):
                                     concise_chunk_metadata["cells"].append({
                                         "a": cell.get("address"),
-                                        "f": cell.get("formula")
+                                        "f": cell.get("formula"),
+                                        "v": cell.get("value")
                                     })
+                                
 
                     # Store for dependency analysis
                     all_cells_metadata.update(chunk_cells_dict)
