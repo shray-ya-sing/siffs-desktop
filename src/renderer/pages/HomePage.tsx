@@ -23,9 +23,6 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] relative">
-      <div className="fixed top-4 left-4 z-50">  {/* Fixed positioning, top-left corner with z-index */}
-        <ConnectionStatus />
-      </div>
       <FolderConnect onFolderConnect={handleConnect} />
     </div>
   );
