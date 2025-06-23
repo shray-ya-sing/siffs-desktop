@@ -55,8 +55,6 @@ class PrebuiltAgent:
         self.conversation_history = []
         self.provider_models= {
             "anthropic": {
-                "claude-sonnet-4-20250514",
-                "claude-sonnet-4",
                 "claude-3-7-sonnet-latest"
             },
             "openai": {
@@ -97,7 +95,7 @@ class PrebuiltAgent:
         if not provider_name:
             logger.error(f"Provider not found for model: {model_name}")
             provider_name = "anthropic"
-            model_name = "claude-sonnet-4-20250514"
+            model_name = "claude-3-7-sonnet-latest"
             
         # Initialize the LLM with the specified model
         self.llm = init_chat_model(
@@ -165,16 +163,20 @@ class PrebuiltAgent:
                 if callback:
                     config = {
                         "configurable": {
-                            "thread_id": thread_id  
+                            "thread_id": thread_id,
+                            "recursion_limit": 100 
                         },
-                        "callbacks": [callback]
+                        "callbacks": [callback],
+                        "recursion_limit": 100
                     }
 
                 else:
                     config = {
                     "configurable": {
-                        "thread_id": thread_id  
-                    }
+                        "thread_id": thread_id,
+                        "recursion_limit": 100  
+                    },
+                    "recursion_limit": 100
                 }
 
                 async for chunk in self.agent.astream(
