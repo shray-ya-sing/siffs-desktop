@@ -39,7 +39,7 @@ type Message = UserMessage | AssistantMessage | ToolCallMessage;
 const MODEL_OPTIONS: ModelOption[] = [
 //  { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
 //  { id: "openai-o3", name: "OpenAI o-3", provider: "OpenAI" },
-  { id: "claude-sonnet-4-20250514", name: "Claude sonnet 4", provider: "Anthropic" },
+//  { id: "claude-sonnet-4-20250514", name: "Claude sonnet 4", provider: "Anthropic" },
   { id: "claude-3-7-sonnet-latest", name: "Claude sonnet 3.7", provider: "Anthropic" },
 //  { id: "xai-grok-3", name: "Grok-3", provider: "xAI" },
 //  { id: "deepseek-v3", name: "DeepSeek v3", provider: "DeepSeek" },
