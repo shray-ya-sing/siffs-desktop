@@ -1,8 +1,8 @@
 {
-  "name": "volute-app",
+  "name": "volute",
   "productName": "Volute",
-  "version": "0.3.1",
-  "description": "Financial model software",
+  "version": "0.4.0",
+  "description": "Financial model agent",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
