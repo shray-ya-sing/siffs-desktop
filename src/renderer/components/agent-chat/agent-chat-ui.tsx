@@ -176,16 +176,18 @@ export default function AIChatUI() {
     };
 
     const handleAssistantChunk = (message: any) => {
-      console.log('handleAssistantChunk received message', message);
+      console.log('handleAssistantChunk triggered');
       if (!message || typeof message !== 'object') {
         console.error('Invalid message format:', message);
         return;
       }
     
       if (message.type === 'ASSISTANT_MESSAGE_CHUNK' && message.content) {
+        console.log('handleAssistantChunk received ASSISTANT_MESSAGE_CHUNK for streaming');
         setMessages(prev => {
           // If last message is from assistant, update it
           if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
+            console.log('handleAssistantChunk updating last assistant message');
             const newMessages = [...prev];
             newMessages[newMessages.length - 1] = {
               ...newMessages[newMessages.length - 1],
@@ -194,6 +196,7 @@ export default function AIChatUI() {
             return newMessages;
           }
           // Otherwise add new assistant message
+          console.log('handleAssistantChunk adding new assistant message');
           return [...prev, { 
             id: `msg-${Date.now()}`,
             role: 'assistant',
@@ -203,6 +206,7 @@ export default function AIChatUI() {
         });
       }
       else if (message.type === 'ASSISTANT_MESSAGE_DONE') {
+        console.log('handleAssistantChunk received message done streaming signal', message);
         setIsLoading(false);
       }
     };

@@ -197,7 +197,7 @@ class WebSocketService {
 
   private handleIncomingMessage(event: MessageEvent) {
     try {
-      console.log('handleIncomingMessage received message', event.data)
+      console.log('WEBSOCKET_SERVICE: handleIncomingMessage received message', event.data)
       const message = JSON.parse(event.data);
       const handlers = this.eventHandlers.get(message.type) || [];
       
@@ -205,6 +205,7 @@ class WebSocketService {
       if (message.type === 'ASSISTANT_MESSAGE_CHUNK' || 
           message.type === 'ASSISTANT_MESSAGE_DONE') {
         // Forward the message with its data
+        console.log('WEBSOCKET_SERVICE: handleIncomingMessage received assistant message from backend server, forwarding to handler in agent-chat-ui.tsx')
         const handlers = this.eventHandlers.get(message.type) || [];
         handlers.forEach(handler => handler(message));
         return;
