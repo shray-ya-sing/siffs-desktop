@@ -273,6 +273,175 @@ class ExcelWriter:
         except Exception as e:
             logger.error(f"Error editing existing workbook {self.file_path}: {str(e)}")
             return False, {}
+
+
+    def get_workbook_data_xlwings(
+    self,
+    file_path: str,
+    sheet_name: str,
+    cell_ranges: List[str],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Get cell data including formulas and addresses from a specified range.
+        
+        Args:
+            file_path: Path to the Excel file
+            sheet_name: Name of the worksheet
+            cell_ranges: List of Excel ranges (e.g., ['A1:B10', 'A30:A40'])
+            
+        Returns:
+            List of dictionaries containing cell data
+        """
+        try:
+            file_path = str(Path(file_path).resolve())
+            workbook = self._get_or_create_workbook(file_path)
+            sheet = workbook.sheets[sheet_name]        
+            
+            result = []
+            errors_found = []
+            for cell_range in cell_ranges:
+                range_obj = sheet.range(cell_range)
+                for cell in range_obj:
+                    result.append({
+                        'address': cell.address,
+                        'formula': cell.formula,
+                        'value': cell.value,
+                    })
+            try:
+                # xlCellTypeFormulas = -4123, xlErrors = 16
+                error_cells = sheet.api.UsedRange.SpecialCells(-4123, 16)
+                for cell in error_cells:
+                    error_text = cell.value
+                    xl_cell = sheet.range(cell.address)
+                    errors_found.append({
+                        'sheet': sheet.name,
+                        'cell': xl_cell.address,
+                        'error': error_text,
+                        'formula': xl_cell.formula 
+                    })
+            except Exception as e:
+                logger.error(f"Error processing sheet {sheet.name}: {str(e)}")
+                
+                
+            return result, errors_found
+                
+        except Exception as e:
+            logger.error(f"Error getting workbook data: {str(e)}", exc_info=True)
+            return [], []
+
+    def tool_write_data_to_existing(
+        self,
+        data: Dict[str, List[Dict[str, Any]]],
+        output_filepath: str,
+        version_id: Optional[int] = None,
+        create_pending: bool = True,
+        save: bool = False,
+        apply_green_highlight: bool = True,
+    ) -> Tuple[bool, Dict[str, List[str]]]:
+        """Write data to an existing Excel file with pending edit tracking.
+    
+        Args:
+            data: Dictionary mapping sheet names to lists of cell data
+            output_filepath: Path to the Excel file
+            version_id: Optional version ID. If None, will try to get the latest version from metadata.
+            create_pending: Whether to create pending edits or apply directly
+            save: Whether to save changes to disk
+            apply_green_highlight: Whether to apply green highlight to updated cells
+            
+        Returns:
+            Tuple of (success, Dictionary mapping sheet names to lists of edit IDs)
+        """
+        if not data:
+            return False, {}
+
+        if not os.path.exists(output_filepath):
+            raise FileNotFoundError(f"File does not exist: {output_filepath}")
+
+        try:
+            
+            # Use unified method to get workbook
+            self.file_path = str(Path(output_filepath).resolve())
+            workbook = self._get_or_create_workbook(self.file_path)
+
+            # Get the latest version ID if not provided            
+            if version_id is None and self.storage:
+                logger.info(f"No version id provided. Getting latest version ID from metadata for file: {output_filepath}")
+                latest_version = self.storage.get_latest_version(self.file_path)
+                if latest_version:
+                    version_id = latest_version['version_number']
+                    logger.info(f"Using latest version ID from metadata: {version_id}")
+                else:
+                    version_id = 1  # Default to 1 if no version exists
+                    logger.info("No existing version found, using default version ID: 1")
+            
+            self.version_id = version_id       
+
+            request_pending_edits = [] # Array of pending edit dictionaries for the current request 
+            # Append all edit dicts from the pending edit manager method to this array   
+            all_updated_cells = [] # Array of dicts to store the updated values of the cell after the edit succeeds
+            
+            for sheet_name, cells_data in data.items():
+                # Get or create worksheet
+                try:
+                    sheet = workbook.sheets[sheet_name]
+                    logger.info(f"Found existing worksheet: {sheet_name}")
+                except:
+                    sheet = workbook.sheets.add(sheet_name)
+                    logger.info(f"Created new worksheet: {sheet_name}")
+                
+                sheet_updated_cells = {
+                    "sheet_name": sheet_name,
+                    "updated_cells": []
+                }
+                # Iterate through the list of cells to be edited, Apply cell updates
+                for cell_data in cells_data:
+                    if 'cell' not in cell_data:
+                        continue
+                    
+                    if create_pending and self.edit_manager:
+                        # Create pending edit
+                        try:
+                            pending_edit = self.edit_manager.apply_pending_edit_with_color_indicator(
+                                wb=workbook,
+                                sheet_name=sheet_name,
+                                cell_data=cell_data,
+                                version_id=version_id,
+                                file_path=self.file_path
+                            )
+                            # Add the pending edit to the request_pending_edits array
+                            request_pending_edits.append(pending_edit)
+                        except Exception as e:
+                            logger.error(f"Error in pending edit manager apply_pending_edit() function: {e}")
+                            # Continue applying to remaining cells even if one fails
+                            continue
+
+                    else:
+                        logger.info(f"Direct update without tracking")
+                        # Direct update without tracking
+                        try:
+                            cell = sheet.range(cell_data['cell'])
+                            updated_cell = self._apply_cell_formatting(cell, cell_data)
+                            sheet_updated_cells['updated_cells'].append(updated_cell)
+                            # Add a green highlight for visual indication of edit
+                            if apply_green_highlight:
+                                self._apply_green_highlight(cell)
+                            if save:
+                                workbook.save()
+                                logger.info(f"Saved workbook: {self.file_path}")
+                        except Exception as e:
+                            logger.error(f"Error updating cell {cell_data['cell']}: {e}")
+                            # Continue applying to remaining cells even if one fails
+                            continue
+
+                all_updated_cells.append(sheet_updated_cells)
+            
+            # Store the pending edits to the storage
+            if create_pending:
+                self.storage.batch_create_pending_edits(request_pending_edits)
+            return True, all_updated_cells # return the updated cells for the tools view
+
+        except Exception as e:
+            logger.error(f"Error editing existing workbook {self.file_path}: {str(e)}")
+            return False, {}
     
     # HELPER METHODS FOR WORKBOOK SESSION MANAGEMENT-------------------------------------------------------------------------------------------------------------------------------------
     def _get_or_create_workbook(self, file_path: str, create_new: bool = False) -> xw.Book:
@@ -333,7 +502,7 @@ class ExcelWriter:
         except (ValueError, TypeError):
             return None
 
-    def _apply_cell_formatting(self, cell: xw.Range, cell_data: Dict[str, Any]) -> None:
+    def _apply_cell_formatting(self, cell: xw.Range, cell_data: Dict[str, Any]) -> Dict[str, Any]:
         """Apply formatting to a cell based on cell_data dictionary."""
         if not cell or not cell_data:
             return
@@ -345,12 +514,13 @@ class ExcelWriter:
             except Exception as e:
                 cell_ref = cell.address if hasattr(cell, 'address') else 'unknown'
                 logger.error(f"Error applying {operation_name} to cell {cell_ref}: {e}")
+                return {}
 
         #----------------Set these properties directly on the xlwings range
         
         # Set cell value or formula
         if 'formula' in cell_data and cell_data['formula'] is not None:
-            safe_apply('formula/value', lambda: self._set_cell_value(cell, cell_data['formula']))
+            updated_result = safe_apply('formula/value', lambda: self._set_cell_value(cell, cell_data['formula']))
 
         # Apply number format
         if 'number_format' in cell_data and cell_data['number_format']:
@@ -377,10 +547,26 @@ class ExcelWriter:
         if 'wrap_text' in cell_data:
             safe_apply('wrap text', lambda: setattr(xl_cell, 'WrapText', bool(cell_data['wrap_text'])))
 
-    def _set_cell_value(self, cell: xw.Range, value):
-        """Safely set cell value or formula with better error handling."""
+        return updated_result
+
+    def _set_cell_value(self, cell: xw.Range, value)-> Dict[str, Any]:
+        """Safely set cell value or formula with better error handling.
+        
+        Returns:
+        Dict containing:
+        - a: cell address (str)
+        - f: formula if set (str or None)
+        - v: current cell value (any)
+        """
+
+        result = {
+            'a': cell.address if hasattr(cell, 'address') else 'unknown',
+            'f': 'Not updated',
+            'v': 'Not updated'
+        }
+        
         if value is None:
-            return
+            return result
             
         try:
             # Convert to string and strip whitespace for formula detection
@@ -406,11 +592,21 @@ class ExcelWriter:
                     cell.api.Worksheet.Evaluate(str_value[1:])  # Remove the '=' for evaluation
                     cell.formula = str_value
                     logger.info(f"Set formula '{str_value}' for cell {cell.address}")
+                    # Update result with new formula and value                    
+                    #Calculate just the new cell value
+                    cell.api.Calculate()
+                    result['f'] = cell.formula
+                    result['v'] = cell.value
                 except Exception as e:
                     logger.warning(f"Warning: Invalid formula '{str_value}': {e}")
                     # Fall back to setting as plain text
                     cell.value = str_value
                     logger.info(f"Set value '{str_value}' for cell {cell.address}")
+                    #Calculate just the new cell value
+                    cell.api.Calculate()
+                    result['f'] = cell.formula
+                    result['v'] = cell.value
+
             else:
                 pattern = r"(?:'?[^!']+'?!)?\$?[A-Za-z]+\$?\d+"
                 if bool(re.search(pattern, str_value)):
@@ -419,15 +615,25 @@ class ExcelWriter:
                 # Set as plain value
                 cell.value = value
                 logger.info(f"Set value '{str_value}' for cell {cell.address}")
+                #Calculate just the new cell value
+                cell.api.Calculate()
+                result['f'] = cell.formula
+                result['v'] = cell.value
+
+            return result
                 
         except Exception as e:
             logger.error(f"Error setting cell {cell.address} with value '{value}': {e}")
             # Fall back to setting as plain text
             try:
                 cell.value = str(value)
+                #Calculate just the new cell value
+                cell.api.Calculate()
+                result['f'] = cell.formula
+                result['v'] = cell.value
             except:
                 logger.error(f"Critical: Failed to set cell {cell.address} with any value type")
-
+            return result
 
     def _fix_average_formula(self, formula: str) -> str:
         """
@@ -542,6 +748,16 @@ class ExcelWriter:
         except Exception as e:
             cell_ref = getattr(cell, 'address', 'unknown')
             logger.warning(f"Warning: Could not set fill color for cell {cell_ref}: {e}")
-                 
+    
+    def _apply_green_highlight(self, cell: xw.Range):
+        """Safely apply green highlight to a cell with error handling."""
+        if not hasattr(cell, 'color'):
+            return
+        
+        try:
+            cell.color = (200, 255, 200)  # Light green if edit includes color change
+        except Exception as e:
+            cell_ref = getattr(cell, 'address', 'unknown')
+            logger.warning(f"Warning: Could not set green highlight for cell {cell_ref}: {e}")
 
     
