@@ -22,46 +22,295 @@ from excel.metadata.generation.llm_metadata_generator import LLMMetadataGenerato
 # Set up logger
 logger = logging.getLogger(__name__)
 
-@tool
-def add(a: int, b: int) -> int:
-    """Adds two integers together.
-    
-    Args:
-        a: First integer
-        b: Second integer
-        
-    Returns:
-        The sum of a and b
-    """
-    return a + b
+# HELPER FUNCTIONS _________________________________________________________________________________________________________________________________
 
-@tool
-def multiply(a: int, b: int) -> int:
-    """Multiplies two integers together.
-    
-    Args:
-        a: First integer
-        b: Second integer
-        
-    Returns:
-        The product of a and b
+def get_excel_context_regions(
+    workspace_path: str,
+    context_regions: List[Dict[str, Any]]
+) -> str:
     """
-    return a * b
+    Retrieve specific cell ranges from Excel cache using context regions.
+    Returns only cell addresses and formulas.
 
-@tool
-def divide(a: int, b: int) -> float:
-    """Divides first integer by the second.
+    Args:
+        workspace_path: Full path to the workbook in the format 'folder/workbook.xlsx'
+        context_regions: List of dicts with 'sheet_name' and 'cell_ranges' keys.
+                         Example: [{"sheet_name": "Sheet1", "cell_ranges": ["A1:B2"]}]
+
+    Returns:
+        A JSON string containing cell addresses and formulas
+        Example: {
+            "workbook_name": "example.xlsx",
+            "sheets": {
+                "Sheet1": {
+                    "A1": "=SUM(A2:A5)",
+                    "B1": "=AVERAGE(B2:B5)"
+                }
+            }
+        }
+    """
+    def is_valid_cell_range(cell_range: str) -> bool:
+        """Validate Excel cell range format (e.g., A1, A1:B2)"""
+        import re
+        pattern = r'^[A-Za-z]+\d+(?::[A-Za-z]+\d+)?$'
+        return bool(re.match(pattern, cell_range))
+
+    try:
+        # Validate context_regions structure
+        if not isinstance(context_regions, list):
+            return 'Error: context_regions must be a list of dictionaries'
+            
+        for region in context_regions:
+            if not isinstance(region, dict) or 'sheet_name' not in region or 'cell_ranges' not in region:
+                return 'Error: Each context region must be a dict with "sheet_name" and "cell_ranges" keys'
+            if not isinstance(region['sheet_name'], str) or not isinstance(region['cell_ranges'], list):
+                return 'Error: sheet_name must be a string and cell_ranges must be a list'
+            for cell_range in region['cell_ranges']:
+                if not is_valid_cell_range(cell_range):
+                    return f'Error: Invalid cell range format: {cell_range}'
+
+        # Get the cache file
+        python_server_path = Path(__file__).parent.parent.parent
+        cache_path = python_server_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
+        
+        if not cache_path.exists():
+            return 'Error: Cache file not found'
+
+        # Load the cache
+        with open(cache_path, 'r') as f:
+            cache_data = json.load(f)
+        
+        # Get the workbook data
+        workbook_data = cache_data.get(workspace_path)
+        if not workbook_data:
+            return 'Error: No data found for workspace'
+
+        result = {
+            "workbook_name": workbook_data.get("workbook_name", ""),
+            "sheets": {}
+        }
+
+        # Process each requested region
+        for region in context_regions:
+            sheet_name = region['sheet_name']
+            if sheet_name not in workbook_data.get("sheets", {}):
+                continue
+                
+            sheet_data = workbook_data["sheets"][sheet_name]
+            if sheet_name not in result["sheets"]:
+                result["sheets"][sheet_name] = {}
+
+            # Process each cell range in the region
+            for cell_range in region['cell_ranges']:
+                start_cell, _, end_cell = cell_range.partition(':')
+                if not end_cell:  # Single cell
+                    end_cell = start_cell
+                
+                start_row = _get_row_number(start_cell)
+                end_row = _get_row_number(end_cell)
+                start_col = _get_column_letter(start_cell)
+                end_col = _get_column_letter(end_cell) if ':' in cell_range else start_col
+
+                # Find matching cells in chunks
+                for chunk in sheet_data.get("chunks", []):
+                    for cell in chunk.get("cells", []):
+                        cell_address = cell.get("a", "")
+                        if not cell_address:
+                            continue
+                            
+                        cell_row = _get_row_number(cell_address)
+                        cell_col = _get_column_letter(cell_address)
+                        
+                        # Check if cell is within the range and has a formula
+                        if (start_row <= cell_row <= end_row and
+                            start_col <= cell_col <= end_col and
+                            "f" in cell):
+                            result["sheets"][sheet_name][cell_address] = cell["f"]
+
+        # Remove empty sheets
+        result["sheets"] = {k: v for k, v in result["sheets"].items() if v}
+        return compress_to_markdown(result)
+        
+    except json.JSONDecodeError:
+        return 'Error: Failed to parse cache file'
+    except Exception as e:
+        logger.error(f"Error retrieving context regions: {str(e)}", exc_info=True)
+        return 'Error: Failed to get data from cache'
+
+
+def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, Any]]) -> bool:
+    """
+    Update the Excel metadata cache with modified cell data.
+
+    Args:
+        workspace_path: Full path to the workbook in the format 'folder/workbook.xlsx'
+        all_updated_cells: List of dicts with 'sheet_name' and 'updated_cells' keys.
+                         Example: [{
+                             "sheet_name": "Sheet1",
+                             "updated_cells": [
+                                 {"a": "A1", "f": "=SUM(B1:B2)", "v": 42},
+                                 {"a": "B1", "f": "=5", "v": 5}
+                             ]
+                         }]
+
+    Returns:
+        str: Success message or error message
+    """
+    try:
+        # Get the cache file path
+        python_server_path = Path(__file__).parent.parent.parent
+        cache_path = python_server_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
+        
+        # Load existing cache
+        if not cache_path.exists():
+            return 'Error: Cache file not found'
+            
+        with open(cache_path, 'r+') as f:
+            try:
+                cache_data = json.load(f)
+            except json.JSONDecodeError:
+                return 'Error: Invalid cache file format'
+            
+            # Get the workbook data
+            workbook_data = cache_data.get(workspace_path)
+            if not workbook_data:
+                return 'Error: No data found for workspace in cache'
+            
+            # Process each sheet's updates
+            for sheet_update in all_updated_cells:
+                sheet_name = sheet_update.get('sheet_name')
+                updated_cells = sheet_update.get('updated_cells', [])
+                
+                if not sheet_name or not updated_cells:
+                    continue
+                
+                # Find the sheet in the cache
+                if sheet_name not in workbook_data.get("sheets", {}):
+                    workbook_data["sheets"][sheet_name] = {"chunks": []}
+                
+                sheet_data = workbook_data["sheets"][sheet_name]
+                
+                # If no chunks exist yet, create one
+                if not sheet_data.get("chunks"):
+                    sheet_data["chunks"] = [{"cells": []}]
+                
+                # Update cells in the first chunk (or create new ones)
+                existing_cells = {cell.get('a'): idx 
+                                for idx, cell in enumerate(sheet_data["chunks"][0].get("cells", []))}
+                
+                for cell_data in updated_cells:
+                    cell_ref = cell_data.get('a')
+                    if not cell_ref:
+                        continue
+                    
+                    cell_entry = {
+                        'a': cell_ref,
+                        'f': cell_data.get('f'),
+                        'v': cell_data.get('v')
+                    }
+                    
+                    # Update existing cell or add new one
+                    if cell_ref in existing_cells:
+                        sheet_data["chunks"][0]["cells"][existing_cells[cell_ref]] = cell_entry
+                    else:
+                        if "cells" not in sheet_data["chunks"][0]:
+                            sheet_data["chunks"][0]["cells"] = []
+                        sheet_data["chunks"][0]["cells"].append(cell_entry)
+            
+            # Write back to cache
+            f.seek(0)
+            json.dump(cache_data, f, indent=2)
+            f.truncate()
+            
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error updating cache: {str(e)}", exc_info=True)
+        return False
+
+def compress_to_markdown(json_data: Union[str, dict]) -> str:
+    """
+    Compress Excel context data into a compact markdown format.
     
     Args:
-        a: The numerator
-        b: The denominator (must not be zero)
+        json_data: Either a JSON string or dict containing the Excel context data
         
     Returns:
-        The result of a divided by b as a float
+        str: A compact markdown string in the format:
+             workbook_name: [name], sheet_name: [name] | A1, "=SUM(...)" | B1, "=AVG(...)" | ...
     """
-    if b == 0:
-        raise ValueError("Cannot divide by zero")
-    return a / b
+    # Parse JSON if input is a string
+    if isinstance(json_data, str):
+        try:
+            data = json.loads(json_data)
+        except json.JSONDecodeError:
+            logger.error("Error in compress_to_markdown: Invalid JSON input str")
+            return "Error compressing extracted metadata: Invalid JSON input string"
+    else:
+        data = json_data
+    
+    # Initialize result list
+    result = []
+    
+    # Add workbook name
+    workbook_name = data.get("workbook_name", "unknown")
+    result.append(f"workbook_name: {workbook_name}")
+    
+    # Process each sheet
+    for sheet_name, cells in data.get("sheets", {}).items():
+        # Add sheet header
+        result.append(f", sheet_name: {sheet_name}")
+        
+        # Add cell data
+        cell_entries = []
+        for cell_ref, formula in sorted(cells.items()):
+            # Escape quotes in formula and wrap in quotes
+            safe_formula = formula.replace('"', '\\"')
+            cell_entries.append(f"{cell_ref}, \"{safe_formula}\"")
+        
+        # Join cell entries with pipes
+        result.append(" | " + " | ".join(cell_entries))
+    
+    # Join all parts with no spaces for maximum compression
+    return "".join(result)
+
+def _get_row_number(cell_address: str) -> int:
+    """Extract row number from cell address (e.g., 'A1' -> 1)"""
+    import re
+    match = re.match(r"^[A-Za-z]+(\d+)$", cell_address)
+    return int(match.group(1)) if match else 0
+
+def _get_column_letter(cell_address: str) -> str:
+    """Extract column letters from cell address (e.g., 'A1' -> 'A')"""
+    import re
+    match = re.match(r"^([A-Za-z]+)\d*$", cell_address)
+    return match.group(1) if match else ""
+
+def format_updated_cells(updated_cells: List[Dict[str, Any]]) -> str:
+    """
+    Format updated cells into a compact string with cell references, formulas, and values.
+    Format: "Sheet1[A1=SUM(A2:A3)=10, B2=5=5], Sheet2[C1=AVG(A1:B1)=7.5]"
+    """
+    if not updated_cells:
+        return "No cells updated"
+    
+    sheets = []
+    for sheet in updated_cells:
+        sheet_name = sheet.get('sheet_name', '?')
+        cells = []
+        
+        for cell in sheet.get('updated_cells', []):
+            addr = cell.get('a', '?')
+            formula = cell.get('f', '')
+            value = str(cell.get('v', ''))[:20]  # Truncate long values
+            cells.append(f"{addr}={formula}={value}")
+            
+        sheets.append(f"{sheet_name}[{','.join(cells)}]")
+    
+    return '; '.join(sheets)
+
+
+# TOOL FUNCTIONS _________________________________________________________________________________________________________________________________
 
 #    It is a pair tool to the semantic_search_excel tool which is a semantic search based tool for getting contextually rich metadata chunks with detailed cell information.
 #This tool is meant for getting quick answers for basic things. Make the judgement call based on your knowledge whether the query can be satisfied with the general info or semantic search.
@@ -79,7 +328,7 @@ def get_excel_general_info(
     Retrieve workbook overview data from the hotcache with optional filtering.
     If you need the context around a cell or cell range use the start_row and end_row params to get the data for the row section.
     You can use the tool in repeated calls to get the data for different row sections. This is more efficient when you need info over a large section. 
-    
+    This tool CANNOT be invoked for specific columns. There is no functionality to get data for certain columns. You have to get the data based on the row ranges, and all the columns available in the data for that row range will be returned.
     Args:
         workspace_path: Full path to the workbook in the format 'folder/workbook.xlsx'
         sheet_names: List of specific sheet names to include (required for cell/row filtering)
@@ -196,19 +445,7 @@ def get_excel_general_info(
         logger.error(f"Error retrieving data: {str(e)}", exc_info=True)
         return 'Failed to get data from cache'
 
-def _get_row_number(cell_address: str) -> int:
-    """Extract row number from cell address (e.g., 'A1' -> 1)"""
-    import re
-    match = re.match(r"^[A-Za-z]+(\d+)$", cell_address)
-    return int(match.group(1)) if match else 0
 
-def _get_column_letter(cell_address: str) -> str:
-    """Extract column letters from cell address (e.g., 'A1' -> 'A')"""
-    import re
-    match = re.match(r"^([A-Za-z]+)\d*$", cell_address)
-    return match.group(1) if match else ""
-
-@tool 
 def semantic_search_excel(query: str, workbook_path: str) -> List[Dict[str, Any]]:
     """Search for relevant information related to the contents of excel files.
     This is a pair tool to the get_excel_general_info tool. If the question asks for summaries, overviews, or exact cell values, se the get_excel_general_info tool. You may have to use the get_excel_general_info tool to get the basic info like sheet names and cell addresses before calling this tool to get more detailed information.
@@ -288,13 +525,358 @@ def semantic_search_excel(query: str, workbook_path: str) -> List[Dict[str, Any]
     except Exception as e:
         return [{"error": f"Search failed: {str(e)}"}]
 
+@tool
+def break_down_edit_request(
+    workspace_path: str,
+    exact_user_edit_request: str,
+    decomposed_edit_series_data: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Break down the user's edit request into a series of smaller, more focused edit requests.
+    Each edit has an edit scope of cells to be edited in that specific edit. You have to determine which cells to edit in each edit. 
+    Each edit should edit no more than 25 cells. If an edit requires changes to less than 25 cells, the full request can be completed in one edit step, and you can include all the changes in 1 edit scope. The goal of the decomposition is to make editing atomic. To do this, we have to keep a limited scope of cells in each edit and focus on getting those perfect before moving on to the next edit.
+    To properly decompose the edit request and define correct cells in the edit scope, you need to understand the context and the current state of the excel file. Call the get_general_info tool to get the full excel context and understand the correct edit steps and edit scopes.
+
+    Args:
+        workspace_path: The path to the workspace file.
+        exact_user_edit_request: The user's edit request.
+        decomposed_edit_series_data: A list of decomposed edit series data.
+        For example: [{
+                "edit_index": "1", 
+                "edit_description": "Change the formulas in cells A2:B10 to sum the cells in row 30 on the assumptions tab",
+                "edit_scope": {"sheet_name": "Assumptions", "cells": ["A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10"]}
+            },
+            {
+                "edit_index": "2", 
+                "edit_description": "Change the formulas in cells B20:B30 to link to the updated cells A2:B10",
+                "edit_scope": {"sheet_name": "Assumptions", "cells": ["B20", "B21", "B22", "B23", "B24", "B25", "B26", "B27", "B28", "B29", "B30"]}
+            }]
+    Returns:
+        A list of decomposed edit series data.
+    """
+    import json
+    from pathlib import Path
+    from datetime import datetime
+    
+    # Define cache file path
+    cache_dir = Path(__file__).parent.parent.parent / "metadata" / "__cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)  # Ensure cache directory exists
+    cache_file = cache_dir / "decomposed_edits.json"
+    
+    # Create new edit info
+    new_edit_info = {
+        "original_request": exact_user_edit_request,
+        "decomposed_edit_series_data": decomposed_edit_series_data,
+        "created": datetime.utcnow().isoformat(),
+    }
+    
+    try:
+        # Try to load existing cache
+        if cache_file.exists():
+            try:
+                with open(cache_file, 'r') as f:
+                    cache_data = json.load(f)
+            except json.JSONDecodeError:
+                # If file is corrupted, start with empty cache
+                cache_data = {}
+        else:
+            cache_data = {}
+        
+        # Update cache with new edit info
+        if workspace_path not in cache_data:
+            cache_data[workspace_path] = []
+        
+        # Add new edit info to the cache
+        cache_data[workspace_path].append(new_edit_info)
+        
+        # Save updated cache back to file
+        with open(cache_file, 'w') as f:
+            json.dump(cache_data, f, indent=2)
+            
+    except Exception as e:
+        # Log error but don't fail the request
+        logger.error(f"Failed to update edit request cache: {str(e)}")
+        # Continue with the request even if cache update fails
+    
+    return decomposed_edit_series_data
 
 @tool 
-async def edit_existing_excel(workbook_path: str, context_search_query: str, exact_user_query: str, edit_instruction: str) -> str:
-    """Edit an existing excel file in the user loaded workspace.
-    This tool is set up to automatically collect the context for the edit so you don't have to search for it yourself with a tool call, you only have to provide the correct parameters.
-    This tool works best when used for targeted edits. When the user's request is very long, complex or broad, you will have to break it down into sub steps and call this tool multiple times for each step. For each tool call, you have to be clear about the edit that is intended to be accomplished and generate paramters accordingly.
-    For simple or medium edit requests one tool call will suffice. 
+def implement_excel_edit(
+    workspace_path: str,
+    sheet_name: str,
+    updated_cell_formulas: Dict[str, Any]
+) -> str:
+    """Implement ONE in a series of edits on an existing excel file in the user loaded workspace.
+    For an edit series with multiple edits, call this tool multiple times, once for each edit. The system takes in the updated formulas passed as params and writes them to the corresponding cells.
+    It is critical you determine the updated formulas and cells to call this method with. Only supply cell formulas for cells that are in the scope of the particular edit this tool call is intended to accomplish.
+    
+    Args:
+        workspace_path: The path to the workspace file.
+        sheet_name: The name of the sheet with the updated cells.
+        updated_cell_formulas: A dictionary of updated cell formulas. Generate the updated formulas for each cell that needs to be updated in the edit.
+        For example: {"A1": "=SUM(B1:B10)", "B1": "=A1*2", "C1": "=A1+B1", "D1": "=A1-B1"}
+        Key Guidelines for generating correct Excel formulas:
+        =AVERAGE(A1:A10) - For ranges or =AVERAGE(A1,B1,C1) for separate cells
+        =SUM(A1:A10) - Sum values with =SUM(A1,B1,C1) for non-adjacent cells
+        =VLOOKUP("John", A2:B10, 2, FALSE) - Always include all parameters
+        =IF(A1>10, "Yes", "No") - Include both true and false values
+        =XLOOKUP(A1, B1:B10, C1:C10, "Not found") - Include default value
+        =UNIQUE(A1:A100) and =FILTER(A1:B10, B1:B10>10) - Modern array functions
+        Linking to other tabs:
+        Use single quotes for sheet names with spaces: ='Sheet Name'!A1
+        Reference tables in other sheets: =VLOOKUP(A1, 'Data Sheet'!Table1, 2, FALSE)
+        Always use exclamation mark (!) to separate sheet name from cell reference
+        IMPORTANT: ALWAYS FAVOR FORMULAS THAT CAN BE REUSED OVER MULTIPLE CELLS INSTEAD OF FORMULAS THAT RELY ON HARDCODING VALUES OR PARTICULAR CELLS.
+        NEVER HARDCODE COMPUTED VALUES IN CELLS -- COMPUTATIONS AND CALCULATIONS SHOULD ALWAYS BE DONE VIA FORMULA INSIDE THE EXCEL FILE.
+
+    Returns:
+        A string message indicating the success of the edit and the updated cells.
+    """
+    MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+    workbook_path = workspace_path
+    try:
+        temp_file_path = None
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+            
+        # Try exact match first
+        if workbook_path in mappings:
+            temp_file_path = mappings[workbook_path]
+        else:            
+            # Try with just the filename
+            filename = Path(workbook_path).name
+            for key, value in mappings.items():
+                if key.endswith(filename):
+                    temp_file_path = value
+        
+    except (json.JSONDecodeError, OSError) as e:
+        return f"Search failed: {str(e)}"
+    
+    if not temp_file_path:
+        temp_file_path = workbook_path
+        logger.info(f"Using original file path: {workbook_path}")
+    else:
+        logger.info(f"Using temporary file {temp_file_path} for workbook {workbook_path}")
+
+
+    try:
+        # Convert the cell formulas into the expected format for the Excel writer
+        parsed_data = {
+            sheet_name: [  # Sheet name as key
+                {  # List of cell data dictionaries
+                    "cell": cell_ref,
+                    "formula": formula,
+                }
+                for cell_ref, formula in updated_cell_formulas.items()
+            ]
+        }
+
+        with ExcelWriter(visible=True) as writer:
+            success, updated_cells = writer.tool_write_data_to_existing(
+                data=parsed_data,
+                output_filepath=temp_file_path,
+                create_pending=False,
+            )
+
+        if not success:
+            return "Error: Failed to edit workbook"
+
+        if not updated_cells:
+            return "Error: Updating succeeded but updated cells could not be viewed. Requires manual verification."
+
+        final_message = "Edited workbook."
+        # get a string rep of the updates
+        updated_cells_str = format_updated_cells(updated_cells)
+        if updated_cells_str:
+            final_message += f"Here are the updated cells: {updated_cells_str}"
+        # update the cache
+        try:
+            update_success = update_excel_cache(workspace_path, updated_cells)
+        except Exception as e:
+            final_message+= f"Edits succeeded but cache update failed -- cache may still reflect outdated data. Inform user to save the file and re-load the workspace to update the cache."
+        
+        logger.info(f"Successfully edited workbook at {temp_file_path}")
+        return final_message
+        
+    except Exception as e:
+        logger.error(f"Failed to edit workbook at {temp_file_path}: {str(e)}")
+        return f"Edit failed. Cannot edit workbook: {str(e)}"
+    
+
+
+def get_excel_cell_data(
+    file_path: str,
+    sheet_name: str,
+    cell_ranges: List[str]
+) -> str:
+    """Get detailed cell data including formulas and values from a specified Excel range.
+    
+    Args:
+        file_path: Path to the Excel file
+        sheet_name: Name of the worksheet
+        cell_range: Excel range (e.g., 'A1:B10')
+        
+    Returns:
+        A string of the cell data in markdown format
+    """
+    try:
+        # Get the cell data
+        with ExcelWriter(visible=True) as writer:
+            cell_data, errors = writer.get_workbook_data_xlwings(
+                file_path=file_path,
+                sheet_name=sheet_name,
+                cell_ranges=cell_ranges
+            )
+        # Transform to expected format
+        transformed = {
+            "workbook_name": Path(file_path).name,
+            "sheets": {
+                sheet_name: {
+                    cell['address']: cell['formula'] or str(cell['value'])
+                    for cell in cell_data
+                    if cell.get('formula') is not None or cell.get('value') is not None
+                }
+            }
+        }
+
+        # Now compress
+        compressed = compress_to_markdown(transformed)
+
+        # Add errors to the compressed string
+        if errors and len(errors) > 0:
+            compressed += "\n\nErrors:\n"
+            for error in errors:
+                try:
+                    # Safely get each value with .get() to handle missing keys
+                    sheet = error.get('sheet', 'N/A')
+                    cell = error.get('cell', 'N/A')
+                    error_type = error.get('error', 'N/A')
+                    formula = error.get('formula', 'N/A')
+                    
+                    # Format the error line
+                    compressed += f"Sheet: {sheet}, Cell: {cell}, Error: {error_type}"
+                    if formula and formula != 'N/A':
+                        compressed += f", Formula: {formula}"
+                    compressed += "\n"
+                except Exception as e:
+                    # If anything goes wrong with formatting, include the raw error
+                    compressed += f"Error formatting error message: {str(e)}\n"
+                    compressed += f"Raw error data: {str(error)}\n"
+        
+        return compressed
+        
+    except Exception as e:
+        logger.error(f"Error getting cell data: {str(e)}", exc_info=True)
+        return [{"error": f"Failed to get cell data: {str(e)}"}]
+
+def parse_cell_ranges(cell_ranges_to_get):
+    """
+    Parse a list of sheet-to-ranges mappings into a dictionary.
+    
+    Args:
+        cell_ranges_to_get: List of dicts like [{'sheet1': ['A1:B10']}, {'sheet2': ['A1:A5']}]
+        
+    Returns:
+        Dict[str, List[str]]: Dictionary mapping sheet names to lists of cell ranges
+    """
+    sheet_ranges = {}
+    
+    for sheet_dict in cell_ranges_to_get:
+        for sheet_name, ranges in sheet_dict.items():
+            # Initialize the sheet's range list if it doesn't exist
+            if sheet_name not in sheet_ranges:
+                sheet_ranges[sheet_name] = []
+            # Add the ranges for this sheet
+            sheet_ranges[sheet_name].extend(ranges)
+    
+    return sheet_ranges
+
+@tool
+def get_updated_excel_data_to_check(
+    workspace_path: str,
+    cell_ranges_to_get: List[Dict[str, List[str]]]
+) -> List[str]:
+    """Get the updated cell data to evaluate if the edit was successful.
+    Call this after each time you call the implement_excel_edit tool, to check whether the edit accomplished its goal successfully.
+    If goal not accomplished, you need to attempt the edit again with updated cell formulas that reflect what the correct result should be.
+    
+    Args:
+        workspace_path: Path to the Excel file like folder/file.xlsx. Should be full path including directory.
+        cell_ranges_to_get: List of dicts like [{sheet_name: [cell_range1, cell_range2]}, {sheet_name2: [cell_range3, cell_range4]}]
+        For example, [{sheet1: ['A1:B10', 'A30:A40']}, {sheet2: ['B20:B50', 'B15:B55']}] . 
+        To correctly check an edit you should get the surrounding cells of the edited region for full context.
+        So if the edit scope was limited to cells B20:B50, you should get cells B15:B55. As a rule, include at least 2 rows and 2 columns around the edited region.
+        If conversation context gives you locations of important reference cells, include those as well. 
+        
+    Returns:
+        A list of strings of the updated / latest cell data in markdown format
+    """
+    try:
+
+        MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+        workbook_path = workspace_path
+        try:
+            temp_file_path = None
+            with open(MAPPINGS_FILE, 'r') as f:
+                mappings = json.load(f)
+                
+            # Try exact match first
+            if workbook_path in mappings:
+                temp_file_path = mappings[workbook_path]
+            else:            
+                # Try with just the filename
+                filename = Path(workbook_path).name
+                for key, value in mappings.items():
+                    if key.endswith(filename):
+                        temp_file_path = value
+            
+        except (json.JSONDecodeError, OSError) as e:
+            return f"Search failed: {str(e)}"
+        
+        if not temp_file_path:
+            temp_file_path = workbook_path
+            logger.info(f"Using original file path: {workbook_path}")
+        else:
+            logger.info(f"Using temporary file {temp_file_path} for workbook {workbook_path}")
+        
+        # parse the cell ranges
+        parsed_ranges = parse_cell_ranges(cell_ranges_to_get)
+        all_cell_data = []
+
+        for sheet_name, cell_ranges in parsed_ranges.items():
+            cell_data_str = get_excel_cell_data(
+                file_path=temp_file_path,
+                sheet_name=sheet_name,
+                cell_ranges=cell_ranges
+            )
+            
+
+            if cell_data_str:
+                all_cell_data.append(cell_data_str)
+
+        if all_cell_data:
+            return all_cell_data
+        else:
+            error_message = f"Error getting cell data, could not get cell data to verify. Ask user to verify manually: {str(e)}"
+            logger.error(error_message)
+            return error_message
+        
+    except Exception as e:
+        error_message = f"Error getting cell data, could not get cell data to verify. Ask user to verify manually: {str(e)}"
+        logger.error(error_message)
+        return error_message
+    
+
+async def edit_existing_excel(
+    workbook_path: str, 
+    context_search_query: str, 
+    exact_user_query: str, 
+    edit_instruction: str, 
+    context_regions: List[Dict[str, Any]]) -> str:
+    """Edit an existing excel file in the user loaded workspace. This tool needs the sheet name and row range of the region to be edited. The row range should be about 10-20 rows encompassing the region to be edited. This is required to supply context so that the current state of the excel file can be viewed before implementing edit.
+    Your conversation context is critical to generating the correct parameters for this tool. If you do not have any context in your conversation, you have to first call the get_excel_general_info tool to get the basic info like sheet names and cell addresses before calling this tool using the sheet names and row ranges.
+    The tool is intended for edits to only section of the excel file at a time, as given by the sheet name and row range. 
+    TWhen the user's request is very long, complex or broad, and multiple sections need to be edited, you will have to break it down into sub steps and call this tool multiple times for each step. For each tool call, you have to be clear about the edit that is intended to be accomplished and generate paramters accordingly.
+    For simple or medium edit requests that are only to one section of the excel file, one tool call will suffice. 
     
     Args:
         workbook_path: The path to the workbook to edit or create. Use the full path including the folder name. 
@@ -307,12 +889,33 @@ async def edit_existing_excel(workbook_path: str, context_search_query: str, exa
         exact_user_query: The exact user query that was given to you. This is the query that will be given to the system to perform the edit. Don't alter the user's message.
 
         edit_instruction: The instruction for the edit. This is the instruction that will be given to the system to perform the edit. Generate it based on your understanding of the conversation context and the user's request. Give pointed instructions to help the system implement the edit successfully, focusing on what changes should be made to which cells or tabs. Be as concise as possible and not verbose.
-    
+
+        context_regions: A list of dictionaries containing the context regions for the edit. The context regions dict looks like this: 
+        "context_regions": [
+            {
+            "sheet_name": "Sales Data",
+            "cell_ranges": ["A1:F1", "A4:B18", "D4:F18"]
+            },
+            {
+            "sheet_name": "Summary",
+            "cell_ranges": ["A1:C5", "A8:C15"]
+            },
+            {
+            "sheet_name": "Inventory",
+            "cell_ranges": ["A1:D1", "A3:D20"]
+            }
+        ]
+        It supplies the cell ranges on the sheetnames that are contextually important for the edit. Be as targeted as possible to supply the specific ranges relevant based on your conversation context.
+        For example, if the edit is supposed to link back to cells on another tab, those cell ranges should be supplied in context regions so the linking can be done to the right cells. 
+        If the edit is supposed to create formulas based on other rows or cell regions, those regions should be supplied in context regions for the correct linking. The system needs to see context of the cells to be linked to get formulas right.
+
+
     Returns:
-        A string of the result of the edit
+        A string of the result of the edit.
     """
     user_request = context_search_query
     MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+    workspace_path = workbook_path
     try:
         temp_file_path = None
         with open(MAPPINGS_FILE, 'r') as f:
@@ -341,32 +944,53 @@ async def edit_existing_excel(workbook_path: str, context_search_query: str, exa
         
         if not user_request:
             return "No user request provided"
+        
+        extracted_metadata = None
+        # Try hotcache data extraction first before semantic search
+        try:
+            extracted_metadata = get_excel_context_regions(workbook_path, context_regions)
+        except Exception as e:
+            logger.error(f"Error extracting context regions: {str(e)}", exc_info=True)
+        
+        # If the hotcache failes we'll do semantic search
+        if not extracted_metadata or "Error" in extracted_metadata:     
 
-        retriever = FAISSChunkRetriever(
-            storage=EmbeddingStorage(),
-            embedder=ChunkEmbedder()
-        )
-        
-        # Use just the filename for searching embeddings (without path)
-        temp_filename = Path(temp_file_path).name if temp_file_path else workbook_path
-        results = retriever.search(
-            query=user_request,
-            workbook_path=temp_filename,  # Use just the filename for searching
-            top_k=2,
-            score_threshold=0.2
-        )
-        
-        formatted_results = []
-        for result in results:
-            formatted_results.append({
-                "score": result["score"],
-                "content": result.get("text", result.get("markdown", "")),
-                "workbook_name": result.get("workbook_name", "Unknown"),
-                "metadata": result.get("metadata", {})
+            retriever = FAISSChunkRetriever(
+                storage=EmbeddingStorage(),
+                embedder=ChunkEmbedder()
+            )
+            
+            # Use just the filename for searching embeddings (without path)
+            temp_filename = Path(temp_file_path).name if temp_file_path else workbook_path
+            results = retriever.search(
+                query=user_request,
+                workbook_path=temp_filename,  # Use just the filename for searching
+                top_k=2,
+                score_threshold=0.2
+            )
+            
+            formatted_results = []
+            for result in results:
+                formatted_results.append({
+                    "score": result["score"],
+                    "content": result.get("text", result.get("markdown", "")),
+                    "markdown": result.get("text", result.get("markdown", "")),
+                    "workbook_name": result.get("workbook_name", "Unknown"),
+                    "metadata": result.get("metadata", {})
+                })
+            
+            search_results = formatted_results
+        else: 
+            # Just use the hotcache data
+            search_results = []
+            search_results.append({
+                "score": 1,
+                "content": extracted_metadata,
+                "markdown": extracted_metadata,
+                "workbook_name": workbook_path,
+                "metadata": {}
             })
-        
-        search_results = formatted_results
-        
+            
     except Exception as e:
         return f"Search failed: {str(e)}"
     
@@ -400,7 +1024,7 @@ async def edit_existing_excel(workbook_path: str, context_search_query: str, exa
         # edit
 
         with ExcelWriter(visible=True) as writer:
-            success, request_pending_edits = writer.write_data_to_existing(
+            success, updated_cells = writer.tool_write_data_to_existing(
                 data=parsed_data,
                 output_filepath=temp_file_path,
                 create_pending=False,
@@ -408,9 +1032,23 @@ async def edit_existing_excel(workbook_path: str, context_search_query: str, exa
 
         if not success:
             return "Error: Failed to edit workbook"
+
+        if not updated_cells:
+            return "Error: Updating succeeded but updated cells could not be viewed. Requires manual verification."
+
+        final_message = "Edited workbook."
+        # get a string rep of the updates
+        updated_cells_str = format_updated_cells(updated_cells)
+        if updated_cells_str:
+            final_message += f"Here are the updated cells: {updated_cells_str}"
+        # update the cache
+        try:
+            update_success = update_excel_cache(workspace_path, updated_cells)
+        except Exception as e:
+            final_message+= f"Edits succeeded but cache update failed -- cache may still reflect outdated data. Inform user to save the file and re-load the workspace to update the cache."
         
         logger.info(f"Successfully edited workbook at {temp_file_path}")
-        return "Success: Workbook edited successfully"
+        return final_message
         
     except Exception as e:
         logger.error(f"Failed to edit workbook at {temp_file_path}: {str(e)}")
@@ -537,5 +1175,6 @@ For circular references: be careful. A circular reference is not always an error
 Circular references are common in interest expense / cash flow / debt balance calculations, where average debt balance uses the current year debt balance to drive interest expense, which influences cash flow, which influences the current year debt payment and debt balance.
 """
 
+
 # Export all tools in a list for easy importing
-ALL_TOOLS = [add, multiply, divide, get_excel_general_info, edit_existing_excel, create_new_excel, get_audit_rules]
+ALL_TOOLS = [break_down_edit_request, implement_excel_edit, get_excel_general_info, create_new_excel, get_audit_rules, get_updated_excel_data_to_check]
