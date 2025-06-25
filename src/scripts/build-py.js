@@ -87,7 +87,8 @@ function buildPython() {
         '--hidden-import=langgraph',
         '--hidden-import=langchain',
         '--hidden-import=langchain-anthropic',
-        '--hidden-import=langchain-openai',   
+        '--hidden-import=langchain-openai',
+        '--hidden-import=langchain-google-genai',   
         '--hidden-import=voyageai',
         // copy metadata needed by transformers lib
         '--copy-metadata', 'regex',
@@ -115,6 +116,7 @@ function buildPython() {
         '--copy-metadata', 'langchain',
         '--copy-metadata', 'langchain-anthropic',
         '--copy-metadata', 'langchain-openai',
+        '--copy-metadata', 'langchain-google-genai',
         '--copy-metadata', 'voyageai',
         // Add the python-server directory to the path
         '--paths', pythonDir,
