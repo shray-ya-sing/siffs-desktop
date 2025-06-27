@@ -442,7 +442,107 @@ class ExcelWriter:
         except Exception as e:
             logger.error(f"Error editing existing workbook {self.file_path}: {str(e)}")
             return False, {}
-    
+
+
+    # OTHER METHODS FOR WORKBOOK ACTIONS-------------------------------------------------------------------------------------------------------------------------------------
+
+    def get_workbook_metadata(
+        self,
+        file_path: str,
+        sheet_cell_ranges: Optional[Dict[str, List[str]]] = None
+    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+        """Get cell data including formulas and values from specified ranges or entire workbook.
+        
+        Args:
+            file_path: Path to the Excel file
+            sheet_cell_ranges: Optional dict mapping sheet names to lists of cell ranges.
+                            If None, returns all used cells in all sheets.
+                            Example: {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
+        
+        Returns:
+            Dict with structure:
+            {
+                "data": {
+                    "Sheet1": [
+                        {"address": "A1", "formula": "=SUM(B1:C1)", "value": 100},
+                        ...
+                    ],
+                    ...
+                },
+                "errors": {
+                    "Sheet1": [
+                        {"cell": "A1", "error": "#VALUE!", "formula": "=1/0"},
+                        ...
+                    ],
+                    ...
+                }
+            }
+        """
+        try:
+            file_path = str(Path(file_path).resolve())
+            workbook = self._get_or_create_workbook(file_path)
+            result = {"data": {}, "errors": {}}
+            
+            # If no specific ranges provided, process all used ranges in all sheets
+            if not sheet_cell_ranges:
+                for sheet in workbook.sheets:
+                    try:
+                        used_range = sheet.used_range
+                        if used_range:
+                            sheet_cell_ranges = sheet_cell_ranges or {}
+                            sheet_cell_ranges[sheet.name] = [used_range.address]
+                    except Exception as e:
+                        logger.warning(f"Could not get used range for sheet {sheet.name}: {str(e)}")
+                        continue
+            
+            # Process each sheet and its ranges
+            for sheet_name, ranges in (sheet_cell_ranges or {}).items():
+                try:
+                    sheet = workbook.sheets[sheet_name]
+                    sheet_data = []
+                    sheet_errors = []
+                    
+                    for cell_range in ranges:
+                        try:
+                            range_obj = sheet.range(cell_range)
+                            for cell in range_obj:
+                                sheet_data.append({
+                                    'address': cell.address,
+                                    'formula': cell.formula,
+                                    'value': cell.value,
+                                })
+                        except Exception as range_err:
+                            logger.error(f"Error processing range {cell_range} in sheet {sheet_name}: {str(range_err)}")
+                            continue
+                    
+                    # Get error cells in the sheet
+                    try:
+                        error_cells = sheet.api.UsedRange.SpecialCells(-4123, 16)  # xlCellTypeFormulas, xlErrors
+                        for cell in error_cells:
+                            xl_cell = sheet.range(cell.address)
+                            sheet_errors.append({
+                                'cell': xl_cell.address,
+                                'error': cell.value,
+                                'formula': xl_cell.formula
+                            })
+                    except Exception as error_err:
+                        logger.warning(f"Could not get error cells for sheet {sheet_name}: {str(error_err)}")
+                    
+                    if sheet_data:
+                        result["data"][sheet_name] = sheet_data
+                    if sheet_errors:
+                        result["errors"][sheet_name] = sheet_errors
+                        
+                except Exception as sheet_err:
+                    logger.error(f"Error processing sheet {sheet_name}: {str(sheet_err)}")
+                    continue
+                    
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in get_workbook_data: {str(e)}", exc_info=True)
+            return {"data": {}, "errors": {}}
+
     # HELPER METHODS FOR WORKBOOK SESSION MANAGEMENT-------------------------------------------------------------------------------------------------------------------------------------
     def _get_or_create_workbook(self, file_path: str, create_new: bool = False) -> xw.Book:
         """Get or create a workbook using appropriate method"""
