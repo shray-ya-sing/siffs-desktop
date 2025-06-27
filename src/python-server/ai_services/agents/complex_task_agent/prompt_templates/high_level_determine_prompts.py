@@ -48,5 +48,16 @@ class HighLevelDeterminePrompts:
         you will go about implementing the actions to construct new elements and link or modify existing ones. Clearly break out each 
         element in the sequence and set out the sequence as a numbered list, listing the name of the element and the description of 
         what you need to do to implement that element in the sub-step.
-        "
+
+        Return a JSON object with this exact structure:
+    {
+        "implementation_sequence": "Description of the sequence, listed step by step in a numbered text paragraph",
+        "steps": [
+            {
+                "step_number": 1,
+                "description": "Step description, in broad terms describe what to do in this step",
+            }
+        ]
+    }
+        """
 

@@ -4,7 +4,8 @@ from pathlib import Path
 import sys
 import json
 import logging
-from typing import List, Dict, Optional, Tuple, Union, Any
+from typing import List, Dict, Optional, Tuple, Union, Any, Annotated
+from langgraph.types import Command, Send
 
 # Add the current directory to Python path
 current_dir = Path(__file__).parent.parent.parent.absolute()
@@ -313,9 +314,12 @@ def format_updated_cells(updated_cells: List[Dict[str, Any]]) -> str:
 
 # TOOL FUNCTIONS _________________________________________________________________________________________________________________________________
 
-@tool(
-    name="transfer_to_complex_request_agent",
-    description="""Hand off complex Excel tasks to specialized agent. 
+@tool
+def transfer_to_complex_request_agent(
+    exact_user_query: str
+) -> Command:
+    """
+    Hand off complex Excel tasks to specialized agent. 
     Use for requests that require:
     - Multi-step implementations
     - Creating new schedules/tabs
@@ -333,23 +337,17 @@ def format_updated_cells(updated_cells: List[Dict[str, Any]]) -> str:
     - Small range edits (<10 cells)
     - Direct value lookups
     - Basic math operations"""
-)
-def transfer_to_complex_request_agent(
-    exact_user_query: str,
-    state: Annotated[MessagesState, InjectedState], 
-    tool_call_id: Annotated[str, InjectedToolCallId],
-) -> Command:
+
     tool_message = {
         "role": "tool",
         "content": "Transferring to complex Excel agent for advanced request handling",
         "name": "transfer_to_complex_excel_request_agent",
-        "tool_call_id": tool_call_id,
     }
     task_description_message = {"role": "user", "content": exact_user_query}
-    agent_input = {**state, "messages": [task_description_message]}
+    agent_input = {"messages": [task_description_message]}
     return Command(
         goto=[Send("complex_excel_request_agent", agent_input)],
-        update={"messages": state["messages"] + [tool_message]}, 
+        update={"messages": [tool_message]}, 
         graph=Command.PARENT,
     )
 
@@ -1216,6 +1214,33 @@ For circular references: be careful. A circular reference is not always an error
 Circular references are common in interest expense / cash flow / debt balance calculations, where average debt balance uses the current year debt balance to drive interest expense, which influences cash flow, which influences the current year debt payment and debt balance.
 """
 
+def list_workspace_files() -> str:
+    """
+    List all files currently available in the user's workspace.
+    Use this tool to see which files you have access to and get the full workspace path of the file as stored in workspace. 
+    User may not input the full path in their request but you can use this tool to find the file they reference.
+    
+    Returns:
+        str: A formatted string listing all files in the workspace, one per line.
+             Returns an error message if no files are found or if there's an error.
+    """
+    MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+    
+    if not MAPPINGS_FILE.exists():
+        return "No workspace files found (metadata not available)"
+    
+    try:
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+        
+        if not mappings:
+            return "Workspace is empty (no files found)"
+            
+        file_list = "\n".join([f"- {path}" for path in mappings.keys()])
+        return f"Files in workspace:\n{file_list}"
+    
+    except Exception as e:
+        return f"Error accessing workspace: {str(e)}"
 
 # Export all tools in a list for easy importing
-ALL_TOOLS = [break_down_edit_request, implement_excel_edit, get_excel_general_info, create_new_excel, get_audit_rules, get_updated_excel_data_to_check]
+ALL_TOOLS = [break_down_edit_request, implement_excel_edit, get_excel_general_info, create_new_excel, get_audit_rules, get_updated_excel_data_to_check, list_workspace_files]

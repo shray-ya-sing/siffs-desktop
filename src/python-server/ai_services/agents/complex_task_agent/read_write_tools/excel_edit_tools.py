@@ -1,6 +1,6 @@
 import re
 import json
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Any, TypedDict, Annotated
 from pathlib import Path
 import sys
 import os
@@ -64,61 +64,78 @@ def write_formulas_to_excel(
             return updated_cells
         return []
 
-
-
-
-
-def validate_cell_formats(formula_str: str) -> bool:
+def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
     """
-    Validate if the input string is a valid JSON array of cell formulas.
-    Each item should be a dict with a single key-value pair where:
-    - Key is a valid cell reference (e.g., "A1", "Sheet1!B2")
-    - Value is a string starting with '=' (Excel formula)
+    Validate if the input is a valid dictionary of sheet formulas.
+    
+    Expected format:
+    {
+        "Sheet1Name": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+        "Sheet2Name": {"C1": "=AVERAGE(A1:A10)"}
+    }
+    
+    Args:
+        formula_dict: Either a JSON string or dict containing sheet formulas
     
     Returns:
         bool: True if valid, False otherwise
     """
-    # Basic JSON validation
-    try:
-        data = json.loads(formula_str)
-    except json.JSONDecodeError:
+    # Parse JSON string if needed
+    if isinstance(formula_dict, str):
+        try:
+            formula_dict = json.loads(formula_dict)
+        except json.JSONDecodeError:
+            return False
+    
+    # Check if it's a dict
+    if not isinstance(formula_dict, dict):
         return False
     
-    # Check if it's a list
-    if not isinstance(data, list):
-        return False
-    
-    # Check each item in the list
-    for item in data:
-        # Check if item is a dict with exactly one key-value pair
-        if not (isinstance(item, dict) and len(item) == 1):
+    # Check each sheet's formulas
+    for sheet_name, cell_formulas in formula_dict.items():
+        # Sheet name should be a non-empty string
+        if not isinstance(sheet_name, str) or not sheet_name.strip():
             return False
-        
-        cell_ref, formula = next(iter(item.items()))
-        
-        # Check cell reference format (e.g., "A1" or "Sheet1!A1")
-        if not re.match(r'^([A-Za-z0-9_]+!)?[A-Z]+[0-9]+$', str(cell_ref)):
+            
+        # Cell formulas should be a dict
+        if not isinstance(cell_formulas, dict):
             return False
-        
-        # Check if formula starts with '='
-        if not (isinstance(formula, str) and formula.startswith('=')):
-            return False
+            
+        # Check each cell formula in the sheet
+        for cell_ref, formula in cell_formulas.items():
+            # Check cell reference format (e.g., "A1")
+            if not re.match(r'^[A-Z]+[0-9]+$', str(cell_ref)):
+                return False
+            
+            # Check if formula starts with '='
+            if not (isinstance(formula, str) and formula.startswith('=')):
+                return False
     
     return True
 
-def parse_cell_formulas(formula_str: str) -> Optional[List[Dict[str, str]]]:
+def parse_cell_formulas(formula_input: Union[str, dict]) -> Optional[Dict[str, Dict[str, str]]]:
     """
-    Parse and validate cell formulas string into a list of dictionaries.
+    Parse and validate cell formulas into a dictionary of sheet formulas.
     
     Args:
-        formula_str: String in format [{"A1": "=SUM(B1:B2)"}, {"B1": "=5"}]
-        
+        formula_input: Either a JSON string or dict in format:
+            {
+                "Sheet1Name": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                "Sheet2Name": {"C1": "=AVERAGE(A1:A10)"}
+            }
+            
     Returns:
-        List of dictionaries with cell references and formulas if valid, None otherwise
+        Dictionary with sheet names as keys and cell formulas as values if valid, None otherwise
     """
     try:
-        if not validate_cell_formats(formula_str):
+        # If input is a string, parse it as JSON
+        if isinstance(formula_input, str):
+            formula_dict = json.loads(formula_input)
+        else:
+            formula_dict = formula_input
+            
+        if not validate_cell_formats(formula_dict):
             return None
-        return json.loads(formula_str)
-    except:
+        return formula_dict
+    except Exception:
         return None

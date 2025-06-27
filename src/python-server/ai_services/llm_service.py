@@ -1,8 +1,7 @@
-# ai_services/llm_service.py
 from typing import Dict, List, Optional, Union, AsyncGenerator
 import sys
 from pathlib import Path
-ai_services_path = Path(__file__).parent.parent
+ai_services_path = Path(__file__).parent
 sys.path.append(str(ai_services_path))
 from base_provider import Message, ChatResponse, ToolCall, LLMProvider
 from factory import ProviderFactory

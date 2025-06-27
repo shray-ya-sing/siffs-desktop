@@ -20,7 +20,7 @@ from langchain.embeddings import init_embeddings
 
 ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
-from llm_service import LLMService
+
 from prompts.system_prompts import VOLUTE_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,6 @@ class PrebuiltAgent:
 
     def _initialize_with_model(self, model_name: str):
         """Initialize the agent with a specific model"""
-        self.llm_service = LLMService()
         
         # Get the provider name for the model
         provider_name = self._get_provider_name(model_name)
@@ -125,7 +124,8 @@ class PrebuiltAgent:
             tools=ALL_TOOLS,
             prompt=enhanced_system_prompt,
             store=self.in_memory_store,
-            checkpointer=self.checkpointer
+            checkpointer=self.checkpointer,
+            name="simple_excel_agent"
         )
         
         self.current_model = model_name

@@ -27,7 +27,10 @@ class CheckingPrompts:
         If the step was fully successfully edited, and there is nothing wrong, you can proceed onto the next step, return true, 
         and a summary of the edit evaluation. If the edit was partially or not at all successful, you MUST consider reverting the 
         edits you just made and trying again. Return false and a summary of the edit evaluation as a dict object 
-        {{success: [true or false], summary: [summary of the edit evaluation]}}.
+        {
+            success: [true or false],
+            rationale: [summary of the edit evaluation]
+        }
         """
         return CHECK_EDIT_SUCCESS_PROMPT + '\n-------------------------------------\n' + REVERSION_REQUEST
 
@@ -47,8 +50,17 @@ class CheckingPrompts:
         you can view the metadata of the excel file for the cell region you wish to edit. Return a dict with the sheet name and 
         cell range you wish to view. Remember, to get context, you should get at least 2 rows and columns outside of the cell range 
         you wish to edit so you can view the full metadata. Which cell range metadata do you wish to view for your edit? 
-        If you wish to retry, return true and the dict {{sheet_name: [], cell_range: []}}. If you wish to proceed without retrying, 
-        return false.
+        If you wish to retry, return true and the dict {{sheet_name: cell_range}}. 
+        If you wish to proceed without retrying, return false.
+
+        For example,
+        {
+            retry: true
+            cell_range: {
+                "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+            }
+        }
         """
 
     @staticmethod
@@ -82,7 +94,13 @@ class CheckingPrompts:
     def get_retry_cell_formulas_prompt():
         return f"""        
         Analyze the instructions in the conversation history to determine how to correctly implement this edit. 
-        Generate a list of key-value pairs in the format [{{cell_address: updated_formula}}] that should be written to the file.
         
-        Format cell addresses as: SheetName!CellAddress (e.g., 'Sheet1!A1')
+        Return a dict object with the cell range you wish to edit. Remember, to get context, you should get at least 2 rows and columns 
+        outside of the cell range you wish to edit so you can view the full metadata.
+        
+        For example,
+        {{
+            "Sheet1Name": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+            "Sheet2Name": {"C1": "=AVERAGE(A1:A10)"}
+        }}
         """

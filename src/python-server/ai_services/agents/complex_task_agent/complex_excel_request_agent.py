@@ -1,18 +1,21 @@
+import uuid
+from typing import Optional, Dict, Any, AsyncGenerator
+from pathlib import Path
 import os
 import sys
-import json
-import asyncio
 import logging
-from pathlib import Path
-from typing import List, Dict, Optional, Any, AsyncGenerator, Union
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
+from langchain.chat_models import init_chat_model
 
-# Configure logging
-import logging
-logger = logging.getLogger(__name__)
+current_dir = Path(__file__).parent
+sys.path.append(str(current_dir))
 
-# Import custom states
-from state.agent_state import InputState, OverallState, DecisionState, OutputState
-# Import all node functions from other node files
+# Import State 
+from state.agent_state import OverallState, InputState, StepDecisionState, OutputState
+
+# Update imports for all node functions
 from nodes.high_level_determination_nodes import (
     determine_request_essence,
     determine_excel_status,
@@ -20,46 +23,29 @@ from nodes.high_level_determination_nodes import (
     determine_implementation_sequence,
     decide_next_step
 )
-
 from nodes.step_level_nodes import (
     get_step_metadata,
     get_step_instructions,
     get_step_cell_formulas,
     write_step_cell_formulas
 )
-
 from nodes.error_nodes import (
     retry_failed,
-    error_during_flow,
     step_edit_failed,
     retry_edit_failed,
     revert_edit_failed
 )
-
-from nodes.final_evaluation_nodes import (
-    check_final_success
+from nodes.final_evaluation_nodes import check_final_success
+from nodes.checking_nodes import (  # Add this import
+    get_updated_excel_data_to_check,
+    check_edit_success,
+    revert_edit,
+    decide_retry_edit,
+    get_retry_edit_instructions,
+    get_updated_metadata_after_retry,
+    check_edit_success_after_retry,
+    step_retry_succeeded
 )
-
-# Import LangGraph components
-
-import langgraph
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.store.memory import InMemoryStore
-from langgraph.prebuilt import create_react_agent
-
-from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.sqlite import SqliteSaver
-
-from langchain_core.tools import tool
-from langchain.chat_models import init_chat_model
-from langchain.embeddings import init_embeddings
-
-# Get the volute system prompt
-ai_services_path = Path(__file__).parent.parent.parent
-sys.path.append(str(ai_services_path))
-from llm_service import LLMService
-from prompts.system_prompts import VOLUTE_SYSTEM_PROMPT
-
 
 class ComplexExcelRequestAgent:
     _instance = None
@@ -67,29 +53,30 @@ class ComplexExcelRequestAgent:
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(ComplexExcelRequestAgent, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._initialized = False
-            cls._instance._initialize()
         return cls._instance
 
     def __init__(self):
-        if hasattr(self, '_initialized') and self._initialized:
+        if self._initialized:
             return
         self._initialized = True
         self._initialize()
 
     def _initialize(self):
         """Initialize shared resources"""
-        self.checkpointer = SqliteSaver.from_conn_string(":memory:")
+        self.checkpointer = InMemorySaver()
+        self.store = InMemoryStore()
         self.current_model = None
         self.llm = None
         self.workflow = None
+        self.complex_excel_request_agent = None
         self.provider_models = {
-            "google": {"gemini-2.5-pro"},
+            "google_genai": {"gemini-2.5-pro"},
             "openai": {"gpt-4", "gpt-4-turbo"},
             "anthropic": {"claude-3-opus-20240229"}
         }
-        self._initialized = True
+
 
     def with_model(self, model_name: str) -> 'ComplexExcelRequestAgent':
         """Return an agent instance with the specified model."""
@@ -147,7 +134,6 @@ class ComplexExcelRequestAgent:
         complex_excel_request_agent.add_node("check_edit_success_after_retry", check_edit_success_after_retry)
         complex_excel_request_agent.add_node("step_retry_succeeded", step_retry_succeeded)
         complex_excel_request_agent.add_node("retry_failed", retry_failed)
-        complex_excel_request_agent.add_node("error_during_flow", error_during_flow)
         complex_excel_request_agent.add_node("step_edit_failed", step_edit_failed)
         complex_excel_request_agent.add_node("retry_edit_failed", retry_edit_failed)
         complex_excel_request_agent.add_node("revert_edit_failed", revert_edit_failed)
@@ -159,9 +145,9 @@ class ComplexExcelRequestAgent:
         
         # Compile the workflow
         self.complex_excel_request_agent = complex_excel_request_agent.compile(
+            name="complex_excel_agent",
             checkpointer=self.checkpointer,
-            # This tells LangGraph to use the Command objects for flow control
-            interrupt_after=["check_edit_success", "check_edit_success_after_retry"]
+            store=self.store
         )
 
 

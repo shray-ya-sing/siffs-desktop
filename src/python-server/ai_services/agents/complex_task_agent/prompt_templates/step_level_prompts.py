@@ -1,7 +1,7 @@
 class StepLevelPrompts:
 
     @staticmethod
-    def get_metadata_prompt():
+    def get_step_metadata_prompt():
         return """
         Please provide the sheet name and cell range that contains the relevant data for the current step.
         Include enough context around the target cells by adding at least 2 rows and columns to the range.
@@ -36,9 +36,12 @@ class StepLevelPrompts:
         For each cell to be edited, provide a key-value pair in the format: {cell_address: updated_cell_formula}.
         The formula will be written directly to the Excel file, so it must be accurate and complete.
         
-        Output a list of dictionaries with the cell address as the key and the formula as the value.
-        For example:
-        [{"A1": "=SUM(B1:B10)", "B1": "=AVERAGE(B1:B10)"}]
+        Output a dictionary with the sheet name as the key and {cell_address: cell_formula} as the value.
+        For example,
+        {{
+            "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+            "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+        }}
 
         
         CORRECT EXCEL FORMULA GUIDELINES:
@@ -115,7 +118,7 @@ class StepLevelPrompts:
             "next_step_number": <int>,  // The step number to execute next (1-based index)
             "next_step": <str>,         // Brief description of the next step
             "all_steps_done": <bool>,   // True if all steps are completed
-            "reasoning": <str>          // Brief explanation for choosing this next step
+            "reasoning": <str>          // Very Brief explanation for choosing this next step
         }
         
         Important guidelines:

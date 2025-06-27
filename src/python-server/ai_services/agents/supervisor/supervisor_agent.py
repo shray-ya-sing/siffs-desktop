@@ -1,41 +1,102 @@
-from langgraph_supervisor import create_supervisor
-from langgraph.prebuilt import create_react_agent
-from langchain.google_genai import ChatGoogleGenerativeAI
-from langchain.anthropic import ChatAnthropic
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.store.memory import InMemoryStore
+from pathlib import Path
 import os
 import sys
+from langgraph_supervisor import create_supervisor
+from langchain_anthropic import ChatAnthropic
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
+
+# Setup path
 ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
+
+# Import local modules
 from agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMPT
-from agents.complex_task_agent.complex_excel_request_agent_graph import ComplexExcelRequestAgent
+from agents.complex_task_agent.complex_excel_request_agent import ComplexExcelRequestAgent
 from agents.prebuilt_agent import PrebuiltAgent
+from agents.supervisor.tools.tools import handoff_to_complex_excel_agent
 
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
-supervisor_model = ChatAnthropic(model_name="claude-3-7-sonnet-latest", api_key=anthropic_api_key)
-simple_request_model_name = "claude-3-7-latest"
-simple_request_agent = PrebuiltAgent().with_model(simple_request_model_name)
-complex_request_model_name = "gemini-2.5-pro"
-complex_request_agent = ComplexExcelRequestAgent().with_model(complex_request_model_name)
+class SupervisorAgent:
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(SupervisorAgent, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+            
+        self._initialized = True
+        self._initialize_agents()
+        self._setup_supervisor()
+    
+    def _initialize_agents(self):
+        """Initialize the underlying agents"""
+        anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        # Initialize models
+        self.supervisor_model = ChatAnthropic(
+            model_name="claude-3-7-sonnet-latest", 
+            api_key=anthropic_api_key
+        )
+        
+        # Initialize agents
+        self.simple_agent = PrebuiltAgent().with_model("claude-3-7-latest").get_agent()
+        self.complex_agent = ComplexExcelRequestAgent().with_model("gemini-2.5-pro").get_agent()
+        workspace_excel_files = self.view_files_in_workspace()
+        self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT + f"""
+        \nHere are the files the user added to the workspace that you have access to:
+        {workspace_excel_files}
+        \n The user will have to mention the file name in their request. Then if you are routing to the complex agent you have to supply the workspace path from the available list above to the handoff tool as a parameter for it to work correctly.
+        """
+    
+    def _setup_supervisor(self):
+        """Set up the supervisor with both agents"""
+        self.supervisor = create_supervisor(
+            [self.simple_agent, self.complex_agent],
+            tools=[handoff_to_complex_excel_agent],
+            model=self.supervisor_model,
+            prompt=self.enhanced_system_prompt,
+            output_mode="full_history"
+        )
+        self.agent_system = self.supervisor.compile()
+    
+    def get_agent_system(self):
+        """Get the compiled agent system"""
+        return self.agent_system
 
-supervisor_agent = create_supervisor(
-    [simple_request_agent, complex_request_agent],
-    model=supervisor_model,
-    prompt=SUPERVISOR_SYSTEM_PROMPT,
-    output_mode="full_history",
-    store=InMemoryStore(),
-    checkpointer=InMemorySaver()
-)
+    def view_files_in_workspace(self) -> str:
+        """Return a list of all user workbook files in the workspace with their original paths.
 
-# Compile and run
-agent_system = supervisor_agent.compile()
-result = agent_system.invoke({
-    "messages": [
-        {
-            "role": "user",
-            "content": "what's the combined headcount of the FAANG companies in 2024?"
-        }
-    ]
-})
+        Args:
+            None
+        
+        Returns:
+            A string of the original paths of the files in the workspace
+        """
+        MAPPINGS_FILE = Path(__file__).parent.parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+        
+        if not MAPPINGS_FILE.exists():
+            return "No files found in workspace"
+        
+        try:
+            with open(MAPPINGS_FILE, 'r') as f:
+                mappings = json.load(f)
+            
+            if not mappings:
+                return "No files found in workspace"
+
+            # Return just the original paths
+            file_list = "\n".join([f"- {path}" for path in mappings.keys()])
+            return f"Files in workspace:\n{file_list}"
+        
+        except Exception as e:
+            return f"Failed to read workspace files: {str(e)}"
+
+
+# Create singleton instance
+supervisor_agent = SupervisorAgent()
+agent_system = supervisor_agent.get_agent_system()
