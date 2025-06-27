@@ -60,6 +60,9 @@ class PrebuiltAgent:
             "openai": {
                 "gpt-4o",
                 "gpt-4o-mini"
+            },
+            "google": {
+                "gemini-2.5-pro"
             }
         }
         _initialized = True
