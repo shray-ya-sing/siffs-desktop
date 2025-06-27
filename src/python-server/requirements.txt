@@ -110,4 +110,4 @@ langchain==0.3.25
 langchain-anthropic==0.3.15
 langchain-openai==0.3.24
 langchain-google-genai==2.1.5
-
+langgraph-supervisor==0.0.27
