@@ -313,7 +313,7 @@ import MainLogo from '../logo/MainLogo'
           {/* Instructions */}
           <div className="max-w-md mx-auto text-center">
             <p className="text-sm text-gray-500 leading-relaxed">
-              Select a folder to open your workspace. The AI assistant will have full context of your project files.
+              Select a folder to copy it to the agent workspace. Volute only reads excel files, so any other file types you have will be ignored.
             </p>
           </div>
         </div>
