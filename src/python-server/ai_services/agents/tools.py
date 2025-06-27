@@ -22,6 +22,7 @@ from excel.metadata.generation.llm_metadata_generator import LLMMetadataGenerato
 # Set up logger
 logger = logging.getLogger(__name__)
 
+
 # HELPER FUNCTIONS _________________________________________________________________________________________________________________________________
 
 def get_excel_context_regions(
@@ -311,6 +312,46 @@ def format_updated_cells(updated_cells: List[Dict[str, Any]]) -> str:
 
 
 # TOOL FUNCTIONS _________________________________________________________________________________________________________________________________
+
+@tool(
+    name="transfer_to_complex_request_agent",
+    description="""Hand off complex Excel tasks to specialized agent. 
+    Use for requests that require:
+    - Multi-step implementations
+    - Creating new schedules/tabs
+    - Complex financial modeling
+    - Building new analyses from scratch
+    - Tasks requiring multiple formula edits across sheets
+    - Advanced Excel functionality
+    - Tasks requiring data validation across multiple ranges
+    
+    Handle these requests directly:
+    - Single cell updates
+    - Simple formula fixes
+    - Basic data entry
+    - Formatting changes
+    - Small range edits (<10 cells)
+    - Direct value lookups
+    - Basic math operations"""
+)
+def transfer_to_complex_request_agent(
+    exact_user_query: str,
+    state: Annotated[MessagesState, InjectedState], 
+    tool_call_id: Annotated[str, InjectedToolCallId],
+) -> Command:
+    tool_message = {
+        "role": "tool",
+        "content": "Transferring to complex Excel agent for advanced request handling",
+        "name": "transfer_to_complex_excel_request_agent",
+        "tool_call_id": tool_call_id,
+    }
+    task_description_message = {"role": "user", "content": exact_user_query}
+    agent_input = {**state, "messages": [task_description_message]}
+    return Command(
+        goto=[Send("complex_excel_request_agent", agent_input)],
+        update={"messages": state["messages"] + [tool_message]}, 
+        graph=Command.PARENT,
+    )
 
 #    It is a pair tool to the semantic_search_excel tool which is a semantic search based tool for getting contextually rich metadata chunks with detailed cell information.
 #This tool is meant for getting quick answers for basic things. Make the judgement call based on your knowledge whether the query can be satisfied with the general info or semantic search.
