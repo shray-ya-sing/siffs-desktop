@@ -118,6 +118,8 @@ class ComplexExcelRequestAgent:
                 return provider
         return None
 
+    def get_agent(self):
+        return self.complex_excel_request_agent
 
 
     def _build_workflow(self):

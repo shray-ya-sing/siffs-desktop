@@ -89,6 +89,9 @@ class PrebuiltAgent:
         PrebuiltAgent._initialized_models[model_name] = new_instance
         return new_instance
 
+    def get_agent(self):
+        return self.agent
+
     def _initialize_with_model(self, model_name: str):
         """Initialize the agent with a specific model"""
         self.llm_service = LLMService()
