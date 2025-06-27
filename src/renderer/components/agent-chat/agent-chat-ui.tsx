@@ -191,7 +191,7 @@ export default function AIChatUI() {
             const newMessages = [...prev];
             newMessages[newMessages.length - 1] = {
               ...newMessages[newMessages.length - 1],
-              content: newMessages[newMessages.length - 1].content + '\n' + message.content
+              content: newMessages[newMessages.length - 1].content + message.content
             };
             return newMessages;
           }
