@@ -5,8 +5,7 @@ import pandas as pd
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
 import sys
-import sentence_transformers
-import faiss
+
 import time
 # Path resolution
 current_file = Path(__file__).resolve()  # Get absolute path of current file
@@ -36,6 +35,8 @@ class ChunkLoader:
     @staticmethod
     def load_chunks_from_dir(directory: str, extension: str = '.txt', prefix: str = 'chunk_') -> List[Dict]:
         """Load chunks from a directory with given file extension and prefix."""
+        import sentence_transformers
+        import faiss
         chunks = []
         path = Path(directory)
         if not path.exists():

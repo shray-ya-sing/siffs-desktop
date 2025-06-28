@@ -3,8 +3,7 @@ import logging
 import asyncio
 import numpy as np
 from typing import Dict, Any, List, Optional, Literal
-from sentence_transformers import SentenceTransformer
-import voyageai
+
 import os
 import sys
 from pathlib import Path
@@ -20,6 +19,8 @@ class ChunkEmbedderHandler:
     def __init__(
         self
     ):
+        from sentence_transformers import SentenceTransformer
+        import voyageai
         # Track sessions
         self.sessions = {}  # request_id -> session data
 

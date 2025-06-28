@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import sys
-import faiss
+
 import time
 from datetime import datetime
 import logging
@@ -34,6 +34,7 @@ class ChunkLoader:
     @staticmethod
     def load_chunks_from_dir(directory: str, extension: str = '.md', prefix: str = 'chunk_') -> list[dict]:
         """Load chunks from markdown files in a directory."""
+        import faiss
         chunks = []
         path = Path(directory)
         if not path.exists():

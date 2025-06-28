@@ -3,7 +3,6 @@ import logging
 import asyncio
 import numpy as np
 from typing import Dict, Any, Optional
-from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +15,7 @@ class QueryEmbedderHandler:
         model_name: str = 'all-MiniLM-L6-v2',
         device: Optional[str] = None
     ):
+        from sentence_transformers import SentenceTransformer
         self.event_bus = event_bus
         
         # Initialize model (could potentially share with ChunkEmbedderHandler in future)

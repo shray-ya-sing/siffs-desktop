@@ -77,13 +77,6 @@ async def startup_event():
     from excel.metadata.extraction.event_handlers.chunk_extractor_handler import ChunkExtractorHandler
     logger.info("Starting up...ChunkExtractorHandler initialized")
     from excel.metadata.compression.event_handlers.markdown_compressor_handler import MarkdownCompressorHandler
-    logger.info("Starting up...MarkdownCompressorHandler initialized")
-    from excel.metadata.storage.event_handlers.storage_handler import StorageHandler
-    logger.info("Starting up...StorageHandler initialized")    
-    from vectors.embeddings.event_handler.chunk_embedder_handler import ChunkEmbedderHandler
-    logger.info("Starting up...ChunkEmbedderHandler initialized")    
-    from vectors.store.event_handlers.embedding_storage_handler import EmbeddingStorageHandler
-    logger.info("Starting up...EmbeddingStorageHandler initialized")
     
     
     # Print all registered routes

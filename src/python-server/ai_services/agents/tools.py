@@ -11,9 +11,7 @@ from langgraph.types import Command, Send
 current_dir = Path(__file__).parent.parent.parent.absolute()
 sys.path.append(str(current_dir))
 # Now import using relative path from vectors
-from vectors.search.faiss_chunk_retriever import FAISSChunkRetriever
-from vectors.embeddings.chunk_embedder import ChunkEmbedder
-from vectors.store.embedding_storage import EmbeddingStorage
+
 from excel.metadata.parsing.llm_metadata_parser import LLMMetadataParser
 from excel.editing.excel_writer import ExcelWriter
 from excel.editing.approval.excel_pending_edit_manager import ExcelPendingEditManager
@@ -485,84 +483,6 @@ def get_excel_general_info(
         return 'Failed to get data from cache'
 
 
-def semantic_search_excel(query: str, workbook_path: str) -> List[Dict[str, Any]]:
-    """Search for relevant information related to the contents of excel files.
-    This is a pair tool to the get_excel_general_info tool. If the question asks for summaries, overviews, or exact cell values, se the get_excel_general_info tool. You may have to use the get_excel_general_info tool to get the basic info like sheet names and cell addresses before calling this tool to get more detailed information.
-    This method only fetches 3 chunks. As each chunk is a sizable piece of text, getting more than three at at time will blow the llm token limits. 
-    When the user requests to understand a lot of data or a full excel file, you may have to break it down into multiple steps and call the tool multiple times with specific step queries instead of relying on one tool call to give you all the information you need. 
-    However, if the user requests to understand a small amount of data or a small section of the excel file, one tool call to this tool will suffice.
-    
-
-    Args:
-        query: The search query. This is the query that we will use to semantic search for the chunks of metadata most relevant to this query.
-        When certain cells or tabs are relevant, the query can include those specific cell addresses or sheet names to bemore accurate. It can also be a series of comma separated keywords or cell locations to fetch the context of those specific cells. It should be a single text string, never a list or dictionary of strings.
-
-        workbook_path: The path to the workbook to search within. Use the full path including the folder name. 
-        So folder/file.xlsx, not just file.xlsx. If you use file.xlsx, the function logic not work.
-    Returns:
-        A list of Dict[str, Any] containing the search results
-    """
-
-    top_k = 3
-    min_score = 0.2
-
-    MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
-    try:
-        temp_file_path = None
-        with open(MAPPINGS_FILE, 'r') as f:
-            mappings = json.load(f)
-            
-        # Try exact match first
-        if workbook_path in mappings:
-            temp_file_path = mappings[workbook_path]
-        else:            
-            # Try with just the filename
-            filename = Path(workbook_path).name
-            for key, value in mappings.items():
-                if key.endswith(filename):
-                    temp_file_path = value
-        
-    except (json.JSONDecodeError, OSError) as e:
-        return [{"error": f"Search failed: {str(e)}"}]
-    
-    if not temp_file_path:
-        temp_file_path = workbook_path
-        logger.info(f"Using original file path: {workbook_path}")
-    else:
-        logger.info(f"Using temporary file {temp_file_path} for workbook {workbook_path}")
-
-
-    try:
-        if not query:
-            return [{"error": "No search query provided"}]
-
-        retriever = FAISSChunkRetriever(
-            storage=EmbeddingStorage(),
-            embedder=ChunkEmbedder()
-        )
-        
-        # Use just the filename for searching embeddings (without path)
-        temp_filename = Path(temp_file_path).name if temp_file_path else workbook_path
-        results = retriever.search(
-            query=query,
-            workbook_path=temp_filename,  # Use just the filename for searching
-            top_k=top_k,
-            score_threshold=min_score
-        )
-        
-        formatted_results = []
-        for result in results:
-            formatted_results.append({
-                "score": result["score"],
-                "content": result.get("text", result.get("markdown", "")),
-                "workbook_name": result.get("workbook_name", "Unknown"),
-                "metadata": result.get("metadata", {})
-            })
-        
-        return formatted_results
-        
-    except Exception as e:
-        return [{"error": f"Search failed: {str(e)}"}]
 
 @tool
 def break_down_edit_request(
@@ -993,32 +913,7 @@ async def edit_existing_excel(
         
         # If the hotcache failes we'll do semantic search
         if not extracted_metadata or "Error" in extracted_metadata:     
-
-            retriever = FAISSChunkRetriever(
-                storage=EmbeddingStorage(),
-                embedder=ChunkEmbedder()
-            )
-            
-            # Use just the filename for searching embeddings (without path)
-            temp_filename = Path(temp_file_path).name if temp_file_path else workbook_path
-            results = retriever.search(
-                query=user_request,
-                workbook_path=temp_filename,  # Use just the filename for searching
-                top_k=2,
-                score_threshold=0.2
-            )
-            
-            formatted_results = []
-            for result in results:
-                formatted_results.append({
-                    "score": result["score"],
-                    "content": result.get("text", result.get("markdown", "")),
-                    "markdown": result.get("text", result.get("markdown", "")),
-                    "workbook_name": result.get("workbook_name", "Unknown"),
-                    "metadata": result.get("metadata", {})
-                })
-            
-            search_results = formatted_results
+            return "Error: Could not get the edit actions from metadata generator. Editing failed"
         else: 
             # Just use the hotcache data
             search_results = []

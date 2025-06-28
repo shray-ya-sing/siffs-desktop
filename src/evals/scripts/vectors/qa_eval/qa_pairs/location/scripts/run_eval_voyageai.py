@@ -9,7 +9,6 @@ import time
 from datetime import datetime
 import logging
 import voyageai
-import faiss
 
 # Path resolution
 current_file = Path(__file__).resolve()
@@ -32,6 +31,8 @@ logger = logging.getLogger(__name__)
 
 class VoyageAIRetrievalEvaluator:
     def __init__(self, chunks_dir: str, qa_pairs_base_dir: str, models: List[Dict[str, any]]):
+        import faiss
+
         self.logger = logging.getLogger(__name__)
         self.chunks_dir = Path(chunks_dir)
         self.qa_pairs_base_dir = Path(qa_pairs_base_dir)

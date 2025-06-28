@@ -1,4 +1,4 @@
-import faiss
+
 import numpy as np
 from typing import List, Dict, Optional, Tuple, Union
 import os
@@ -36,6 +36,7 @@ class FAISSChunkRetriever:
             embedder: ChunkEmbedder instance for query embedding
             index_path: Directory to store FAISS indices
         """
+        import faiss
         self.storage = storage
         self.embedder = embedder
         if index_path is None:

@@ -1,8 +1,6 @@
 import numpy as np
 from typing import List, Dict, Union, Optional, Tuple
-from sentence_transformers import SentenceTransformer
-import torch
-from tqdm import tqdm
+
 import logging
 import os
 import voyageai
@@ -25,6 +23,9 @@ class ChunkEmbedder:
         voyageai_api_key: Optional[str] = None
     ):
         """Initialize the embedder with a sentence-transformers model."""
+        from sentence_transformers import SentenceTransformer
+        import torch
+        from tqdm import tqdm
         self.logger = logging.getLogger(__name__)
         self.voyageai_initialized = False
         self.voyageai_client = None
