@@ -1,25 +1,94 @@
 import os
 import sys
+import logging
+import traceback
 from pathlib import Path
+from functools import wraps
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('high_level_determination.log')
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Add project root to path
 complex_agent_dir_path = Path(__file__).parent.parent
 sys.path.append(str(complex_agent_dir_path))
+
 from langgraph.types import Command
 from langgraph.config import get_stream_writer
-
 from state.agent_state import InputState, OverallState, StepDecisionState, OutputState
 from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
 from prompt_templates.step_level_prompts import StepLevelPrompts
 from read_write_tools.excel_info_tools import get_full_excel_metadata
 
-from typing import Annotated
+from typing import Annotated, Optional
 from typing_extensions import TypedDict
 from typing import List, Dict, Any
 
-from langchain.chat_models import init_chat_model
-llm = init_chat_model(model="gemini-2.5-pro", model_provider="google_genai")
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+# Decorator for error handling and logging
+def log_errors(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        func_name = func.__name__
+        logger.info(f"Starting {func_name}")
+        try:
+            result = func(*args, **kwargs)
+            logger.info(f"Completed {func_name} successfully")
+            return result
+        except Exception as e:
+            error_msg = f"Error in {func_name}: {str(e)}\n{traceback.format_exc()}"
+            logger.error(error_msg)
+            raise  # Re-raise the exception after logging
+    return wrapper
+
+# Initialize LLM
+try:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY environment variable not set")
+        
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-pro",
+        temperature=0.3,
+        max_retries=3,
+        google_api_key=GEMINI_API_KEY
+    )
+    logger.info("Successfully initialized Gemini LLM for high level determination")
+except Exception as e:
+    logger.error(f"Failed to initialize Gemini LLM: {str(e)}")
+    raise
+
+from pydantic import BaseModel, Field
+# Pydantic Model for structured output
+class Essence(BaseModel):
+    """Essence of the request."""
+    workspace_path: str = Field(description="The workspace path to edit")
+    task_summary: str = Field(description="The task summary")
+
+class Implementation(BaseModel):
+    """Implementation of the request."""
+    implementation_sequence: List[Dict[str, Any]] = Field(description="The implementation sequence")
+    steps: List[Dict[str, Any]] = Field(description="The steps in the implementation sequence"
+    )
+
+class NextStep(BaseModel):
+    """Next step in the implementation sequence."""
+    next_step: str = Field(description="The next step in the implementation sequence")
+    next_step_number: int = Field(description="The next step number in the implementation sequence")
+    all_steps_done: bool = Field(description="Whether all steps are done")
 
 # HIGH LEVEL DECOMPOSITION NODES
+@log_errors
 def determine_request_essence(state: InputState) -> OverallState:
     writer = get_stream_writer()
     writer({"custom_key": "Understanding request"})
@@ -34,16 +103,17 @@ def determine_request_essence(state: InputState) -> OverallState:
     llm_response = llm.invoke(messages)
     llm_response_content = llm_response.content
     messages.append({"role": "assistant", "content": llm_response_content})
-    return Command({
-        update: {"messages": messages, 
+    return Command(
+        update= {"messages": messages, 
         "thread_id": thread_id,
         "user_input": user_input,
         "latest_model_response": llm_response_content, 
         "workspace_path": workspace_path
     },
-    goto: "determine_excel_status"
-    })
+    goto= "determine_excel_status"
+    )
 
+@log_errors
 def determine_excel_status(state: OverallState) -> OverallState:
     writer = get_stream_writer()
     writer({"custom_key": "Understanding excel file contents and status"})
@@ -57,14 +127,15 @@ def determine_excel_status(state: OverallState) -> OverallState:
     llm_response = llm.invoke(messages)
     llm_response_content = llm_response.content
     messages.append({"role": "assistant", "content": llm_response_content})
-    return Command({
-        update: {"messages": [enhanced_user_request, llm_response_content], 
+    return Command(
+        update= {"messages": [enhanced_user_request, llm_response_content], 
         "latest_model_response": llm_response_content, 
         "original_excel_metadata": full_excel_metadata
     },
-    goto: "determine_model_architecture"
-    })
+    goto= "determine_model_architecture"
+    )
 
+@log_errors
 def determine_model_architecture(state: OverallState) -> OverallState:
     writer = get_stream_writer()
     writer({"custom_key": "Planning structure"})
@@ -76,13 +147,14 @@ def determine_model_architecture(state: OverallState) -> OverallState:
     llm_response = llm.invoke(messages)
     llm_response_content = llm_response.content
     messages.append({"role": "assistant", "content": llm_response_content})
-    return Command({
-        update: {"messages": [enhanced_user_request, llm_response_content], 
+    return Command(
+        update= {"messages": [enhanced_user_request, llm_response_content], 
         "latest_model_response": llm_response_content
     },
-    goto: "determine_implementation_sequence"
-    })
+    goto= "determine_implementation_sequence"
+    )
 
+@log_errors
 def determine_implementation_sequence(state: OverallState) -> OverallState:
     writer = get_stream_writer()
     writer({"custom_key": "Planning steps"})
@@ -97,16 +169,17 @@ def determine_implementation_sequence(state: OverallState) -> OverallState:
     implementation_sequence = llm_response_content.get("implementation_sequence")
     steps = llm_response_content.get("steps")
     messages.append({"role": "assistant", "content": llm_response_content})
-    return Command({
-        update: {"messages": [enhanced_user_request, llm_response_content], 
+    return Command(
+        update= {"messages": [enhanced_user_request, llm_response_content], 
         "latest_model_response": llm_response_content,
         "implementation_sequence": implementation_sequence,
         "steps": steps
     },
-    goto: "decide_next_step"
-    })
+    goto= "decide_next_step"
+    )
 
 
+@log_errors
 def decide_next_step(state: OverallState) -> OverallState:
     writer = get_stream_writer()
     writer({"custom_key": "Deciding next step"})
@@ -130,22 +203,22 @@ def decide_next_step(state: OverallState) -> OverallState:
     all_steps_done = llm_response_content.get("all_steps_done", False)
     messages.append({"role": "assistant", "content": llm_response_content})
     if not all_steps_done:
-        return Command({
-            update: {"messages": [enhanced_user_request, llm_response_content], 
+        return Command(
+            update= {"messages": [enhanced_user_request, llm_response_content], 
             "latest_model_response": llm_response_content,
             "current_step": next_step,
             "current_step_number": next_step_number
         },
-        goto: "get_step_metadata"
-    })
+        goto= "get_step_metadata"
+    )
     else:
-        return Command({
-            update: {"messages": [enhanced_user_request, llm_response_content], 
+        return Command(
+            update= {"messages": [enhanced_user_request, llm_response_content], 
             "latest_model_response": llm_response_content,
             "current_step": next_step,
             "current_step_number": next_step_number
         },
-        goto: "check_final_success"
-    })
+        goto= "check_final_success"
+    )
     
     
