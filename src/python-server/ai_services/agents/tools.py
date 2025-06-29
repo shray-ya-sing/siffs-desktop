@@ -517,7 +517,7 @@ def break_down_edit_request(
     from datetime import datetime
     
     # Define cache file path
-    cache_dir = Path(__file__).parent.parent.parent / "metadata" / "__cache"
+    cache_dir = Path(__file__).parent.parent.parent / "metadata" / "_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)  # Ensure cache directory exists
     cache_file = cache_dir / "decomposed_edits.json"
     
@@ -1109,6 +1109,7 @@ For circular references: be careful. A circular reference is not always an error
 Circular references are common in interest expense / cash flow / debt balance calculations, where average debt balance uses the current year debt balance to drive interest expense, which influences cash flow, which influences the current year debt payment and debt balance.
 """
 
+@tool
 def list_workspace_files() -> str:
     """
     List all files currently available in the user's workspace.
