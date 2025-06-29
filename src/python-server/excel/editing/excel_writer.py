@@ -341,6 +341,10 @@ class ExcelWriter:
     
         Args:
             data: Dictionary mapping sheet names to lists of cell data
+            For example, 
+            {
+                sheet_name: {"A1": "+SUM(A1:B10)", "B2": "+AVERAGE(G10:G20)"}
+            }
             output_filepath: Path to the Excel file
             version_id: Optional version ID. If None, will try to get the latest version from metadata.
             create_pending: Whether to create pending edits or apply directly
@@ -458,6 +462,7 @@ class ExcelWriter:
             sheet_cell_ranges: Optional dict mapping sheet names to lists of cell ranges.
                             If None, returns all used cells in all sheets.
                             Example: {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
+
         
         Returns:
             Dict with structure:
