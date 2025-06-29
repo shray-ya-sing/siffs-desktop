@@ -3,6 +3,10 @@ import sys
 import json
 from fastapi.responses import JSONResponse
 from fastapi import Request
+import shutil
+from pathlib import Path
+import atexit
+
 
 # Set UTF-8 encoding for all outputs
 if sys.platform == "win32":
@@ -18,7 +22,7 @@ if sys.platform == "win32":
 # Set environment variable for subprocesses
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-from pathlib import Path
+
 import logging
 
 # Import and setup logging configuration
@@ -66,18 +70,48 @@ from fastapi import WebSocket, WebSocketDisconnect
 # Create FastAPI app
 app = FastAPI(title="Volute API")
 
+def clear_metadata_cache():
+    """Clear the metadata cache directory"""
+    try:
+        cache_dir = Path(__file__).parent / "metadata" / "_cache"
+        if cache_dir.exists() and cache_dir.is_dir():
+            # Remove all files in the cache directory
+            for item in cache_dir.glob('*'):
+                if item.is_file():
+                    os.unlink(item)
+                elif item.is_dir():
+                    shutil.rmtree(item)
+            logger.info(f"Cleared metadata cache at {cache_dir}")
+            cache_dir = Path(__file__).parent / "metadata" / "__cache"
+        if cache_dir.exists() and cache_dir.is_dir():
+            # Remove all files in the cache directory
+            for item in cache_dir.glob('*'):
+                if item.is_file():
+                    os.unlink(item)
+                elif item.is_dir():
+                    shutil.rmtree(item)
+            logger.info(f"Cleared metadata cache at {cache_dir}")
+        else:
+            logger.info(f"Cache directory {cache_dir} does not exist, skipping clear")
+    except Exception as e:
+        logger.error(f"Error clearing metadata cache: {str(e)}")
+
+
 @app.on_event("startup")
 async def startup_event():
+    try:
+        clear_metadata_cache()
+    except Exception as e:
+        logger.error(f"Error clearing metadata cache: {str(e)}")
     from excel.orchestration.excel_orchestrator import ExcelOrchestrator
     logger.info("Starting up...Excel orchestrator initialized")
-    from ai_services.orchestration.prebuilt_agent_orchestrator import PrebuiltAgentOrchestrator
-    logger.info("Starting up...PrebuiltAgent orchestrator initialized")
+    from ai_services.orchestration.supervisor_agent_orchestrator import SupervisorAgentOrchestrator
+    logger.info("Starting up...Supervisor orchestrator initialized")
     from excel.metadata.extraction.event_handlers.metadata_cache_handler import MetadataCacheHandler
     logger.info("Starting up...MetadataCacheHandler initialized")
     from excel.metadata.extraction.event_handlers.chunk_extractor_handler import ChunkExtractorHandler
     logger.info("Starting up...ChunkExtractorHandler initialized")
-    from excel.metadata.compression.event_handlers.markdown_compressor_handler import MarkdownCompressorHandler
-    
+
     
     # Print all registered routes
     for route in app.routes:
@@ -171,6 +205,7 @@ async def log_requests(request: Request, call_next):
     
     logger.info(f"=== RESPONSE: {response.status_code} ===")
     return response
+
 
 if __name__ == '__main__':
     import uvicorn
