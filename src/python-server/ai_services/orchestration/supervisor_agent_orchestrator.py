@@ -230,12 +230,20 @@ class SupervisorAgentOrchestrator:
                 "messages": [{"role": "user", "content": message}],
                 "thread_id": thread_id
             }
+
+            config = {
+                    "configurable": {
+                        "thread_id": thread_id,
+                        "recursion_limit": 100  
+                    },
+                    "recursion_limit": 100
+                }
             
             assistant_message = ""
             # Stream both messages and custom data
             async for mode, chunk in agent_system.astream(
                 inputs,
-                {"configurable": {"thread_id": thread_id}} if thread_id else {},
+                config,
                 stream_mode=["messages", "custom"]
             ):
                 if mode == "messages":
@@ -262,19 +270,14 @@ class SupervisorAgentOrchestrator:
                             }
                 
                 elif mode == "custom":
-                    # Handle custom data streaming
-                    if isinstance(chunk, dict):
-                        content = chunk.get("content", str(chunk))
-
-                        text = content
-                        assistant_message += '\n' + text
-                        
-                        if text:
-                            yield {
-                                "type": "content",
-                                "content": text,
-                                "requestId": request_id
-                            }
+                    if isinstance(chunk, str):
+                        assistant_message += chunk
+                        yield {
+                            "type": "content",
+                            "content": chunk,
+                            "requestId": request_id
+                    }
+                            
         
             yield {"type": "done", "requestId": request_id}
             

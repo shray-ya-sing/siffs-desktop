@@ -1,6 +1,6 @@
 import os
 import sys
-import re
+
 from pathlib import Path
 complex_agent_dir_path = Path(__file__).parent.parent
 sys.path.append(str(complex_agent_dir_path))
@@ -208,6 +208,9 @@ def get_step_cell_formulas(state: OverallState) -> OverallState:
                 
             except json.JSONDecodeError:
                 logger.error("Failed to parse sheets data as JSON")
+            except Exception as e:
+                logger.error(f"Failed to parse sheets data: {e}")
+                raise
 
 
         try:
@@ -215,9 +218,7 @@ def get_step_cell_formulas(state: OverallState) -> OverallState:
             logger.info("Parsed sheets data into formulas")
         except Exception as e:
             logger.error(f"Failed to parse sheets data into formulas: {e}")
-            return Command(
-                goto= "step_edit_failed"
-            )
+            raise
     # store the metadata cells before editing
     if cell_data:        
         try:
@@ -235,13 +236,9 @@ def get_step_cell_formulas(state: OverallState) -> OverallState:
 
         except Exception as e:
             logger.error(f"Failed to get excel metadata before edit: {e}")
-            return Command(
-                goto= "step_edit_failed"
-            )
+            raise
     
-    return Command(
-        goto= "step_edit_failed"
-    )
+    raise Exception("Failed to get excel metadata before edit")
 
 @log_errors
 def write_step_cell_formulas(state: OverallState) -> OverallState:
@@ -255,27 +252,28 @@ def write_step_cell_formulas(state: OverallState) -> OverallState:
             logger.info(f"Validated formulas from llm via json string parsing")
         except json.JSONDecodeError:
             logger.error("Failed to parse sheets data as JSON")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to parse sheets data as pydantic: {e}")
+            raise
     else:
         try:
             validated_formulas = parse_cell_formulas(current_step_cell_formulas_for_edit)   
             logger.info(f"Validated formulas from llm via pydantic parsing")
         except Exception as e:
             logger.error(f"Failed to parse sheets data as pydantic: {e}")
-            return Command(
-                goto="step_edit_failed"
-            )
+            raise
     try:
         logger.info(f"Writing formulas to excel: {validated_formulas}")
         updated_formulas = write_formulas_to_excel(state["workspace_path"], validated_formulas)
     except Exception as e:
         logger.error(f"Failed to write formulas to excel: {e}")
-        return Command(
-            goto= "step_edit_failed"
-        )
+        raise
     try:
         update_excel_cache(state["workspace_path"], updated_formulas)
     except Exception as e:
         logger.error(f"Failed to update excel cache: {e}")
+        raise
     return Command(
         goto= "get_updated_excel_data_to_check"
     )
@@ -292,6 +290,9 @@ def clean_json_string(json_str):
     Returns:
         Parsed Python object from the JSON, or None if parsing fails
     """
+    import re 
+    import ast
+
     if not isinstance(json_str, str):
         # If it's not a string, return as-is (might already be a dict/list)
         return json_str

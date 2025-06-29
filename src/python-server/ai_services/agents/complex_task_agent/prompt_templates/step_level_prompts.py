@@ -107,6 +107,21 @@ class StepLevelPrompts:
         
         MATCH with Multiple Criteria
         Formula: =MATCH(1, (Criteria1_Range=Criteria1) * (Criteria2_Range=Criteria2), 0)
+
+
+        Sheets property in the output should be a JSON like string mapping cell adress to updated formula. For example:
+        {{
+            "Sheet1": {{
+                "A1": "=SUM(B1:B10)",
+                "B1": "=A1*2"
+            }},
+            "Sheet2": {{
+                "C1": "=AVERAGE(A1:A10)"
+            }}
+        }}
+
+        DO NOT Group multiple cells together to create entries with cell ranges as keys like B87:B96': ['=Assumptions!A49', '=Assumptions!A50', '=Assumptions!A51'......].
+        Make each key value pair entry for each cell, where the key represents the cell address of a SINGLE cell and the value the formula for only that SINGLE cell.
         """
 
 

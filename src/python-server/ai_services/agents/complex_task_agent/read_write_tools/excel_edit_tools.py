@@ -86,11 +86,6 @@ def write_formulas_to_excel(
             
             if success and updated_cells:
                 logger.info(f"Successfully updated {len(updated_cells)} cells")
-                try:
-                    update_excel_cache(workspace_path, updated_cells)
-                    logger.debug("Successfully updated Excel cache")
-                except Exception as e:
-                    logger.error(f"Cache update failed: {str(e)}", exc_info=True)
                 return updated_cells
             else:
                 logger.warning("No cells were updated or write operation failed")
@@ -172,10 +167,6 @@ def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
                 logger.error(f"Invalid cell reference format: {cell_ref}")
                 return False
             
-            # Check if formula starts with '='
-            if not (isinstance(formula, str) and formula.startswith('=')):
-                logger.error(f"Formula for {sheet_name}!{cell_ref} must start with '='. Got: {formula}")
-                return False
     
     logger.debug("Cell format validation successful")
     return True

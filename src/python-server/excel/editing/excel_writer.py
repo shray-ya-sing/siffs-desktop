@@ -507,6 +507,8 @@ class ExcelWriter:
                     sheet_data = []
                     sheet_errors = []
                     
+                    if isinstance(ranges, str):
+                        ranges = [ranges]
                     for cell_range in ranges:
                         try:
                             range_obj = sheet.range(cell_range)
