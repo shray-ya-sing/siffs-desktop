@@ -110,6 +110,19 @@ def get_full_excel_metadata(workspace_path: str) -> str:
     Returns:
         A JSON string containing all metadata for the excel file
     """
+
+    MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
+    
+    try:
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+        temp_file_path = mappings.get(workspace_path) or next(
+            (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+            workspace_path
+        )
+    except (json.JSONDecodeError, OSError):
+        temp_file_path = workspace_path
+
     try:
         # Get the cache file
         cache_path = server_dir_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
@@ -120,11 +133,14 @@ def get_full_excel_metadata(workspace_path: str) -> str:
         # Load the cache
         with open(cache_path, 'r') as f:
             cache_data = json.load(f)
+
+
+        # Find the workbook by matching the workbook_name
+        file_name = os.path.basename(temp_file_path)
+        for cache_key, workbook_data in cache_data.items():
+            if isinstance(workbook_data, dict) and workbook_data.get('workbook_name') == file_name:
+                return workbook_data
         
-        # Get the workbook data
-        workbook_data = cache_data.get(workspace_path)
-        if not workbook_data:
-            return 'No data found for workspace'
 
         # Return the complete workbook data
         return json.dumps(workbook_data, separators=(',', ':'))
@@ -205,7 +221,58 @@ def get_excel_metadata(workspace_path: str, sheet_cell_ranges: Optional[Dict[str
     except Exception as e:
         logger.error(f"Error getting cell data: {str(e)}", exc_info=True)
         return [{"error": f"Failed to get cell data: {str(e)}"}]
+
+
+def get_cell_formulas(workspace_path: str, cell_dict: Dict[str, Dict[str, str]] = None) -> str:
+    """
+            Get formulas from specific cells in an Excel workbook.
+            
+            Args:
+                file_path: Path to the Excel file
+                cell_dict: Dictionary mapping sheet names to cell references
+                    Example: {
+                        "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                        "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+                    }
+                    Note: The formula values are ignored, only cell references are used.
+                    
+            Returns:
+                Dictionary with the same structure as input, but containing the actual
+                formulas from the Excel file.
+                Example: {
+                    "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                    "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+                }
+            """
+
+    MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
+    
+    try:
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+        temp_file_path = mappings.get(workspace_path) or next(
+            (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+            workspace_path
+        )
+    except (json.JSONDecodeError, OSError):
+        temp_file_path = workspace_path
+
+    try:
+        with ExcelWriter(visible=True) as writer:
+            result = writer.get_cell_formulas(temp_file_path, cell_dict)
+        if result:
+            return result
+        else:
+            return {} 
+            
         
+    except Exception as e:
+        logger.error(f"Error getting cell data: {str(e)}", exc_info=True)
+        return [{"error": f"Failed to get cell data: {str(e)}"}]
+
+
+
+
 def xl_col_to_name(col_num):
     """Convert a column number to Excel column name (A, B, ..., Z, AA, AB, ...)"""
     col_name = ''

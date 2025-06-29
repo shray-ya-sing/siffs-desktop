@@ -127,10 +127,27 @@ def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
             logger.error(f"Failed to parse JSON string: {str(je)}")
             return False
     
+    # Handle case where the dictionary has string values that are JSON
+    if isinstance(formula_dict, dict):
+        for key, value in list(formula_dict.items()):
+            if isinstance(value, str):
+                try:
+                    parsed_value = json.loads(value)
+                    if isinstance(parsed_value, (dict, list)):
+                        formula_dict[key] = parsed_value
+                        logger.debug(f"Parsed nested JSON for key: {key}")
+                except json.JSONDecodeError:
+                    pass  # Not a JSON string, keep original value
+    
     # Check if it's a dict
     if not isinstance(formula_dict, dict):
         logger.error(f"Expected dict, got {type(formula_dict).__name__}")
         return False
+        
+    # Handle the case where sheets are nested under a 'sheets' key
+    if 'sheets' in formula_dict and isinstance(formula_dict['sheets'], dict):
+        logger.debug("Found 'sheets' key, using its contents for validation")
+        formula_dict = formula_dict['sheets']
     
     # Check each sheet's formulas
     for sheet_name, cell_formulas in formula_dict.items():

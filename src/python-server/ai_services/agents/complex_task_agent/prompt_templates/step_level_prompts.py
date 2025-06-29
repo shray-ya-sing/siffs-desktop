@@ -42,17 +42,7 @@ class StepLevelPrompts:
         return f"""
         Here are the instructions for this step:{step}
         \n
-        To execute this step, generate the updated formulas to write to the excel file. Output your response as a JSON like string of a nested dictionary mapping sheet names to cell formulas.
-        For example,
-        {
-            "Sheet1": {
-                "A1": "=SUM(B1:B10)",
-                "B1": "=A1*2"
-            },
-            "Sheet2": {
-                "C1": "=AVERAGE(A1:A10)"
-            }
-        }
+        To execute this step, generate the updated formulas to write to the excel file.
         
         CRITICAL DATA HANDLING RULES:
         1. NEVER overwrite or modify any existing non-blank cells

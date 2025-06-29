@@ -125,3 +125,25 @@ def revert_edit_failed(state: StepDecisionState) -> OverallState:
         },
         goto= "END"
     )
+
+@log_errors
+def task_understanding_failed(state: InputState) -> OverallState:
+    writer = get_stream_writer()
+    writer({"custom_key": "Task understanding failed, agent terminated"})
+    return Command(
+        update= {
+        "agent_succeeded": False
+        },
+        goto= "END"
+    )
+
+@log_errors
+def llm_response_failure(state:OverallState) -> OverallState:
+    writer = get_stream_writer()
+    writer({"custom_key": "LLM response failure, agent terminated"})
+    return Command(
+        update= {
+        "agent_succeeded": False
+        },
+        goto= "END"
+    )

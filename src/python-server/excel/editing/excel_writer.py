@@ -548,6 +548,66 @@ class ExcelWriter:
             logger.error(f"Error in get_workbook_data: {str(e)}", exc_info=True)
             return {"data": {}, "errors": {}}
 
+
+
+    def get_cell_formulas(
+        self,
+        file_path: str,
+        cell_dict: Dict[str, Dict[str, str]]
+    ) -> Dict[str, Dict[str, str]]:
+        """
+            Get formulas from specific cells in an Excel workbook.
+            
+            Args:
+                file_path: Path to the Excel file
+                cell_dict: Dictionary mapping sheet names to cell references
+                    Example: {
+                        "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                        "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+                    }
+                    Note: The formula values are ignored, only cell references are used.
+                    
+            Returns:
+                Dictionary with the same structure as input, but containing the actual
+                formulas from the Excel file.
+                Example: {
+                    "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                    "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+                }
+            """
+        try:
+            file_path = str(Path(file_path).resolve())
+            workbook = self._get_or_create_workbook(file_path)
+            result = {}
+            
+            for sheet_name, cells in cell_dict.items():
+                try:
+                    sheet = wb.sheets[sheet_name]
+                    sheet_result = {}
+                    
+                    for cell_ref in cells:
+                        try:
+                            cell = sheet.range(cell_ref)
+                            sheet_result[cell_ref] = cell.formula
+                        except Exception as cell_err:
+                            logger.warning(
+                                f"Error accessing cell {cell_ref} in sheet {sheet_name}: {str(cell_err)}"
+                            )
+                            sheet_result[cell_ref] = None
+                    
+                    result[sheet_name] = sheet_result
+                    
+                except Exception as sheet_err:
+                    logger.error(f"Error processing sheet {sheet_name}: {str(sheet_err)}")
+                    result[sheet_name] = {cell_ref: None for cell_ref in cells}
+                    continue
+                    
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in get_workbook_data: {str(e)}", exc_info=True)
+            return {}
+
     # HELPER METHODS FOR WORKBOOK SESSION MANAGEMENT-------------------------------------------------------------------------------------------------------------------------------------
     def _get_or_create_workbook(self, file_path: str, create_new: bool = False) -> xw.Book:
         """Get or create a workbook using appropriate method"""
