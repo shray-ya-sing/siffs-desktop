@@ -33,7 +33,7 @@ class ChunkExtractorHandler:
         
         # Register event handlers
         event_bus.on_async("START_FRESH_EXTRACTION", self.handle_fresh_extraction)
-        event_bus.on_async("CACHED_METADATA_FOUND", self.handle_cached_metadata)
+        event_bus.on_async("CACHED_METADATA_FOUND", self.handle_cached_metadata_without_events)
         
         logger.info(f"ChunkExtractorHandler initialized (chunk size: {self.rows_per_chunk} rows)")
         
@@ -64,7 +64,7 @@ class ChunkExtractorHandler:
             })
             
             # Extract chunks using existing method
-            await self._extract_chunks_progressively(
+            await self.extract_lightweight_metadata_without_events(
                 extractor, 
                 file_path, 
                 client_id, 
@@ -119,7 +119,68 @@ class ChunkExtractorHandler:
             "request_id": request_id,
             "from_cache": True
         })
+
+
+    async def handle_cached_metadata_without_events(self, event):
+        """Handle when cached metadata is found - just forward it"""
+        chunks = event.data.get("chunks", [])
+        client_id = event.data.get("client_id")
+        request_id = event.data.get("request_id")
         
+        logger.info(f"Processing {len(chunks)} cached chunks")
+
+
+    async def extract_lightweight_metadata_without_events(self, extractor, file_path: str, workspace_path: str, client_id: str, request_id: str, session_id: str):
+        """
+        Extract lightweight metadata without emitting events, just saving to hotcache.
+        """
+        try:
+            # Extract lightweight metadata
+            metadata = extractor.extract_lightweight_metadata(file_path)
+            
+            # Get sheet dimensions for non_empty_rows/columns
+            extractor.open_workbook(file_path)
+            sheet_dimensions = {
+                sheet.title: {
+                    "rows": min(sheet.max_row or 0, 1048576),
+                    "cols": min(sheet.max_column or 0, 16384)
+                }
+                for sheet in extractor.workbook.worksheets
+            }
+            extractor.close()
+            
+            # Add dimensions to each sheet
+            for sheet_name, sheet_data in metadata["sheets"].items():
+                dims = sheet_dimensions.get(sheet_name, {"rows": 0, "cols": 0})
+                sheet_data.update({
+                    "non_empty_rows": dims["rows"],
+                    "non_empty_columns": dims["cols"]
+                })
+            
+            # Wrap in the expected format
+            hotcache_data = {
+                workspace_path: {
+                    **metadata,
+                    "extracted_at": datetime.now().isoformat(),
+                    "workspace_path": workspace_path
+                }
+            }
+            
+            # Save to hotcache
+            self.save_excel_hotcache(hotcache_data[workspace_path], workspace_path)
+            
+            logger.info(f"Successfully extracted lightweight metadata for {file_path}")
+            
+        except Exception as e:
+            logger.error(f"Error in lightweight metadata extraction: {str(e)}", exc_info=True)
+        
+        finally:
+            if 'extractor' in locals() and hasattr(extractor, 'close'):
+                try:
+                    extractor.close()
+                except:
+                    pass
+
     async def _extract_chunks_progressively(self, extractor, file_path, client_id, request_id, session_id, workspace_path):
         """Extract chunks progressively using the existing extractor"""
         try:
