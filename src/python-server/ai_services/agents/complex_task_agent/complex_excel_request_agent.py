@@ -8,6 +8,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from langchain.chat_models import init_chat_model
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
@@ -94,7 +95,15 @@ class ComplexExcelRequestAgent:
         if not provider_name:
             raise ValueError(f"Unsupported model: {model_name}")
             
-        self.llm = init_chat_model(model=f"{provider_name}:{model_name}")
+    
+        api_key = os.getenv("GEMINI_API_KEY")
+        self.llm = ChatGoogleGenerativeAI(
+            model= "gemini-2.5-pro",
+            temperature=0.3,
+            max_retries=2,
+            google_api_key=api_key,
+        )
+
         self.current_model = model_name
         self._build_workflow()
 
