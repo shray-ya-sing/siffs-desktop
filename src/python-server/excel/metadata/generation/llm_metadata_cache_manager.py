@@ -46,7 +46,7 @@ class LLMMetadataCacheManager:
         self._hits = 0
         self._misses = 0
         self._logger = logging.getLogger('LLMMetadataCache')
-        self.cache_dir = Path(__file__).parent.parent / "__cache"
+        self.cache_dir = Path(__file__).parent.parent / "_cache"
         os.makedirs(self.cache_dir, exist_ok=True)
         self.auto_save = auto_save
         self.save_interval = save_interval
