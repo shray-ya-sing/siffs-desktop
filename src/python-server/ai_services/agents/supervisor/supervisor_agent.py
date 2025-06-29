@@ -14,7 +14,7 @@ sys.path.append(str(ai_services_path))
 from agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMPT
 from agents.complex_task_agent.complex_excel_request_agent import ComplexExcelRequestAgent
 from agents.prebuilt_agent import PrebuiltAgent
-from agents.supervisor.tools.tools import handoff_to_complex_excel_agent
+from agents.supervisor.tools.tools import handoff_to_complex_excel_agent, list_workspace_files
 
 class SupervisorAgent:
     _instance = None
@@ -46,18 +46,14 @@ class SupervisorAgent:
         # Initialize agents
         self.simple_agent = PrebuiltAgent().with_model("claude-3-7-latest").get_agent()
         self.complex_agent = ComplexExcelRequestAgent().with_model("gemini-2.5-pro").get_agent()
-        workspace_excel_files = self.view_files_in_workspace()
-        self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT + f"""
-        \nHere are the files the user added to the workspace that you have access to:
-        {workspace_excel_files}
-        \n The user will have to mention the file name in their request. Then if you are routing to the complex agent you have to supply the workspace path from the available list above to the handoff tool as a parameter for it to work correctly.
-        """
+
+        self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT 
     
     def _setup_supervisor(self):
         """Set up the supervisor with both agents"""
         self.supervisor = create_supervisor(
             [self.simple_agent, self.complex_agent],
-            tools=[handoff_to_complex_excel_agent],
+            tools=[list_workspace_files],
             model=self.supervisor_model,
             prompt=self.enhanced_system_prompt,
             output_mode="full_history"
@@ -87,7 +83,7 @@ class SupervisorAgent:
                 mappings = json.load(f)
             
             if not mappings:
-                return "No files found in workspace"
+                return "Found cache but no files found in workspace"
 
             # Return just the original paths
             file_list = "\n".join([f"- {path}" for path in mappings.keys()])
