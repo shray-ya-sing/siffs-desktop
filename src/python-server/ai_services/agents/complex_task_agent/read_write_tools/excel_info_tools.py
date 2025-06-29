@@ -142,6 +142,9 @@ def get_excel_metadata(workspace_path: str, sheet_cell_ranges: Optional[Dict[str
     
     Args:
         workspace_path: Full path to the excel file
+        sheet_cell_ranges: Optional dict mapping sheet names to lists of cell ranges.
+                            If None, returns all used cells in all sheets.
+                            Example: {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
         
     Returns:
         A JSON string containing sheet names as keys and lists of cell data as values
@@ -161,7 +164,7 @@ def get_excel_metadata(workspace_path: str, sheet_cell_ranges: Optional[Dict[str
         temp_file_path = workspace_path
 
     try:
-        with ExcelWriter(visible=False) as writer:
+        with ExcelWriter(visible=True) as writer:
             # Get all data from all sheets
             result = writer.get_workbook_metadata(temp_file_path, sheet_cell_ranges)
             
