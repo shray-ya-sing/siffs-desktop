@@ -1,9 +1,8 @@
 import numpy as np
 from typing import List, Dict, Union, Optional, Tuple
-
 import logging
 import os
-import voyageai
+
 from pathlib import Path
 import sys
 import json
@@ -26,6 +25,8 @@ class ChunkEmbedder:
         from sentence_transformers import SentenceTransformer
         import torch
         from tqdm import tqdm
+        import voyageai
+        
         self.logger = logging.getLogger(__name__)
         self.voyageai_initialized = False
         self.voyageai_client = None
