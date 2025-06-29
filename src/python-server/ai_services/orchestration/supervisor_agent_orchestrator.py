@@ -1,8 +1,12 @@
 # Create a new file: supervisor_agent_orchestrator.py
 import logging
-from typing import Dict, Any, Optional, AsyncGenerator
+from typing import Dict, Any, Optional, AsyncGenerator, List, Union
+import uuid
+from datetime import datetime, timezone
+
 from pathlib import Path
 import sys
+import json
 
 ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
@@ -14,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 class SupervisorAgentOrchestrator:
     """Orchestrates WebSocket communication with SupervisorAgent"""
+    CACHE_DIR = Path(__file__).parent.parent.parent / "metadata" / "_cache"
+    CONVERSATION_CACHE = CACHE_DIR / "conversation_cache.json"
     
     EXCLUDED_NODES = {
     "determine_implementation_sequence",
@@ -34,6 +40,84 @@ class SupervisorAgentOrchestrator:
         """Initialize the orchestrator"""
         self.setup_event_handlers()
         logger.info("SupervisorAgentOrchestrator initialized")
+        self.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        self._conversations = self._load_conversations()
+    
+    def _save_conversations(self):
+        """Save conversations to cache file"""
+        try:
+            with open(self.CONVERSATION_CACHE, 'w') as f:
+                json.dump(self._conversations, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving conversation cache: {e}")
+
+    # In the _append_message method, update it to also update thread metadata
+    def _append_message(self, thread_id: str, role: str, content: str):
+        """Append a message to a conversation thread and update thread metadata"""
+        current_time = datetime.utcnow().isoformat()
+        
+        # Initialize thread if it doesn't exist
+        if thread_id not in self._conversations:
+            self._conversations[thread_id] = {
+                "metadata": {
+                    "created_at": current_time,
+                    "updated_at": current_time,
+                    "message_count": 0
+                },
+                "messages": []
+            }
+        else:
+            # Update the updated_at timestamp
+            self._conversations[thread_id]["metadata"]["updated_at"] = current_time
+        
+        # Add the message
+        self._conversations[thread_id]["messages"].append({
+            "role": role,
+            "content": content,
+            "timestamp": current_time
+        })
+        
+        # Update message count
+        self._conversations[thread_id]["metadata"]["message_count"] += 1
+        
+        self._save_conversations()
+
+    # Update the _get_messages method to handle the new structure
+    def _get_messages(self, thread_id: str) -> List[Dict[str, str]]:
+        """Get messages for a thread"""
+        return self._conversations.get(thread_id, {}).get("messages", [])
+
+    # Add this new method to get the latest thread
+    def get_latest_thread_id(self) -> Optional[str]:
+        """Get the ID of the most recently updated thread"""
+        if not self._conversations:
+            return None
+            
+        # Get thread with the most recent updated_at timestamp
+        latest_thread = max(
+            self._conversations.items(),
+            key=lambda x: x[1].get("metadata", {}).get("updated_at", ""),
+            default=None
+        )
+        
+        return latest_thread[0] if latest_thread else None
+
+    # Add this method to get thread metadata
+    def get_thread_metadata(self, thread_id: str) -> Dict:
+        """Get metadata for a specific thread"""
+        return self._conversations.get(thread_id, {}).get("metadata", {})
+        
+
+    def _load_conversations(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Load conversations from cache file"""
+        if not self.CONVERSATION_CACHE.exists():
+            return {}
+        try:
+            with open(self.CONVERSATION_CACHE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading conversation cache: {e}")
+            return {}
         
     def setup_event_handlers(self):
         """Register WebSocket event handlers"""
@@ -129,12 +213,25 @@ class SupervisorAgentOrchestrator:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream the supervisor agent's response"""
         try:
+
+            # Get or create thread_id if not provided
+            if not thread_id:
+                thread_id = str(uuid.uuid4())
+            
+            # Save user message
+            self._append_message(thread_id, "user", message)
+
+            # Get conversation history
+            history = self._get_messages(thread_id)
+            
+            
             # Prepare the input for the supervisor
             inputs = {
                 "messages": [{"role": "user", "content": message}],
                 "thread_id": thread_id
             }
             
+            assistant_message = ""
             # Stream both messages and custom data
             async for mode, chunk in agent_system.astream(
                 inputs,
@@ -152,26 +249,38 @@ class SupervisorAgentOrchestrator:
                     if node_name in self.EXCLUDED_NODES:
                         continue
                     
-                    yield {
-                        "type": "content",
-                        "content": message_chunk.content,
-                        "requestId": request_id
-                    }
+                    if isinstance(message_chunk.content, list) and len(message_chunk.content) > 0:
+                        first_chunk = message_chunk.content[0]
+                        if isinstance(first_chunk, dict) and 'text' in first_chunk:
+                            text = first_chunk['text']
+                            assistant_message += text
+                            
+                            yield {
+                                "type": "content",
+                                "content": text,
+                                "requestId": request_id
+                            }
                 
                 elif mode == "custom":
                     # Handle custom data streaming
                     if isinstance(chunk, dict):
                         content = chunk.get("content", str(chunk))
-                    else:
-                        content = str(chunk)
-                    
-                    yield {
-                        "type": "content",
-                        "content": content,
-                        "requestId": request_id
-                    }
-            
+
+                        text = content
+                        assistant_message += '\n' + text
+                        
+                        if text:
+                            yield {
+                                "type": "content",
+                                "content": text,
+                                "requestId": request_id
+                            }
+        
             yield {"type": "done", "requestId": request_id}
+            
+            # Save assistant message
+            if assistant_message:
+                self._append_message(thread_id, "assistant", assistant_message)
             
         except Exception as e:
             logger.error(f"Error in supervisor response stream: {str(e)}", exc_info=True)
@@ -198,6 +307,7 @@ class SupervisorAgentOrchestrator:
             "error": error
         }
         await self._send_to_client(client_id, error_msg, request_id)
+
 
 # Create global instance
 supervisor_agent_orchestrator = SupervisorAgentOrchestrator()
