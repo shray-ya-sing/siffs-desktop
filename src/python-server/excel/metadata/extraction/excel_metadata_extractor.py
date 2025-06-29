@@ -211,7 +211,7 @@ class ExcelMetadataExtractor:
             storage: Optional storage instance to use
         """
         if not OPENPYXL_AVAILABLE:
-            raise ImportError("openpyxl is required but not installed. Please install with: pip install openpyxl")
+            logger.error("openpyxl is required but not installed. Please install with: pip install openpyxl")
             
         self.workbook_path = None
         self.workbook = None
@@ -253,13 +253,13 @@ class ExcelMetadataExtractor:
                 self.workbook_path = os.path.abspath(workbook_path)
                 
             if not self.workbook_path:
-                raise ValueError("No workbook path specified")
+                logger.error("No workbook path specified")
                 
             if not os.path.exists(self.workbook_path):
-                raise FileNotFoundError(f"Workbook not found: {self.workbook_path}")
+                logger.error(f"Workbook not found: {self.workbook_path}")
                 
             if not os.path.isfile(self.workbook_path):
-                raise ValueError(f"Path is not a file: {self.workbook_path}")
+                logger.error(f"Path is not a file: {self.workbook_path}")
                 
             # Open workbooks with explicit error handling
             try:
@@ -270,7 +270,7 @@ class ExcelMetadataExtractor:
                     keep_links=False
                 )
             except Exception as e:
-                raise RuntimeError(f"Failed to open workbook for formulas: {str(e)}")
+                logger.error(f"Failed to open workbook for formulas: {str(e)}")
                 
             try:
                 self.workbook_values = openpyxl.load_workbook(
@@ -283,11 +283,11 @@ class ExcelMetadataExtractor:
                 if self.workbook:
                     self.workbook.close()
                     self.workbook = None
-                raise RuntimeError(f"Failed to open workbook for values: {str(e)}")
+                logger.error(f"Failed to open workbook for values: {str(e)}")
                 
         except Exception as e:
             self.close()
-            raise RuntimeError(f"Error opening workbook: {str(e)}") from e
+            logger.error(f"Error opening workbook: {str(e)}")
 
     def close(self) -> None:
         """Safely close all open workbooks and clean up resources."""
@@ -436,7 +436,7 @@ class ExcelMetadataExtractor:
             error_msg = f"Failed to extract workbook metadata: {str(e)}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
-            raise RuntimeError(error_msg) from e
+            
 
     def extract_workbook_metadata_openpyxl(
         self,
@@ -453,7 +453,7 @@ class ExcelMetadataExtractor:
                 self.open_workbook(workbook_path)
                 
             if not self.workbook:
-                raise RuntimeError("Workbook is not open")
+                logger.error("Workbook is not open")
                 
             # Get basic workbook info
             workbook_metadata = {
@@ -523,7 +523,6 @@ class ExcelMetadataExtractor:
             error_msg = f"Failed to extract workbook metadata: {str(e)}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
-            raise RuntimeError(error_msg) from e
 
     def _extract_sheet_metadata_with_cells(
         self,
@@ -643,7 +642,7 @@ class ExcelMetadataExtractor:
         except Exception as e:
             logger.error(f"Error extracting cell data: {str(e)}")
             logger.error(traceback.format_exc())
-            raise
+            
             
         return cell_data, cell_dict
 
@@ -1172,7 +1171,7 @@ class ExcelMetadataExtractor:
                         f.write(json_str)
                     logger.info(f"Metadata successfully saved to: {output_path}")
                 except Exception as e:
-                    raise IOError(f"Failed to write output file: {str(e)}")
+                    logger.error(f"Failed to write output file: {str(e)}")
                     
             return json_str
             
@@ -1326,7 +1325,7 @@ class ExcelMetadataExtractor:
                 self.open_workbook(workbook_path)
                 
             if not self.workbook:
-                raise RuntimeError("Workbook is not open")
+                logger.error("Workbook is not open")
 
             # Extract metadata chunks from xl file
             logger.info("No cached chunks available. Extracting metadata chunks from xl file...")
@@ -1464,7 +1463,7 @@ class ExcelMetadataExtractor:
             error_msg = f"Failed to extract chunk metadata: {str(e)}"
             logger.warning(error_msg)
             logger.error(traceback.format_exc())
-            raise RuntimeError(error_msg) from e
+            
 
     def _extract_chunk_cell_data(
         self,
@@ -1512,7 +1511,7 @@ class ExcelMetadataExtractor:
         except Exception as e:
             logger.warning(f"Error extracting chunk cell data: {str(e)}")
             logger.error(traceback.format_exc())
-            raise
+                
             
         return cell_data, cell_dict
 
@@ -1646,6 +1645,123 @@ class ExcelMetadataExtractor:
             "externalPrecedents": list(chunk_precedents - set(chunk_cell_addresses))[:10],  # Top 10
             "externalDependents": list(chunk_dependents - set(chunk_cell_addresses))[:10]   # Top 10
         }
+
+
+    def extract_lightweight_metadata(self, workbook_path: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Extract lightweight metadata containing just cell addresses, formulas, and values.
+        Returns data in a format compatible with hotcache.
+        
+        Args:
+            workbook_path: Path to the Excel file (optional if already opened)
+            
+        Returns:
+            Dict containing workbook info and cell data in hotcache-compatible format
+        """
+        try:
+            if workbook_path or not self.workbook:
+                self.open_workbook(workbook_path)
+                
+            if not self.workbook:
+                logger.error("Workbook is not open")
+                
+            # Basic workbook info
+            workbook_info = {
+                "workbook_name": os.path.basename(self.workbook_path) if self.workbook_path else "Unknown",
+                "sheet_names": [sheet.title for sheet in self.workbook.worksheets],
+                "total_sheets": len(self.workbook.worksheets),
+                "sheets": {}
+            }
+            
+            # Process each sheet
+            for sheet in self.workbook.worksheets:
+                sheet_name = sheet.title
+                workbook_info["sheets"][sheet_name] = {
+                    "sheet_index": len(workbook_info["sheets"]),
+                    "chunks": [{
+                        "startRow": 1,
+                        "endRow": min(sheet.max_row or 0, 1048576),
+                        "rowCount": min(sheet.max_row or 0, 1048576),
+                        "columnCount": min(sheet.max_column or 0, 16384),
+                        "chunkIndex": 0,
+                        "cells": self._extract_sheet_cells_lightweight(sheet)
+                    }]
+                }
+                
+            return workbook_info
+            
+        except Exception as e:
+            error_msg = f"Error extracting lightweight metadata: {str(e)}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+        finally:
+            self.close()
+
+    def _extract_sheet_cells_lightweight(self, sheet) -> List[Dict[str, Any]]:
+        """
+        Extract lightweight cell data (address, formula, value) from a sheet.
+        
+        Args:
+            sheet: OpenPyXL worksheet object
+            
+        Returns:
+            List of cell data dictionaries
+        """
+        cells = []
+        
+        try:
+            # Get actual dimensions
+            max_row = min(sheet.max_row or 0, 1048576)
+            max_col = min(sheet.max_column or 0, 16384)
+            
+            if max_row == 0 or max_col == 0:
+                return []
+                
+            # Get corresponding sheet from values workbook
+            value_sheet = None
+            if self.workbook_values and sheet.title in self.workbook_values.sheetnames:
+                value_sheet = self.workbook_values[sheet.title]
+            
+            # Extract cell data
+            for row in sheet.iter_rows(min_row=1, max_row=max_row, max_col=max_col):
+                for cell in row:
+                    try:
+                        # Skip empty cells
+                        if cell.value is None and not (hasattr(cell, 'value') and cell.data_type == 'f'):
+                            continue
+                            
+                        # Get cell value
+                        cell_value = None
+                        if value_sheet:
+                            try:
+                                value_cell = value_sheet.cell(row=cell.row, column=cell.column)
+                                cell_value = self._serialize_value(value_cell.value)
+                            except:
+                                pass
+                        
+                        # Get formula if present
+                        formula = None
+                        if hasattr(cell, 'data_type') and cell.data_type == 'f' and cell.value is not None:
+                            formula = str(cell.value).lstrip('=')
+                        
+                        # Only include cells with values or formulas
+                        if cell_value is not None or formula:
+                            cells.append({
+                                "a": f"{get_column_letter(cell.column)}{cell.row}",  # address
+                                "v": cell_value,  # value
+                                "f": formula  # formula
+                            })
+                            
+                    except Exception as e:
+                        logger.warning(f"Error processing cell {cell.coordinate}: {str(e)}")
+                        continue
+                        
+        except Exception as e:
+            logger.error(f"Error extracting cells from sheet {sheet.title}: {str(e)}")
+            logger.error(traceback.format_exc())
+
+            
+        return cells
 
 
     def _calculate_file_hash(self, file_path: str) -> str:
