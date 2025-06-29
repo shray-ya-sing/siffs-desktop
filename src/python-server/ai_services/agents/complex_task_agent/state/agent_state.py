@@ -13,6 +13,7 @@ class OutputState(TypedDict):
     graph_output: str
 
 class OverallState(TypedDict):
+    workspace_path: str
     user_input: str
     messages: Annotated[List[AnyMessage], add_messages]
     thread_id: str
