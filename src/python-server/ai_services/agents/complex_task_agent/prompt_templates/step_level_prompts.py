@@ -6,12 +6,15 @@ class StepLevelPrompts:
         Please provide the sheet name and cell range that contains the relevant data for the current step.
         Include enough context around the target cells by adding at least 2 rows and columns to the range.
         This will be used to analyze the relevant section of the Excel file.
-    
-        Output your response as a dictionary with sheet names as keys and cell ranges as values:
-        {
-            "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
-            "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
-        }
+        
+        IMPORTANT DATA HANDLING RULES:
+        1. NEVER overwrite or modify existing data in the Excel file
+        2. Only reference existing data, do not attempt to modify it
+        3. If you need to add new data, it must be placed in a completely blank cell range
+        4. Do not insert new rows or columns that would shift existing data
+        
+        Output your response as a dictionary with sheet names as keys and list of cell ranges as values:
+        {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
         """
 
     @staticmethod
@@ -23,7 +26,15 @@ class StepLevelPrompts:
         If the table is a new schedule, table, or cell region to be created, include a markdown version of the table in your response.
         The goal is to provide exact and detailed implementation instructions for maximum accuracy.
         
+        CRITICAL IMPLEMENTATION RULES:
+        1. NEVER overwrite or modify any existing data in the Excel file
+        2. New data can ONLY be added in completely blank cell ranges
+        3. Do not insert new rows or columns that would shift existing data
+        4. If you need to reference existing data, do so without modifying it
+        5. Clearly specify the exact cell range where new data should be placed
+        
         Include a verification paragraph at the end that explains why the instructions are correct and serves as a self-check.
+        The verification must confirm that no existing data will be overwritten and that any new data is placed in blank areas only.
         """
 
     @staticmethod
@@ -31,18 +42,25 @@ class StepLevelPrompts:
         return f"""
         Here are the instructions for this step:{step}
         \n
-        To execute this step in excel, generate a list of key-value pairs in the format [{{cell_address: updated_formula}}] that should be written to the file.
-        Focus only on generating correct formulas without worrying about formatting or styling.
-        For each cell to be edited, provide a key-value pair in the format: {cell_address: updated_cell_formula}.
-        The formula will be written directly to the Excel file, so it must be accurate and complete.
-        
-        Output a dictionary with the sheet name as the key and {cell_address: cell_formula} as the value.
+        To execute this step, generate the updated formulas to write to the excel file. Output your response as a JSON like string of a nested dictionary mapping sheet names to cell formulas.
         For example,
-        {{
-            "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
-            "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
-        }}
-
+        {
+            "Sheet1": {
+                "A1": "=SUM(B1:B10)",
+                "B1": "=A1*2"
+            },
+            "Sheet2": {
+                "C1": "=AVERAGE(A1:A10)"
+            }
+        }
+        
+        CRITICAL DATA HANDLING RULES:
+        1. NEVER overwrite or modify any existing non-blank cells
+        2. Only write to cells that are completely empty
+        3. If you need to reference existing data, do so without modifying it
+        4. Do not insert new rows or columns that would shift existing data
+        5. If you need to add new data, ensure it's placed in a completely blank area
+        6. Double-check that your formulas only modify blank cells
         
         CORRECT EXCEL FORMULA GUIDELINES:
         
