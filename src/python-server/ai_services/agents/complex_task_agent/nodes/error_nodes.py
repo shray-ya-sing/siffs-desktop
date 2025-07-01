@@ -77,7 +77,7 @@ def retry_failed(state: StepDecisionState) -> OverallState:
             "status": "failed",
             "error": error_msg
         },
-        goto="end"
+        goto="execution_failed"
     )
 
 
@@ -91,7 +91,7 @@ def step_edit_failed(state: StepDecisionState) -> OverallState:
         update= {
         "agent_succeeded": False
         },
-        goto= "END"
+        goto= "execution_failed"
     )
 
 @log_errors
@@ -107,7 +107,7 @@ def retry_edit_failed(state: StepDecisionState) -> OverallState:
         "latest_model_response": last_model_response,
         "agent_succeeded": False
         },
-        goto= "END"
+        goto= "execution_failed"
     )
 
 @log_errors
@@ -123,7 +123,7 @@ def revert_edit_failed(state: StepDecisionState) -> OverallState:
         "latest_model_response": last_model_response,
         "agent_succeeded": False
         },
-        goto= "END"
+        goto= "execution_failed"
     )
 
 @log_errors
@@ -134,13 +134,24 @@ def task_understanding_failed(state: InputState) -> OverallState:
         update= {
         "agent_succeeded": False
         },
-        goto= "END"
+        goto= "execution_failed"
     )
 
 @log_errors
 def llm_response_failure(state:OverallState) -> OverallState:
     writer = get_stream_writer()
     writer({"custom_key": "LLM response failure, agent terminated"})
+    return Command(
+        update= {
+        "agent_succeeded": False
+        },
+        goto= "execution_failed"
+    )
+
+@log_errors
+def execution_failed(state:OverallState) -> OverallState:
+    writer = get_stream_writer()
+    writer({"custom_key": "Execution failed, agent terminated"})
     return Command(
         update= {
         "agent_succeeded": False
