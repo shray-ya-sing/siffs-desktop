@@ -270,7 +270,18 @@ class SupervisorAgentOrchestrator:
                             }
                 
                 elif mode == "custom":
+                    if isinstance(chunk, dict):
+                        chunk_str = json.dumps(chunk)
+                        logger.info(f"Custom chunk: {chunk_str}")
+                        assistant_message += chunk_str
+                        yield {
+                            "type": "content",
+                            "content": chunk_str,
+                            "requestId": request_id
+                        }
+                    
                     if isinstance(chunk, str):
+                        logger.info(f"Custom chunk: {chunk}")
                         assistant_message += chunk
                         yield {
                             "type": "content",

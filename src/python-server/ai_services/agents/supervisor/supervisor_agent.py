@@ -5,7 +5,9 @@ from langgraph_supervisor import create_supervisor
 from langchain_anthropic import ChatAnthropic
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
-
+from langchain_google_genai import ChatGoogleGenerativeAI
+import logging
+logger = logging.getLogger(__name__)
 # Setup path
 ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
@@ -38,14 +40,21 @@ class SupervisorAgent:
         anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         
         # Initialize models
-        self.supervisor_model = ChatAnthropic(
-            model_name="claude-3-7-sonnet-latest", 
-            api_key=anthropic_api_key
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
+        if not GEMINI_API_KEY:
+            logger.error("GEMINI_API_KEY not found in environment variables")
+        gemini_pro = "gemini-2.5-pro"
+        gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"    
+        self.supervisor_model = ChatGoogleGenerativeAI(
+            model=gemini_flash_lite,
+            temperature=0.2,
+            max_retries=3,
+            google_api_key=GEMINI_API_KEY
         )
         
         # Initialize agents
         self.simple_agent = PrebuiltAgent().with_model("claude-3-7-latest").get_agent()
-        self.complex_agent = ComplexExcelRequestAgent().with_model("gemini-2.5-pro").get_agent()
+        self.complex_agent = ComplexExcelRequestAgent().with_model(gemini_flash_lite).get_agent()
 
         self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT 
     
