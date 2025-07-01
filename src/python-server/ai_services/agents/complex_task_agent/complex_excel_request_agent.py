@@ -73,7 +73,7 @@ class ComplexExcelRequestAgent:
         self.workflow = None
         self.complex_excel_request_agent = None
         self.provider_models = {
-            "google_genai": {"gemini-2.5-pro"},
+            "google_genai": {"gemini-2.5-pro", "gemini-2.5-flash-lite-preview-06-17"},
             "openai": {"gpt-4", "gpt-4-turbo"},
             "anthropic": {"claude-3-opus-20240229"}
         }
@@ -97,8 +97,10 @@ class ComplexExcelRequestAgent:
             
     
         api_key = os.getenv("GEMINI_API_KEY")
+        gemini_pro = "gemini-2.5-pro"
+        gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
         self.llm = ChatGoogleGenerativeAI(
-            model= "gemini-2.5-pro",
+            model= gemini_flash_lite,
             temperature=0.3,
             max_retries=2,
             google_api_key=api_key,
