@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 import sys
+import pythoncom
+from threading import local
+
 # Add the project root to Python path
 approval_path = Path(__file__).parent.absolute()
 sys.path.append(str(approval_path))
@@ -23,6 +26,15 @@ from dataclasses import dataclass
 from openpyxl.styles import Alignment
 import re
 logger.info("Imported external modules. Now initializing ExcelWriter")
+
+# Add this at the top of your file
+_thread_local = local()
+
+def ensure_com_initialized():
+    if not hasattr(_thread_local, 'com_initialized'):
+        pythoncom.CoInitialize()
+        _thread_local.com_initialized = True
+
 
 @dataclass
 class ExcelCell:
@@ -334,7 +346,7 @@ class ExcelWriter:
         output_filepath: str,
         version_id: Optional[int] = None,
         create_pending: bool = True,
-        save: bool = False,
+        save: bool = True,
         apply_green_highlight: bool = True,
     ) -> Tuple[bool, Dict[str, List[str]]]:
         """Write data to an existing Excel file with pending edit tracking.
@@ -358,7 +370,8 @@ class ExcelWriter:
             return False, {}
 
         if not os.path.exists(output_filepath):
-            raise FileNotFoundError(f"File does not exist: {output_filepath}")
+            return False, {}
+            
 
         try:
             
@@ -428,9 +441,7 @@ class ExcelWriter:
                             # Add a green highlight for visual indication of edit
                             if apply_green_highlight:
                                 self._apply_green_highlight(cell)
-                            if save:
-                                workbook.save()
-                                logger.info(f"Saved workbook: {self.file_path}")
+                            
                         except Exception as e:
                             logger.error(f"Error updating cell {cell_data['cell']}: {e}")
                             # Continue applying to remaining cells even if one fails
@@ -438,9 +449,21 @@ class ExcelWriter:
 
                 all_updated_cells.append(sheet_updated_cells)
             
-            # Store the pending edits to the storage
-            if create_pending:
-                self.storage.batch_create_pending_edits(request_pending_edits)
+            # save
+            try:
+                if save:
+                    workbook.save()
+                    logger.info(f"Saved workbook: {self.file_path}")
+            except Exception as e:
+                logger.error(f"Error saving workbook: {str(e)}")
+
+
+            try:
+                # Store the pending edits to the storage
+                if create_pending:
+                    self.storage.batch_create_pending_edits(request_pending_edits)
+            except Exception as e:
+                logger.error(f"Error storing pending edits: {str(e)}")
             return True, all_updated_cells # return the updated cells for the tools view
 
         except Exception as e:
