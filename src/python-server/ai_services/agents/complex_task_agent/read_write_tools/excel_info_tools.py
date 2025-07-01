@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import os
 import logging
+import datetime
 logger = logging.getLogger(__name__)
 # Add the current directory to Python path
 server_dir_path = Path(__file__).parent.parent.parent.parent.parent.absolute()
@@ -27,75 +28,133 @@ def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, An
                          }]
 
     Returns:
-        str: Success message or error message
+        bool: True if at least one cell was updated successfully, False otherwise
     """
+    class DateTimeEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+                return obj.isoformat()
+            return super().default(obj)
+
+    MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
+    
     try:
-        # Get the cache file path
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+        temp_file_path = mappings.get(workspace_path) or next(
+            (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+            workspace_path
+        )
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error(f"Error loading file mappings: {str(e)}")
+        temp_file_path = workspace_path
+
+    try:
         cache_path = server_dir_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
         
-        # Load existing cache
         if not cache_path.exists():
-            return 'Error: Cache file not found'
-            
-        with open(cache_path, 'r+') as f:
+            logger.error("Cache file not found")
+            return False
+
+        # Load the cache
+        with open(cache_path, 'r+', encoding='utf-8') as f:
             try:
                 cache_data = json.load(f)
-            except json.JSONDecodeError:
-                return 'Error: Invalid cache file format'
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid cache file format: {str(e)}")
+                return False
+
+            file_name = os.path.basename(temp_file_path)
+            workbook_updated = False
+            success_count = 0
+            error_count = 0
             
-            # Get the workbook data
-            workbook_data = cache_data.get(workspace_path)
-            if not workbook_data:
-                return 'Error: No data found for workspace in cache'
-            
-            # Process each sheet's updates
-            for sheet_update in all_updated_cells:
-                sheet_name = sheet_update.get('sheet_name')
-                updated_cells = sheet_update.get('updated_cells', [])
-                
-                if not sheet_name or not updated_cells:
+            for cache_key, workbook_data in cache_data.items():
+                if not isinstance(workbook_data, dict) or workbook_data.get('workbook_name') != file_name:
                     continue
+                    
+                workbook_updated = True
                 
-                # Find the sheet in the cache
-                if sheet_name not in workbook_data.get("sheets", {}):
-                    workbook_data["sheets"][sheet_name] = {"chunks": []}
-                
-                sheet_data = workbook_data["sheets"][sheet_name]
-                
-                # If no chunks exist yet, create one
-                if not sheet_data.get("chunks"):
-                    sheet_data["chunks"] = [{"cells": []}]
-                
-                # Update cells in the first chunk (or create new ones)
-                existing_cells = {cell.get('a'): idx 
-                                for idx, cell in enumerate(sheet_data["chunks"][0].get("cells", []))}
-                
-                for cell_data in updated_cells:
-                    cell_ref = cell_data.get('a')
-                    if not cell_ref:
+                # Process each sheet's updates
+                for sheet_update in all_updated_cells:
+                    sheet_name = sheet_update.get('sheet_name')
+                    updated_cells = sheet_update.get('updated_cells', [])
+                    
+                    if not sheet_name or not updated_cells:
                         continue
                     
-                    cell_entry = {
-                        'a': cell_ref,
-                        'f': cell_data.get('f'),
-                        'v': cell_data.get('v')
+                    # Initialize sheet data if it doesn't exist
+                    if "sheets" not in workbook_data:
+                        workbook_data["sheets"] = {}
+                        
+                    if sheet_name not in workbook_data["sheets"]:
+                        workbook_data["sheets"][sheet_name] = {"chunks": [{"cells": []}]}
+                    
+                    sheet_data = workbook_data["sheets"][sheet_name]
+                    
+                    # Ensure chunks exist
+                    if "chunks" not in sheet_data or not sheet_data["chunks"]:
+                        sheet_data["chunks"] = [{"cells": []}]
+                    
+                    # Ensure first chunk has cells list
+                    if "cells" not in sheet_data["chunks"][0]:
+                        sheet_data["chunks"][0]["cells"] = []
+                    
+                    # Create mapping of cell references to their indices
+                    existing_cells = {
+                        cell.get('a'): idx 
+                        for idx, cell in enumerate(sheet_data["chunks"][0]["cells"])
                     }
                     
-                    # Update existing cell or add new one
-                    if cell_ref in existing_cells:
-                        sheet_data["chunks"][0]["cells"][existing_cells[cell_ref]] = cell_entry
-                    else:
-                        if "cells" not in sheet_data["chunks"][0]:
-                            sheet_data["chunks"][0]["cells"] = []
-                        sheet_data["chunks"][0]["cells"].append(cell_entry)
+                    # Process each cell update
+                    for cell_data in updated_cells:
+                        try:
+                            cell_ref = cell_data.get('a')
+                            if not cell_ref:
+                                error_count += 1
+                                continue
+                            
+                            cell_entry = {
+                                'a': cell_ref,
+                                'f': cell_data.get('f'),
+                                'v': cell_data.get('v')
+                            }
+                            
+                            # Update existing cell or add new one
+                            if cell_ref in existing_cells:
+                                sheet_data["chunks"][0]["cells"][existing_cells[cell_ref]] = cell_entry
+                                logger.info(f"Updated existing cell: {cell_ref}")
+                            else:
+                                sheet_data["chunks"][0]["cells"].append(cell_entry)
+                                logger.info(f"Added new cell: {cell_ref}")
+                            
+                            success_count += 1
+                            
+                        except Exception as cell_error:
+                            error_count += 1
+                            logger.error(f"Error updating cell {cell_data.get('a', 'unknown')}: {str(cell_error)}", 
+                                       exc_info=True)
+                            continue
             
-            # Write back to cache
-            f.seek(0)
-            json.dump(cache_data, f, indent=2)
-            f.truncate()
-            
-        return True
-        
+            if not workbook_updated:
+                logger.error(f"No matching workbook found for {file_name}")
+                return False
+                
+            if success_count == 0 and error_count > 0:
+                logger.error("All cell updates failed")
+                return False
+                
+            # Write back to the file
+            try:
+                f.seek(0)
+                json.dump(cache_data, f, indent=2, cls=DateTimeEncoder)
+                f.truncate()
+                logger.info(f"Cache updated successfully: {success_count} cells updated, {error_count} errors")
+                return True
+            except Exception as write_error:
+                logger.error(f"Error writing to cache file: {str(write_error)}", exc_info=True)
+                return False
+                
     except Exception as e:
         logger.error(f"Error updating cache: {str(e)}", exc_info=True)
         return False
@@ -151,6 +210,120 @@ def get_full_excel_metadata(workspace_path: str) -> str:
         logger.error(f"Error retrieving data: {str(e)}", exc_info=True)
         return 'Failed to get data from cache'
 
+def get_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optional[Dict[str, List[str]]] = None) -> str:
+    """
+    Retrieve filtered metadata for the specified excel file from the hotcache,
+    returning only the specified cell ranges without row range validation.
+    
+    Args:
+        workspace_path: Full path to the excel file workbook in the format 'folder/workbook.xlsx'
+        sheet_cell_ranges: Dict mapping sheet names to lists of cell ranges.
+                         If None, returns all data (same as get_full_excel_metadata).
+                         Example: {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
+    
+    Returns:
+        A JSON string containing filtered metadata in the format:
+        {
+            "Sheet1": [
+                {"a": "A1", "f": "=SUM(B1:B2)", "v": 42},
+                {"a": "B1", "f": "=5", "v": 5}
+            ],
+            "Sheet2": [...]
+        }
+    """
+    def normalize_cell_ref(cell_ref: str) -> str:
+        """Remove $ signs from cell reference and convert to uppercase."""
+        if not cell_ref:
+            return cell_ref
+        return cell_ref.replace('$', '').upper()
+
+    try:
+        # First get the full metadata from cache
+        full_metadata = get_full_excel_metadata(workspace_path)
+        if not full_metadata or not isinstance(full_metadata, dict):
+            return json.dumps({"error": "Failed to load metadata from cache"})
+        
+        # If no ranges specified, return all data in the expected format
+        if not sheet_cell_ranges:
+            result = {}
+            for sheet_name, sheet_data in full_metadata.get('sheets', {}).items():
+                result[sheet_name] = []
+                for chunk in sheet_data.get('chunks', []):
+                    result[sheet_name].extend(chunk.get('cells', []))
+            return json.dumps(result, separators=(',', ':'))
+        
+        # Parse cell range strings into cell references
+        def parse_cell_refs(cell_range: str) -> List[str]:
+            """Parse a cell range into individual cell references."""
+            import re
+            from openpyxl.utils import range_boundaries, get_column_letter
+            
+            # Handle single cell
+            if ':' not in cell_range:
+                return [normalize_cell_ref(cell_range)]
+                
+            # Handle range
+            try:
+                # Remove $ signs before parsing range
+                normalized_range = cell_range.replace('$', '')
+                min_col, min_row, max_col, max_row = range_boundaries(normalized_range)
+                cells = []
+                for row in range(min_row, max_row + 1):
+                    for col in range(min_col, max_col + 1):
+                        cell_ref = f"{get_column_letter(col)}{row}"
+                        cells.append(cell_ref)
+                return cells
+            except Exception as e:
+                logger.warning(f"Invalid range format '{cell_range}': {str(e)}")
+                return []
+        
+        # Filter the data based on the specified ranges
+        filtered_data = {}
+        for sheet_name, ranges in sheet_cell_ranges.items():
+            if sheet_name not in full_metadata.get('sheets', {}):
+                continue
+
+            if isinstance(ranges, str):
+                ranges = [ranges]
+                
+            # Get all cell references to include
+            cell_refs_to_include = set()
+            for r in ranges:
+                cell_refs_to_include.update(parse_cell_refs(r))
+                
+            if not cell_refs_to_include:
+                continue
+                
+            # Filter cells
+            sheet_data = full_metadata['sheets'][sheet_name]
+            filtered_cells = []
+            cell_refs_found = set()
+            
+            for chunk in sheet_data.get('chunks', []):
+                for cell in chunk.get('cells', []):
+                    cell_ref = cell.get('a')
+                    normalized_ref = normalize_cell_ref(cell_ref)
+                    if cell_ref and normalized_ref in cell_refs_to_include:
+                        filtered_cells.append({
+                            'a': cell_ref,  # Keep original reference with $ if present
+                            'f': cell.get('f'),
+                            'v': cell.get('v')
+                        })
+                        cell_refs_found.add(normalized_ref)
+            
+            # Log any requested but not found cells
+            missing_cells = cell_refs_to_include - cell_refs_found
+            if missing_cells:
+                logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+                
+            if filtered_cells:
+                filtered_data[sheet_name] = filtered_cells
+        
+        return json.dumps(filtered_data, separators=(',', ':'))
+
+    except Exception as e:
+        logger.error(f"Error getting filtered metadata: {str(e)}", exc_info=True)
+        return json.dumps({"error": f"Failed to get filtered metadata: {str(e)}"})
 
 def get_excel_metadata(workspace_path: str, sheet_cell_ranges: Optional[Dict[str, List[str]]] = None) -> str:
     """
@@ -223,6 +396,85 @@ def get_excel_metadata(workspace_path: str, sheet_cell_ranges: Optional[Dict[str
         return [{"error": f"Failed to get cell data: {str(e)}"}]
 
 
+
+
+def get_cell_formulas_from_cache(workspace_path: str, cell_dict: Dict[str, Dict[str, str]]) -> Optional[Dict[str, Dict[str, str]]]:
+    """
+    Get formulas from specific cells in an Excel workbook from the cache.
+    
+    Args:
+        workspace_path: Path to the Excel file
+        cell_dict: Dictionary mapping sheet names to cell references
+            Example: {
+                "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+            }
+            Note: The formula values are ignored, only cell references are used.
+            
+    Returns:
+        Dictionary with the same structure as input, containing the actual formulas from the Excel cache.
+        Returns None if there was an error accessing the cache.
+        For cells not found in cache, returns empty string as the formula.
+    """
+    def normalize_cell_ref(cell_ref: str) -> str:
+        """Remove $ signs from cell reference and convert to uppercase."""
+        if not cell_ref:
+            return cell_ref
+        return cell_ref.replace('$', '').upper()
+
+    try:
+        # Get the full metadata from cache
+        full_metadata = get_full_excel_metadata(workspace_path)
+        if not full_metadata or not isinstance(full_metadata, dict):
+            logger.error("Failed to load metadata from cache")
+            return None
+
+        result = {}
+        
+        # Process each sheet in the request
+        for sheet_name, cells in cell_dict.items():
+            result[sheet_name] = {}
+            
+            # Initialize all requested cells with empty strings
+            for cell_ref in cells:
+                result[sheet_name][cell_ref] = ""
+                
+            # If sheet exists in cache, try to find the cells
+            if sheet_name in full_metadata.get('sheets', {}):
+                sheet_data = full_metadata['sheets'][sheet_name]
+                
+                # Create a mapping of normalized cell refs to original cell refs
+                cell_refs = {normalize_cell_ref(ref): ref for ref in cells.keys()}
+                found_cells = set()
+                
+                # Search through all chunks for the requested cells
+                for chunk in sheet_data.get('chunks', []):
+                    for cell in chunk.get('cells', []):
+                        cell_ref = cell.get('a')
+                        if not cell_ref:
+                            continue
+                            
+                        normalized_ref = normalize_cell_ref(cell_ref)
+                        if normalized_ref in cell_refs:
+                            # Use the original casing from the request for the result
+                            original_ref = cell_refs[normalized_ref]
+                            result[sheet_name][original_ref] = cell.get('f', '')
+                            found_cells.add(normalized_ref)
+                
+                # Log any missing cells
+                missing_cells = set(cell_refs.keys()) - found_cells
+                if missing_cells:
+                    logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+            else:
+                logger.warning(f"Sheet '{sheet_name}' not found in cache")
+                # Keep the empty strings for all cells in this sheet
+                
+        return result
+
+    except Exception as e:
+        logger.error(f"Error getting cell formulas from cache: {str(e)}", exc_info=True)
+        return None
+
 def get_cell_formulas(workspace_path: str, cell_dict: Dict[str, Dict[str, str]] = None) -> str:
     """
             Get formulas from specific cells in an Excel workbook.
@@ -271,8 +523,6 @@ def get_cell_formulas(workspace_path: str, cell_dict: Dict[str, Dict[str, str]] 
         return [{"error": f"Failed to get cell data: {str(e)}"}]
 
 
-
-
 def xl_col_to_name(col_num):
     """Convert a column number to Excel column name (A, B, ..., Z, AA, AB, ...)"""
     col_name = ''
@@ -280,3 +530,103 @@ def xl_col_to_name(col_num):
         col_num, remainder = divmod(col_num - 1, 26)
         col_name = chr(65 + remainder) + col_name
     return col_name
+
+
+def get_formulas_for_revert(
+    sheet_formulas: Dict[str, Dict[str, str]], 
+    sheet_cell_ranges: Dict[str, List[str]]
+) -> Dict[str, Dict[str, str]]:
+    """
+    Extract formulas from a dictionary of sheet data based on specified cell ranges.
+    
+    Args:
+        sheet_formulas: Dictionary mapping sheet names to cell formulas.
+                      Example: {
+                          "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                          "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+                      }
+        sheet_cell_ranges: Dict mapping sheet names to lists of cell ranges.
+                         Example: {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
+    
+    Returns:
+        A dictionary with the same structure as sheet_formulas, containing only the
+        cells that fall within the specified ranges.
+        Example: {
+            "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+            "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+        }
+    """
+    def normalize_cell_ref(cell_ref: str) -> str:
+        """Remove $ signs from cell reference and convert to uppercase."""
+        if not cell_ref:
+            return cell_ref
+        return cell_ref.replace('$', '').upper()
+
+    def parse_cell_refs(cell_range: str) -> List[str]:
+        """Parse a cell range into individual cell references."""
+        import re
+        from openpyxl.utils import range_boundaries, get_column_letter
+        
+        # Handle single cell
+        if ':' not in cell_range:
+            return [normalize_cell_ref(cell_range)]
+            
+        # Handle range
+        try:
+            # Remove $ signs before parsing range
+            normalized_range = cell_range.replace('$', '')
+            min_col, min_row, max_col, max_row = range_boundaries(normalized_range)
+            cells = []
+            for row in range(min_row, max_row + 1):
+                for col in range(min_col, max_col + 1):
+                    cell_ref = f"{get_column_letter(col)}{row}"
+                    cells.append(cell_ref)
+            return cells
+        except Exception as e:
+            logger.warning(f"Invalid range format '{cell_range}': {str(e)}")
+            return []
+
+    try:
+        result = {}
+        
+        for sheet_name, ranges in sheet_cell_ranges.items():
+            if sheet_name not in sheet_formulas:
+                logger.debug(f"Sheet '{sheet_name}' not found in provided formulas")
+                continue
+
+            if isinstance(ranges, str):
+                ranges = [ranges]
+                
+            # Get all cell references to include
+            cell_refs_to_include = set()
+            for r in ranges:
+                cell_refs_to_include.update(parse_cell_refs(r))
+                
+            if not cell_refs_to_include:
+                logger.debug(f"No valid cell ranges found for sheet '{sheet_name}'")
+                continue
+                
+            # Initialize sheet in result
+            if sheet_name not in result:
+                result[sheet_name] = {}
+                
+            # Filter cells
+            sheet_data = sheet_formulas[sheet_name]
+            cell_refs_found = set()
+            
+            for cell_ref, formula in sheet_data.items():
+                normalized_ref = normalize_cell_ref(cell_ref)
+                if normalized_ref in cell_refs_to_include:
+                    result[sheet_name][cell_ref] = formula  # Keep original cell reference
+                    cell_refs_found.add(normalized_ref)
+            
+            # Log any requested but not found cells
+            missing_cells = cell_refs_to_include - cell_refs_found
+            if missing_cells:
+                logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+        
+        return result
+
+    except Exception as e:
+        logger.error(f"Error extracting formulas: {str(e)}", exc_info=True)
+        return {"error": f"Failed to extract formulas: {str(e)}"}
