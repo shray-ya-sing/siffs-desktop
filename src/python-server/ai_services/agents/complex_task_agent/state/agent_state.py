@@ -24,7 +24,7 @@ class OverallState(TypedDict):
     current_step: Dict[str, Any] # overview of the current step task
     current_step_metadata_for_instructions: Dict[str, Any] # metadata for the current step
     current_step_instructions: str # detailed instructions for the current step
-    current_step_excel_data_before_edit: Dict[str, Any] # metadata before the edit
+    current_step_metadata_before_edit: Dict[str, Any] # metadata before the edit
     current_step_cell_formulas_for_edit: List[Dict[str, Any]] # cell formulas for the edit
     current_step_verified_cell_formulas: List[Dict[str, Any]] # verified correct cell formulas for the edit
     current_step_updated_metadata_range: Dict[str, Any] # range of cells that were edited
