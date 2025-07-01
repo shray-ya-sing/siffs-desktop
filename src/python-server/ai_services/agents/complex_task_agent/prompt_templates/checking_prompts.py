@@ -36,13 +36,13 @@ class CheckingPrompts:
         Do not proceed immediately to the next step. If there are corrections in the edit execution, you MAY revert the edit and 
         redo it. Assuming your edit has been fully reverted i.e. all the formulas you generated for the cells you assigned them to 
         have been fully reverted to their original state. DO YOU WISH TO REVERT THE EDIT AND TRY TO IMPLEMENT IT AGAIN OR PROCEED 
-        WITH THE CURRENT STATE? Return true to revert and false to not.
+        WITH THE CURRENT STATE? Return true to revert and false to not. If you wish to revert, also return the cell range of the cells that should be reverted to their prior values. 
         """
 
     @staticmethod
     def decide_retry_prompt():
         return """
-        You have successfully reverted the edit. Do you wish to retry the edit or proceed to the next step? If you wish to retry, 
+        You have successfully reverted the edit in the specified cells. Do you wish to retry the edit or proceed to the next step? If you wish to retry, 
         you can view the metadata of the excel file for the cell region you wish to edit. Return a dict with the sheet name and 
         cell range you wish to view. Remember, to get context, you should get at least 2 rows and columns outside of the cell range 
         you wish to edit so you can view the full metadata. Which cell range metadata do you wish to view for your edit? 
