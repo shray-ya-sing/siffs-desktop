@@ -40,11 +40,32 @@ class StepLevelPrompts:
     @staticmethod
     def get_step_cell_formulas_prompt(step: str):
         return f"""
-        Here are the instructions for this step:{step}
-        \n
-        To execute this step, generate the updated formulas to write to the excel file.
+        Here are the instructions for this step: {step}
         
-        CRITICAL DATA HANDLING RULES:
+        FORMAT YOUR RESPONSE AS FOLLOWS:
+        
+        sheet_name: [Name of the sheet]| A1, "=SUM(B1:B10)" | B1, "Text value" | C1, 123 | sheet_name: [Next sheet name]| D5, "=AVERAGE(A1:A10)" | E5, "Another value"
+        
+        RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC. Just return the pipe delimited markdown containig cell formulas in the specified format.
+        RULES:
+        1. Start each sheet with 'sheet_name: [exact sheet name]' followed by a pipe (|)
+        2. List each cell update as: [cell_reference], "[formula_or_value]"
+        3. Separate multiple cell updates with pipes (|)
+        4. Always enclose formulas and text values in double quotes
+        5. Numbers can be written without quotes
+        6. Include ALL cells that need to be written
+        7. NEVER modify or reference non-existent cells
+       
+        EXAMPLES:
+        
+        sheet_name: Income Statement| B5, "=SUM(B2:B4)" | B6, 1000 | B7, "=B5-B6" | sheet_name: Assumptions| B2, 0.05 | B3, 1.2 | C3, "=B3*1.1"
+        
+        BAD EXAMPLES:
+        - sheet_name: Income Statement B5, "=SUM(B2:B4)"  # Missing pipe after sheet name
+        - sheet_name: Income Statement | B5, =SUM(B2:B4)   # Formula not in quotes
+        - sheet_name: Income Statement | B5 SUM(B2:B4)     # Missing comma after cell reference
+        
+        DATA HANDLING RULES:
         1. NEVER overwrite or modify any existing non-blank cells
         2. Only write to cells that are completely empty
         3. If you need to reference existing data, do so without modifying it
@@ -107,21 +128,6 @@ class StepLevelPrompts:
         
         MATCH with Multiple Criteria
         Formula: =MATCH(1, (Criteria1_Range=Criteria1) * (Criteria2_Range=Criteria2), 0)
-
-
-        Sheets property in the output should be a JSON like string mapping cell adress to updated formula. For example:
-        {{
-            "Sheet1": {{
-                "A1": "=SUM(B1:B10)",
-                "B1": "=A1*2"
-            }},
-            "Sheet2": {{
-                "C1": "=AVERAGE(A1:A10)"
-            }}
-        }}
-
-        DO NOT Group multiple cells together to create entries with cell ranges as keys like B87:B96': ['=Assumptions!A49', '=Assumptions!A50', '=Assumptions!A51'......].
-        Make each key value pair entry for each cell, where the key represents the cell address of a SINGLE cell and the value the formula for only that SINGLE cell.
         """
 
 
