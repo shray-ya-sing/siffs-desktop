@@ -57,9 +57,10 @@ try:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY environment variable not set")
-        
+    gemini_pro = "gemini-2.5-pro"
+    gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",
+        model=gemini_pro,
         temperature=0.3,
         max_retries=3,
         google_api_key=GEMINI_API_KEY
