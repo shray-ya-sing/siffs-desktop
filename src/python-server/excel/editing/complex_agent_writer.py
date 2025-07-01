@@ -1,277 +1,295 @@
 import os
-from pathlib import Path
-import sys
-import pythoncom
-from threading import local
-# Add the project root to Python path
-approval_path = Path(__file__).parent.absolute()
-sys.path.append(str(approval_path))
-from approval.excel_pending_edit_manager import ExcelPendingEditManager
-
-folder_path = Path(__file__).parent.parent.absolute()
-sys.path.append(str(folder_path))
-from session_management.excel_session_manager import ExcelSessionManager
-import logging
-logger = logging.getLogger(__name__)
-
-logger.info("Imported internal modules. Now importing external ExcelWriter dependencies")
-import atexit
+import queue
 import threading
-import datetime
-import xlwings as xw
-from typing import Dict, List, Any, Optional, Union, Tuple
-from dataclasses import dataclass
-from openpyxl.styles import Alignment
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 import re
-logger.info("Imported external modules. Now initializing ExcelWriter")
+import json
+import pythoncom
+import xlwings as xw
+import logging
 
-@dataclass
-class ExcelCell:
-    """Data class to hold cell formatting and content information."""
-    cell_ref: str
-    formula: str = ""
-    font_style: str = "Calibri"
-    font_size: int = 11
-    bold: bool = False
-    italic: bool = False
-    text_color: str = "#000000"
-    horizontal_alignment: str = "left"
-    vertical_alignment: str = "bottom"
-    number_format: str = "General"
-    fill_color: Optional[str] = None
-    wrap_text: bool = False
+logger = logging.getLogger(__name__)
+T = TypeVar('T')
 
-
-# Add this at the top of your file
-_thread_local = local()
-
-def ensure_com_initialized():
-    if not hasattr(_thread_local, 'com_initialized'):
-        pythoncom.CoInitialize()
-        _thread_local.com_initialized = True
-
-
-class ComplexAgentWriter:
+class ExcelWorker:
+    """Thread-safe Excel worker that processes all Excel operations in a single thread.
+    
+    This class ensures that all Excel operations are performed in a dedicated thread
+    to avoid COM threading issues while maintaining a single Excel instance.
+    """
+    
     _instance = None
+    _lock = threading.Lock()
     _initialized = False
-    _workbook = None
-    _file_path = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(ComplexAgentWriter, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self, visible: bool = True):
+    
+    def __new__(cls) -> 'ExcelWorker':
+        """Get or create the singleton instance."""
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+            
+    def __init__(self) -> None:
+        """Initialize the Excel worker if not already initialized."""
         if not self._initialized:
-            logger.info("Initializing ComplexAgentWriter singleton")
-            self.visible = visible
-            self.session_manager = ExcelSessionManager()
-            self._initialized = True
-
-    def _get_or_create_workbook(self, file_path: str) -> xw.Book:
-        """Get or create a workbook using session manager."""
-        ensure_com_initialized()
-        if self._workbook is None or self._file_path != file_path:
-            self._file_path = str(Path(file_path).resolve())
-            self._workbook = self.session_manager.get_session(self._file_path, self.visible)
-        return self._workbook
-
-    def write_to_existing(
-        self,
-        data: Dict[str, List[Dict[str, Any]]],
-        output_filepath: str,
-        version_id: Optional[int] = None,
-        create_pending: bool = True,
-        save: bool = True,
-        apply_green_highlight: bool = True,
-    ) -> Tuple[bool, Dict[str, List[str]]]:
-        """Write data to an existing Excel file with pending edit tracking."""
-        if not data:
-            return False, {}
-
-        if not os.path.exists(output_filepath):
-            return False, {}
-
+            with self._lock:
+                if not self._initialized:
+                    self.visible = True
+                    self._workbook = None
+                    self._file_path = None
+                    self._task_queue = queue.Queue(maxsize=100)
+                    self._worker_thread = None
+                    self._start_worker()
+                    self._initialized = True
+                    logger.info("ExcelWorker initialized")
+    
+    def _start_worker(self) -> None:
+        """Start the worker thread if it's not already running."""
+        if self._worker_thread is None or not self._worker_thread.is_alive():
+            self._worker_thread = threading.Thread(
+                target=self._worker_loop,
+                daemon=True,
+                name="ExcelWorkerThread"
+            )
+            self._worker_thread.start()
+            logger.debug("Started Excel worker thread")
+    
+    def _worker_loop(self) -> None:
+        """Main worker loop that processes tasks from the queue."""
+        pythoncom.CoInitialize()
+        logger.info("Excel worker thread started")
+        
         try:
-            # Get the workbook
-            self._file_path = str(Path(output_filepath).resolve())
-            workbook = self._get_or_create_workbook(self._file_path)
-            
-            all_updated_cells = []
-            
-            for sheet_name, cells_data in data.items():
-                # Get or create worksheet
+            while True:
                 try:
-                    sheet = workbook.sheets[sheet_name]
-                except:
-                    sheet = workbook.sheets.add(sheet_name)
+                    # Get task with a small timeout to allow for clean shutdown
+                    try:
+                        task_id, task_func = self._task_queue.get(timeout=1)
+                        if task_id is None:  # Shutdown signal
+                            break
+                    except queue.Empty:
+                        continue
+                        
+                    try:
+                        # Execute the task
+                        task_func()
+                    except Exception as e:
+                        logger.error(f"Error executing task: {e}", exc_info=True)
+                    finally:
+                        self._task_queue.task_done()
+                        
+                except Exception as e:
+                    logger.critical(f"Critical error in worker loop: {e}", exc_info=True)
+                    time.sleep(1)  # Prevent tight loop on critical errors
+                    
+        except Exception as e:
+            logger.critical(f"Fatal error in worker thread: {e}", exc_info=True)
+        finally:
+            self._cleanup()
+            pythoncom.CoUninitialize()
+            logger.info("Excel worker thread stopped")
+    
+    def _execute(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+        """Execute a function in the worker thread and return its result.
+        
+        Args:
+            func: The function to execute
+            *args: Positional arguments to pass to the function
+            **kwargs: Keyword arguments to pass to the function
+            
+        Returns:
+            The result of the function call
+            
+        Raises:
+            RuntimeError: If the operation fails
+            TimeoutError: If the operation times out
+        """
+        task_id = str(uuid.uuid4())
+        result_event = threading.Event()
+        result_container = [None, None]  # [result, error]
+        task_removed = [False]
+        
+        def task_wrapper():
+            if task_removed[0]:  # Skip execution if task was removed due to timeout
+                    return
+            try:
+                result = func(*args, **kwargs)
+                result_container[0] = result
+            except Exception as e:
+                result_container[1] = str(e)
+            finally:
+                result_event.set()
+        
+        # Put the task in the queue
+        self._task_queue.put((task_id, task_wrapper))
+        
+        # Wait for the result with timeout
+        if not result_event.wait(timeout=180):
+            logger.error("Excel operation timed out")
+            
+        if result_container[1] is not None:
+            logger.error(f"Excel operation failed: {result_container[1]}")
+            
+        return result_container[0]
+    
+    def _cleanup(self) -> None:
+        """Clean up resources and ensure Excel is properly closed."""
+        if not hasattr(self, '_workbook') or self._workbook is None:
+            return
+            
+        try:
+            # Try to save and close the workbook
+            try:
+                self._workbook.save()
+                logger.debug("Workbook saved successfully")
+            except Exception as e:
+                logger.warning(f"Failed to save workbook: {e}")
                 
-                sheet_updated_cells = {
-                    "sheet_name": sheet_name,
-                    "updated_cells": []
-                }
+            try:
+                self._workbook.close()
+                logger.debug("Workbook closed successfully")
+            except Exception as e:
+                logger.warning(f"Failed to close workbook: {e}")
                 
-                # Apply cell updates
-                for cell_data in cells_data:
-                    if 'cell' not in cell_data:
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}", exc_info=True)
+        finally:
+            self._workbook = None
+            self._file_path = None
+    
+    def ensure_workbook(self, file_path: str) -> None:
+        """Ensure the specified workbook is open.
+        
+        Args:
+            file_path: Path to the Excel file to open
+        """
+        def _ensure_workbook():
+            file_path_obj = Path(file_path).resolve()
+            if (self._workbook is None or 
+                str(self._file_path) != str(file_path_obj)):
+                self._file_path = file_path_obj
+                logger.info(f"Opening workbook: {self._file_path}")
+
+                # Check Excel app instance open
+                if not xw.apps:
+                    # No Excel instance running, create one
+                    app = xw.App(visible=self.visible if hasattr(self, 'visible') else False)                    
+
+                else:
+                    # Set Excel application visibility
+                    if hasattr(self, 'visible'):
+                        xw.apps.active.visible = self.visible
+
+                self._workbook = xw.Book(str(self._file_path))
+        
+        self._execute(_ensure_workbook)
+    
+    def write_cells(self, sheet_name: str, cells: List[Dict[str, Any]], apply_green_highlight: bool = True) -> List[Dict[str, Any]]:
+        """Write data to cells in the specified sheet.
+        
+        Args:
+            sheet_name: Name of the worksheet
+            cells: List of cell data dictionaries with 'cell' key and optional 'value' or 'formula'
+
+        Returns:
+            List of updated cell data dictionaries
+            For example, 
+            [
+                {
+                    "a": "A1",
+                    "f": "=SUM(B1:B10)",
+                    "v": 42
+                },
+                {
+                    "a": "B1",
+                    "f": "=A1*2",
+                    "v": 5
+            ]
+        """
+        def _write_cells() -> List[Dict[str, Any]]:
+            updated_cells = []
+            try:
+                try:
+                    self._workbook.app.calculation = 'manual'
+                except Exception as e:
+                    logger.error(f"Error setting calculation mode, proceeding without setting to manual: {e}")
+                
+                try:
+                    if not any(sheet.name == sheet_name for sheet in self._workbook.sheets):
+                        sheet = self._workbook.sheets.add(sheet_name)
+                    else:
+                        sheet = self._workbook.sheets[sheet_name]
+                except Exception as e:
+                    logger.error(f"Error opening sheet {sheet_name}: {e}")
+                    return []
+                
+                for cell_data in cells:
+                    cell_ref = cell_data.get('cell')
+                    if not cell_ref:
                         continue
                     
                     try:
-                        cell = sheet.range(cell_data['cell'])
+                        cell = sheet.range(cell_ref)
                         updated_cell = self._apply_cell_formatting(cell, cell_data)
-                        sheet_updated_cells['updated_cells'].append(updated_cell)
-                        
+                        #log the updated cell dict
+                        json_str = json.dumps(updated_cell, indent=2)
+                        logger.info(json_str)
+                        updated_cells.append(updated_cell)
+                        # Add a green highlight for visual indication of edit
                         if apply_green_highlight:
                             self._apply_green_highlight(cell)
-                            
+
                     except Exception as e:
-                        logger.error(f"Error updating cell {cell_data.get('cell')}: {e}")
+                        logger.error(f"Error updating cell {cell_ref}: {e}")
                         continue
-
-                all_updated_cells.append(sheet_updated_cells)
+                
+                return updated_cells
             
-            # Save if requested
-            try:
-                if save:
-                    workbook.save()
-                    logger.info(f"Saved workbook: {self._file_path}")
             except Exception as e:
-                logger.error(f"Error saving workbook: {str(e)}")
-
-            return True, all_updated_cells
-
-        except Exception as e:
-            logger.error(f"Error editing workbook {self._file_path}: {str(e)}", exc_info=True)
-            return False, {}
-
-    def get_workbook_metadata(
-        self,
-        file_path: str,
-        sheet_cell_ranges: Optional[Dict[str, List[str]]] = None
-    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
-        """Get cell data including formulas and values from specified ranges or entire workbook."""
-        try:
-            file_path = str(Path(file_path).resolve())
-            workbook = self._get_or_create_workbook(file_path)
-            result = {"data": {}, "errors": {}}
-            
-            # If no specific ranges provided, process all used ranges in all sheets
-            if not sheet_cell_ranges:
-                for sheet in workbook.sheets:
-                    try:
-                        used_range = sheet.used_range
-                        if used_range:
-                            sheet_cell_ranges = sheet_cell_ranges or {}
-                            sheet_cell_ranges[sheet.name] = [used_range.address]
-                    except Exception as e:
-                        logger.warning(f"Could not get used range for sheet {sheet.name}: {str(e)}")
-            
-            # Process each sheet and its ranges
-            for sheet_name, ranges in (sheet_cell_ranges or {}).items():
-                try:
-                    sheet = workbook.sheets[sheet_name]
-                    sheet_data = []
-                    sheet_errors = []
-                    
-                    for cell_range in ranges:
-                        try:
-                            range_obj = sheet.range(cell_range)
-                            for cell in range_obj:
-                                sheet_data.append({
-                                    'address': cell.address,
-                                    'formula': cell.formula,
-                                    'value': cell.value,
-                                })
-                        except Exception as range_err:
-                            logger.error(f"Error processing range {cell_range}: {str(range_err)}")
-                    
-                    # Get error cells
-                    try:
-                        error_cells = sheet.api.UsedRange.SpecialCells(-4123, 16)
-                        for cell in error_cells:
-                            xl_cell = sheet.range(cell.address)
-                            sheet_errors.append({
-                                'cell': xl_cell.address,
-                                'error': cell.value,
-                                'formula': xl_cell.formula
-                            })
-                    except Exception as error_err:
-                        logger.warning(f"Could not get error cells: {str(error_err)}")
-                    
-                    if sheet_data:
-                        result["data"][sheet_name] = sheet_data
-                    if sheet_errors:
-                        result["errors"][sheet_name] = sheet_errors
-                        
-                except Exception as sheet_err:
-                    logger.error(f"Error processing sheet {sheet_name}: {str(sheet_err)}")
-                    
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error in get_workbook_metadata: {str(e)}", exc_info=True)
-            return {"data": {}, "errors": {}}
-
-    def get_cell_formulas(
-        self,
-        file_path: str,
-        cell_dict: Dict[str, Dict[str, str]]
-    ) -> Dict[str, Dict[str, str]]:
-        """Get formulas from specific cells in an Excel workbook."""
-        try:
-            file_path = str(Path(file_path).resolve())
-            workbook = self._get_or_create_workbook(file_path)
-            result = {}
-            
-            for sheet_name, cells in cell_dict.items():
-                try:
-                    sheet = workbook.sheets[sheet_name]
-                    sheet_result = {}
-                    
-                    for cell_ref in cells:
-                        try:
-                            cell = sheet.range(cell_ref)
-                            sheet_result[cell_ref] = cell.formula
-                        except Exception as cell_err:
-                            logger.warning(f"Error accessing cell {cell_ref}: {str(cell_err)}")
-                            sheet_result[cell_ref] = None
-                    
-                    result[sheet_name] = sheet_result
-                    
-                except Exception as sheet_err:
-                    logger.error(f"Error processing sheet {sheet_name}: {str(sheet_err)}")
-                    result[sheet_name] = {cell_ref: None for cell_ref in cells}
-                    
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error in get_cell_formulas: {str(e)}", exc_info=True)
-            return {}
-
-     
-    # HELPER METHODS FOR XLWINGS-------------------------------------------------------------------------------------------------------------------------------------
-    def _hex_to_rgb(self, hex_color: str) -> Optional[tuple]:
-        """Convert hex color to RGB tuple (0-1 scale for xlwings)."""
-        if not hex_color or not isinstance(hex_color, str) or not hex_color.startswith('#'):
-            return None
-            
-        hex_color = hex_color.lstrip('#')
-        if len(hex_color) not in (3, 6):
-            return None
+                logger.error(f"Error in write_cells: {e}")
+                return updated_cells
+        
+        return self._execute(_write_cells)
+    
+    def save(self) -> None:
+        """Save the current workbook."""
+        def _save():
+            if self._workbook:
+                self._workbook.save()
+                logger.debug("Workbook saved")
+        
+        self._execute(_save)
+    
+    def close(self) -> None:
+        """Close the worker thread and clean up resources."""
+        if not hasattr(self, '_worker_thread') or self._worker_thread is None:
+            return
             
         try:
-            if len(hex_color) == 3:
-                hex_color = ''.join([c * 2 for c in hex_color])
-            r, g, b = (int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-            return (r/255, g/255, b/255)  # xlwings uses 0-1 scale
-        except (ValueError, TypeError):
-            return None
+            # Signal the worker to exit
+            self._task_queue.put((None, lambda: None))
+            
+            # Wait for the worker to finish with a timeout
+            self._worker_thread.join(timeout=5)
+            
+            if self._worker_thread.is_alive():
+                logger.warning("Worker thread did not shut down cleanly")
+                
+        except Exception as e:
+            logger.error(f"Error during worker shutdown: {e}", exc_info=True)
+        finally:
+            self._worker_thread = None
+            self._initialized = False
+            logger.info("Excel worker closed")
+
 
     def _apply_cell_formatting(self, cell: xw.Range, cell_data: Dict[str, Any]) -> Dict[str, Any]:
         """Apply formatting to a cell based on cell_data dictionary."""
         if not cell or not cell_data:
-            return
+            return {}
 
         def safe_apply(operation_name, func, *args, **kwargs):
             """Helper to safely apply a formatting operation."""
@@ -526,7 +544,108 @@ class ComplexAgentWriter:
             cell_ref = getattr(cell, 'address', 'unknown')
             logger.warning(f"Warning: Could not set green highlight for cell {cell_ref}: {e}")
 
-    def cleanup(self):
-        if hasattr(_thread_local, 'com_initialized'):
-            pythoncom.CoUninitialize()
-            delattr(_thread_local, 'com_initialized')
+    
+
+class ComplexAgentWriter:
+    """Thread-safe Excel writer that uses a single Excel instance.
+    
+    This class provides a high-level interface for writing to Excel files
+    while ensuring thread safety and proper resource management.
+    """
+    
+    _instance = None
+    _lock = threading.Lock()
+    _initialized = False
+    
+    def __new__(cls) -> 'ComplexAgentWriter':
+        """Get or create the singleton instance."""
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+            
+    def __init__(self) -> None:
+        """Initialize the Excel writer if not already initialized."""
+        if not self._initialized:
+            with self._lock:
+                if not self._initialized:
+                    self.visible = True
+                    self._worker = ExcelWorker()
+                    self._initialized = True
+                    logger.info("ComplexAgentWriter initialized")
+    
+    def write_to_existing(
+        self, 
+        data: Dict[str, List[Dict[str, Any]]], 
+        output_filepath: str, 
+        **kwargs: Any
+    ) -> Tuple[bool, Dict[str, List[str]]]:
+        """Write data to an existing Excel file.
+        
+        Args:
+            data: Dictionary mapping sheet names to lists of cell data
+            output_filepath: Path to the output Excel file
+            **kwargs: Additional arguments (currently unused)
+            
+        Returns:
+            Tuple of success, Dictionary mapping sheet names to updated cells
+            (true, {"sheet_name": sheet_name, "updated_cells": sheet_updated_cells})
+            where sheet_updated_cells like: 
+            [
+                {
+                    "a": "A1",
+                    "f": "=SUM(B1:B10)",
+                    "v": 42
+                },
+                {
+                    "a": "B1",
+                    "f": "=A1*2",
+                    "v": 5
+                }
+            ]
+
+        Raises:
+            RuntimeError: If there was an error writing to the file
+        """
+        try:
+            all_updated_cells = []
+            # Ensure the workbook is open in the worker thread
+            self._worker.ensure_workbook(output_filepath)
+            
+            # Process each sheet's data
+            for sheet_name, cells_data in data.items():
+                sheet_updated_cells = self._worker.write_cells(sheet_name, cells_data)
+                all_updated_cells.append({"sheet_name": sheet_name, "updated_cells": sheet_updated_cells})
+                json_str = json.dumps(sheet_updated_cells, indent=2)
+                logger.info(json_str[:200])
+
+            
+            # Save changes
+            self._worker.save()
+            # log updated cells counts
+            for item in all_updated_cells:
+                logger.info(f"Updated {len(item['updated_cells'])} cells in sheet {item['sheet_name']}")
+            json_str = json.dumps(all_updated_cells, indent=2)[:200]
+            logger.info(json_str)
+            return True, all_updated_cells
+            
+        except Exception as e:
+            error_msg = f"Error in write_to_existing: {e}"
+            logger.error(error_msg, exc_info=True)
+            raise RuntimeError(error_msg) from e
+    
+    @classmethod
+    def cleanup(cls) -> None:
+        """Clean up resources and close the Excel instance."""
+        if cls._instance is not None:
+            try:
+                cls._instance._worker.close()
+            except Exception as e:
+                logger.error(f"Error during cleanup: {e}", exc_info=True)
+            finally:
+                cls._instance = None
+                cls._initialized = False
+
+# Register cleanup on application exit
+import atexit
+atexit.register(ComplexAgentWriter.cleanup)

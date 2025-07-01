@@ -13,8 +13,8 @@ from state.agent_state import InputState, OverallState, StepDecisionState, Outpu
 from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
 from prompt_templates.step_level_prompts import StepLevelPrompts
-from read_write_tools.excel_info_tools import get_excel_metadata, update_excel_cache, get_cell_formulas
-from read_write_tools.excel_edit_tools import parse_cell_formulas, write_formulas_to_excel
+from read_write_tools.excel_info_tools import get_excel_metadata, update_excel_cache, get_cell_formulas_from_cache, get_metadata_from_cache
+from read_write_tools.excel_edit_tools import parse_cell_formulas, write_formulas_to_excel_complex_agent, parse_markdown_formulas
 
 from typing import Annotated, Optional
 from typing_extensions import TypedDict
@@ -71,11 +71,11 @@ class CellFormula(BaseModel):
 
 
 class ExcelMetadataRange(BaseModel):
-    """Represents formulas across all sheets in an Excel workbook"""
-    sheets: str = Field(
+    """Represents data across all sheets in an Excel workbook"""
+    sheets: Dict[str, Dict[str, str]] = Field(
         ...,
-        description="JSON like string of a nested dictionary mapping sheet names to cell formulas",
-        example="""{
+        description="Mapping of sheet names to cell formulas (e.g., {'Sheet1': {'A1': '=SUM(B1:B10)', 'B1': '=A1*2'}})",
+        example={
             "Sheet1": {
                 "A1": "=SUM(B1:B10)",
                 "B1": "=A1*2"
@@ -83,7 +83,7 @@ class ExcelMetadataRange(BaseModel):
             "Sheet2": {
                 "C1": "=AVERAGE(A1:A10)"
             }
-        }"""
+        }
     )
 
 class ExcelMetadataForGathering(BaseModel):
@@ -126,7 +126,7 @@ def get_step_metadata(state: OverallState) -> OverallState:
             logger.info(f"Parsed cell range: {json_str}")
             # get the metadata for the cell range
             try:    
-                metadata = get_excel_metadata(state["workspace_path"], json_str)
+                metadata = get_metadata_from_cache(state["workspace_path"], json_str)
                 logger.info(f"Received metadata from excel: {metadata[0:100]}")
             except Exception as e:
                 logger.error(f"Failed to get excel metadata: {e}")
@@ -183,39 +183,24 @@ def get_step_cell_formulas(state: OverallState) -> OverallState:
     prompt_template = StepLevelPrompts.get_step_cell_formulas_prompt(current_step_instructions)
     enhanced_user_request = f"{prompt_template}"
     messages.append({"role": "user", "content": enhanced_user_request})
-    structured_llm = llm.with_structured_output(ExcelMetadataRange)
-    llm_response = structured_llm.invoke(messages)
+    llm_response = llm.invoke(messages)
     if not llm_response:
         return Command(
             goto= "llm_response_failure"
         )
-    llm_response_content = llm_response.sheets
-    messages.append({"role": "assistant", "content": llm_response_content})
-    update_data = {
-        "messages": [enhanced_user_request, llm_response_content], 
-        "latest_model_response": llm_response_content
-        }
-    cell_data = None
-    if llm_response.sheets:
-        sheet_data = llm_response.sheets
-        logger.info(f"Received cell range from llm: {sheet_data[0:200]}")
-        if isinstance(sheet_data, str):
-            try:
-                # Parse the string in the sheets field
-                # clean the string
-                cleaned_sheet_data = clean_json_string(sheet_data)
-                logger.info("Parsed sheets data")
-                
-            except json.JSONDecodeError:
-                logger.error("Failed to parse sheets data as JSON")
-            except Exception as e:
-                logger.error(f"Failed to parse sheets data: {e}")
-                raise
-
-
+    if llm_response:
+        messages.append({"role": "assistant", "content": llm_response.content})
+        update_data = {
+            "messages": [enhanced_user_request, llm_response.content], 
+            "latest_model_response": llm_response.content
+            }
+        cell_data = None
+        logger.info(f"Received cell range from llm: {llm_response.content[0:200]}")
         try:
-            cell_data = parse_cell_formulas(cleaned_sheet_data)
+            cell_data = parse_markdown_formulas(llm_response.content)
             logger.info("Parsed sheets data into formulas")
+            json_str = json.dumps(cell_data, indent=2)
+            logger.info(f"Parsed cell data: {json_str[0:200]}")
         except Exception as e:
             logger.error(f"Failed to parse sheets data into formulas: {e}")
             raise
@@ -223,10 +208,17 @@ def get_step_cell_formulas(state: OverallState) -> OverallState:
     if cell_data:        
         try:
             update_data["current_step_cell_formulas_for_edit"] =  cell_data
-            excel_cell_metadata_before_edit = get_cell_formulas(
+            excel_cell_metadata_before_edit = get_cell_formulas_from_cache(
                 state["workspace_path"],
                 cell_data
             )
+            if excel_cell_metadata_before_edit:
+                str_value = json.dumps(excel_cell_metadata_before_edit, indent=2)
+                logger.info(f"Received metadata from excel: {str_value[0:100]}")
+            else:
+                logger.error("Failed to get excel metadata before edit")
+                raise
+            
             update_data["current_step_metadata_before_edit"] = excel_cell_metadata_before_edit
 
             return Command(
@@ -265,7 +257,7 @@ def write_step_cell_formulas(state: OverallState) -> OverallState:
             raise
     try:
         logger.info(f"Writing formulas to excel: {validated_formulas}")
-        updated_formulas = write_formulas_to_excel(state["workspace_path"], validated_formulas)
+        updated_formulas = write_formulas_to_excel_complex_agent(state["workspace_path"], validated_formulas)
     except Exception as e:
         logger.error(f"Failed to write formulas to excel: {e}")
         raise
@@ -280,52 +272,106 @@ def write_step_cell_formulas(state: OverallState) -> OverallState:
     # no need to update state here since no interaction with llm happened
     # use add_edge to add the edge from write_step_cell_formulas to get_updated_excel_data_to_check
 
-
 def clean_json_string(json_str):
-    """Clean and parse a JSON string that might have extra escaping.
+    """Clean and parse a JSON string that might be malformed or have extra escaping.
     
     Args:
         json_str: A string that might be a JSON string, possibly with extra escaping
+                 or malformed structure. Expected format: {sheet: {cell1:val, ...}, ...}
         
     Returns:
         Parsed Python object from the JSON, or None if parsing fails
     """
-    import re 
+    import re
     import ast
+    from json import JSONDecodeError
 
     if not isinstance(json_str, str):
-        # If it's not a string, return as-is (might already be a dict/list)
         return json_str
         
     # Try direct JSON parse first
     try:
         return json.loads(json_str)
-    except json.JSONDecodeError:
+    except JSONDecodeError:
         pass
         
+    # Try to fix common issues
+    try:
+        # Try to extract valid JSON using regex for the expected structure
+        pattern = r'(\{.*?"[^"]*"\s*:\s*\{.*?\}\s*(?:,\s*"[^"]*"\s*:\s*\{.*?\}\s*)*\})'
+        matches = re.findall(pattern, json_str, re.DOTALL)
+        if matches:
+            # Take the longest match that looks like valid JSON
+            best_match = max(matches, key=len)
+            # Try to balance the braces if needed
+            open_braces = best_match.count('{')
+            close_braces = best_match.count('}')
+            if open_braces > close_braces:
+                best_match += '}' * (open_braces - close_braces)
+            return json.loads(best_match)
+    except (JSONDecodeError, re.error) as e:
+        logger.debug(f"Regex extraction failed: {e}")
+
     # Try removing extra escaping
     try:
-        # Replace multiple backslashes with single backslashes
-        # Using raw strings for both pattern and replacement
         cleaned = re.sub(r'\\+', r'\\', json_str)
         return json.loads(cleaned)
-    except (json.JSONDecodeError, re.error) as e:
-        logger.debug(f"First cleanup attempt failed: {e}")
-        
+    except (JSONDecodeError, re.error) as e:
+        logger.debug(f"Escape character cleanup failed: {e}")
+
+    # Try to fix truncated JSON
+    try:
+        # Find the last complete key-value pair
+        last_brace = json_str.rfind('}')
+        if last_brace > 0:
+            truncated = json_str[:last_brace+1]
+            # Try to balance the braces
+            open_count = truncated.count('{')
+            close_count = truncated.count('}')
+            if open_count > close_count:
+                truncated = truncated.rsplit('{', 1)[0]
+                if truncated.endswith(','):
+                    truncated = truncated[:-1]
+                truncated += '}'
+            return json.loads(truncated)
+    except JSONDecodeError as e:
+        logger.debug(f"Truncated JSON handling failed: {e}")
+
     # Try literal eval as last resort
     try:
-        return ast.literal_eval(json_str)
+        # First clean up any control characters that might break ast.literal_eval
+        cleaned = re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', json_str)
+        # Try to handle single-quoted strings
+        cleaned = re.sub(r"(?<!\\)'", '"', cleaned)
+        # Handle escaped single quotes inside strings
+        cleaned = re.sub(r"(?<!\\)\\'", "'", cleaned)
+        # Remove trailing commas
+        cleaned = re.sub(r',\s*}', '}', cleaned)
+        cleaned = re.sub(r',\s*]', ']', cleaned)
+        return ast.literal_eval(cleaned)
     except (ValueError, SyntaxError, TypeError) as e:
-        logger.error(f"Failed to parse JSON string after all attempts: {e}")
-        
-    # If all else fails, try stripping potential outer quotes
+        logger.debug(f"Literal eval failed: {e}")
+
+    # Final attempt: Try to extract just the cell data part
     try:
-        stripped = json_str.strip()
-        if (stripped.startswith('"') and stripped.endswith('"')) or \
-           (stripped.startswith("'") and stripped.endswith("'")):
-            return json.loads(stripped[1:-1])
-    except (ValueError, json.JSONDecodeError) as e:
-        logger.debug(f"Stripping quotes also failed: {e}")
+        # Look for patterns like "A1": "value" or "A1":"value"
+        cell_pattern = r'"([A-Z]+\d+)"\s*:\s*("[^"]*"|[\d.]+|true|false|null)'
+        sheet_pattern = r'"([^"]+)"\s*:\s*\{([^{}]*)\}'
         
+        # Find all sheet matches
+        sheet_matches = re.findall(sheet_pattern, json_str, re.DOTALL)
+        if sheet_matches:
+            result = {}
+            for sheet_name, cells_str in sheet_matches:
+                # Find all cell matches in this sheet
+                cell_matches = re.findall(cell_pattern, cells_str)
+                if cell_matches:
+                    result[sheet_name] = dict(cell_matches)
+            if result:
+                return result
+    except Exception as e:
+        logger.debug(f"Final pattern matching failed: {e}")
+
     logger.error("All parsing attempts failed")
     return None
+    

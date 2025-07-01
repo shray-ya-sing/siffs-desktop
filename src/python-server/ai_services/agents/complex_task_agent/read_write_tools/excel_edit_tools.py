@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 server_dir_path = Path(__file__).parent.parent.parent.parent.parent.absolute()
 sys.path.append(str(server_dir_path))
 from excel.editing.excel_writer import ExcelWriter
+from excel.editing.complex_agent_writer import ComplexAgentWriter
 
 
 def write_formulas_to_excel(
@@ -94,6 +95,77 @@ def write_formulas_to_excel(
     except Exception as e:
         logger.error(f"Error in write_formulas_to_excel: {str(e)}", exc_info=True)
         raise
+
+
+def write_formulas_to_excel_complex_agent(
+    workspace_path: str,
+    sheet_formulas: Dict[str, Dict[str, str]]
+) -> List[Dict[str, Any]]:
+    """
+    Write formulas to specified cells across multiple sheets in an Excel workbook using ComplexAgentWriter.
+    
+    Args:
+        workspace_path: Path to the Excel file
+        sheet_formulas: Dictionary mapping sheet names to dictionaries of cell formulas
+            Example: {
+                "Sheet1": {"A1": "=SUM(B1:B10)", "B1": "=A1*2"},
+                "Sheet2": {"C1": "=AVERAGE(A1:A10)"}
+            }
+        
+    Returns:
+        List of updated cell data dictionaries
+    """
+    logger.info(f"Starting to write formulas to Excel file using ComplexAgentWriter: {workspace_path}")
+    logger.debug(f"Sheet formulas received: {json.dumps(sheet_formulas, indent=2)}")
+    
+    MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
+    
+    try:
+        logger.debug(f"Loading file mappings from: {MAPPINGS_FILE}")
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+        temp_file_path = mappings.get(workspace_path) or next(
+            (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+            workspace_path
+        )
+        logger.debug(f"Using temp file path: {temp_file_path}")
+    except Exception as e:
+        logger.error(f"Error processing file mappings, using original path: {str(e)}")
+        temp_file_path = workspace_path
+
+    try:
+        # Convert to the format expected by write_to_existing
+        parsed_data = {
+            sheet_name: [{"cell": cell, "formula": formula} 
+                        for cell, formula in cell_formulas.items()]
+            for sheet_name, cell_formulas in sheet_formulas.items()
+        }
+        logger.debug(f"Converted {len(parsed_data)} sheets for Excel writing")
+        
+        # Use ComplexAgentWriter to write the data
+        writer = ComplexAgentWriter()
+        logger.info("Starting to write data to Excel")
+        
+        success, updated_cells = writer.write_to_existing(
+            data=parsed_data,
+            output_filepath=temp_file_path,
+            create_pending=False,
+            save=True
+        )
+        
+        logger.info(f"Excel write operation {'succeeded' if success else 'failed'}")
+        
+        if success and updated_cells:
+            return updated_cells
+        else:
+            logger.warning("No cells were updated or write operation failed")
+            return []
+            
+    except Exception as e:
+        logger.error(f"Error in write_formulas_to_excel: {str(e)}", exc_info=True)
+        raise
+
+
 
 def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
     """
@@ -170,6 +242,98 @@ def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
     
     logger.debug("Cell format validation successful")
     return True
+
+def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str, str]]]:
+    """
+    Parse markdown-style cell formulas into a dictionary of sheet formulas.
+    
+    Expected input format:
+        sheet_name: Sheet1| A1, "=SUM(B1:B10)" | B1, 100 | sheet_name: Sheet2| C1, "=A1*2"
+    
+    Args:
+        markdown_input: String in markdown format with sheet names and cell formulas
+        
+    Returns:
+        Dictionary with sheet names as keys and cell formulas as values if valid, None otherwise.
+        
+        Example return value:
+        {
+            "Sheet1": {
+                "A1": "=SUM(B1:B10)",
+                "B1": "100"
+            },
+            "Sheet2": {
+                "C1": "=A1*2"
+            }
+        }
+    """
+    logger.info("Starting to parse markdown formulas")
+    
+    try:
+        if not markdown_input or not isinstance(markdown_input, str):
+            logger.error("Invalid markdown input: empty or not a string")
+            return None
+            
+        result = {}
+        current_sheet = None
+        
+        # Split by 'sheet_name:' to separate different sheets
+        sheet_sections = [s.strip() for s in markdown_input.split('sheet_name:') if s.strip()]
+        
+        for section in sheet_sections:
+            # Split into sheet name and cell entries
+            parts = [p.strip() for p in section.split('|', 1)]
+            if len(parts) < 1:
+                continue
+                
+            sheet_name = parts[0].strip()
+            if not sheet_name:
+                logger.warning("Empty sheet name found, skipping section")
+                continue
+                
+            current_sheet = sheet_name
+            result[current_sheet] = {}
+            
+            if len(parts) == 1:  # No cell entries for this sheet
+                continue
+                
+            # Process cell entries
+            cell_entries = [e.strip() for e in parts[1].split('|') if e.strip()]
+            
+            for entry in cell_entries:
+                # Split into cell reference and formula/value
+                cell_parts = [p.strip() for p in entry.split(',', 1)]
+                if len(cell_parts) != 2:
+                    logger.warning(f"Invalid cell entry format: {entry}")
+                    continue
+                    
+                cell_ref, formula = cell_parts
+                cell_ref = cell_ref.strip()
+                formula = formula.strip()
+                
+                # Clean up formula (remove surrounding quotes if present)
+                if (formula.startswith('"') and formula.endswith('"')) or \
+                   (formula.startswith("'") and formula.endswith("'")):
+                    formula = formula[1:-1]
+                
+                # Validate cell reference format (simple check)
+                if not re.match(r'^[A-Za-z]+[0-9]+$', cell_ref):
+                    logger.warning(f"Invalid cell reference format: {cell_ref}")
+                    continue
+                    
+                result[current_sheet][cell_ref.upper()] = formula
+        
+        if not result:
+            logger.error("No valid sheets or cell entries found in markdown")
+            return None
+            
+        logger.info(f"Successfully parsed {sum(len(s) for s in result.values())} formulas "
+                  f"across {len(result)} sheets from markdown")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in parse_markdown_formulas: {str(e)}", exc_info=True)
+        return None
 
 def parse_cell_formulas(formula_input: Union[str, dict]) -> Optional[Dict[str, Dict[str, str]]]:
     """
