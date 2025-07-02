@@ -34,15 +34,19 @@ from nodes.error_nodes import (
     retry_failed,
     step_edit_failed,
     retry_edit_failed,
-    revert_edit_failed
+    revert_edit_failed,
+    llm_response_failure,
+    execution_failed,
+    task_understanding_failed,
 )
-from nodes.final_evaluation_nodes import check_final_success
+from nodes.final_evaluation_nodes import check_final_success, update_full_excel_metadata, terminate_success, terminate_failure
 from nodes.checking_nodes import (  # Add this import
     get_updated_excel_data_to_check,
     check_edit_success,
     revert_edit,
     decide_retry_edit,
     get_retry_edit_instructions,
+    implement_retry,
     get_updated_metadata_after_retry,
     check_edit_success_after_retry,
     step_retry_succeeded
@@ -141,6 +145,7 @@ class ComplexExcelRequestAgent:
         complex_excel_request_agent.add_node("revert_edit", revert_edit)
         complex_excel_request_agent.add_node("decide_retry_edit", decide_retry_edit)
         complex_excel_request_agent.add_node("get_retry_edit_instructions", get_retry_edit_instructions)
+        complex_excel_request_agent.add_node("implement_retry", implement_retry)
         complex_excel_request_agent.add_node("get_updated_metadata_after_retry", get_updated_metadata_after_retry)
         complex_excel_request_agent.add_node("check_edit_success_after_retry", check_edit_success_after_retry)
         complex_excel_request_agent.add_node("step_retry_succeeded", step_retry_succeeded)
@@ -148,12 +153,21 @@ class ComplexExcelRequestAgent:
         complex_excel_request_agent.add_node("step_edit_failed", step_edit_failed)
         complex_excel_request_agent.add_node("retry_edit_failed", retry_edit_failed)
         complex_excel_request_agent.add_node("revert_edit_failed", revert_edit_failed)
+        complex_excel_request_agent.add_node("llm_response_failure", llm_response_failure)
+        complex_excel_request_agent.add_node("execution_failed", execution_failed)
+        complex_excel_request_agent.add_node("task_understanding_failed", task_understanding_failed)
         # FINAL
+        complex_excel_request_agent.add_node("update_full_excel_metadata", update_full_excel_metadata)  
         complex_excel_request_agent.add_node("check_final_success", check_final_success)
-        
+        complex_excel_request_agent.add_node("terminate_success", terminate_success)
+        complex_excel_request_agent.add_node("terminate_failure", terminate_failure)
         # Set entry point
         complex_excel_request_agent.set_entry_point("determine_request_essence")
         
+        # Set termination from termination nodes
+        complex_excel_request_agent.add_edge("terminate_success", END)
+        complex_excel_request_agent.add_edge("terminate_failure", END)
+
         # Compile the workflow
         self.complex_excel_request_agent = complex_excel_request_agent.compile(
             name="complex_excel_agent",
