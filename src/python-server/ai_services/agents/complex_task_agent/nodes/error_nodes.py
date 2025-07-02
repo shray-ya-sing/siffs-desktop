@@ -65,7 +65,7 @@ def retry_failed(state: StepDecisionState) -> OverallState:
     """
     writer = get_stream_writer()
     error_msg = "Maximum retry attempts reached. Agent terminated."
-    writer(error_msg)
+    writer({"error": error_msg})
     logger.error(error_msg)
     
     messages = state.get("messages", [])
@@ -84,7 +84,7 @@ def retry_failed(state: StepDecisionState) -> OverallState:
 @log_errors
 def step_edit_failed(state: StepDecisionState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Step edit failed, agent terminated"})
+    writer({"error": "Step edit failed, agent terminated"})
     # interrupt the streamwriter to notify the user that the agent was caught in an infinite loop while working on the action and it could not be completed
     # then route to the end node
     return Command(
@@ -97,7 +97,7 @@ def step_edit_failed(state: StepDecisionState) -> OverallState:
 @log_errors
 def retry_edit_failed(state: StepDecisionState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Retry edit failed, agent terminated"})
+    writer({"error": "Retry edit failed, agent terminated"})
     messages = state["messages"]
     last_model_response = messages[-1]
     # interrupt the streamwriter to notify the user that the agent was caught in an infinite loop while working on the action and it could not be completed
@@ -115,7 +115,7 @@ def revert_edit_failed(state: StepDecisionState) -> OverallState:
     messages = state["messages"]
     last_model_response = messages[-1]
     writer = get_stream_writer()
-    writer({"custom_key": "Revert edit failed, agent terminated"})
+    writer({"error": "Revert edit failed, agent terminated"})
     # interrupt the streamwriter to notify the user that the agent was caught in an infinite loop while working on the action and it could not be completed
     # then route to the end node
     return Command(
@@ -129,7 +129,7 @@ def revert_edit_failed(state: StepDecisionState) -> OverallState:
 @log_errors
 def task_understanding_failed(state: InputState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Task understanding failed, agent terminated"})
+    writer({"error": "Task understanding failed, agent terminated"})
     return Command(
         update= {
         "agent_succeeded": False
@@ -140,7 +140,7 @@ def task_understanding_failed(state: InputState) -> OverallState:
 @log_errors
 def llm_response_failure(state:OverallState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "LLM response failure, agent terminated"})
+    writer({"error": "LLM response failure, agent terminated"})
     return Command(
         update= {
         "agent_succeeded": False
@@ -151,10 +151,10 @@ def llm_response_failure(state:OverallState) -> OverallState:
 @log_errors
 def execution_failed(state:OverallState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Execution failed, agent terminated"})
+    writer({"error": "Execution failed, agent terminated"})
     return Command(
         update= {
         "agent_succeeded": False
         },
-        goto= "END"
+        goto= "terminate_failure"
     )
