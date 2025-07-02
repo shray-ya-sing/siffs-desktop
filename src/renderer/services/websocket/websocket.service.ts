@@ -11,6 +11,14 @@ export interface AssistantChunkMessage {
   requestId: string;
 }
 
+export interface CustomEventMessage {
+  type: 'CUSTOM_EVENT';
+  event_type: string;
+  event_message: string;
+  requestId: string;
+  done: boolean;
+}
+
 class WebSocketService {
   private socket: WebSocket | null = null;
   private static instance: WebSocketService;
@@ -92,6 +100,13 @@ class WebSocketService {
         // Special handling for chunked messages
         if (message.type === 'ASSISTANT_MESSAGE_CHUNK' || 
             message.type === 'ASSISTANT_MESSAGE_DONE') {
+          const handlers = this.eventHandlers.get(message.type) || [];
+          handlers.forEach(handler => handler(message)); // Pass the entire message
+          return;
+        }
+
+        // Special handling for custom events
+        if (message.type === 'CUSTOM_EVENT') {
           const handlers = this.eventHandlers.get(message.type) || [];
           handlers.forEach(handler => handler(message)); // Pass the entire message
           return;
@@ -206,6 +221,15 @@ class WebSocketService {
           message.type === 'ASSISTANT_MESSAGE_DONE') {
         // Forward the message with its data
         console.log('WEBSOCKET_SERVICE: handleIncomingMessage received assistant message from backend server, forwarding to handler in agent-chat-ui.tsx')
+        const handlers = this.eventHandlers.get(message.type) || [];
+        handlers.forEach(handler => handler(message));
+        return;
+      }
+      
+      // Special handling for custom events
+      if (message.type === 'CUSTOM_EVENT') {
+        // Forward the message with its data
+        console.log('WEBSOCKET_SERVICE: handleIncomingMessage received custom event from backend server, forwarding to handler in agent-chat-ui.tsx')
         const handlers = this.eventHandlers.get(message.type) || [];
         handlers.forEach(handler => handler(message));
         return;

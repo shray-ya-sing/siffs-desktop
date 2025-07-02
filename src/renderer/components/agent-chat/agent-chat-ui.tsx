@@ -7,9 +7,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { useMention } from '../../hooks/useMention'
 import MentionDropdown from './MentionDropdown'
 import { useFileTree, FileItem } from '../../hooks/useFileTree'
-import { EventCard } from '../events/EventCard'
+import { EventCard, EventType } from '../events/EventCard'
 
-type MessageType = 'user' | 'assistant' | 'tool_call';
+type MessageType = 'user' | 'assistant' | 'tool_call' | 'custom_event';
 
 interface BaseMessage {
   id: string;
@@ -34,7 +34,15 @@ interface ToolCallMessage extends BaseMessage {
   result?: any;
 }
 
-type Message = UserMessage | AssistantMessage | ToolCallMessage;
+interface CustomEventMessage extends BaseMessage {
+  role: 'custom_event';
+  event_type: string;
+  event_message: string;
+  requestId: string;
+  done: boolean;
+}
+
+type Message = UserMessage | AssistantMessage | ToolCallMessage | CustomEventMessage;
 
 const MODEL_OPTIONS: ModelOption[] = [
 //  { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
@@ -185,8 +193,27 @@ export default function AIChatUI() {
       if (message.type === 'ASSISTANT_MESSAGE_CHUNK' && message.content) {
         console.log('handleAssistantChunk received ASSISTANT_MESSAGE_CHUNK for streaming');
         setMessages(prev => {
+          // If last message is from custom event, update its status to completed
+          if (prev.length > 0 && prev[prev.length - 1].role === 'custom_event') {
+            const newMessages = [...prev];
+            const lastMessage = prev[prev.length - 1];
+            newMessages[newMessages.length - 1] = {
+              ...lastMessage as CustomEventMessage,
+              done: true
+            };
+            // Then add the new assistant message
+            return [
+              ...newMessages,
+              { 
+                id: `msg-${Date.now()}`,
+                role: 'assistant',
+                content: message.content,
+                timestamp: new Date()
+              }
+            ];
+          }
           // If last message is from assistant, update it
-          if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
+          else if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
             console.log('handleAssistantChunk updating last assistant message');
             const newMessages = [...prev];
             newMessages[newMessages.length - 1] = {
@@ -208,6 +235,68 @@ export default function AIChatUI() {
       else if (message.type === 'ASSISTANT_MESSAGE_DONE') {
         console.log('handleAssistantChunk received message done streaming signal', message);
         setIsLoading(false);
+      }
+    };
+
+    const handleCustomEvent = (message: any) => {
+      console.log('handleCustomEvent triggered');
+      if (!message || typeof message !== 'object') {
+        console.error('Invalid message format:', message);
+        return;
+      }
+    
+      if (message.type === 'CUSTOM_EVENT' && message.event_message) {
+        console.log('handleCustomEvent received CUSTOM_EVENT for streaming');
+        
+        /**
+         * Add a new message for a custom event to the conversation history.
+         *
+         * The callback function takes the previous messages as an argument and
+         * returns a new array with the new message added to the end.
+         *
+         * Always adds the message as a new one, even if there is already a message
+         * with the same requestId. This is because the requestId is not unique for
+         * custom events, and we want to show all custom events in the conversation
+         * history.
+         *
+         * @param prev The previous messages in the conversation history.
+         * @return A new array with the new message added to the end.
+         */
+        setMessages(prev => {
+
+          // If last message is from custom event, update its status to completed
+          if (prev.length > 0 && prev[prev.length - 1].role === 'custom_event') {
+            const newMessages = [...prev];
+            const lastMessage = prev[prev.length - 1];
+            newMessages[newMessages.length - 1] = {
+              ...lastMessage as CustomEventMessage,
+              done: true
+            };
+            // Then add the new custom event message
+            return [...prev, { 
+              id: `msg-${Date.now()}`,
+              role: 'custom_event',
+              event_type: message.event_type,
+              event_message: message.event_message,
+              content: message.event_message,
+              done: message.done,
+              requestId: message.requestId,
+              timestamp: new Date()
+            }];
+          }
+          // Always add it as a new message
+          console.log('handleCustomEvent adding new custom event message');
+          return [...prev, { 
+            id: `msg-${Date.now()}`,
+            role: 'custom_event',
+            event_type: message.event_type,
+            event_message: message.event_message,
+            content: message.event_message,
+            done: message.done,
+            requestId: message.requestId,
+            timestamp: new Date()
+          }];
+        });
       }
     };
 
@@ -254,6 +343,8 @@ export default function AIChatUI() {
     webSocketService.on('TOOL_RESULT', handleToolResult);
     webSocketService.on('ASSISTANT_MESSAGE_CHUNK', handleAssistantChunk);
     webSocketService.on('ASSISTANT_MESSAGE_DONE', handleAssistantChunk);
+    webSocketService.on('CUSTOM_EVENT', handleCustomEvent);
+    
     
     
     return () => {
@@ -262,6 +353,7 @@ export default function AIChatUI() {
       webSocketService.off('TOOL_RESULT', handleToolResult);
       webSocketService.off('ASSISTANT_MESSAGE_CHUNK', handleAssistantChunk);
       webSocketService.off('ASSISTANT_MESSAGE_DONE', handleAssistantChunk);
+      webSocketService.off('CUSTOM_EVENT', handleCustomEvent);
     };
   }, []);
 
@@ -308,21 +400,21 @@ export default function AIChatUI() {
                   </div>
                 </div>
               </div>
-            ) : message.role === 'tool_call' ? (
+            ) : message.role === 'custom_event' ? (
               <div className="flex justify-start">
                 <div className="max-w-4xl w-full">
                   <EventCard
-                    type={message.status === 'completed' ? 'completed' : 'executing'}
-                    message={message.content}
+                    type={message.event_type as EventType}
+                    message={message.event_message}
                     className="w-full"
-                    isStreaming={message.status !== 'completed'}
+                    isStreaming={message.done !== true}
                     timestamp={message.timestamp.getTime()}
                   />
                 </div>
               </div>
             ) : (
               <div className="flex justify-start">
-                <div className="max-w-4xl">
+                <div className="max-w-4xl w-full">
                   <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20">
                   <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
                     {message.content}

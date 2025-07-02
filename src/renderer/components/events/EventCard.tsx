@@ -12,6 +12,7 @@ export type EventType =
   | 'generating' 
   | 'executing' 
   | 'reviewing' 
+  | 'retrying'
   | 'info'
   | 'error';
 
@@ -55,6 +56,10 @@ const typeStyles = {
   reviewing: {
     badge: 'bg-purple-600/40 text-purple-300/90',
     card: 'border-purple-500/20'
+  },
+  retrying: {
+    badge: 'bg-gray-600/40 text-gray-300/90',
+    card: 'border-gray-500/20'
   },
   info: {
     badge: 'bg-gray-600/40 text-gray-300/90',
