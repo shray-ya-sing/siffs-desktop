@@ -235,8 +235,8 @@ class ExcelWorker:
                         cell = sheet.range(cell_ref)
                         updated_cell = self._apply_cell_formatting(cell, cell_data)
                         #log the updated cell dict
-                        json_str = json.dumps(updated_cell, indent=2)
-                        logger.info(json_str)
+                        #json_str = json.dumps(updated_cell, indent=2)
+                        #logger.info(json_str)
                         updated_cells.append(updated_cell)
                         # Add a green highlight for visual indication of edit
                         if apply_green_highlight:
@@ -375,7 +375,7 @@ class ExcelWorker:
                             str_value = fixed_value
                     cell.api.Worksheet.Evaluate(str_value[1:])  # Remove the '=' for evaluation
                     cell.formula = str_value
-                    logger.info(f"Set formula '{str_value}' for cell {cell.address}")
+                    #logger.info(f"Set formula '{str_value}' for cell {cell.address}")
                     # Update result with new formula and value                    
                     #Calculate just the new cell value
                     cell.api.Calculate()
@@ -385,7 +385,7 @@ class ExcelWorker:
                     logger.warning(f"Warning: Invalid formula '{str_value}': {e}")
                     # Fall back to setting as plain text
                     cell.value = str_value
-                    logger.info(f"Set value '{str_value}' for cell {cell.address}")
+                   # logger.info(f"Set value '{str_value}' for cell {cell.address}")
                     #Calculate just the new cell value
                     cell.api.Calculate()
                     result['f'] = cell.formula
@@ -395,10 +395,10 @@ class ExcelWorker:
                 pattern = r"(?:'?[^!']+'?!)?\$?[A-Za-z]+\$?\d+"
                 if bool(re.search(pattern, str_value)):
                     cell.formula = f"={str_value}"
-                    logger.info(f"Set formula '{str_value}' for cell {cell.address} without = sign")
+                    #logger.info(f"Set formula '{str_value}' for cell {cell.address} without = sign")
                 # Set as plain value
                 cell.value = value
-                logger.info(f"Set value '{str_value}' for cell {cell.address}")
+                #logger.info(f"Set value '{str_value}' for cell {cell.address}")
                 #Calculate just the new cell value
                 cell.api.Calculate()
                 result['f'] = cell.formula
@@ -616,8 +616,8 @@ class ComplexAgentWriter:
             for sheet_name, cells_data in data.items():
                 sheet_updated_cells = self._worker.write_cells(sheet_name, cells_data)
                 all_updated_cells.append({"sheet_name": sheet_name, "updated_cells": sheet_updated_cells})
-                json_str = json.dumps(sheet_updated_cells, indent=2)
-                logger.info(json_str[:200])
+                #json_str = json.dumps(sheet_updated_cells, indent=2)
+                #logger.info(json_str[:200])
 
             
             # Save changes
@@ -625,8 +625,8 @@ class ComplexAgentWriter:
             # log updated cells counts
             for item in all_updated_cells:
                 logger.info(f"Updated {len(item['updated_cells'])} cells in sheet {item['sheet_name']}")
-            json_str = json.dumps(all_updated_cells, indent=2)[:200]
-            logger.info(json_str)
+            #json_str = json.dumps(all_updated_cells, indent=2)[:200]
+            #logger.info(json_str)
             return True, all_updated_cells
             
         except Exception as e:
