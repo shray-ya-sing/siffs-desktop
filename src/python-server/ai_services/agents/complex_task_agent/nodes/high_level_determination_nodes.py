@@ -94,7 +94,7 @@ class NextStep(BaseModel):
 @log_errors
 def determine_request_essence(state: InputState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Understanding request"})
+    writer({"analyzing": "Understanding request"})
     
     # Get the latest conversation from cache
     latest_conversation = get_latest_conversation()
@@ -144,7 +144,7 @@ def determine_request_essence(state: InputState) -> OverallState:
 @log_errors
 def determine_excel_status(state: OverallState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Understanding excel file contents and status"})
+    writer({"analyzing": "Understanding excel file contents and status"})
     messages = state["messages"]
     # call the get full excel info tool to determine the status of the full excel file
     full_excel_metadata = get_full_excel_metadata(state["workspace_path"])
@@ -171,7 +171,7 @@ def determine_excel_status(state: OverallState) -> OverallState:
 @log_errors
 def determine_model_architecture(state: OverallState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Planning structure"})
+    writer({"analyzing": "Planning structure"})
     messages = state["messages"]
     # call llm with the latest model response and latest excel metadata to determine the model architecture
     prompt_template = HighLevelDeterminePrompts.get_model_architecture_prompt()
@@ -190,7 +190,7 @@ def determine_model_architecture(state: OverallState) -> OverallState:
 @log_errors
 def determine_implementation_sequence(state: OverallState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Planning steps"})
+    writer({"analyzing": "Planning steps"})
     messages = state["messages"]
     # call llm with the latest model response and latest excel metadata to determine the implementation sequence
     prompt_template = HighLevelDeterminePrompts.get_implementation_sequence_prompt()
@@ -220,7 +220,7 @@ def determine_implementation_sequence(state: OverallState) -> OverallState:
 @log_errors
 def decide_next_step(state: OverallState) -> OverallState:
     writer = get_stream_writer()
-    writer({"custom_key": "Deciding next step"})
+    writer({"analyzing": "Deciding next step"})
     messages = state["messages"]
     latest_step = state.get("current_step")
     latest_step_number = state.get("current_step_number", 0)
