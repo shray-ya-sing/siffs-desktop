@@ -13,8 +13,9 @@ class StepLevelPrompts:
         3. If you need to add new data, it must be placed in a completely blank cell range
         4. Do not insert new rows or columns that would shift existing data
         
-        Output your response as a dictionary with sheet names as keys and list of cell ranges as values:
+        Output your response as a dictionary with a sheets property that is a JSON like string with sheet names as keys and list of cell ranges as values:
         {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
+        DONOT INCLUDE THE FORMULAS IN YOUR RESPONSE AS YOU ARE ONLY GENERATING THE CELL RANGE TO VIEW: output like {"Sheet1":{"A1":"House Price","B1":1000000,"A2":"Downpayment","B2":0.1,"A3":"Interest Rate","B3":0.019,"A4":"Term (years)","B4":40}} is INCORRECT!
         """
 
     @staticmethod
