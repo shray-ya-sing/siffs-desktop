@@ -15,6 +15,7 @@ sys.path.append(str(ai_services_path))
 # Import local modules
 from agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMPT
 from agents.complex_task_agent.complex_excel_request_agent import ComplexExcelRequestAgent
+from agents.medium_complexity_agent.medium_excel_request_agent import MediumExcelRequestAgent
 from agents.prebuilt_agent import PrebuiltAgent
 from agents.supervisor.tools.tools import handoff_to_complex_excel_agent, list_workspace_files
 
@@ -55,13 +56,13 @@ class SupervisorAgent:
         # Initialize agents
         self.simple_agent = PrebuiltAgent().with_model("claude-3-7-latest").get_agent()
         self.complex_agent = ComplexExcelRequestAgent().with_model(gemini_flash_lite).get_agent()
-
+        self.medium_agent = MediumExcelRequestAgent().with_model(gemini_flash_lite).get_agent()
         self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT 
     
     def _setup_supervisor(self):
         """Set up the supervisor with both agents"""
         self.supervisor = create_supervisor(
-            [self.simple_agent, self.complex_agent],
+            [self.simple_agent, self.complex_agent, self.medium_agent],
             tools=[list_workspace_files],
             model=self.supervisor_model,
             prompt=self.enhanced_system_prompt,

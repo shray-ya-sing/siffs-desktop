@@ -170,6 +170,17 @@ class SupervisorAgentOrchestrator:
                             "requestId": request_id
                         }
                     )
+                elif chunk_type == "custom_event":
+                    await self._send_to_client(
+                        client_id=client_id,
+                        data={
+                            "type": "CUSTOM_EVENT",
+                            "event_type": chunk.get("event_type", {}),
+                            "event_message": chunk.get("event_message", {}),
+                            "requestId": request_id,
+                            "done": False
+                        }
+                    )
                 elif chunk_type == "tool_calls":
                     await self._send_to_client(
                         client_id=client_id,
@@ -234,61 +245,82 @@ class SupervisorAgentOrchestrator:
             config = {
                     "configurable": {
                         "thread_id": thread_id,
-                        "recursion_limit": 100  
+                        "recursion_limit": 1000  
                     },
-                    "recursion_limit": 100
+                    "recursion_limit": 1000
                 }
             
             assistant_message = ""
             # Stream both messages and custom data
-            async for mode, chunk in agent_system.astream(
+            async for stream_item in agent_system.astream(
                 inputs,
                 config,
+                subgraphs= True, # Enable streaming from sub-agents
                 stream_mode=["messages", "custom"]
             ):
-                if mode == "messages":
-                    # Handle LLM token streaming
-                    message_chunk, metadata = chunk
-                    if not hasattr(message_chunk, 'content') or not message_chunk.content:
-                        continue
-                    
-                    # Skip tokens from excluded nodes
-                    node_name = metadata.get("langgraph_node", "")
-                    if node_name in self.EXCLUDED_NODES:
-                        continue
-                    
-                    if isinstance(message_chunk.content, list) and len(message_chunk.content) > 0:
-                        first_chunk = message_chunk.content[0]
-                        if isinstance(first_chunk, dict) and 'text' in first_chunk:
-                            text = first_chunk['text']
+                if isinstance(stream_item, tuple):
+                    node_id, mode, chunk = stream_item
+                    if mode == "messages":
+                        message_chunk, metadata = chunk
+                        if not hasattr(message_chunk, 'content'):
+                            continue
+                        
+                        # Skip tokens from excluded nodes
+                        node_name = metadata.get("langgraph_node", "")
+                        if node_name in self.EXCLUDED_NODES:
+                            continue
+                        
+                        # Extract text content
+                        text = self.extract_ai_message_content(message_chunk)
+                        if text:
                             assistant_message += text
-                            
                             yield {
                                 "type": "content",
                                 "content": text,
                                 "requestId": request_id
                             }
-                
-                elif mode == "custom":
-                    if isinstance(chunk, dict):
-                        chunk_str = json.dumps(chunk)
-                        logger.info(f"Custom chunk: {chunk_str}")
-                        assistant_message += chunk_str
-                        yield {
-                            "type": "content",
-                            "content": chunk_str,
-                            "requestId": request_id
+                        
+                    
+                    elif mode == "custom":
+                        if isinstance(chunk, dict):
+                            chunk_str = json.dumps(chunk)
+                            for key, value in chunk.items():
+                                event_type = key
+                                event_message = value
+                            logger.info(f"Custom event: {event_type}")
+                            logger.info(f"Custom event message: {event_message}")
+                            yield {
+                                "type": "custom_event",
+                                "event_type": event_type,
+                                "event_message": event_message,
+                                "requestId": request_id,
+                                "done": False
+                            }
+                        
+                        if isinstance(chunk, str):
+                            logger.info(f"Custom chunk: {chunk}")
+                            assistant_message += chunk
+                            yield {
+                                "type": "custom_event",
+                                "event_type": "info",
+                                "event_message": chunk,
+                                "requestId": request_id,
+                                "done": False
                         }
                     
-                    if isinstance(chunk, str):
-                        logger.info(f"Custom chunk: {chunk}")
-                        assistant_message += chunk
-                        yield {
-                            "type": "content",
-                            "content": chunk,
-                            "requestId": request_id
-                    }
-                            
+                    elif mode == "updates":
+                        # Handle model state updates
+                        if isinstance(chunk, dict):
+                            logger.info(f"Model update: {chunk}")
+                            yield {
+                                "type": "update",
+                                "data": chunk,
+                                "requestId": request_id
+                            }
+                
+                # else get a string representation of the stream_item and log it
+                else:
+                    logger.info(f"Received stream_item of type: {type(stream_item)}")                                
         
             yield {"type": "done", "requestId": request_id}
             
@@ -321,6 +353,29 @@ class SupervisorAgentOrchestrator:
             "error": error
         }
         await self._send_to_client(client_id, error_msg, request_id)
+
+    def extract_ai_message_content(self, message_chunk):
+        """Extract text content from an AIMessage or AIMessageChunk."""
+        # Check for direct string content
+        if isinstance(message_chunk.content, str):
+            return message_chunk.content
+        
+        # Handle list of content blocks (common in newer models)
+        if isinstance(message_chunk.content, list):
+            text_parts = []
+            for content in message_chunk.content:
+                if isinstance(content, str):
+                    text_parts.append(content)
+                elif isinstance(content, dict):
+                    # Handle different content types
+                    if content.get('type') == 'text':
+                        text_parts.append(content.get('text', ''))
+                    elif 'text' in content:
+                        text_parts.append(content['text'])
+            return ''.join(text_parts)
+        
+        # Fallback to string representation if content is not in expected format
+        return str(message_chunk.content)
 
 
 # Create global instance

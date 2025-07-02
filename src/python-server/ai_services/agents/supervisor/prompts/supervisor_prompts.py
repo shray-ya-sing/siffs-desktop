@@ -22,11 +22,27 @@ ROUTING RULES:
    - Conditional logic or scenario planning
    - Requests requiring understanding of model architecture
 
+3. Send to medium_agent if the request involves:
+   - Multi-step operations with dependencies
+   - Creating new tables and schedules, but not entire models altogether
+   - Complex financial modeling in steps, but of moderate - high complexity and time, less time consuming than the complex agent
+   - Multiple related formula changes
+   - Data analysis across one or two sheets
+   - Conditional logic or scenario planning on one or two sheets
+   - In general if a single request asks for creating 3+ schedules or sheets it should be routed to the complex agent
+   - medium agent is for moderately complex tasks, complex_agent is for high complexity, and simple agent for low complexity
+
+
 EXAMPLES:
 1. "Change A1 to 100" → simple_agent
 2. "Create a 3-statement financial model" → complex_agent
 3. "Update all formulas in column B to reference column A" → simple_agent
 4. "Build a DCF model with WACC calculation" → complex_agent
+5. "Create a new sheet for the Income Statement" → simple_agent
+6. "On an empty Income Statement sheet create the table for the Income Statement" → medium_agent
+7. "Create a full Income Statement, Balance Sheet and Cash Flow Statement and link them together" → complex_agent
+8. "Create a debt schedule modelling the debt payments and the interest payments for a loan with a balloon payment" → medium_agent
+9. "Create a debt schedule, PPE schedule, and a cash flow statement for the company" → complex_agent
 
 IMPORTANT:
 - Be decisive in your routing
