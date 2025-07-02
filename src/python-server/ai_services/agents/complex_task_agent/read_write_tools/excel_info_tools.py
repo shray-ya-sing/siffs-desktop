@@ -6,6 +6,7 @@ import sys
 import os
 import logging
 import datetime
+from decimal import Decimal
 logger = logging.getLogger(__name__)
 # Add the current directory to Python path
 server_dir_path = Path(__file__).parent.parent.parent.parent.parent.absolute()
@@ -30,10 +31,12 @@ def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, An
     Returns:
         bool: True if at least one cell was updated successfully, False otherwise
     """
-    class DateTimeEncoder(json.JSONEncoder):
+    class ExtendedJSONEncoder(json.JSONEncoder):
         def default(self, obj):
             if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
                 return obj.isoformat()
+            elif isinstance(obj, Decimal):
+                return str(obj)  # Preserve exact decimal precision
             return super().default(obj)
 
     MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
@@ -123,10 +126,10 @@ def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, An
                             # Update existing cell or add new one
                             if cell_ref in existing_cells:
                                 sheet_data["chunks"][0]["cells"][existing_cells[cell_ref]] = cell_entry
-                                logger.info(f"Updated existing cell: {cell_ref}")
+                                #logger.info(f"Updated existing cell: {cell_ref}")
                             else:
                                 sheet_data["chunks"][0]["cells"].append(cell_entry)
-                                logger.info(f"Added new cell: {cell_ref}")
+                                #logger.info(f"Added new cell: {cell_ref}")
                             
                             success_count += 1
                             
@@ -147,7 +150,7 @@ def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, An
             # Write back to the file
             try:
                 f.seek(0)
-                json.dump(cache_data, f, indent=2, cls=DateTimeEncoder)
+                json.dump(cache_data, f, indent=2, cls=ExtendedJSONEncoder)
                 f.truncate()
                 logger.info(f"Cache updated successfully: {success_count} cells updated, {error_count} errors")
                 return True
@@ -630,3 +633,130 @@ def get_formulas_for_revert(
     except Exception as e:
         logger.error(f"Error extracting formulas: {str(e)}", exc_info=True)
         return {"error": f"Failed to extract formulas: {str(e)}"}
+
+
+def clean_json_string(json_str):
+    """Clean and parse a JSON string that might be malformed or have extra escaping.
+    
+    Handles various edge cases including:
+    - Extra outer quotes
+    - Escaped quotes
+    - Truncated JSON
+    - Malformed structures
+    - Single-quoted strings
+    - Trailing commas
+    
+    Args:
+        json_str: A string that might be a JSON string, possibly with extra escaping
+                or malformed structure. Expected format: {sheet: {cell1:val, ...}, ...}
+        
+    Returns:
+        Parsed Python object from the JSON, or the original string if all parsing fails
+    """
+    import re
+    import json
+    import ast
+    from json import JSONDecodeError
+
+    if not isinstance(json_str, str) or not json_str.strip():
+        return json_str
+
+    # Helper function to safely parse JSON
+    def try_parse(s):
+        try:
+            return json.loads(s)
+        except (JSONDecodeError, TypeError):
+            return None
+
+    # Try direct JSON parse first (handles well-formed JSON)
+    parsed = try_parse(json_str)
+    if parsed is not None:
+        return parsed
+
+    # Handle case where the entire JSON is wrapped in quotes and escaped
+    stripped = json_str.strip()
+    if (stripped.startswith('"') and stripped.endswith('"')) or \
+       (stripped.startswith("'") and stripped.endswith("'")):
+        try:
+            # Remove outer quotes and unescape
+            unescaped = stripped[1:-1].encode().decode('unicode_escape')
+            # Try parsing the unescaped content
+            parsed = try_parse(unescaped)
+            if parsed is not None:
+                return parsed
+            # If unescaped content is still not valid JSON, try wrapping in braces
+            if not unescaped.startswith('{'):
+                parsed = try_parse(f'{{{unescaped}}}')
+                if parsed is not None:
+                    return parsed
+        except (UnicodeDecodeError, JSONDecodeError):
+            pass
+
+    # Try to extract valid JSON using regex for the expected structure
+    try:
+        # Pattern for sheet with cell ranges: {"Sheet1": ["A1:B5"]} or similar
+        sheet_range_pattern = r'\{[^{}]*"[^"]*"\s*:\s*(\[\s*"[^"]*"\s*(?:,\s*"[^"]*"\s*)*\]|\{[^{}]*\})[^{}]*\}'
+        matches = re.findall(sheet_range_pattern, json_str, re.DOTALL)
+        if matches:
+            # Take the longest match that looks like valid JSON
+            best_match = max(matches, key=len)
+            # Try to balance the braces if needed
+            open_braces = best_match.count('{')
+            close_braces = best_match.count('}')
+            if open_braces > close_braces:
+                best_match += '}' * (open_braces - close_braces)
+            elif close_braces > open_braces:
+                best_match = '{' * (close_braces - open_braces) + best_match
+            parsed = try_parse(best_match)
+            if parsed is not None:
+                return parsed
+    except (re.error, JSONDecodeError):
+        pass
+
+    # Try to fix common JSON issues
+    try:
+        # Remove control characters
+        cleaned = re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', json_str)
+        # Convert single quotes to double quotes
+        cleaned = re.sub(r"(?<!\\)'", '"', cleaned)
+        # Handle escaped single quotes
+        cleaned = re.sub(r"(?<!\\)\\'", "'", cleaned)
+        # Remove trailing commas
+        cleaned = re.sub(r',\s*([}\]])', r'\1', cleaned)
+        # Remove comments (// and /* */)
+        cleaned = re.sub(r'//.*?$|/\*.*?\*/', '', cleaned, flags=re.MULTILINE)
+        
+        parsed = try_parse(cleaned)
+        if parsed is not None:
+            return parsed
+    except (re.error, JSONDecodeError):
+        pass
+
+    # Try to extract cell data as last resort
+    try:
+        # Look for patterns like "A1": "value" or "A1":"value"
+        cell_pattern = r'"([A-Z]+\d+)"\s*:\s*("[^"]*"|[\d.]+|true|false|null)'
+        sheet_pattern = r'"([^"]+)"\s*:\s*(\{[^{}]*\}|\[[^]]*\])'
+        
+        # Find all sheet matches
+        sheet_matches = re.findall(sheet_pattern, json_str, re.DOTALL)
+        if sheet_matches:
+            result = {}
+            for sheet_name, cells_str in sheet_matches:
+                # If it's a list of ranges like ["A1:B5", "C1:D5"]
+                if cells_str.startswith('['):
+                    ranges = re.findall(r'"([^"]+)"', cells_str)
+                    if ranges:
+                        result[sheet_name] = ranges
+                # If it's an object with cell values
+                else:
+                    cell_matches = re.findall(cell_pattern, cells_str)
+                    if cell_matches:
+                        result[sheet_name] = dict(cell_matches)
+            if result:
+                return result
+    except (re.error, TypeError):
+        pass
+
+    # If all else fails, return the original string
+    return json_str
