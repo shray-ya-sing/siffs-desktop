@@ -7,6 +7,7 @@ class CheckingPrompts:
         Extract not only the cells you generated edits for but the context around them, so add at least 2 rows and columns to the 
         cell range so you can view the context as well to determine if the edit was successfully executed, or if it resulted in a 
         malformed or wrongfully edited file. 
+        output result in a sheets property that should be a json like string like {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
         """
 
     @staticmethod
@@ -76,7 +77,36 @@ class CheckingPrompts:
         """
 
     @staticmethod
-    def get_retry_cell_formulas_prompt():
-        return f"""        
-        Analyze the instructions in the conversation history to determine how to correctly implement this edit. 
+    def get_retry_cell_formulas_prompt(instructions,excel_metadata, error_comments):
+        return f""" 
+        Generate updated cell formulas for cells in the excel sheet for this retry attempt.        
+        FORMAT YOUR RESPONSE AS FOLLOWS:
+        
+        sheet_name: [Name of the sheet]| A1, "=SUM(B1:B10)" | B1, "Text value" | C1, 123 | sheet_name: [Next sheet name]| D5, "=AVERAGE(A1:A10)" | E5, "Another value"
+        
+        RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC. Just return the pipe delimited markdown containig cell formulas in the specified format.
+        RULES:
+        1. Start each sheet with 'sheet_name: [exact sheet name]' followed by a pipe (|)
+        2. List each cell update as: [cell_reference], "[formula_or_value]"
+        3. Separate multiple cell updates with pipes (|)
+        4. Always enclose formulas and text values in double quotes
+        5. Numbers can be written without quotes
+        6. Include ALL cells that need to be written
+        7. NEVER modify or reference non-existent cells
+       
+        EXAMPLES:
+        
+        sheet_name: Income Statement| B5, "=SUM(B2:B4)" | B6, 1000 | B7, "=B5-B6" | sheet_name: Assumptions| B2, 0.05 | B3, 1.2 | C3, "=B3*1.1"
+        
+        BAD EXAMPLES:
+        - sheet_name: Income Statement B5, "=SUM(B2:B4)"  # Missing pipe after sheet name
+        - sheet_name: Income Statement | B5, =SUM(B2:B4)   # Formula not in quotes
+        - sheet_name: Income Statement | B5 SUM(B2:B4)     # Missing comma after cell reference
+ 
+        ----------------ORIGINAL INSTRUCTIONS:
+        {instructions}
+        -----------------METADATA:
+        {excel_metadata}
+        -----------------COMMENTS:    
+        {error_comments}
         """
