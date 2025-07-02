@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from functools import wraps
 from datetime import datetime
-
+from langgraph.graph.state import END
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -42,7 +42,7 @@ def log_errors(func):
 
 from state.agent_state import InputState, OverallState, StepDecisionState, OutputState
 from prompt_templates.final_evaluator_prompt import get_final_success_prompt
-from read_write_tools.excel_info_tools import get_excel_metadata;
+from read_write_tools.excel_info_tools import get_excel_metadata, get_metadata_from_cache, get_full_excel_metadata
 
 from typing import Annotated, Optional
 from typing_extensions import TypedDict
@@ -53,9 +53,10 @@ try:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
     if not GEMINI_API_KEY:
         logger.error("GEMINI_API_KEY environment variable not set")
-        
+    gemini_pro = "gemini-2.5-pro"
+    gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",
+        model=gemini_flash_lite,
         temperature=0.2,
         max_retries=3,
         google_api_key=GEMINI_API_KEY
@@ -73,6 +74,22 @@ class FinalSuccess(BaseModel):
     final_success_rationale: str = Field(..., description="Rationale for the edit success")
 
 @log_errors
+def update_full_excel_metadata(state: OverallState)-> OverallState:
+    # updates the cache based on the latest values in the excel file
+    try:
+        updated_data = get_excel_metadata(state.get("workspace_path"))
+        update_excel_cache(state.get("workspace_path"), updated_data)
+    except Exception as e:
+        logger.error(f"Failed to update excel metadata: {str(e)}")
+        raise
+    
+    return Command(
+            goto="check_final_success"
+        )
+
+
+
+@log_errors
 def check_final_success(state: OverallState):
     """
     Checks if the final state of the task meets the success criteria.
@@ -84,38 +101,37 @@ def check_final_success(state: OverallState):
         Command: Command to either end the process or retry based on success
     """
     writer = get_stream_writer()
-    writer("Checking final success")
+    writer({"reviewing": "Checking final success"})
     logger.info("Starting final success check")
     
     try:
         messages = state.get("messages", [])
-        current_state = state.get("current_state", {})
-        
-        if not current_state:
-            logger.error("No current state found in the agent state")
-
             
         # Get the final excel metadata
-        excel_metadata = current_state.get("excel_metadata")
+        excel_metadata = get_full_excel_metadata(state.get("workspace_path"))
         if not excel_metadata:
             logger.error("No Excel metadata found in the current state")
+            excel_metadata = {}
             
         # Get the user request
-        user_request = current_state.get("user_request")
+        user_request = state.get("user_input")
         if not user_request:
             logger.error("No user request found in the current state")
 
         
         logger.info("Generating final success prompt")
         # Get the final success prompt
-        final_success_prompt = get_final_success_prompt(user_request, excel_metadata)
+        final_success_prompt = get_final_success_prompt(excel_metadata)
         
-        # Call the LLM
-        messages.append({"role": "user", "content": final_success_prompt})
-        logger.debug(f"Sending final evaluation request to LLM: {final_success_prompt[:200]}...")
-        
+
         try:
             structured_llm = llm.with_structured_output(FinalSuccess)
+            if user_request:
+                final_success_prompt+=f"\n\nInitial User Request for reference: {user_request}"
+            # Call the LLM
+            messages.append({"role": "user", "content": final_success_prompt})
+            logger.debug(f"Sending final evaluation request to LLM: {final_success_prompt[:200]}...")
+        
             llm_response = structured_llm.invoke(messages)
             llm_response_content = llm_response.model_dump_json()
             messages.append({"role": "assistant", "content": llm_response_content})
@@ -138,7 +154,7 @@ def check_final_success(state: OverallState):
                 logger.info("Task completed successfully")
                 return Command(
                     update=update_data,
-                    goto="end"
+                    goto="terminate_success"
                 )
             else:
                 logger.warning("Task did not meet success criteria, considering retry")
@@ -157,21 +173,34 @@ def check_final_success(state: OverallState):
             update={
                 "messages": messages,
                 "final_success": False,
-                "final_success_rationale": f"Error during evaluation: {str(e)}",
-                "error": error_msg
+                "final_success_rationale": f"Error during evaluation: {str(e)}"
             },
             goto="decide_retry"
         )
     else:
-        writer("Final failure! Some steps could not be completed successfully. ")
+        writer({"error": "Final failure! Some steps could not be completed successfully."})
         return Command(
             update= {"messages": [final_success_prompt, llm_response_content], 
             "latest_model_response": llm_response_content,
             "final_excel_metadata": excel_metadata,
-            "final_excel_metadata": final_excel_metadata,
             "final_success": final_success,
             "final_success_rationale": final_success_rationale
             },
-            goto= "END"
+            goto= "terminate_failure"
         )
     
+@log_errors 
+def terminate_success(state: OverallState):
+    messages = state["messages"]
+    success_message = {"role": "assistant", "content": "Task completed successfully. "}
+    writer = get_stream_writer()
+    writer({"completed": "Task completed successfully"})
+    return {"messages": success_message}
+
+@log_errors
+def terminate_failure(state: OverallState):
+    messages = state["messages"]
+    failure_message = {"role": "assistant", "content": "An unexpected error ocurred during execution. Need to retry "}
+    writer = get_stream_writer()
+    writer({"error": "An unexpected error ocurred during execution. Need to retry "})
+    return {"messages": failure_message}
