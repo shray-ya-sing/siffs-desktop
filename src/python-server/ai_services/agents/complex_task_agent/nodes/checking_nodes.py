@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 from langgraph.types import Command
 from langgraph.config import get_stream_writer
+from langgraph.graph import END
 
 # Decorator for error handling and logging
 def log_errors(func):
@@ -42,8 +43,8 @@ from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
 from prompt_templates.step_level_prompts import StepLevelPrompts
 from prompt_templates.checking_prompts import CheckingPrompts
-from read_write_tools.excel_info_tools import get_full_excel_metadata, get_excel_metadata, update_excel_cache
-from read_write_tools.excel_edit_tools import write_formulas_to_excel, parse_cell_formulas
+from read_write_tools.excel_info_tools import get_full_excel_metadata, get_excel_metadata, update_excel_cache, get_metadata_from_cache, get_formulas_for_revert, get_cell_formulas_from_cache, clean_json_string
+from read_write_tools.excel_edit_tools import write_formulas_to_excel_complex_agent, parse_cell_formulas, parse_markdown_formulas
 
 from typing import Annotated, Optional
 from typing_extensions import TypedDict
@@ -56,9 +57,10 @@ try:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
     if not GEMINI_API_KEY:
         logger.error("GEMINI_API_KEY not found in environment variables")
-        
+    gemini_pro = "gemini-2.5-pro"
+    gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",
+        model=gemini_flash_lite,
         temperature=0.2,
         max_retries=3,
         google_api_key=GEMINI_API_KEY
@@ -92,16 +94,6 @@ class ExcelMetadataRange(BaseModel):
         }"""
     )
     
-class EditSuccess(BaseModel):
-    """Represents the success of an edit"""
-    edit_success: bool = Field(..., description="Whether the edit was successful")
-    rationale: str = Field(..., description="Rationale for the edit success")
-
-
-class RevertEdit(BaseModel):
-    """Represents the revert of an edit"""
-    revert: bool = Field(..., description="Whether the edit should be reverted")
-
 class ExcelMetadataForGathering(BaseModel):
     """Represents formulas across all sheets in an Excel workbook"""
     sheets: str = Field(
@@ -111,6 +103,17 @@ class ExcelMetadataForGathering(BaseModel):
             {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
         """
     )
+
+class EditSuccess(BaseModel):
+    """Represents the success of an edit"""
+    edit_success: bool = Field(..., description="Whether the edit was successful")
+    rationale: str = Field(..., description="Rationale for the edit success")
+
+
+class RevertEdit(BaseModel):
+    """Represents the revert of an edit"""
+    revert: bool = Field(..., description="Whether the edit should be reverted")
+    revert_cell_range: ExcelMetadataForGathering = Field(..., description="Range of cells that should be reverted")
 
 class RetryEdit(BaseModel):
     """Represents the retry of an edit"""
@@ -122,7 +125,7 @@ class RetryEdit(BaseModel):
 def get_updated_excel_data_to_check(state: OverallState) -> OverallState:
     messages = state.get("messages", [])
     writer = get_stream_writer()
-    writer("Reviewing edit")
+    writer({"reviewing": "Reviewing edit"})
     
     try:
         # Get prompt and prepare request
@@ -145,6 +148,7 @@ def get_updated_excel_data_to_check(state: OverallState) -> OverallState:
             
         llm_response_content = llm_response.model_dump_json()
         messages.append({"role": "assistant", "content": llm_response_content})
+        logger.info(f"LLM response content: {llm_response_content}")
         
         # Validate metadata range
         metadata_range = llm_response.sheets
@@ -152,19 +156,42 @@ def get_updated_excel_data_to_check(state: OverallState) -> OverallState:
             error_msg = f"Invalid metadata range format: {metadata_range}"
             logger.error(error_msg)
         
+
+        metadata_range_dict = {}
+        logger.info(f"Metadata range of type: {type(metadata_range)}")
         if isinstance(metadata_range, str):
             try:
-                metadata_range = json.loads(metadata_range)
+                metadata_range_parsed = json.loads(metadata_range)
+                # need to ensure this is a dict
+                if isinstance(metadata_range_parsed, list):
+                    
+                    for item in metadata_range_parsed:
+                        # check if item is a dict
+                        if not isinstance(item, dict):
+                            error_msg = f"Invalid metadata range format: {metadata_range}"
+                            logger.error(error_msg)
+                            raise
+                        else: 
+                            for sheet_name, cell_range in item.items():
+                                metadata_range_dict[sheet_name] = cell_range
+                elif isinstance(metadata_range_parsed, dict):
+                    metadata_range_dict = metadata_range_parsed
+                else:
+                    error_msg = f"Invalid metadata range format: {metadata_range}"
+                    logger.error(error_msg)
+                    raise
             except json.JSONDecodeError:
                 error_msg = f"Invalid metadata range format: {metadata_range}"
                 logger.error(error_msg)
+        else:
+            raise ValueError(f"Invalid metadata range format: {metadata_range}")
 
             
         return Command(
             update={
                 "messages": [enhanced_user_request, llm_response_content],
                 "latest_model_response": llm_response_content,
-                "current_step_updated_metadata_range": metadata_range
+                "current_step_updated_metadata_range": metadata_range_dict
             },
             goto="check_edit_success"
         )
@@ -186,7 +213,7 @@ def get_updated_excel_data_to_check(state: OverallState) -> OverallState:
 @log_errors
 def check_edit_success(state: OverallState) -> OverallState:
     writer = get_stream_writer()
-    writer("Reviewing whether the edit was successful")
+    writer({"reviewing": "Reviewing whether the edit was successful"})
     messages = state.get("messages", [])
     
     try:
@@ -203,7 +230,7 @@ def check_edit_success(state: OverallState) -> OverallState:
             error_msg = "No workspace path provided in state"
             logger.error(error_msg)
             
-        updated_excel_metadata = get_excel_metadata(workspace_path, excel_metadata_range)
+        updated_excel_metadata = get_metadata_from_cache(workspace_path, excel_metadata_range)
         if not updated_excel_metadata:
             error_msg = "Failed to get updated Excel metadata"
             logger.error(error_msg)
@@ -273,7 +300,7 @@ def check_edit_success(state: OverallState) -> OverallState:
 @log_errors
 def revert_edit(state: OverallState) -> StepDecisionState:
     writer = get_stream_writer()
-    writer("Deciding whether to revert malformed edit")
+    writer({"reviewing": "Deciding whether to revert malformed edit"})
     
     try:
         # Get state data with validation
@@ -282,6 +309,7 @@ def revert_edit(state: OverallState) -> StepDecisionState:
         step_number = state.get("current_step_number")
         step_edit_formulas = state.get("current_step_cell_formulas_for_edit")
         workspace_path = state.get("workspace_path")
+
         
         # Validate required state
         if not all([step_instructions, step_number is not None, step_edit_formulas, workspace_path]):
@@ -315,6 +343,7 @@ def revert_edit(state: OverallState) -> StepDecisionState:
         # Prepare common update data
         update_data = {
             "messages": [enhanced_user_request, llm_response_content],
+            "workspace_path": workspace_path,
             "revert": revert,
             "step_instructions": step_instructions,
             "step_number": step_number,
@@ -325,19 +354,39 @@ def revert_edit(state: OverallState) -> StepDecisionState:
         
         if revert:
             # Revert the edit
-            pre_edit_metadata = state.get("current_step_metadata_before_edit")
+            try:
+                # check if the response has a revert_cell_range
+                if not hasattr(llm_response, 'revert_cell_range') or not llm_response.revert_cell_range:
+                    error_msg = "Invalid or incomplete response from LLM when deciding revert"
+                    logger.error(error_msg)
+                    raise
+                pre_edit_metadata = state.get("current_step_metadata_before_edit")
+                pre_edit_metadata_str = json.dumps(pre_edit_metadata)
+                logger.info(f"Pre-edit metadata: {pre_edit_metadata_str[0:200]}")
+                revert_cell_range_str = llm_response.revert_cell_range.sheets # revert_cell_range is an ExcelMetadataForGathering object with a sheets property that is a str
+                revert_cell_range_dict = json.loads(revert_cell_range_str)
+                logger.info(f"Revert cell range: {revert_cell_range_str[0:200]}")
+                pre_edit_data_for_range = get_formulas_for_revert(pre_edit_metadata, revert_cell_range_dict)
+            except Exception as e:
+                error_msg = f"Failed to get pre-edit metadata: {str(e)}"
+                logger.error(error_msg)
+                raise
             if not pre_edit_metadata:
                 error_msg = "No pre-edit metadata available for revert"
                 logger.error(error_msg)
-
                 
             try:
-                # Write formulas to revert the changes
-                revert_result = write_formulas_to_excel(workspace_path, pre_edit_metadata)
+                try:
+                    # Write formulas to revert the changes
+                    revert_result = write_formulas_to_excel_complex_agent(workspace_path, pre_edit_data_for_range)
+                except Exception as e:
+                    error_msg = f"Failed to write formulas to revert edit: {str(e)}"
+                    logger.error(error_msg)
+                    raise
                 
                 # Update the excel cache
                 try:
-                    update_excel_cache(workspace_path, pre_edit_metadata)
+                    update_excel_cache(workspace_path, revert_result)
                 except Exception as e:
                     logger.error(f"Failed to update excel cache during revert: {str(e)}")
                     # Continue even if cache update fails
@@ -348,7 +397,7 @@ def revert_edit(state: OverallState) -> StepDecisionState:
                         **update_data,
                         "metadata_after_revert": revert_result
                     },
-                    goto="retry_edit"
+                    goto="decide_retry_edit"
                 )
                 
             except Exception as e:
@@ -386,7 +435,7 @@ def revert_edit(state: OverallState) -> StepDecisionState:
 @log_errors
 def decide_retry_edit(state: StepDecisionState) -> StepDecisionState:
     writer = get_stream_writer()
-    writer("Deciding whether to retry malformed edit")
+    writer({"reviewing": "Deciding whether to retry malformed edit"})
     
     try:
         # Get state data with validation
@@ -435,15 +484,17 @@ def decide_retry_edit(state: StepDecisionState) -> StepDecisionState:
                 if not cell_range:
                     error_msg = "No cell range provided in LLM response for retry"
                     logger.error(error_msg)
+                    raise
 
                 
                 # Parse cell formulas and get metadata
                 json_str = json.loads(cell_range.sheets)
                 
-                metadata = get_excel_metadata(workspace_path, json_str)
+                metadata = get_metadata_from_cache(workspace_path, json_str)
                 if not metadata:
                     error_msg = "Failed to get metadata for the specified cell range"
                     logger.error(error_msg)
+                    raise
 
                 
                 logger.info("Preparing to retry edit with updated metadata")
@@ -452,7 +503,7 @@ def decide_retry_edit(state: StepDecisionState) -> StepDecisionState:
                         **update_data,
                         "metadata_for_retry": metadata,
                     },
-                    goto="retry_edit"
+                    goto="get_retry_edit_instructions"
                 )
                 
             except Exception as e:
@@ -489,13 +540,13 @@ def decide_retry_edit(state: StepDecisionState) -> StepDecisionState:
 @log_errors
 def get_retry_edit_instructions(state: StepDecisionState) -> StepDecisionState:
     writer = get_stream_writer()
-    writer("Generating retry edit instructions")
+    writer({"retrying": "Generating retry edit instructions"})
     
     try:
         # Get state data with validation
         messages = state.get("messages", [])
         instructions = state.get("step_instructions")
-        comments = state.get("step_success_rationale")
+        comments = state.get("current_step_success_rationale")
         metadata = state.get("metadata_for_retry")
         
         # Validate required state
@@ -538,7 +589,7 @@ def get_retry_edit_instructions(state: StepDecisionState) -> StepDecisionState:
                     "metadata_for_retry": metadata,
                     "retry_count": 0  # Reset retry count for the next operation
                 },
-                goto="retry_edit"
+                goto="implement_retry"
             )
             
         except Exception as e:
@@ -561,21 +612,23 @@ def get_retry_edit_instructions(state: StepDecisionState) -> StepDecisionState:
         )
 
 @log_errors
-def retry_edit(state: StepDecisionState) -> StepDecisionState:
+def implement_retry(state: StepDecisionState) -> StepDecisionState:
     writer = get_stream_writer()
-    writer("Attempting to retry Excel edit with new formulas")
+    writer({"retrying": "Attempting to retry Excel edit with new formulas"})
     
     try:
         # Get state data with validation
         messages = state.get("messages", [])
         instructions = state.get("instructions_for_retry")
+        if not instructions:
+            raise ValueError("Missing instructions for retry")  
         metadata = state.get("metadata_for_retry")
+        if not metadata:
+            raise ValueError("Missing metadata for retry")
         workspace_path = state.get("workspace_path")
-        
-        # Validate required state
-        if not all([instructions, metadata, workspace_path]):
-            error_msg = "Missing required state data for retry edit"
-            logger.error(error_msg)
+        if not workspace_path:
+            raise ValueError("Missing workspace path for retry")
+    
 
         
         # Generate prompt with error handling
@@ -588,75 +641,72 @@ def retry_edit(state: StepDecisionState) -> StepDecisionState:
             if not enhanced_user_request:
                 error_msg = "Failed to generate retry cell formulas prompt"
                 logger.error(error_msg)
+                raise
      
         except Exception as e:
             error_msg = f"Error generating retry prompt: {str(e)}"
             logger.error(error_msg)
-            return Command(
-                goto="llm_response_failure"
-            )
+            raise
+            
         
         # Prepare messages for LLM
         messages.append({"role": "user", "content": enhanced_user_request})
         
         # Get LLM response with structured output
         try:
-            structured_llm = llm.with_structured_output(ExcelMetadataRange)
-            llm_response = structured_llm.invoke(messages)
-            
-            # Validate LLM response
-            if not llm_response or not hasattr(llm_response, 'sheets') or not llm_response.sheets:
-                error_msg = "Invalid or empty response from LLM for retry cell formulas"
-                logger.error(error_msg)
-                return Command(
-                    goto="llm_response_failure"
-                )
-                
-            llm_response_content = llm_response.model_dump_json()
+            llm_response = llm.invoke(messages)                
+            llm_response_content = llm_response.content
             messages.append({"role": "assistant", "content": llm_response_content})
-            
-            # Parse and validate formulas
-            json_str = json.loads(llm_response.sheets)
-            formulas = parse_cell_formulas(json_str)
-            if not formulas:
-                error_msg = "No valid formulas found in LLM response"
-                logger.error(error_msg)
-                return Command(
-                    goto="llm_response_failure"
-                )
-            
+            update_data = {"messages": [enhanced_user_request, llm_response_content]}    
+            try:
+                cell_data = parse_markdown_formulas(llm_response.content)
+                logger.info("Parsed sheets data into formulas")
+                json_str = json.dumps(cell_data, indent=2)
+                #logger.info(f"Parsed cell data: {json_str[0:200]}")
+            except Exception as e:
+                logger.error(f"Failed to parse sheets data into formulas: {e}")
+                raise
+            # store the metadata cells before editing
+            if cell_data:        
+                try:
+                    update_data["current_step_cell_formulas_for_edit"] =  cell_data
+                    excel_cell_metadata_before_edit = get_cell_formulas_from_cache(
+                        workspace_path,
+                        cell_data
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to get cell formulas from cache: {e}")
+                    raise
             # Write formulas to Excel with error handling
             try:
+                formulas = parse_cell_formulas(cell_data)
                 logger.info("Writing retry formulas to Excel")
-                write_formulas_to_excel(workspace_path, formulas)
+                result = write_formulas_to_excel_complex_agent(workspace_path, formulas)
                 
                 # Update cache with error handling
                 try:
-                    update_excel_cache(workspace_path, formulas)
+                    update_excel_cache(workspace_path, result)
                 except Exception as e:
                     logger.error(f"Warning: Failed to update Excel cache: {str(e)}")
-                    # Continue even if cache update fails
+                    raise
                 
                 logger.info("Successfully applied retry formulas")
+                if formulas:
+                    update_data["formulas_for_retry"] = formulas
+                update_data["retry_count"] = state.get("retry_count", 0) + 1
                 return Command(
-                    update={
-                        "messages": [enhanced_user_request, llm_response_content],
-                        "formulas_for_retry": formulas,
-                        "retry_count": 0  # Reset retry count on success
-                    },
+                    update=update_data,
                     goto="get_updated_metadata_after_retry"
                 )
                 
             except Exception as e:
                 error_msg = f"Failed to write formulas to Excel: {str(e)}"
                 logger.error(error_msg)
+                if formulas:
+                    update_data["formulas_for_retry"] = formulas
+                update_data["retry_count"] = state.get("retry_count", 0) + 1
                 return Command(
-                    update={
-                        "messages": [enhanced_user_request, llm_response_content],
-                        "formulas_for_retry": formulas,
-                        "error": error_msg,
-                        "retry_count": state.get("retry_count", 0) + 1
-                    },
+                    update=update_data,
                     goto="retry_edit_failed"
                 )
                 
@@ -678,14 +728,15 @@ def retry_edit(state: StepDecisionState) -> StepDecisionState:
                 "error": error_msg,
                 "retry_count": retry_count
             },
-            goto="retry_failed" if retry_count >= 3 else "retry_edit"
+            goto="retry_failed" if retry_count >= 3 else "implement_retry"
         )
+                
 
 @log_errors
 def get_updated_metadata_after_retry(state: StepDecisionState):
 
     writer = get_stream_writer()
-    writer("Reviewing updated excel after retry")
+    writer({"reviewing": "Reviewing updated excel after retry"})
     
     try:
         # Get state with validation
@@ -695,6 +746,7 @@ def get_updated_metadata_after_retry(state: StepDecisionState):
         if not workspace_path:
             error_msg = "No workspace path provided in state"
             logger.error(error_msg)
+            raise
 
         
         # Generate prompt with error handling
@@ -703,10 +755,12 @@ def get_updated_metadata_after_retry(state: StepDecisionState):
             if not enhanced_user_request:
                 error_msg = "Failed to generate updated metadata prompt"
                 logger.error(error_msg)
+                raise
 
         except Exception as e:
             error_msg = f"Error generating updated metadata prompt: {str(e)}"
             logger.error(error_msg)
+            raise
 
         
         # Prepare messages for LLM
@@ -729,13 +783,13 @@ def get_updated_metadata_after_retry(state: StepDecisionState):
             messages.append({"role": "assistant", "content": llm_response_content})
             
             # Parse and validate cell range
-            json_str = json.loads(llm_response.sheets)
-            metadata_range = json_str
+            json_dict = clean_json_string(llm_response.sheets)
+            metadata_range = json_dict
             
             if metadata_range:
                 try:
                     # Get metadata with error handling
-                    metadata = get_excel_metadata(workspace_path, metadata_range)
+                    metadata = get_metadata_from_cache(workspace_path, metadata_range)
                     if not metadata:
                         logger.warning("No metadata returned for the specified range")
                 except Exception as e:
@@ -775,7 +829,7 @@ def get_updated_metadata_after_retry(state: StepDecisionState):
 @log_errors
 def check_edit_success_after_retry(state: StepDecisionState) -> StepDecisionState:
     writer = get_stream_writer()
-    writer("Checking edit success after retry")
+    writer({"reviewing": "Checking edit success after retry"})
     
     try:
         # Get state with validation
@@ -869,23 +923,31 @@ def check_edit_success_after_retry(state: StepDecisionState) -> StepDecisionStat
             },
             goto="retry_failed" if retry_count >= 3 else "check_edit_success_after_retry"
         )
-@log_errors
-def step_retry_succeeded(state: StepDecisionState) -> OverallState:
-    writer = get_stream_writer()  
-    writer({"custom_key": "Step retry succeeded! Moving on to next step"}) 
-    messages = state["messages"]
-    current_step_edit_success = state["retry_success"]
-    current_step_success_rationale = state["retry_success_rationale"]
-    current_step_verified_cell_formulas = state["correct_cell_formulas"]
-    current_step_updated_metadata = state["metadata_after_retry"]
-    return Command(
-        update= {"messages": [enhanced_user_request, llm_response_content], 
-            "current_step_edit_success": current_step_edit_success,
-            "current_step_success_rationale": current_step_success_rationale,
-            "current_step_verified_cell_formulas": current_step_verified_cell_formulas,
-            "current_step_updated_metadata": current_step_updated_metadata,
-            },
-        goto= "decide_next_step"
-    )
 
+@log_errors
+def step_retry_succeeded(state: StepDecisionState) -> Command:
+    writer = get_stream_writer()  
+    writer({"info": "Step retry succeeded! Moving on to next step"}) 
+    
+    try:
+        messages = state.get("messages", [])
+        current_step_edit_success = state.get("retry_success")
+        current_step_success_rationale = state.get("retry_success_rationale")
+        current_step_verified_cell_formulas = state.get("correct_cell_formulas", {})
+        current_step_updated_metadata = state.get("metadata_after_retry", {})
+        
+        return Command(
+            update={
+                "messages": messages,
+                "current_step_edit_success": current_step_edit_success,
+                "current_step_success_rationale": current_step_success_rationale,
+                "current_step_verified_cell_formulas": current_step_verified_cell_formulas,
+                "current_step_updated_metadata": current_step_updated_metadata,
+            },
+            goto="decide_next_step"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in step_retry_succeeded: {str(e)}")
+        raise
 
