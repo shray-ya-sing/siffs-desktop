@@ -43,7 +43,7 @@ def write_formulas_to_excel(
         List of updated cell data dictionaries
     """
     logger.info(f"Starting to write formulas to Excel file: {workspace_path}")
-    logger.debug(f"Sheet formulas received: {json.dumps(sheet_formulas, indent=2)}")
+    #logger.debug(f"Sheet formulas received: {json.dumps(sheet_formulas, indent=2)}")
     
     MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
     
@@ -232,7 +232,7 @@ def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
             
         # Check each cell formula in the sheet
         for cell_ref, formula in cell_formulas.items():
-            logger.debug(f"Validating cell {sheet_name}!{cell_ref}")
+            #logger.debug(f"Validating cell {sheet_name}!{cell_ref}")
             
             # Check cell reference format (e.g., "A1")
             if not re.match(r'^[A-Z]+[0-9]+$', str(cell_ref)):
@@ -255,19 +255,33 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
         
     Returns:
         Dictionary with sheet names as keys and cell formulas as values if valid, None otherwise.
-        
-        Example return value:
-        {
-            "Sheet1": {
-                "A1": "=SUM(B1:B10)",
-                "B1": "100"
-            },
-            "Sheet2": {
-                "C1": "=A1*2"
-            }
-        }
     """
+    import re
     logger.info("Starting to parse markdown formulas")
+    
+    def clean_formula(formula: str) -> str:
+        """Clean and unescape formula string while preserving internal quotes"""
+        if not formula:
+            return formula
+            
+        formula = formula.strip()
+        # Only strip outer matching quotes if they exist and the formula is not just quotes
+        if (formula.startswith('"') and formula.endswith('"')) or \
+           (formula.startswith("'") and formula.endswith("'")):
+            # Check if there are matching quotes inside the formula
+            inner = formula[1:-1]
+            if not (('"' in inner) or ("'" in inner)):
+                formula = inner
+            else:
+                # Unescape any escaped quotes inside the formula
+                formula = formula[1:-1].replace('\\"', '"').replace("\\'", "'")
+        return formula
+
+    def is_valid_cell_reference(ref: str) -> bool:
+        """Validate Excel cell reference format"""
+        # Handles: A1, AA1, A$1, $A1, $A$1, Sheet1!A1, 'Sheet 1'!A1
+        pattern = r'^(\'.?|(.*\'!))?(\$?[A-Za-z]+\$?[0-9]+|\$?[A-Za-z]+:\$?[A-Za-z]+\$?[0-9]+)$'
+        return bool(re.match(pattern, ref))
     
     try:
         if not markdown_input or not isinstance(markdown_input, str):
@@ -281,9 +295,12 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
         sheet_sections = [s.strip() for s in markdown_input.split('sheet_name:') if s.strip()]
         
         for section in sheet_sections:
+            if not section:
+                continue
+                
             # Split into sheet name and cell entries
             parts = [p.strip() for p in section.split('|', 1)]
-            if len(parts) < 1:
+            if not parts:
                 continue
                 
             sheet_name = parts[0].strip()
@@ -301,6 +318,9 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
             cell_entries = [e.strip() for e in parts[1].split('|') if e.strip()]
             
             for entry in cell_entries:
+                if not entry:
+                    continue
+                    
                 # Split into cell reference and formula/value
                 cell_parts = [p.strip() for p in entry.split(',', 1)]
                 if len(cell_parts) != 2:
@@ -309,15 +329,16 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     
                 cell_ref, formula = cell_parts
                 cell_ref = cell_ref.strip()
-                formula = formula.strip()
                 
-                # Clean up formula (remove surrounding quotes if present)
-                if (formula.startswith('"') and formula.endswith('"')) or \
-                   (formula.startswith("'") and formula.endswith("'")):
-                    formula = formula[1:-1]
+                if not cell_ref:
+                    logger.warning("Empty cell reference found, skipping")
+                    continue
+                    
+                # Clean the formula while preserving internal quotes
+                formula = clean_formula(formula)
                 
-                # Validate cell reference format (simple check)
-                if not re.match(r'^[A-Za-z]+[0-9]+$', cell_ref):
+                # Validate cell reference format
+                if not is_valid_cell_reference(cell_ref):
                     logger.warning(f"Invalid cell reference format: {cell_ref}")
                     continue
                     
