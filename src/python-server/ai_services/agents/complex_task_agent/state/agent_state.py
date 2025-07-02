@@ -52,3 +52,4 @@ class StepDecisionState(TypedDict):
     metadata_for_retry: Dict[str, Any]
     instructions_for_retry: str
     formulas_for_retry: List[Dict[str, Any]]
+    workspace_path: str
