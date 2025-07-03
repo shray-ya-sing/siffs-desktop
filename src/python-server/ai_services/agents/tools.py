@@ -8,8 +8,8 @@ from typing import List, Dict, Optional, Tuple, Union, Any, Annotated
 from langgraph.types import Command, Send
 
 # Add the current directory to Python path
-current_dir = Path(__file__).parent.parent.parent.absolute()
-sys.path.append(str(current_dir))
+python_server_dir = Path(__file__).parent.parent.parent.absolute()
+sys.path.append(str(python_server_dir))
 # Now import using relative path from vectors
 
 from excel.metadata.parsing.llm_metadata_parser import LLMMetadataParser
@@ -49,6 +49,29 @@ def get_excel_context_regions(
             }
         }
     """
+    def get_temp_filepath(workspace_path: str) -> str:
+        MAPPINGS_FILE = python_server_dir / "metadata" / "__cache" / "files_mappings.json"
+        
+        if not MAPPINGS_FILE.exists():
+            return "Cache not found, could not access files"
+        
+        try:
+            with open(MAPPINGS_FILE, 'r') as f:
+                mappings = json.load(f)
+            
+            if not mappings:
+                return "Workspace is empty (no files found)"
+                
+            temp_file_path = mappings.get(workspace_path) or next(
+                (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+                workspace_path
+            )
+            return temp_file_path
+        
+        except Exception as e:
+            return f"Error accessing workspace: {str(e)}"
+
+
     def is_valid_cell_range(cell_range: str) -> bool:
         """Validate Excel cell range format (e.g., A1, A1:B2)"""
         import re
@@ -81,7 +104,11 @@ def get_excel_context_regions(
             cache_data = json.load(f)
         
         # Get the workbook data
-        workbook_data = cache_data.get(workspace_path)
+        temp_file_path = get_temp_filepath(workspace_path)
+        cache_key = os.path.basename(temp_file_path)
+        for cache_key, workbook_data in cache_data.items():
+            if isinstance(workbook_data, dict) and workbook_data.get('workbook_name') == cache_key:
+                workbook_data = workbook_data
         if not workbook_data:
             return 'Error: No data found for workspace'
 
@@ -362,117 +389,196 @@ def get_excel_general_info(
     cells: Optional[List[str]] = None
 ) -> str:
     """
-    Retrieve workbook overview data from the hotcache with optional filtering.
+    Retrieve excel file content.
     If you need the context around a cell or cell range use the start_row and end_row params to get the data for the row section.
-    You can use the tool in repeated calls to get the data for different row sections. This is more efficient when you need info over a large section. 
+    When you need full data for a sheet provide only the name of the sheet and not the row ranges or cells, and you will get the data for the entire sheet. This is more efficient when you need info over a large section than repeated tool calling. 
     This tool CANNOT be invoked for specific columns. There is no functionality to get data for certain columns. You have to get the data based on the row ranges, and all the columns available in the data for that row range will be returned.
+    If you get an error message indicating the data could not be found, DO NOT CALL this tool again and simply inform the user that you could not access the data.
     Args:
-        workspace_path: Full path to the workbook in the format 'folder/workbook.xlsx'
-        sheet_names: List of specific sheet names to include (required for cell/row filtering)
+        workspace_path: Full path to the workbook in the format 'folder/workbook.xlsx'. Calling the tool with only the workspace path will get you an object like  '{"workspace_path":"speed_it_up/speed_it_up.xlsx","workbook_actual_filepath":"tmp_speed_it_up_xadkpkvt.xlsx","sheet_names":["Sheet1"],"cell_addresses":{"Sheet1":[]}}. This can be interpreted as a file with one sheet Sheet1 which does not have any populated cells ("Sheet1":[] indicates empty cells).        
+        sheet_names: List of specific sheet names to include (required for cell/row filtering). Like ["Sheet1", "Sheet2", "Sheet3",....]. It is optional, but if you do not provide it, you will only get the list of sheets in the file not actual cell data.
+        If cell data for a lot of sheets is needed, then call this tool multiple times to get the data for different sheet names.
         start_row: Starting row number (1-based) - requires sheet_names
         end_row: Ending row number (1-based) - requires sheet_names
         cells: List of specific cell addresses to retrieve (e.g., ['A1', 'B2'])
-               Takes precedence over row filtering if both are provided
+               Takes precedence over row filtering if both are provided. If neither cells or row range are provided, entire data for sheet_names specified will be returned.
     
     Returns:
         A JSON string containing only the requested data
     """
+    def get_temp_filepath(workspace_path: str) -> str:
+        MAPPINGS_FILE = python_server_dir / "metadata" / "__cache" / "files_mappings.json"
+        
+        if not MAPPINGS_FILE.exists():
+            return "Mapping Cache not found, could not access files"
+        
+        try:
+            with open(MAPPINGS_FILE, 'r') as f:
+                mappings = json.load(f)
+            
+            if not mappings:
+                return "Workspace is empty (no files found)"
+                
+            temp_file_path = mappings.get(workspace_path) or next(
+                (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+                workspace_path
+            )
+            return temp_file_path
+        
+        except Exception as e:
+            return f"Error accessing workspace: {str(e)}"
+    
+    def normalize_cell_address(cell_ref):
+        """Remove $ signs from cell references for consistent matching."""
+        return cell_ref.replace('$', '')
+
+    def _get_row_number(cell_ref):
+        """Extract row number from cell reference (e.g., 'A1' -> 1, 'B2' -> 2)"""
+        # Remove $ signs and get the row number part
+        import re
+        match = re.search(r'[A-Za-z]+\$?(\d+)', cell_ref.replace('$', ''))
+        return int(match.group(1)) if match else 0
+
     try:
         # Get the cache file
         python_server_path = Path(__file__).parent.parent.parent
         cache_path = python_server_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
         
         if not cache_path.exists():
-            return 'Cache file not found'
+            return 'Metadata Cache file not found'
 
         # Load the cache
-        with open(cache_path, 'r') as f:
-            cache_data = json.load(f)
+        try:
+            with open(cache_path, 'r') as f:
+                cache_data = json.load(f)
+        except Exception as e:
+            return f"Error loading metadata cache: {str(e)}"
         
         # Get the workbook data
-        workbook_data = cache_data.get(workspace_path)
+        try:
+            temp_file_path = get_temp_filepath(workspace_path)
+            temp_file_name = os.path.basename(temp_file_path)
+
+        except Exception as e:
+            return f"Error accessing workspace: {str(e)}"
+
+        workbook_data = None
+
+        try:
+            workbook_data = next(
+                (data for data in cache_data.values() 
+                 if isinstance(data, dict) and data.get('workbook_name') == temp_file_name),
+                None
+            )
+            logger.info(f"workbook_data keys: {workbook_data.keys()}")
+
+        except Exception as e:
+            return f"Error getting workbook data: {str(e)}"
+
         if not workbook_data:
             return 'No data found for workspace'
-
-        # If no sheet names provided, return just the top-level info
-        if not sheet_names:
-            result = {k: v for k, v in workbook_data.items() if k != "sheets"}
-            return json.dumps(result, separators=(',', ':'))
         
+        try:
+            actual_sheet_names = list(workbook_data['sheets'].keys())
+        except Exception as e:
+            return f"Error getting sheet names: {str(e)}"
+
         # Initialize result with basic info
         result = {
-            "workbook_name": workbook_data.get("workbook_name"),
-            "total_sheets": workbook_data.get("total_sheets"),
-            "sheet_names": sheet_names,  # Only include requested sheets
+            "workspace_path": workspace_path,
+            "workbook_actual_filepath": workbook_data.get("workbook_name"),
+            "sheet_names": actual_sheet_names,
             "sheets": {}
         }
-        
-        # Process each requested sheet
-        for sheet_name in sheet_names:
-            if sheet_name not in workbook_data.get("sheets", {}):
-                continue
+
+        # add the list of cell addresses for each sheet, when no sheet specified
+        if not sheet_names:
+            try:
+                cell_addresses = {}
+                for sheet_name, sheet_data in workbook_data.get("sheets").items():
+                    cell_addresses[sheet_name] = []
+                    
+                    # Iterate through each chunk in the sheet
+                    for chunk in sheet_data.get('chunks', []):
+                        # Get cells from the current chunk
+                        for cell in chunk.get('cells', []):
+                            if 'a' in cell:  # 'a' contains the cell address
+                                cell_addresses[sheet_name].append(cell['a'])
                 
-            sheet_data = workbook_data["sheets"][sheet_name]
-            result_sheet = {
-                "non_empty_rows": sheet_data.get("non_empty_rows"),
-                "non_empty_columns": sheet_data.get("non_empty_columns"),
-                "chunks": []
-            }
+                result["cell_addresses"] = cell_addresses
+            except Exception as e:
+                logger.error(f"Error getting cell addresses: {str(e)}")
             
-            # If cells are specified, they take precedence over row ranges
-            if cells:
-                cell_addresses = set(cells)
-                result_sheet["cells"] = []
-                
-                for chunk in sheet_data.get("chunks", []):
-                    for cell in chunk.get("cells", []):
-                        if cell["a"] in cell_addresses:
-                            result_sheet["cells"].append(cell)
-                
-                # If we found any cells, add the sheet to results
-                if result_sheet["cells"]:
-                    result["sheets"][sheet_name] = result_sheet
-                    
-            # If no cells but row range is specified
-            elif start_row is not None or end_row is not None:
-                result_sheet["row_range"] = {
-                    "start": start_row,
-                    "end": end_row
-                }
-                
-                for chunk in sheet_data.get("chunks", []):
-                    chunk_start = chunk.get("startRow", 1)
-                    chunk_end = chunk.get("endRow", chunk_start + chunk.get("rowCount", 0) - 1)
-                    
-                    # Check if chunk overlaps with row range
-                    if (start_row is not None and chunk_end < start_row) or \
-                       (end_row is not None and chunk_start > end_row):
+        try:
+            if sheet_names and len(sheet_names) > 0:
+                # Process each requested sheet
+                for sheet_name in sheet_names:
+                    if sheet_name not in actual_sheet_names:
                         continue
                         
-                    # Create a filtered chunk
-                    filtered_chunk = {
-                        "startRow": max(chunk_start, start_row) if start_row else chunk_start,
-                        "endRow": min(chunk_end, end_row) if end_row else chunk_end,
-                        "cells": []
-                    }
+                    sheets_data = workbook_data["sheets"]
+                    sheet_data = sheets_data.get(sheet_name)
+                    if not sheet_data:
+                        logger.error(f"Sheet {sheet_name} not found in workbook")
+                        result["error_message"] = f"Sheet {sheet_name} not found in workbook"
+                        continue
+                    result_sheet = {}
                     
-                    # Filter cells by row range
-                    for cell in chunk.get("cells", []):
-                        cell_row = _get_row_number(cell["a"])
-                        if (start_row is None or cell_row >= start_row) and \
-                           (end_row is None or cell_row <= end_row):
-                            filtered_chunk["cells"].append(cell)
-                    
-                    if filtered_chunk["cells"]:
-                        result_sheet["chunks"].append(filtered_chunk)
+                    # If cells are specified, they take precedence over row ranges
+                    if cells:
+                        cell_addresses = {normalize_cell_address(addr) for addr in cells}
+                        result_sheet["cells"] = []
+                        
+                        for chunk in sheet_data.get("chunks", []):
+                            for cell in chunk.get("cells", []):
+                                if normalize_cell_address(cell["a"]) in cell_addresses:
+                                    result_sheet["cells"].append(cell)
+                        
+                        # If we found any cells, add the sheet to results
+                        if result_sheet["cells"]:
+                            result["sheets"][sheet_name] = result_sheet
+                            
+                    # If no cells but row range is specified
+                    elif start_row is not None or end_row is not None:
+                        result_sheet = {
+                            "row_range": {
+                                "start": start_row,
+                                "end": end_row
+                            },
+                            "chunks": []  # Initialize chunks list
+                        }   
+                        
+                        for chunk in sheet_data.get("chunks", []):
+                            chunk_cells = []
+
+                            # Process each cell in the chunk
+                            for cell in chunk.get("cells", []):
+                                cell_row = _get_row_number(cell["a"])
+                                
+                                # Check if cell is within row range
+                                if (start_row is None or cell_row >= start_row) and \
+                                (end_row is None or cell_row <= end_row):
+                                    chunk_cells.append(cell)
                 
-                # If we found any chunks in the row range, add the sheet to results
-                if result_sheet["chunks"]:
-                    result["sheets"][sheet_name] = result_sheet
+                            # If we found matching cells, create a new chunk with them
+                            if chunk_cells:
+                                rows = [_get_row_number(cell["a"]) for cell in chunk_cells]
+                                filtered_chunk = {
+                                    "startRow": min(rows),
+                                    "endRow": max(rows),
+                                    "cells": chunk_cells
+                                }
+                                result_sheet["chunks"].append(filtered_chunk)
             
-            # If no cells or row range, include the entire sheet
-            else:
-                result["sheets"][sheet_name] = sheet_data
+                        # If we found any chunks in the row range, add the sheet to results
+                        if result_sheet["chunks"]:
+                            result["sheets"][sheet_name] = result_sheet
+                            
+                    # If no cells or row range, include the entire sheet
+                    else:
+                        result["sheets"][sheet_name] = sheet_data
+        except Exception as e:
+            return f"Error getting sheet data: {str(e)}"
         
         return json.dumps(result, separators=(',', ':'))
         
