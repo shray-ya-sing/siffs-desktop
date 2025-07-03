@@ -10,24 +10,25 @@ from langgraph.store.memory import InMemoryStore
 from langchain.chat_models import init_chat_model
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-current_dir = Path(__file__).parent
-sys.path.append(str(current_dir))
+agent_dir = Path(__file__).parent.parent.absolute()    
+sys.path.append(str(agent_dir))
 
 # Import State 
-from state.agent_state import OverallState, InputState, StepDecisionState, OutputState
+from medium_complexity_agent.state.agent_state import OverallState, InputState, StepDecisionState, OutputState
 
 # Update imports for all node functions
-from nodes.high_level_determination_nodes import (
+from medium_complexity_agent.nodes.high_level_determination_nodes import (
+    get_workspace_path,
     determine_implementation_sequence,
     decide_next_step
 )
-from nodes.step_level_nodes import (
+from medium_complexity_agent.nodes.step_level_nodes import (
     get_step_metadata,
     get_step_instructions,
     get_step_cell_formulas,
     write_step_cell_formulas
 )
-from nodes.error_nodes import (
+from medium_complexity_agent.nodes.error_nodes import (
     retry_failed,
     step_edit_failed,
     retry_edit_failed,
@@ -36,8 +37,8 @@ from nodes.error_nodes import (
     execution_failed,
     task_understanding_failed,
 )
-from nodes.final_evaluation_nodes import check_final_success, update_full_excel_metadata, terminate_success, terminate_failure
-from nodes.checking_nodes import (  # Add this import
+from medium_complexity_agent.nodes.final_evaluation_nodes import check_final_success, update_full_excel_metadata, terminate_success, terminate_failure
+from medium_complexity_agent.nodes.checking_nodes import (  
     get_updated_excel_data_to_check,
     check_edit_success,
     get_updated_metadata_after_retry,
@@ -122,6 +123,7 @@ class MediumExcelRequestAgent:
         medium_excel_request_agent= StateGraph(OverallState)
         
         # Add all nodes without defining edges
+        medium_excel_request_agent.add_node("get_workspace_path", get_workspace_path)
         medium_excel_request_agent.add_node("determine_implementation_sequence", determine_implementation_sequence)
         medium_excel_request_agent.add_node("decide_next_step", decide_next_step)
         # STEP LEVEL
@@ -149,7 +151,7 @@ class MediumExcelRequestAgent:
         medium_excel_request_agent.add_node("terminate_success", terminate_success)
         medium_excel_request_agent.add_node("terminate_failure", terminate_failure)
         # Set entry point
-        medium_excel_request_agent.set_entry_point("determine_implementation_sequence")
+        medium_excel_request_agent.set_entry_point("get_workspace_path")
         
         # Set termination from termination nodes
         medium_excel_request_agent.add_edge("terminate_success", END)
@@ -170,7 +172,7 @@ class MediumExcelRequestAgent:
         thread_id: Optional[str] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Process a user request through the complex Excel request workflow.
+        Process a user request through the medium Excel request workflow.
         
         Args:
             user_input: The user's request

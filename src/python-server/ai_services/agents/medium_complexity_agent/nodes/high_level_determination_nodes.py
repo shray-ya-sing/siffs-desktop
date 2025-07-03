@@ -11,15 +11,14 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('high_level_determination.log')
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
 # Add project root to path
-complex_agent_dir_path = Path(__file__).parent.parent
-sys.path.append(str(complex_agent_dir_path))
+agent_dir_path = Path(__file__).parent.parent
+sys.path.append(str(agent_dir_path))
 
 from langgraph.types import Command
 from langgraph.config import get_stream_writer
@@ -60,7 +59,7 @@ try:
     gemini_pro = "gemini-2.5-pro"
     gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
     llm = ChatGoogleGenerativeAI(
-        model=gemini_pro,
+        model=gemini_flash_lite,
         temperature=0.3,
         max_retries=3,
         google_api_key=GEMINI_API_KEY
@@ -73,12 +72,14 @@ except Exception as e:
 from pydantic import BaseModel, Field
 # Pydantic Model for structured output
 
-class Implementation(BaseModel):
-    """Implementation of the request."""
+class TaskSummary(BaseModel):
+    """Summary of the task."""
     workspace_path: str = Field(description="The workspace path to edit")
+
+class Implementation(BaseModel):
+    """Implementation of the request."""    
     implementation_sequence: List[Dict[str, Any]] = Field(description="The implementation sequence")
-    steps: List[Dict[str, Any]] = Field(description="The steps in the implementation sequence"
-    )
+    steps: List[Dict[str, Any]] = Field(description="The steps in the implementation sequence")
 
 class NextStep(BaseModel):
     """Next step in the implementation sequence."""
@@ -89,9 +90,44 @@ class NextStep(BaseModel):
 
 # HIGH LEVEL DECOMPOSITION NODES
 @log_errors
-def determine_implementation_sequence(state: InputState) -> OverallState:
+def get_workspace_path(state: InputState) -> OverallState:
     writer = get_stream_writer()
     writer({"analyzing": "Understanding request"})
+     # Get the latest conversation from cache
+    latest_conversation = get_latest_conversation()
+    if not latest_conversation:
+        raise ValueError("No recent conversation found in cache")
+    
+    thread_id = latest_conversation["thread_id"]
+    user_input = latest_conversation["user_message"]
+    messages = [{"role": "user", "content": user_input}]
+    workspace_files = list_workspace_files()
+    workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
+    messages.append({"role": "user", "content": workspace_prompt})
+    structured_llm = llm.with_structured_output(TaskSummary)
+    llm_response = structured_llm.invoke(messages)
+    if llm_response:
+        workspace_path = llm_response.workspace_path
+        if not workspace_path:
+            return Command(
+                goto= "llm_response_failure"
+            )
+        return Command(
+            update= {
+                "workspace_path": workspace_path
+            },
+            goto= "determine_implementation_sequence"
+        )
+    else:
+        return Command(
+            goto= "llm_response_failure"
+        )
+
+
+@log_errors
+def determine_implementation_sequence(state: OverallState) -> OverallState:
+    writer = get_stream_writer()
+    writer({"analyzing": "Planning implementation"})
     
     # Get the latest conversation from cache
     latest_conversation = get_latest_conversation()
@@ -103,7 +139,7 @@ def determine_implementation_sequence(state: InputState) -> OverallState:
 
     messages = []    
     workspace_files = list_workspace_files()
-    workspace_prompt= f"Choose the worskpace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
+    workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
     # call the get full excel info tool to determine the status of the full excel file
     full_excel_metadata = get_full_excel_metadata(state["workspace_path"])
     if not full_excel_metadata:
@@ -114,7 +150,7 @@ def determine_implementation_sequence(state: InputState) -> OverallState:
     # call llm with the full excel metadata to determine the status of the excel file
     get_excel_status_prompt = HighLevelDeterminePrompts.get_excel_status_prompt(full_excel_metadata_str)    
     implementation_sequence_prompt = HighLevelDeterminePrompts.get_implementation_sequence_prompt()
-    enhanced_user_request = f"{workspace_prompt}\n\n{get_excel_status_prompt}\n\n{implementation_sequence_prompt}"
+    enhanced_user_request = f"{get_excel_status_prompt}\n\n{implementation_sequence_prompt}"
     messages.append({"role": "user", "content": enhanced_user_request})
     structured_llm = llm.with_structured_output(Implementation)
     llm_response = structured_llm.invoke(messages)
@@ -123,13 +159,11 @@ def determine_implementation_sequence(state: InputState) -> OverallState:
         messages.append({"role": "assistant", "content": llm_response_content})
         implementation_sequence = llm_response.implementation_sequence
         steps = llm_response.steps
-        workspace_path = llm_response.workspace_path
         return Command(
             update= {"messages": [enhanced_user_request, llm_response_content], 
             "latest_model_response": llm_response_content,
             "implementation_sequence": implementation_sequence,
-            "steps": steps,
-            "workspace_path": workspace_path
+            "steps": steps
         },
         goto= "decide_next_step"
     )

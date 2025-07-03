@@ -11,15 +11,14 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('final_evaluation_agent.log')
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
 # Add project root to path
-complex_agent_dir_path = Path(__file__).parent.parent
-sys.path.append(str(complex_agent_dir_path))
+agent_dir_path = Path(__file__).parent.parent
+sys.path.append(str(agent_dir_path))
 
 from langgraph.types import Command
 from langgraph.config import get_stream_writer

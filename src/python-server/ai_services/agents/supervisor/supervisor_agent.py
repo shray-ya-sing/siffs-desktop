@@ -17,7 +17,7 @@ from agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMP
 from agents.complex_task_agent.complex_excel_request_agent import ComplexExcelRequestAgent
 from agents.medium_complexity_agent.medium_excel_request_agent import MediumExcelRequestAgent
 from agents.prebuilt_agent import PrebuiltAgent
-from agents.supervisor.tools.tools import handoff_to_complex_excel_agent, list_workspace_files
+from agents.supervisor.tools.tools import ALL_TOOLS
 
 class SupervisorAgent:
     _instance = None
@@ -63,10 +63,11 @@ class SupervisorAgent:
         """Set up the supervisor with both agents"""
         self.supervisor = create_supervisor(
             [self.simple_agent, self.complex_agent, self.medium_agent],
-            tools=[list_workspace_files],
+            tools=ALL_TOOLS,
             model=self.supervisor_model,
             prompt=self.enhanced_system_prompt,
-            output_mode="full_history"
+            output_mode="full_history",
+            
         )
         self.agent_system = self.supervisor.compile()
     

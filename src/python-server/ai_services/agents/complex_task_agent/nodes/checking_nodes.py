@@ -784,6 +784,10 @@ def get_updated_metadata_after_retry(state: StepDecisionState):
             
             # Parse and validate cell range
             json_dict = clean_json_string(llm_response.sheets)
+            if isinstance(json_dict, str):
+                return Command(
+                    goto="get_updated_metadata_after_retry"
+                )
             metadata_range = json_dict
             
             if metadata_range:

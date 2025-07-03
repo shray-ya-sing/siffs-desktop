@@ -120,13 +120,17 @@ def get_step_metadata(state: OverallState) -> OverallState:
     metadata = []
     if llm_response.sheets:
         logger.info(f"Received cell range from llm: {llm_response.sheets}")
-        json_str = clean_json_string(llm_response.sheets)
+        json_dict = clean_json_string(llm_response.sheets)
+        if isinstance(json_dict, str):
+            return Command(
+                goto="get_step_metadata"
+            )
     
-        if json_str:
-            logger.info(f"Parsed cell range: {json_str}")
+        if json_dict:
+            logger.info(f"Parsed cell range: {json_dict}")
             # get the metadata for the cell range
             try:    
-                metadata = get_metadata_from_cache(state["workspace_path"], json_str)
+                metadata = get_metadata_from_cache(state["workspace_path"], json_dict)
                 logger.info(f"Received metadata from excel: {metadata[0:100]}")
             except Exception as e:
                 logger.error(f"Failed to get excel metadata: {e}")

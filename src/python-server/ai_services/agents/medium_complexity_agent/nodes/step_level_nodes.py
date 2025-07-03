@@ -2,13 +2,16 @@ import os
 import sys
 
 from pathlib import Path
-complex_agent_dir_path = Path(__file__).parent.parent
-sys.path.append(str(complex_agent_dir_path))
+
 from langgraph.types import Command
 from langgraph.config import get_stream_writer
 from functools import wraps
 import traceback
 import json
+
+agent_dir_path = Path(__file__).parent.parent
+sys.path.append(str(agent_dir_path))
+
 from state.agent_state import InputState, OverallState, StepDecisionState, OutputState
 from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
@@ -37,8 +40,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('complex_task_agent.log')
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
@@ -102,13 +104,17 @@ def get_step_metadata(state: OverallState) -> OverallState:
     metadata = []
     if llm_response.sheets:
         logger.info(f"Received cell range from llm: {llm_response.sheets}")
-        json_str = clean_json_string(llm_response.sheets)
+        json_dict = clean_json_string(llm_response.sheets)
+        if isinstance(json_dict, str):
+            return Command(
+                goto="get_step_metadata"
+            )
     
-        if json_str:
-            logger.info(f"Parsed cell range: {json_str}")
+        if json_dict:
+            logger.info(f"Parsed cell range: {json_dict}")
             # get the metadata for the cell range
             try:    
-                metadata = get_metadata_from_cache(state["workspace_path"], json_str)
+                metadata = get_metadata_from_cache(state["workspace_path"], json_dict)
                 logger.info(f"Received metadata from excel: {metadata[0:100]}")
             except Exception as e:
                 logger.error(f"Failed to get excel metadata: {e}")

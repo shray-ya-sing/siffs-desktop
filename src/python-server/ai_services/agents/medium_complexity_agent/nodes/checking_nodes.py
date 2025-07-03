@@ -12,8 +12,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('complex_task_agent.log')
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
@@ -39,8 +38,8 @@ def log_errors(func):
     return wrapper
 
 from pathlib import Path
-complex_agent_dir_path = Path(__file__).parent.parent
-sys.path.append(str(complex_agent_dir_path))
+agent_dir_path = Path(__file__).parent.parent
+sys.path.append(str(agent_dir_path))
 from state.agent_state import InputState, OverallState, StepDecisionState, OutputState
 from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
@@ -366,6 +365,10 @@ def get_updated_metadata_after_retry(state: StepDecisionState):
             
             # Parse and validate cell range
             json_dict = clean_json_string(llm_response.sheets)
+            if isinstance(json_dict, str):
+                return Command(
+                    goto="get_updated_metadata_after_retry"
+                )
             metadata_range = json_dict
             
             if metadata_range:

@@ -137,9 +137,16 @@ class PrebuiltAgentOrchestrator:
     
     async def _send_error(self, client_id: str, error: str, request_id: Optional[str] = None):
         """Send error message to client"""
+        if '429' in error:
+            error_message = "Rate limit exceeded. Token usage has exceeded the limit. Create a new conversation to continue."
+        else:
+            error_message = "An unexpected error occurred and the agent was forcibly terminated. Please try again later."
         error_msg = {
-            "type": "AGENT_ERROR",
-            "error": error
+            "type": "CUSTOM_EVENT",
+            "event_type": "error",
+            "event_message": error_message,
+            "requestId": request_id,
+            "done": True
         }
         await self._send_to_client(client_id, error_msg, request_id)
 
