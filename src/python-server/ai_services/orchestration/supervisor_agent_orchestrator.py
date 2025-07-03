@@ -31,9 +31,14 @@ class SupervisorAgentOrchestrator:
     "revert_edit",
     "decide_retry_edit",
     "retry_edit",
+    "implement_retry",
+    "get_retry_edit_instructions",
     "get_updated_metadata_after_retry",
     "check_edit_success_after_retry",
-    "check_final_success"
+    "check_final_success",
+    "get_step_instructions",
+    "step_retry_succeeded",
+    "check_retry_edit_success"
     }
     
     def __init__(self):
@@ -261,7 +266,15 @@ class SupervisorAgentOrchestrator:
                 if isinstance(stream_item, tuple):
                     node_id, mode, chunk = stream_item
                     if mode == "messages":
+                        # log a representation of the stream item
+                        #logger.info(f"Stream item: {stream_item}")
                         message_chunk, metadata = chunk
+
+                        # Check if this is a tool message, don't want to send these to client
+                        if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
+                            continue
+
+
                         if not hasattr(message_chunk, 'content'):
                             continue
                         
@@ -272,6 +285,12 @@ class SupervisorAgentOrchestrator:
                         
                         # Extract text content
                         text = self.extract_ai_message_content(message_chunk)
+                        if text == "":
+                            continue
+
+                        elif text == "Transferring back to supervisor":
+                            continue
+                            
                         if text:
                             assistant_message += text
                             yield {
@@ -299,14 +318,6 @@ class SupervisorAgentOrchestrator:
                         
                         if isinstance(chunk, str):
                             logger.info(f"Custom chunk: {chunk}")
-                            assistant_message += chunk
-                            yield {
-                                "type": "custom_event",
-                                "event_type": "info",
-                                "event_message": chunk,
-                                "requestId": request_id,
-                                "done": False
-                        }
                     
                     elif mode == "updates":
                         # Handle model state updates
@@ -348,9 +359,16 @@ class SupervisorAgentOrchestrator:
     
     async def _send_error(self, client_id: str, error: str, request_id: Optional[str] = None):
         """Send error message to client"""
+        if '429' in error:
+            error_message = "Rate limit exceeded. Token usage has exceeded the limit. Create a new conversation to continue."
+        else:
+            error_message = "An unexpected error occurred and the agent was forcibly terminated. Please try again."
         error_msg = {
-            "type": "AGENT_ERROR",
-            "error": error
+            "type": "CUSTOM_EVENT",
+            "event_type": "error",
+            "event_message": error_message,
+            "requestId": request_id,
+            "done": True
         }
         await self._send_to_client(client_id, error_msg, request_id)
 
