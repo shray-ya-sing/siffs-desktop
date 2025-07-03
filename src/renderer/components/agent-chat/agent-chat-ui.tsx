@@ -8,6 +8,7 @@ import { useMention } from '../../hooks/useMention'
 import MentionDropdown from './MentionDropdown'
 import { useFileTree, FileItem } from '../../hooks/useFileTree'
 import { EventCard, EventType } from '../events/EventCard'
+import {MarkdownRenderer} from './MarkdownRenderer'
 
 type MessageType = 'user' | 'assistant' | 'tool_call' | 'custom_event';
 
@@ -136,6 +137,11 @@ export default function AIChatUI() {
     setInput("")
     setIsLoading(true)
     setIsTyping(false)
+
+    // Reset textarea height after clearing input
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "40px";
+    }
 
     try {
       webSocketService.sendChatMessage(input, selectedModel, threadId, requestId);
@@ -273,6 +279,19 @@ export default function AIChatUI() {
               done: true
             };
             // Then add the new custom event message
+            return [...newMessages, { 
+              id: `msg-${Date.now()}`,
+              role: 'custom_event',
+              event_type: message.event_type,
+              event_message: message.event_message,
+              content: message.event_message,
+              done: message.done,
+              requestId: message.requestId,
+              timestamp: new Date()
+            }];
+          }
+          // Always add it as a new message if the previous message was an assistant message
+          else if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
             return [...prev, { 
               id: `msg-${Date.now()}`,
               role: 'custom_event',
@@ -284,18 +303,19 @@ export default function AIChatUI() {
               timestamp: new Date()
             }];
           }
-          // Always add it as a new message
-          console.log('handleCustomEvent adding new custom event message');
-          return [...prev, { 
-            id: `msg-${Date.now()}`,
-            role: 'custom_event',
-            event_type: message.event_type,
-            event_message: message.event_message,
-            content: message.event_message,
-            done: message.done,
-            requestId: message.requestId,
-            timestamp: new Date()
-          }];
+          // Otherwise add it as a new message
+          else {
+            return [...prev, { 
+              id: `msg-${Date.now()}`,
+              role: 'custom_event',
+              event_type: message.event_type,
+              event_message: message.event_message,
+              content: message.event_message,
+              done: message.done,
+              requestId: message.requestId,
+              timestamp: new Date()
+            }];
+          }
         });
       }
     };
@@ -388,7 +408,7 @@ export default function AIChatUI() {
           <div key={message.id} className="space-y-2">
             {message.role === "user" ? (
               <div className="flex justify-start">
-                <div className="max-w-3xl">
+                <div className="max-w-6xl w-full">
                   <div
                     className="rounded-3xl px-3 py-2 text-gray-300 text-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                     style={{
@@ -402,7 +422,7 @@ export default function AIChatUI() {
               </div>
             ) : message.role === 'custom_event' ? (
               <div className="flex justify-start">
-                <div className="max-w-4xl w-full">
+                <div className="max-w-6xl w-full">
                   <EventCard
                     type={message.event_type as EventType}
                     message={message.event_message}
@@ -414,10 +434,10 @@ export default function AIChatUI() {
               </div>
             ) : (
               <div className="flex justify-start">
-                <div className="max-w-4xl w-full">
-                  <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20">
+                <div className="max-w-6xl w-full">
+                <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20 [&>pre]:m-0 [&>pre]:p-0">
                   <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
-                    {message.content}
+                    <MarkdownRenderer content={message.content} />
                     {isLoading && messages[messages.length - 1]?.id === message.id && (
                       <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
                     )}
@@ -480,7 +500,7 @@ export default function AIChatUI() {
 
       {/* Input - Fixed at bottom center */}
       <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20 space-y-2">
-        {/* ProviderDropdown positioned above the input */}
+      {/* ProviderDropdown positioned above the input 
         <div className="relative w-full">
           <ProviderDropdown 
             value={selectedModel}
@@ -490,7 +510,7 @@ export default function AIChatUI() {
             onToggle={setIsDropdownOpen}
             className="w-full"
           />
-        </div>
+        </div>*/}
 
         {showMentions && (
           <MentionDropdown
