@@ -310,16 +310,39 @@ class ChunkExtractorHandler:
                         
                     chunk_metadata["cellData"] = chunk_cells
 
-                    # Track non-empty cells and collect formulas
+                    # Track non-empty cells and collect all available data
                     for row_idx, row in enumerate(chunk_metadata["cellData"], start=chunk_start_row):
                         for col_idx, cell in enumerate(row, start=1):
                             if cell.get("value") is not None or cell.get("formula"):                                
+                                # Save complete cell data to hotcache
+                                hotcache_cell = {
+                                    "a": cell.get("address"),
+                                    "v": cell.get("value"),
+                                    "r": cell.get("row"),
+                                    "c": cell.get("column")
+                                }
+                                
+                                # Add formula if present
                                 if cell.get("formula"):
-                                    concise_chunk_metadata["cells"].append({
-                                        "a": cell.get("address"),
-                                        "f": cell.get("formula"),
-                                        "v": cell.get("value")
-                                    })
+                                    hotcache_cell["f"] = cell.get("formula")
+                                
+                                # Add formatting data if present
+                                if cell.get("formatting"):
+                                    hotcache_cell["fmt"] = cell.get("formatting")
+                                
+                                # Add dependency data if present
+                                if cell.get("directPrecedents"):
+                                    hotcache_cell["precedents"] = cell.get("directPrecedents")
+                                if cell.get("directDependents"):
+                                    hotcache_cell["dependents"] = cell.get("directDependents")
+                                if cell.get("precedentCount", 0) > 0:
+                                    hotcache_cell["precedentCount"] = cell.get("precedentCount")
+                                if cell.get("dependentCount", 0) > 0:
+                                    hotcache_cell["dependentCount"] = cell.get("dependentCount")
+                                if cell.get("totalConnections", 0) > 0:
+                                    hotcache_cell["totalConnections"] = cell.get("totalConnections")
+                                
+                                concise_chunk_metadata["cells"].append(hotcache_cell)
                                 
 
                     # Store for dependency analysis

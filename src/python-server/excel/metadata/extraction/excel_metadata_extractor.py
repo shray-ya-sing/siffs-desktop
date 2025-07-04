@@ -845,37 +845,53 @@ class ExcelMetadataExtractor:
             # Alignment
             try:
                 if cell.alignment:
-                    formatting["alignment"] = {
-                        "horizontal": cell.alignment.horizontal,
-                        "vertical": cell.alignment.vertical,
-                        "wrapText": cell.alignment.wrap_text,
-                        "shrinkToFit": cell.alignment.shrink_to_fit,
-                        "indent": cell.alignment.indent,
-                        "textRotation": cell.alignment.text_rotation,
-                        "readingOrder": cell.alignment.reading_order,
-                        "justifyLastLine": cell.alignment.justify_last_line,
-                        "relativeIndent": cell.alignment.relative_indent
+                    alignment_data = {
+                        "horizontal": getattr(cell.alignment, 'horizontal', None),
+                        "vertical": getattr(cell.alignment, 'vertical', None),
+                        "wrapText": getattr(cell.alignment, 'wrap_text', None),
+                        "shrinkToFit": getattr(cell.alignment, 'shrink_to_fit', None),
+                        "indent": getattr(cell.alignment, 'indent', None),
+                        "textRotation": getattr(cell.alignment, 'text_rotation', None)
                     }
+                    # Only include properties that exist and don't cause errors
+                    if hasattr(cell.alignment, 'justify_last_line'):
+                        alignment_data["justifyLastLine"] = cell.alignment.justify_last_line
+                    if hasattr(cell.alignment, 'relative_indent'):
+                        alignment_data["relativeIndent"] = cell.alignment.relative_indent
+                    
+                    formatting["alignment"] = alignment_data
             except Exception as e:
-                formatting["alignment"] = {"error": str(e)}
+                # Skip alignment if it causes errors
+                pass
                 
             # Border properties
             try:
                 if cell.border:
-                    formatting["borders"] = {
-                        "left": self._get_border_info(cell.border.left),
-                        "right": self._get_border_info(cell.border.right),
-                        "top": self._get_border_info(cell.border.top),
-                        "bottom": self._get_border_info(cell.border.bottom),
-                        "diagonal": self._get_border_info(cell.border.diagonal),
-                        "diagonalUp": cell.border.diagonal_up,
-                        "diagonalDown": cell.border.diagonal_down,
-                        "outline": cell.border.outline,
-                        "start": self._get_border_info(cell.border.start),
-                        "end": self._get_border_info(cell.border.end)
+                    border_data = {
+                        "left": self._get_border_info(getattr(cell.border, 'left', None)),
+                        "right": self._get_border_info(getattr(cell.border, 'right', None)),
+                        "top": self._get_border_info(getattr(cell.border, 'top', None)),
+                        "bottom": self._get_border_info(getattr(cell.border, 'bottom', None))
                     }
+                    
+                    # Add optional properties if they exist
+                    if hasattr(cell.border, 'diagonal'):
+                        border_data["diagonal"] = self._get_border_info(cell.border.diagonal)
+                    if hasattr(cell.border, 'diagonal_up'):
+                        border_data["diagonalUp"] = cell.border.diagonal_up
+                    if hasattr(cell.border, 'diagonal_down'):
+                        border_data["diagonalDown"] = cell.border.diagonal_down
+                    if hasattr(cell.border, 'outline'):
+                        border_data["outline"] = cell.border.outline
+                    if hasattr(cell.border, 'start'):
+                        border_data["start"] = self._get_border_info(cell.border.start)
+                    if hasattr(cell.border, 'end'):
+                        border_data["end"] = self._get_border_info(cell.border.end)
+                    
+                    formatting["borders"] = border_data
             except Exception as e:
-                formatting["borders"] = {"error": str(e)}
+                # Skip borders if they cause errors
+                pass
                 
             # Protection
             try:
@@ -887,28 +903,30 @@ class ExcelMetadataExtractor:
             except Exception as e:
                 formatting["protection"] = {"error": str(e)}
                 
-            # Comments
+            # Comments - only try if cell has comment attribute
             try:
-                if cell.comment:
+                if hasattr(cell, 'comment') and cell.comment:
                     formatting["comment"] = {
-                        "text": cell.comment.text,
-                        "author": cell.comment.author,
-                        "width": cell.comment.width,
-                        "height": cell.comment.height
+                        "text": getattr(cell.comment, 'text', None),
+                        "author": getattr(cell.comment, 'author', None),
+                        "width": getattr(cell.comment, 'width', None),
+                        "height": getattr(cell.comment, 'height', None)
                     }
             except Exception as e:
-                formatting["comment"] = {"error": str(e)}
+                # Skip comments if they cause errors
+                pass
                 
-            # Hyperlink
+            # Hyperlink - only try if cell has hyperlink attribute
             try:
-                if cell.hyperlink:
+                if hasattr(cell, 'hyperlink') and cell.hyperlink:
                     formatting["hyperlink"] = {
-                        "target": cell.hyperlink.target,
-                        "tooltip": cell.hyperlink.tooltip,
-                        "display": cell.hyperlink.display
+                        "target": getattr(cell.hyperlink, 'target', None),
+                        "tooltip": getattr(cell.hyperlink, 'tooltip', None),
+                        "display": getattr(cell.hyperlink, 'display', None)
                     }
             except Exception as e:
-                formatting["hyperlink"] = {"error": str(e)}
+                # Skip hyperlinks if they cause errors
+                pass
                 
             # Data type
             try:
@@ -916,24 +934,26 @@ class ExcelMetadataExtractor:
             except Exception as e:
                 formatting["dataType"] = {"error": str(e)}
                 
-            # Merged cells
+            # Merged cells - only try if worksheet has merged_cells attribute
             try:
-                merged_ranges = cell.parent.merged_cells.ranges
-                is_merged = False
-                merge_range = None
-                
-                for merged_range in merged_ranges:
-                    if cell.coordinate in merged_range:
-                        is_merged = True
-                        merge_range = str(merged_range)
-                        break
-                        
-                formatting["merged"] = {
-                    "isMerged": is_merged,
-                    "mergeRange": merge_range
-                }
+                if hasattr(cell.parent, 'merged_cells') and cell.parent.merged_cells:
+                    merged_ranges = cell.parent.merged_cells.ranges
+                    is_merged = False
+                    merge_range = None
+                    
+                    for merged_range in merged_ranges:
+                        if cell.coordinate in merged_range:
+                            is_merged = True
+                            merge_range = str(merged_range)
+                            break
+                            
+                    formatting["merged"] = {
+                        "isMerged": is_merged,
+                        "mergeRange": merge_range
+                    }
             except Exception as e:
-                formatting["merged"] = {"error": str(e)}
+                # Skip merged cells if they cause errors
+                pass
                 
         except Exception as e:
             formatting["error"] = f"Error extracting formatting: {str(e)}"
@@ -1699,7 +1719,7 @@ class ExcelMetadataExtractor:
 
     def _extract_sheet_cells_lightweight(self, sheet) -> List[Dict[str, Any]]:
         """
-        Extract lightweight cell data (address, formula, value) from a sheet.
+        Extract lightweight cell data including address, formula, value, and formatting properties.
         
         Args:
             sheet: OpenPyXL worksheet object
@@ -1744,13 +1764,22 @@ class ExcelMetadataExtractor:
                         if hasattr(cell, 'data_type') and cell.data_type == 'f' and cell.value is not None:
                             formula = str(cell.value).lstrip('=')
                         
+                        # Extract formatting properties
+                        formatting = self._extract_complete_cell_formatting(cell)
+                        
                         # Only include cells with values or formulas
                         if cell_value is not None or formula:
-                            cells.append({
+                            cell_data = {
                                 "a": f"{get_column_letter(cell.column)}{cell.row}",  # address
                                 "v": cell_value,  # value
                                 "f": formula  # formula
-                            })
+                            }
+                            
+                            # Add formatting properties if they exist
+                            if formatting:
+                                cell_data["fmt"] = formatting
+                            
+                            cells.append(cell_data)
                             
                     except Exception as e:
                         logger.warning(f"Error processing cell {cell.coordinate}: {str(e)}")
