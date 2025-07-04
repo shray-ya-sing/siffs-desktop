@@ -132,6 +132,8 @@ src/python-server/api/routes/excel/qa.py
 # SQLite database files
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 
@@ -142,3 +144,7 @@ excel_embeddings.db
 /faiss_indices/
 *.faiss
 *.pkl
+
+# Cache directories
+**/metadata/__cache/
+**/metadata/_cache/
