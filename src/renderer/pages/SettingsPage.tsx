@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sidebar } from '../components/Sidebar';
+import { APIKeyManagement } from '../components/settings/APIKeyManagement';
+import { NavIcons } from '../components/navigation/NavIcons';
 
 interface UserData {
   name: string;
@@ -10,7 +11,7 @@ interface UserData {
   confirmPassword: string;
 }
 
-type ActiveTab = 'profile' | 'password';
+type ActiveTab = 'profile' | 'password' | 'api-keys';
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -83,81 +84,94 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#0a0f1a] text-gray-200 font-sans font-thin overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-hidden">
+      {/* Navigation icons */}
+      <div className="fixed left-4 top-4 z-50">
+        <NavIcons />
+      </div>
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="max-w-6xl w-full mx-auto px-4 space-y-6 pt-20">
         {/* Header */}
-        <header className="border-b border-[#ffffff0f] p-4 flex justify-between items-center bg-[#1a2035]/20 backdrop-blur-md">
-          <h1 className="font-semibold text-lg tracking-wide text-white">Settings</h1>
-        </header>
+        <div className="text-center space-y-4 mb-8">
+          <h1 className="text-4xl font-thin text-white">Settings</h1>
+          <p className="text-gray-400 text-lg font-light">Configure your preferences and API keys</p>
+        </div>
         
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-[#0a0f1a] to-[#1a2035]/30">
-          <div className="max-w-5xl w-full mx-auto space-y-6">
-            {/* Tabs */}
-            <div className="border-b border-[#ffffff0f]">
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => handleTabChange('profile')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md ${
-                    activeTab === 'profile'
-                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-                  }`}
-                >
-                  Profile
-                </button>
-                <button
-                  onClick={() => handleTabChange('password')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md ${
-                    activeTab === 'password'
-                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-                  }`}
-                >
-                  Password
-                </button>
-              </div>
-            </div>
+        {/* Tabs */}
+        <div className="flex justify-center mb-8">
+          <div className="flex space-x-4 p-1 bg-gray-900/60 backdrop-blur-sm rounded-full border border-gray-700/50">
+            <button
+              onClick={() => handleTabChange('profile')}
+              className={`px-6 py-3 text-sm font-light rounded-full transition-all duration-300 ${
+                activeTab === 'profile'
+                  ? 'bg-gray-800/70 text-white border border-gray-700/50 shadow-lg'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => handleTabChange('password')}
+              className={`px-6 py-3 text-sm font-light rounded-full transition-all duration-300 ${
+                activeTab === 'password'
+                  ? 'bg-gray-800/70 text-white border border-gray-700/50 shadow-lg'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              Password
+            </button>
+            <button
+              onClick={() => handleTabChange('api-keys')}
+              className={`px-6 py-3 text-sm font-light rounded-full transition-all duration-300 ${
+                activeTab === 'api-keys'
+                  ? 'bg-gray-800/70 text-white border border-gray-700/50 shadow-lg'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              API Keys
+            </button>
+          </div>
+        </div>
             
+        {/* Content Area */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-3xl">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
-              <div className="bg-[#1a2035]/30 p-6 rounded-lg border border-[#ffffff0f] backdrop-blur-sm shadow-lg">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white">Profile Information</h2>
-                    <p className="text-gray-400 text-sm">Update your account's profile information and email address.</p>
+              <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-light text-white mb-2">Profile Information</h2>
+                    <p className="text-gray-400 font-light">Update your account's profile information and email address.</p>
                   </div>
-                  <form onSubmit={handleProfileUpdate} className="space-y-4">
-                    <div className="space-y-2">
-                      <label htmlFor="name" className="text-gray-300">Name</label>
+                  <form onSubmit={handleProfileUpdate} className="space-y-6">
+                    <div className="space-y-3">
+                      <label htmlFor="name" className="text-gray-300 font-light text-sm">Name</label>
                       <input
                         id="name"
                         name="name"
                         value={userData.name}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 bg-[#1a2035]/50 border border-[#ffffff1a] rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 focus:ring-2 focus:ring-gray-600/50 transition-all duration-300"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label htmlFor="email" className="text-gray-300">Email</label>
+                    <div className="space-y-3">
+                      <label htmlFor="email" className="text-gray-300 font-light text-sm">Email</label>
                       <input
                         id="email"
                         name="email"
                         type="email"
                         value={userData.email}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 bg-[#1a2035]/50 border border-[#ffffff1a] rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 focus:ring-2 focus:ring-gray-600/50 transition-all duration-300"
                       />
                     </div>
-                    <div className="pt-2">
+                    <div className="pt-4 text-center">
                       <button 
                         type="submit" 
                         disabled={isLoading} 
-                        className="bg-blue-600/30 hover:bg-blue-600/50 text-white border border-[#ffffff1a] px-4 py-2 rounded-md shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                        className="bg-gray-800/70 hover:bg-gray-700/80 text-white border border-gray-700/50 px-8 py-3 rounded-full font-light transition-all duration-300 shadow-lg hover:shadow-xl"
                       >
                         {isLoading ? 'Saving...' : 'Save Changes'}
                       </button>
@@ -169,26 +183,28 @@ export function SettingsPage() {
             
             {/* Password Tab */}
             {activeTab === 'password' && (
-              <div className="bg-[#1a2035]/30 p-6 rounded-lg border border-[#ffffff0f] backdrop-blur-sm shadow-lg">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white">Update Password</h2>
-                    <p className="text-gray-400 text-sm">Ensure your account is using a long, random password to stay secure.</p>
+              <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-light text-white mb-2">Update Password</h2>
+                    <p className="text-gray-400 font-light">Ensure your account is using a long, random password to stay secure.</p>
                   </div>
-                  <form onSubmit={handlePasswordChange} className="space-y-4">
-                    <div className="space-y-4">
+                  <form onSubmit={handlePasswordChange} className="space-y-6">
+                    <div className="space-y-6">
                       {!isEditingPassword ? (
-                        <button
-                          type="button"
-                          onClick={toggleEditPassword}
-                          className="bg-blue-600/30 hover:bg-blue-600/50 text-white border border-[#ffffff1a] px-4 py-2 rounded-md flex items-center gap-2"
-                        >
-                          🔒 Change Password
-                        </button>
+                        <div className="text-center">
+                          <button
+                            type="button"
+                            onClick={toggleEditPassword}
+                            className="bg-gray-800/70 hover:bg-gray-700/80 text-white border border-gray-700/50 px-8 py-3 rounded-full font-light transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 mx-auto"
+                          >
+                            🔒 Change Password
+                          </button>
+                        </div>
                       ) : (
                         <>
-                          <div className="space-y-2">
-                            <label htmlFor="currentPassword" className="text-gray-300">
+                          <div className="space-y-3">
+                            <label htmlFor="currentPassword" className="text-gray-300 font-light text-sm">
                               Current Password
                             </label>
                             <input
@@ -198,11 +214,11 @@ export function SettingsPage() {
                               value={userData.currentPassword}
                               onChange={handleInputChange}
                               placeholder="Enter your current password"
-                              className="w-full px-3 py-2 bg-[#1a2035]/50 border border-[#ffffff1a] rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 focus:ring-2 focus:ring-gray-600/50 transition-all duration-300"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <label htmlFor="newPassword" className="text-gray-300">New Password</label>
+                          <div className="space-y-3">
+                            <label htmlFor="newPassword" className="text-gray-300 font-light text-sm">New Password</label>
                             <input
                               id="newPassword"
                               name="newPassword"
@@ -210,11 +226,11 @@ export function SettingsPage() {
                               value={userData.newPassword}
                               onChange={handleInputChange}
                               placeholder="Enter your new password"
-                              className="w-full px-3 py-2 bg-[#1a2035]/50 border border-[#ffffff1a] rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 focus:ring-2 focus:ring-gray-600/50 transition-all duration-300"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <label htmlFor="confirmPassword" className="text-gray-300">Confirm New Password</label>
+                          <div className="space-y-3">
+                            <label htmlFor="confirmPassword" className="text-gray-300 font-light text-sm">Confirm New Password</label>
                             <input
                               id="confirmPassword"
                               name="confirmPassword"
@@ -222,21 +238,21 @@ export function SettingsPage() {
                               value={userData.confirmPassword}
                               onChange={handleInputChange}
                               placeholder="Confirm your new password"
-                              className="w-full px-3 py-2 bg-[#1a2035]/50 border border-[#ffffff1a] rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 focus:ring-2 focus:ring-gray-600/50 transition-all duration-300"
                             />
                           </div>
-                          <div className="flex gap-2 pt-2">
+                          <div className="flex gap-4 pt-4 justify-center">
                             <button 
                               type="submit" 
                               disabled={isLoading} 
-                              className="bg-blue-600/30 hover:bg-blue-600/50 text-white border border-[#ffffff1a] px-4 py-2 rounded-md shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                              className="bg-gray-800/70 hover:bg-gray-700/80 text-white border border-gray-700/50 px-8 py-3 rounded-full font-light transition-all duration-300 shadow-lg hover:shadow-xl"
                             >
                               {isLoading ? 'Updating...' : 'Update Password'}
                             </button>
                             <button 
                               type="button"
                               onClick={toggleEditPassword}
-                              className="text-gray-400 hover:text-white hover:bg-gray-800/50 px-4 py-2 rounded-md"
+                              className="text-gray-400 hover:text-white hover:bg-gray-800/50 px-8 py-3 rounded-full font-light transition-all duration-300"
                             >
                               Cancel
                             </button>
@@ -248,8 +264,15 @@ export function SettingsPage() {
                 </div>
               </div>
             )}
+            
+            {/* API Keys Tab */}
+            {activeTab === 'api-keys' && (
+              <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">
+                <APIKeyManagement />
+              </div>
+            )}
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
