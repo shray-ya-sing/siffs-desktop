@@ -74,17 +74,37 @@ import MainLogo from '../logo/MainLogo'
         setDiscoveryMessages(prev => [...prev, `Error: ${'Failed to process file'}`]);
         setIsDiscovering(true);
       };
+      
+      // PowerPoint event handlers
+      const onPowerPointExtractionComplete = (data: any) => {
+        setDiscoveryMessages(prev => [...prev, `PowerPoint extraction complete: ${data.totalSlides} slides processed`]);
+        setIsDiscovering(true);
+      };
+    
+      const onPowerPointExtractionError = (error: any) => {
+        console.error('PowerPoint extraction error:', error);
+        setDiscoveryMessages(prev => [...prev, `PowerPoint error: ${'Failed to process file'}`]);
+        setIsDiscovering(true);
+      };
     
       // Register event listeners
       webSocketService.on('CHUNK_EXTRACTED', onChunkExtracted);
       webSocketService.on('EXTRACTION_COMPLETE', onExtractionComplete);
       webSocketService.on('EXTRACTION_ERROR', onExtractionError);
+      
+      // PowerPoint event listeners
+      webSocketService.on('POWERPOINT_EXTRACTION_COMPLETE', onPowerPointExtractionComplete);
+      webSocketService.on('POWERPOINT_EXTRACTION_ERROR', onPowerPointExtractionError);
     
       // Clean up on unmount
       return () => {
         webSocketService.off('CHUNK_EXTRACTED', onChunkExtracted);
         webSocketService.off('EXTRACTION_COMPLETE', onExtractionComplete);
         webSocketService.off('EXTRACTION_ERROR', onExtractionError);
+        
+        // PowerPoint cleanup
+        webSocketService.off('POWERPOINT_EXTRACTION_COMPLETE', onPowerPointExtractionComplete);
+        webSocketService.off('POWERPOINT_EXTRACTION_ERROR', onPowerPointExtractionError);
       };
     }, [onFolderConnect]);
 
@@ -129,18 +149,24 @@ import MainLogo from '../logo/MainLogo'
         await scanDirectory(dirHandle, fileList, []);
         console.log("File list:", fileList);
         
-        // Filter only Excel files
+        // Filter Excel and PowerPoint files
         const excelFiles = fileList.filter(file => 
           !file.isDirectory && file.name.endsWith('.xlsx')
         );
         
-        if (excelFiles.length === 0) {
-          setDiscoveryMessages(prev => [...prev, "No Excel files found in the selected directory"]);
+        const powerPointFiles = fileList.filter(file => 
+          !file.isDirectory && (file.name.endsWith('.pptx') || file.name.endsWith('.ppt'))
+        );
+        
+        const allSupportedFiles = [...excelFiles, ...powerPointFiles];
+        
+        if (allSupportedFiles.length === 0) {
+          setDiscoveryMessages(prev => [...prev, "No Excel or PowerPoint files found in the selected directory"]);
           return;
         }
     
-        // Trigger extraction for each Excel file
-        for (const file of excelFiles) {
+        // Trigger extraction for each supported file
+        for (const file of allSupportedFiles) {
           const message = `Found file: ${file.name}`;
           setDiscoveryMessages(prev => [...prev, message]);
           
@@ -162,13 +188,27 @@ import MainLogo from '../logo/MainLogo'
               file_content: base64Content ? `[${base64Content.length} chars]` : 'EMPTY'
             });
             
-            // Send extraction request
-            webSocketService.emit('EXTRACT_METADATA', {
-              client_id: clientId,
-              request_id: requestId,
-              file_path: `${dirName}/${file.path}`,
-              file_content: base64Content
-            });
+            // Determine file type and send appropriate extraction request
+            const isExcelFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+            const isPowerPointFile = file.name.endsWith('.pptx') || file.name.endsWith('.ppt');
+            
+            if (isExcelFile) {
+              // Send Excel extraction request
+              webSocketService.emit('EXTRACT_METADATA', {
+                client_id: clientId,
+                request_id: requestId,
+                file_path: `${dirName}/${file.path}`,
+                file_content: base64Content
+              });
+            } else if (isPowerPointFile) {
+              // Send PowerPoint extraction request
+              webSocketService.emit('EXTRACT_POWERPOINT_METADATA', {
+                client_id: clientId,
+                request_id: requestId,
+                file_path: `${dirName}/${file.path}`,
+                file_content: base64Content
+              });
+            }
     
             // Small delay between files
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -313,7 +353,7 @@ import MainLogo from '../logo/MainLogo'
           {/* Instructions */}
           <div className="max-w-md mx-auto text-center">
             <p className="text-sm text-gray-500 leading-relaxed">
-              Select a folder to copy it to the agent workspace. Volute only reads excel files, so any other file types you have will be ignored.
+              Select a folder to copy it to the agent workspace. Volute reads Excel (.xlsx) and PowerPoint (.pptx, .ppt) files, so any other file types will be ignored.
             </p>
           </div>
         </div>

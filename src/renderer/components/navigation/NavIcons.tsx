@@ -1,11 +1,25 @@
 import { useNavigate } from 'react-router-dom';
-import { TechHomeIcon, TechSettingsIcon } from '../tech-icons/TechIcons';
+import { TechHomeIcon, TechSettingsIcon, TechSignOutIcon } from '../tech-icons/TechIcons';
+import { useAuth } from '../../providers/AuthProvider';
+
 interface NavIconsProps {
   className?: string;
 }
 
 export const NavIcons = ({ className = '' }: NavIconsProps) => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/auth/login', { replace: true });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Even if there's an error, redirect to login
+      navigate('/auth/login', { replace: true });
+    }
+  };
 
   return (
     <div className={`flex flex-row gap-3 ${className}`}>
@@ -26,6 +40,15 @@ export const NavIcons = ({ className = '' }: NavIconsProps) => {
         aria-label="Settings"
       >
         <TechSettingsIcon className="w-5 h-5 text-gray-300" />
+      </button>
+      <button
+        onClick={handleSignOut}
+        className="p-2 rounded-full bg-red-900/60 hover:bg-red-800/70 backdrop-blur-sm 
+                 border border-red-700/50 shadow-lg transition-all duration-200
+                 flex items-center justify-center group"
+        aria-label="Sign Out"
+      >
+        <TechSignOutIcon className="w-5 h-5 text-red-300 group-hover:text-red-200" />
       </button>
     </div>
   );
