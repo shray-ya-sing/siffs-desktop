@@ -31,17 +31,32 @@ class APIKeyManager:
         try:
             with open(self.api_keys_file, 'w') as f:
                 json.dump(self._user_api_keys, f, indent=2)
+            logger.info(f"=== CACHE SAVED ===")
+            logger.info(f"Saved to file: {self.api_keys_file}")
+            logger.info(f"In-memory cache keys: {list(self._user_api_keys.keys())}")
+            logger.info(f"===================")
         except Exception as e:
             logger.error(f"Error saving API keys: {e}")
     
     def set_user_api_key(self, user_id: str, provider: str, api_key: str):
         """Set API key for a specific user and provider"""
+        logger.info(f"=== API_KEY_MANAGER SET_USER_API_KEY ===")
+        logger.info(f"User ID: {user_id}")
+        logger.info(f"Provider: {provider}")
+        logger.info(f"API Key (first 10 chars): {api_key[:10]}...")
+        logger.info(f"Current cache keys: {list(self._user_api_keys.keys())}")
+        
         if user_id not in self._user_api_keys:
             self._user_api_keys[user_id] = {}
         
         self._user_api_keys[user_id][provider] = api_key
+        
+        logger.info(f"After setting - cache keys: {list(self._user_api_keys.keys())}")
+        logger.info(f"User {user_id} providers: {list(self._user_api_keys[user_id].keys())}")
+        
         self._save_api_keys()
-        logger.info(f"API key set for user {user_id}, provider {provider}")
+        logger.info(f"API key saved to JSON cache for user {user_id}, provider {provider}")
+        logger.info(f"==========================================")
     
     def get_user_api_key(self, user_id: str, provider: str) -> Optional[str]:
         """Get API key for a specific user and provider"""
@@ -77,7 +92,18 @@ class APIKeyManager:
     
     def has_user_api_key(self, user_id: str, provider: str) -> bool:
         """Check if user has provided their own API key for the provider"""
-        return self.get_user_api_key(user_id, provider) is not None
+        user_key = self.get_user_api_key(user_id, provider)
+        logger.info(f"=== HAS_USER_API_KEY CHECK ===")
+        logger.info(f"User ID: {user_id}")
+        logger.info(f"Provider: {provider}")
+        logger.info(f"Available user IDs in cache: {list(self._user_api_keys.keys())}")
+        logger.info(f"User key found: {user_key is not None}")
+        if user_id in self._user_api_keys:
+            logger.info(f"User {user_id} providers: {list(self._user_api_keys[user_id].keys())}")
+        else:
+            logger.info(f"User {user_id} not found in cache")
+        logger.info(f"=============================")
+        return user_key is not None
 
 # Global instance
 api_key_manager = APIKeyManager()

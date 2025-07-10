@@ -64,6 +64,13 @@ class APIKeyHandler:
             provider = data.get("provider")
             api_key = data.get("api_key")
             
+            logger.info(f"=== SET_API_KEY DEBUG ===")
+            logger.info(f"Received user_id from frontend: {data.get('user_id')}")
+            logger.info(f"WebSocket client_id: {client_id}")
+            logger.info(f"Final user_id being used: {user_id}")
+            logger.info(f"Provider: {provider}")
+            logger.info(f"=========================")
+            
             if not provider:
                 await manager.send_message(client_id, {
                     "type": "API_KEY_ERROR",
@@ -110,6 +117,12 @@ class APIKeyHandler:
         try:
             user_id = data.get("user_id") or client_id
             
+            logger.info(f"=== GET_API_KEY_STATUS DEBUG ===")
+            logger.info(f"Received user_id from frontend: {data.get('user_id')}")
+            logger.info(f"WebSocket client_id: {client_id}")
+            logger.info(f"Final user_id being used: {user_id}")
+            logger.info(f"====================================")
+            
             # Check status for all supported providers
             providers = ["gemini", "openai", "anthropic"]
             status = {}
@@ -124,11 +137,19 @@ class APIKeyHandler:
                     "configured": has_user_key or has_env_key
                 }
             
-            await manager.send_message(client_id, {
+            response_message = {
                 "type": "API_KEY_STATUS",
                 "status": status,
                 "requestId": request_id
-            })
+            }
+            
+            logger.info(f"=== SENDING API_KEY_STATUS RESPONSE ===")
+            logger.info(f"Client ID: {client_id}")
+            logger.info(f"Request ID: {request_id}")
+            logger.info(f"Status: {status}")
+            logger.info(f"===========================================")
+            
+            await manager.send_message(client_id, response_message)
             
         except Exception as e:
             logger.error(f"Error getting API key status: {str(e)}")
