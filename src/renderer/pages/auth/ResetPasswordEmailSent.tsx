@@ -22,12 +22,70 @@ export default function ResetPasswordEmailSent() {
   // Get the email from the navigation state or default to empty string
   const email = location.state?.email || '';
   
-  // If no email is provided, redirect to forgot password
-  useEffect(() => {
-    if (!email) {
-      navigate('/auth/forgot-password');
-    }
-  }, [email, navigate]);
+  // If no email is provided, show error state instead of redirecting
+  if (!email) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-[#0a0f1a] via-[#141b31] to-[#1a2035]">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md space-y-6 rounded-2xl bg-white/5 backdrop-blur-lg p-8 shadow-2xl border border-white/10 hover:border-white/20 transition-all duration-300"
+        >
+          <div className="space-y-6 text-center">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 15 }}
+              className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-red-600 to-red-500 shadow-lg"
+            >
+              <AlertCircle className="h-10 w-10 text-white" strokeWidth={1.5} />
+            </motion.div>
+            
+            <motion.div 
+              className="space-y-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h1 className="text-2xl font-bold text-white">No Email Provided</h1>
+              
+              <p className="text-white/80">
+                An email address is required to send the password reset link.
+              </p>
+              
+              <p className="text-sm text-white/60">
+                Please go back and enter your email address to receive the reset instructions.
+              </p>
+            </motion.div>
+            
+            <motion.div 
+              className="pt-2 space-y-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <button
+                type="button"
+                onClick={() => navigate('/auth/forgot-password')}
+                className="w-full py-3 px-4 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg hover:shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-0.5"
+              >
+                Go Back to Forgot Password
+              </button>
+              
+              <Link 
+                to="/auth/login" 
+                className="text-sm font-medium text-white/60 hover:text-white transition-colors flex items-center justify-center gap-1.5 group"
+              >
+                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                Back to login
+              </Link>
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
   
   const handleResendEmail = async () => {
     if (isResending) return;

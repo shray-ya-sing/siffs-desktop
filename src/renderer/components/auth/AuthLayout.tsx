@@ -91,15 +91,6 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Footer */}
-      <motion.div 
-        className="mt-8 text-center text-sm text-white/40"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <p>© {new Date().getFullYear()} Cori. All rights reserved.</p>
-      </motion.div>
     </div>
   );
 }

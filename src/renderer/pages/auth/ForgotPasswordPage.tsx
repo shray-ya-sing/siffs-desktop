@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Label } from '../../components/ui/label';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { Loader2, Mail, ArrowLeft, Check, AlertCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../providers/AuthProvider';
 
 
 export default function ForgotPasswordPage() {
@@ -18,6 +18,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const location = useLocation() as LocationWithState;
   const navigate = useNavigate();
+  const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,43 +33,25 @@ export default function ForgotPasswordPage() {
     setMessage('');
     
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-  
+      // Send OTP code to email for password reset
+      const { error } = await resetPassword(email);
+      
       if (error) {
-        // Don't reveal if the email exists or not for security
         console.error('Password reset error:', error);
-        setMessage(`If an account exists with ${email}, you will receive a password reset link.`);
-        // Still navigate but pass the error state
-        navigate('/auth/reset-email-sent', { 
-          state: { 
-            email,
-            error: 'Failed to send reset email. Please try again.' 
-          } 
-        });
+        setError('Failed to send reset code. Please try again.');
         return;
       }
-
-      // Navigate to the reset email sent page with the email
-      navigate('/auth/reset-email-sent', { 
-        state: { email } 
-      });
-  
-      // Show success message even if we don't reveal if the email exists
-      setMessage(`If an account exists with ${email}, you will receive a password reset link.`);
-    } catch (err) {
-      console.error('Error:', err);
-      // Generic error message to avoid leaking information
-      setMessage(`If an account exists with ${email}, you will receive a password reset link.`);
-      // Navigate even on error but pass the error state
-      navigate('/auth/reset-email-sent', { 
+      
+      // Navigate to OTP verification page
+      navigate('/auth/reset-password', { 
         state: { 
-          email,
-          error: 'An unexpected error occurred. Please try again.' 
+          email: email,
+          isOTPFlow: true
         } 
       });
-    
+    } catch (err) {
+      console.error('Error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +95,7 @@ export default function ForgotPasswordPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
               >
-                Enter your email and we'll send you a link to reset your password
+                Enter your email and we'll send you a verification code to reset your password
               </motion.p>
             </div>
 
@@ -209,10 +192,10 @@ export default function ForgotPasswordPage() {
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
+                          Processing...
                         </>
                       ) : (
-                        'Send Reset Link'
+                        'Reset Password'
                       )}
                     </Button>
                   </motion.div>
