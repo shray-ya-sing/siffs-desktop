@@ -41,24 +41,32 @@ class CheckingPrompts:
         Generate updated cell formulas for cells in the excel sheet for this retry attempt.        
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        sheet_name: [Name of the sheet]| A1, "=SUM(B1:B10)" | B1, "Text value" | C1, 123 | sheet_name: [Next sheet name]| D5, "=AVERAGE(A1:A10)" | E5, "Another value"
-        
-        RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC. Just return the pipe delimited markdown containig cell formulas in the specified format.
+        sheet_name: [Name of the sheet]| A1, "=SUM(B1:B10)" | B1, "Text value", b=true, it=true, num_fmt="#,000.0", sz="12", st="calibri", font="#000000", fill="#0f0f0f" | C1, 123 
+
+        RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC. 
+        Just return the pipe-delimited markdown containing cell formulas and formatting properties in the specified format.
+
         RULES:
-        1. Start each sheet with 'sheet_name: [exact sheet name]' followed by a pipe (|)
-        2. List each cell update as: [cell_reference], "[formula_or_value]"
-        3. Separate multiple cell updates with pipes (|)
-        4. Always enclose formulas and text values in double quotes
-        5. Numbers can be written without quotes
-        6. Include ALL cells that need to be written
-        7. NEVER modify or reference non-existent cells
-       
+        1. Start each sheet with 'sheet_name: [exact sheet name]' followed by a pipe (|).
+        2. List each cell update as: [cell_reference], "[formula_or_value]", [formatting properties if any].
+        3. Formatting properties should be included ONLY if necessary to continue a pattern observed in neighboring cells.
+        4. Formatting properties must be in this exact order: bold (b), italic (it), number format (num_fmt), font size (sz), font style (st), font color (font), and cell fill color (fill).
+        5. Use keyword identifiers: b, it, num_fmt, sz, st, font, fill to denote properties.
+        6. Separate multiple cell updates with pipes (|).
+        7. Always enclose formulas, text values, and number formats in double quotes.
+        8. Numbers can be written without quotes.
+        9. Include ALL cells that need to be written.
+        10. NEVER modify or reference non-existent cells.
+        
         EXAMPLES:
         
-        sheet_name: Income Statement| B5, "=SUM(B2:B4)" | B6, 1000 | B7, "=B5-B6" | sheet_name: Assumptions| B2, 0.05 | B3, 1.2 | C3, "=B3*1.1"
-        
+        sheet_name: Income Statement| B5, "=SUM(B2:B4)" | B6, 1000, b=true | B7, "=B5-B6", it=true, font="#0000FF" | sheet_name: Assumptions| B2, 0.05 | B3, 1.2, sz="10" | C3, "=B3*1.1", num_fmt="#,##0.00"
+
         BAD EXAMPLES:
         - sheet_name: Income Statement B5, "=SUM(B2:B4)"  # Missing pipe after sheet name
         - sheet_name: Income Statement | B5, =SUM(B2:B4)   # Formula not in quotes
         - sheet_name: Income Statement | B5 SUM(B2:B4)     # Missing comma after cell reference
+        
+        ADDITIONAL NOTES:
+        - When parsing, the system will look for properties based on the keyword identifiers (b, it, num_fmt, sz, st, font, fill) and handle them based on their existence and values after the '=' sign.
         """
