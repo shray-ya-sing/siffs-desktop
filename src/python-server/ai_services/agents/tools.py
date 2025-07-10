@@ -532,7 +532,13 @@ def get_excel_general_info(
                         for chunk in sheet_data.get("chunks", []):
                             for cell in chunk.get("cells", []):
                                 if normalize_cell_address(cell["a"]) in cell_addresses:
-                                    result_sheet["cells"].append(cell)
+                                    # Filter to only include address, value, and formula
+                                    simplified_cell = {'a': cell.get('a')}
+                                    if 'v' in cell and cell['v'] is not None:
+                                        simplified_cell['v'] = cell['v']
+                                    if 'f' in cell and cell['f'] is not None:
+                                        simplified_cell['f'] = cell['f']
+                                    result_sheet["cells"].append(simplified_cell)
                         
                         # If we found any cells, add the sheet to results
                         if result_sheet["cells"]:
@@ -574,9 +580,31 @@ def get_excel_general_info(
                         if result_sheet["chunks"]:
                             result["sheets"][sheet_name] = result_sheet
                             
-                    # If no cells or row range, include the entire sheet
+                    # If no cells or row range, include the entire sheet but with simplified cell data
                     else:
-                        result["sheets"][sheet_name] = sheet_data
+                        result_sheet = {"chunks": []}
+                        
+                        for chunk in sheet_data.get("chunks", []):
+                            simplified_chunk = {
+                                "startRow": chunk.get("startRow"),
+                                "endRow": chunk.get("endRow"),
+                                "cells": []
+                            }
+                            
+                            for cell in chunk.get("cells", []):
+                                # Filter to only include address, value, and formula
+                                simplified_cell = {'a': cell.get('a')}
+                                if 'v' in cell and cell['v'] is not None:
+                                    simplified_cell['v'] = cell['v']
+                                if 'f' in cell and cell['f'] is not None:
+                                    simplified_cell['f'] = cell['f']
+                                simplified_chunk["cells"].append(simplified_cell)
+                            
+                            if simplified_chunk["cells"]:  # Only add chunks that have cells
+                                result_sheet["chunks"].append(simplified_chunk)
+                        
+                        if result_sheet["chunks"]:  # Only add sheet if it has chunks with cells
+                            result["sheets"][sheet_name] = result_sheet
         except Exception as e:
             return f"Error getting sheet data: {str(e)}"
         

@@ -105,12 +105,18 @@ async def startup_event():
         logger.error(f"Error clearing metadata cache: {str(e)}")
     from excel.orchestration.excel_orchestrator import ExcelOrchestrator
     logger.info("Starting up...Excel orchestrator initialized")
+    from powerpoint.orchestration.powerpoint_orchestrator import PowerPointOrchestrator
+    logger.info("Starting up...PowerPoint orchestrator initialized")
     from ai_services.orchestration.supervisor_agent_orchestrator import SupervisorAgentOrchestrator
     logger.info("Starting up...Supervisor orchestrator initialized")
     from excel.metadata.extraction.event_handlers.metadata_cache_handler import MetadataCacheHandler
     logger.info("Starting up...MetadataCacheHandler initialized")
     from excel.metadata.extraction.event_handlers.chunk_extractor_handler import ChunkExtractorHandler
     logger.info("Starting up...ChunkExtractorHandler initialized")
+    from powerpoint.metadata.extraction.event_handlers.powerpoint_cache_handler import PowerPointCacheHandler
+    logger.info("Starting up...PowerPointCacheHandler initialized")
+    from api_key_management.handlers.api_key_handler import api_key_handler
+    logger.info("Starting up...APIKeyHandler initialized")
 
     
     # Print all registered routes

@@ -359,10 +359,17 @@ class SupervisorAgentOrchestrator:
     
     async def _send_error(self, client_id: str, error: str, request_id: Optional[str] = None):
         """Send error message to client"""
+        error_str = str(error).lower()
+        
         if '429' in error:
             error_message = "Rate limit exceeded. Token usage has exceeded the limit. Create a new conversation to continue."
+        elif 'api key expired' in error_str or 'api_key_invalid' in error_str:
+            error_message = "Your Google Gemini API key has expired. Please update your API key in the settings to continue using the AI assistant."
+        elif 'invalid argument provided to gemini' in error_str:
+            error_message = "There was an issue with the Google Gemini API configuration. Please check your API key and try again."
         else:
             error_message = "An unexpected error occurred and the agent was forcibly terminated. Please try again."
+        
         error_msg = {
             "type": "CUSTOM_EVENT",
             "event_type": "error",
