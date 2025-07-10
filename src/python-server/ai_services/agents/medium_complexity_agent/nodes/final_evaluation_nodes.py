@@ -41,7 +41,7 @@ def log_errors(func):
 
 from state.agent_state import InputState, OverallState, StepDecisionState, OutputState
 from prompt_templates.final_evaluator_prompt import get_final_success_prompt
-from read_write_tools.excel_info_tools import get_excel_metadata, get_metadata_from_cache, get_full_excel_metadata
+from read_write_tools.excel_info_tools import get_excel_metadata, get_metadata_from_cache, get_simplified_excel_metadata
 
 from typing import Annotated, Optional
 from typing_extensions import TypedDict
@@ -107,7 +107,7 @@ def check_final_success(state: OverallState):
         messages = state.get("messages", [])
             
         # Get the final excel metadata
-        excel_metadata = get_full_excel_metadata(state.get("workspace_path"))
+        excel_metadata = get_simplified_excel_metadata(state.get("workspace_path"))
         if not excel_metadata:
             logger.error("No Excel metadata found in the current state")
             excel_metadata = {}

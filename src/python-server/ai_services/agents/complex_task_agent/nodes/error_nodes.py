@@ -44,7 +44,7 @@ from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
 from prompt_templates.step_level_prompts import StepLevelPrompts
 from prompt_templates.checking_prompts import CheckingPrompts
-from read_write_tools.excel_info_tools import get_full_excel_metadata
+from read_write_tools.excel_info_tools import get_simplified_excel_metadata
 from read_write_tools.excel_edit_tools import write_formulas_to_excel, parse_cell_formulas
 
 from typing import Annotated, Optional

@@ -16,7 +16,7 @@ from state.agent_state import InputState, OverallState, StepDecisionState, Outpu
 from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
 from prompt_templates.step_level_prompts import StepLevelPrompts
-from read_write_tools.excel_info_tools import get_excel_metadata, update_excel_cache, get_cell_formulas_from_cache, get_metadata_from_cache, clean_json_string
+from read_write_tools.excel_info_tools import get_excel_metadata, update_excel_cache, get_cell_formulas_from_cache, get_metadata_from_cache, get_full_metadata_from_cache, clean_json_string
 from read_write_tools.excel_edit_tools import parse_cell_formulas, write_formulas_to_excel_complex_agent, parse_markdown_formulas
 
 from typing import Annotated, Optional
@@ -114,7 +114,7 @@ def get_step_metadata(state: OverallState) -> OverallState:
             logger.info(f"Parsed cell range: {json_dict}")
             # get the metadata for the cell range
             try:    
-                metadata = get_metadata_from_cache(state["workspace_path"], json_dict)
+                metadata = get_full_metadata_from_cache(state["workspace_path"], json_dict)
                 logger.info(f"Received metadata from excel: {metadata[0:100]}")
             except Exception as e:
                 logger.error(f"Failed to get excel metadata: {e}")

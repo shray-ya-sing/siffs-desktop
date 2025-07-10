@@ -43,7 +43,7 @@ from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
 from prompt_templates.step_level_prompts import StepLevelPrompts
 from prompt_templates.checking_prompts import CheckingPrompts
-from read_write_tools.excel_info_tools import get_full_excel_metadata, get_excel_metadata, update_excel_cache, get_metadata_from_cache, get_formulas_for_revert, get_cell_formulas_from_cache, clean_json_string
+from read_write_tools.excel_info_tools import get_simplified_excel_metadata, get_excel_metadata, update_excel_cache, get_metadata_from_cache, get_full_metadata_from_cache, get_formulas_for_revert, get_cell_formulas_from_cache, clean_json_string
 from read_write_tools.excel_edit_tools import write_formulas_to_excel_complex_agent, parse_cell_formulas, parse_markdown_formulas
 
 from typing import Annotated, Optional
@@ -230,7 +230,7 @@ def check_edit_success(state: OverallState) -> OverallState:
             error_msg = "No workspace path provided in state"
             logger.error(error_msg)
             
-        updated_excel_metadata = get_metadata_from_cache(workspace_path, excel_metadata_range)
+        updated_excel_metadata = get_full_metadata_from_cache(workspace_path, excel_metadata_range)
         if not updated_excel_metadata:
             error_msg = "Failed to get updated Excel metadata"
             logger.error(error_msg)
@@ -490,7 +490,7 @@ def decide_retry_edit(state: StepDecisionState) -> StepDecisionState:
                 # Parse cell formulas and get metadata
                 json_str = json.loads(cell_range.sheets)
                 
-                metadata = get_metadata_from_cache(workspace_path, json_str)
+                metadata = get_full_metadata_from_cache(workspace_path, json_str)
                 if not metadata:
                     error_msg = "Failed to get metadata for the specified cell range"
                     logger.error(error_msg)
@@ -793,7 +793,7 @@ def get_updated_metadata_after_retry(state: StepDecisionState):
             if metadata_range:
                 try:
                     # Get metadata with error handling
-                    metadata = get_metadata_from_cache(workspace_path, metadata_range)
+                    metadata = get_full_metadata_from_cache(workspace_path, metadata_range)
                     if not metadata:
                         logger.warning("No metadata returned for the specified range")
                 except Exception as e:

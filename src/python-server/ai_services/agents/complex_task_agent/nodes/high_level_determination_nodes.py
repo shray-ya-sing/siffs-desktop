@@ -27,7 +27,7 @@ from state.agent_state import InputState, OverallState, StepDecisionState, Outpu
 from prompt_templates.checking_prompts import CheckingPrompts
 from prompt_templates.high_level_determine_prompts import HighLevelDeterminePrompts
 from prompt_templates.step_level_prompts import StepLevelPrompts
-from read_write_tools.excel_info_tools import get_full_excel_metadata
+from read_write_tools.excel_info_tools import get_simplified_excel_metadata
 from read_write_tools.workspace_tools import load_conversation_cache, get_latest_conversation, list_workspace_files
 
 from typing import Annotated, Optional
@@ -147,7 +147,7 @@ def determine_excel_status(state: OverallState) -> OverallState:
     writer({"analyzing": "Understanding excel file contents and status"})
     messages = state["messages"]
     # call the get full excel info tool to determine the status of the full excel file
-    full_excel_metadata = get_full_excel_metadata(state["workspace_path"])
+    full_excel_metadata = get_simplified_excel_metadata(state["workspace_path"])
     if not full_excel_metadata:
         logger.error("Failed to get full excel metadata")
         full_excel_metadata = ""
