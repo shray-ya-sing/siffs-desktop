@@ -135,11 +135,18 @@ def write_formulas_to_excel_complex_agent(
 
     try:
         # Convert to the format expected by write_to_existing
-        parsed_data = {
-            sheet_name: [{"cell": cell, "formula": formula} 
-                        for cell, formula in cell_formulas.items()]
-            for sheet_name, cell_formulas in sheet_formulas.items()
-        }
+        parsed_data = {}
+        for sheet_name, cell_formulas in sheet_formulas.items():
+            parsed_data[sheet_name] = []
+            for cell, cell_data in cell_formulas.items():
+                if isinstance(cell_data, dict):
+                    # New format with formatting properties
+                    cell_entry = {"cell": cell}
+                    cell_entry.update(cell_data)  # Add all formatting properties
+                else:
+                    # Backward compatibility: simple formula string
+                    cell_entry = {"cell": cell, "formula": cell_data}
+                parsed_data[sheet_name].append(cell_entry)
         logger.debug(f"Converted {len(parsed_data)} sheets for Excel writing")
         
         # Use ComplexAgentWriter to write the data
@@ -321,14 +328,14 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                 if not entry:
                     continue
                     
-                # Split into cell reference and formula/value
-                cell_parts = [p.strip() for p in entry.split(',', 1)]
-                if len(cell_parts) != 2:
+                # Split into cell reference, formula/value, and formatting properties
+                cell_parts = [p.strip() for p in entry.split(',')]
+                if len(cell_parts) < 2:
                     logger.warning(f"Invalid cell entry format: {entry}")
                     continue
                     
-                cell_ref, formula = cell_parts
-                cell_ref = cell_ref.strip()
+                cell_ref = cell_parts[0].strip()
+                formula = cell_parts[1].strip()
                 
                 if not cell_ref:
                     logger.warning("Empty cell reference found, skipping")
@@ -341,8 +348,38 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                 if not is_valid_cell_reference(cell_ref):
                     logger.warning(f"Invalid cell reference format: {cell_ref}")
                     continue
+                
+                # Parse formatting properties if they exist
+                cell_data = {'formula': formula}
+                
+                # Process formatting properties from remaining parts
+                for i in range(2, len(cell_parts)):
+                    prop_part = cell_parts[i].strip()
+                    if '=' in prop_part:
+                        key, value = prop_part.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        
+                        # Parse different property types
+                        if key == 'b':  # bold
+                            cell_data['bold'] = value.lower() == 'true'
+                        elif key == 'it':  # italic
+                            cell_data['italic'] = value.lower() == 'true'
+                        elif key == 'num_fmt':  # number format
+                            cell_data['number_format'] = clean_formula(value)
+                        elif key == 'sz':  # font size
+                            try:
+                                cell_data['font_size'] = float(clean_formula(value))
+                            except (ValueError, TypeError):
+                                logger.warning(f"Invalid font size value: {value}")
+                        elif key == 'st':  # font style
+                            cell_data['font_style'] = clean_formula(value)
+                        elif key == 'font':  # font color
+                            cell_data['text_color'] = clean_formula(value)
+                        elif key == 'fill':  # fill color
+                            cell_data['fill_color'] = clean_formula(value)
                     
-                result[current_sheet][cell_ref.upper()] = formula
+                result[current_sheet][cell_ref.upper()] = cell_data
         
         if not result:
             logger.error("No valid sheets or cell entries found in markdown")

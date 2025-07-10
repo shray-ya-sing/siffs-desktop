@@ -162,6 +162,103 @@ def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, An
         logger.error(f"Error updating cache: {str(e)}", exc_info=True)
         return False
 
+def get_simplified_excel_metadata(workspace_path: str) -> str:
+    """
+    Retrieve simplified metadata for the specified excel file from the hotcache.
+    Only returns address, value, and formula for each cell.
+    
+    Args:
+        workspace_path: Full path to the excel file workbook in the format 'folder/workbook.xlsx'
+    
+    Returns:
+        A JSON string containing simplified metadata with only address, value, and formula:
+        {
+            "Sheet1": [
+                {
+                    "a": "A1", 
+                    "f": "=SUM(B1:B2)", 
+                    "v": 42
+                }
+            ],
+            "Sheet2": [...]
+        }
+    """
+    
+    MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
+    
+    try:
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+        temp_file_path = mappings.get(workspace_path) or next(
+            (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+            workspace_path
+        )
+    except (json.JSONDecodeError, OSError):
+        temp_file_path = workspace_path
+
+    try:
+        # Get the cache file
+        cache_path = server_dir_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
+        
+        if not cache_path.exists():
+            return 'Cache file not found'
+
+        # Load the cache
+        with open(cache_path, 'r') as f:
+            cache_data = json.load(f)
+
+        # Find the workbook by matching the workbook_name
+        file_name = os.path.basename(temp_file_path)
+        workbook_data = None
+        
+        for cache_key, data in cache_data.items():
+            if isinstance(data, dict) and data.get('workbook_name') == file_name:
+                workbook_data = data
+                break
+        
+        if not workbook_data:
+            return 'Workbook not found in cache'
+            
+        # Extract simplified data
+        simplified_data = {}
+        
+        if 'sheets' in workbook_data:
+            for sheet_name, sheet_data in workbook_data['sheets'].items():
+                simplified_data[sheet_name] = []
+                
+                # Process chunks if they exist
+                if 'chunks' in sheet_data:
+                    for chunk in sheet_data['chunks']:
+                        if 'cells' in chunk:
+                            for cell in chunk['cells']:
+                                # Only include address, value, and formula
+                                simplified_cell = {}
+                                
+                                # Address (always include)
+                                if 'a' in cell:
+                                    simplified_cell['a'] = cell['a']
+                                
+                                # Value (only if not None)
+                                if 'v' in cell and cell['v'] is not None:
+                                    simplified_cell['v'] = cell['v']
+                                
+                                # Formula (only if not None)
+                                if 'f' in cell and cell['f'] is not None:
+                                    simplified_cell['f'] = cell['f']
+                                
+                                # Only add cell if it has at least an address
+                                if 'a' in simplified_cell:
+                                    simplified_data[sheet_name].append(simplified_cell)
+        
+        return json.dumps(simplified_data, separators=(',', ':'))
+        
+    except json.JSONDecodeError:
+        return 'Failed to parse cache file'
+    except Exception as e:
+        logger.error(f"Error retrieving simplified data: {str(e)}", exc_info=True)
+        return 'Failed to get simplified data from cache'
+
+
 def get_full_excel_metadata(workspace_path: str) -> str:
     """
     Retrieve complete metadata for the specified excel file from the hotcache.
@@ -212,6 +309,178 @@ def get_full_excel_metadata(workspace_path: str) -> str:
     except Exception as e:
         logger.error(f"Error retrieving data: {str(e)}", exc_info=True)
         return 'Failed to get data from cache'
+
+def get_full_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optional[Dict[str, List[str]]] = None) -> str:
+    """
+    Retrieve complete metadata including formatting for the specified excel file from the hotcache,
+    returning only the specified cell ranges with all non-null/non-false formatting properties.
+    
+    Args:
+        workspace_path: Full path to the excel file workbook in the format 'folder/workbook.xlsx'
+        sheet_cell_ranges: Dict mapping sheet names to lists of cell ranges.
+                         If None, returns all data with complete formatting.
+                         Example: {"Sheet1": ["A1:B10", "C1:D5"], "Sheet2": ["A1:Z1000"]}
+    
+    Returns:
+        A JSON string containing complete metadata with formatting in the format:
+        {
+            "Sheet1": [
+                {
+                    "a": "A1", 
+                    "f": "=SUM(B1:B2)", 
+                    "v": 42,
+                    "fmt": {
+                        "font": {"name": "Arial", "size": 12, "bold": true},
+                        "numberFormat": "General"
+                    }
+                }
+            ],
+            "Sheet2": [...]
+        }
+    """
+    def normalize_cell_ref(cell_ref: str) -> str:
+        """Remove $ signs from cell reference and convert to uppercase."""
+        if not cell_ref:
+            return cell_ref
+        return cell_ref.replace('$', '').upper()
+    
+    def filter_formatting(fmt_data: dict) -> dict:
+        """Filter out null/false values and skip protection/dataType properties."""
+        if not isinstance(fmt_data, dict):
+            return {}
+        
+        filtered = {}
+        
+        # Skip protection and dataType properties entirely
+        skip_properties = {'protection', 'dataType'}
+        
+        for key, value in fmt_data.items():
+            if key in skip_properties:
+                continue
+                
+            if isinstance(value, dict):
+                # Recursively filter nested dictionaries
+                filtered_nested = filter_formatting(value)
+                if filtered_nested:  # Only add if there are non-null values
+                    filtered[key] = filtered_nested
+            elif value is not None and value is not False and value != "" and value != 0:
+                # Include non-null, non-false, non-empty values (but allow 0.0 for float values)
+                if isinstance(value, (int, float)) and value == 0:
+                    # Skip zero values for formatting properties
+                    continue
+                filtered[key] = value
+                
+        return filtered
+    
+    def process_cell_data(cell: dict) -> dict:
+        """Process a single cell and return it with filtered formatting."""
+        result = {'a': cell.get('a')}  # Always include address
+        
+        # Add basic properties if they exist and are not null
+        for prop in ['v', 'f', 'r', 'c']:
+            if prop in cell and cell[prop] is not None:
+                result[prop] = cell[prop]
+        
+        # Process formatting if it exists
+        if 'fmt' in cell and isinstance(cell['fmt'], dict):
+            filtered_fmt = filter_formatting(cell['fmt'])
+            if filtered_fmt:  # Only add if there are meaningful formatting properties
+                result['fmt'] = filtered_fmt
+        
+        # Add dependency data if present
+        for prop in ['precedents', 'dependents', 'precedentCount', 'dependentCount', 'totalConnections']:
+            if prop in cell and cell[prop] is not None:
+                if isinstance(cell[prop], (list, int)) and cell[prop]:  # Non-empty lists or non-zero numbers
+                    result[prop] = cell[prop]
+        
+        return result
+
+    try:
+        # First get the full metadata from cache
+        full_metadata = get_full_excel_metadata(workspace_path)
+        if not full_metadata or not isinstance(full_metadata, dict):
+            return json.dumps({"error": "Failed to load metadata from cache"})
+        
+        # If no ranges specified, return all data with complete formatting
+        if not sheet_cell_ranges:
+            result = {}
+            for sheet_name, sheet_data in full_metadata.get('sheets', {}).items():
+                result[sheet_name] = []
+                for chunk in sheet_data.get('chunks', []):
+                    for cell in chunk.get('cells', []):
+                        processed_cell = process_cell_data(cell)
+                        result[sheet_name].append(processed_cell)
+            return json.dumps(result, separators=(',', ':'))
+        
+        # Parse cell range strings into cell references
+        def parse_cell_refs(cell_range: str) -> List[str]:
+            """Parse a cell range into individual cell references."""
+            import re
+            from openpyxl.utils import range_boundaries, get_column_letter
+            
+            # Handle single cell
+            if ':' not in cell_range:
+                return [normalize_cell_ref(cell_range)]
+                
+            # Handle range
+            try:
+                # Remove $ signs before parsing range
+                normalized_range = cell_range.replace('$', '')
+                min_col, min_row, max_col, max_row = range_boundaries(normalized_range)
+                cells = []
+                for row in range(min_row, max_row + 1):
+                    for col in range(min_col, max_col + 1):
+                        cell_ref = f"{get_column_letter(col)}{row}"
+                        cells.append(cell_ref)
+                return cells
+            except Exception as e:
+                logger.warning(f"Invalid range format '{cell_range}': {str(e)}")
+                return []
+        
+        # Filter the data based on the specified ranges
+        filtered_data = {}
+        for sheet_name, ranges in sheet_cell_ranges.items():
+            if sheet_name not in full_metadata.get('sheets', {}):
+                continue
+
+            if isinstance(ranges, str):
+                ranges = [ranges]
+                
+            # Get all cell references to include
+            cell_refs_to_include = set()
+            for r in ranges:
+                cell_refs_to_include.update(parse_cell_refs(r))
+                
+            if not cell_refs_to_include:
+                continue
+                
+            # Filter cells
+            sheet_data = full_metadata['sheets'][sheet_name]
+            filtered_cells = []
+            cell_refs_found = set()
+            
+            for chunk in sheet_data.get('chunks', []):
+                for cell in chunk.get('cells', []):
+                    cell_ref = cell.get('a')
+                    normalized_ref = normalize_cell_ref(cell_ref)
+                    if cell_ref and normalized_ref in cell_refs_to_include:
+                        processed_cell = process_cell_data(cell)
+                        filtered_cells.append(processed_cell)
+                        cell_refs_found.add(normalized_ref)
+            
+            # Log any requested but not found cells
+            missing_cells = cell_refs_to_include - cell_refs_found
+            if missing_cells:
+                logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+                
+            if filtered_cells:
+                filtered_data[sheet_name] = filtered_cells
+        
+        return json.dumps(filtered_data, separators=(',', ':'))
+
+    except Exception as e:
+        logger.error(f"Error getting full metadata with formatting: {str(e)}", exc_info=True)
+        return json.dumps({"error": f"Failed to get full metadata: {str(e)}"})
 
 def get_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optional[Dict[str, List[str]]] = None) -> str:
     """
