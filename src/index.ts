@@ -248,7 +248,7 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const csp = [
       "default-src 'self'",
-      "connect-src 'self' ws://localhost:3001 ws://127.0.0.1:3001 ws://localhost:5001 ws://127.0.0.1:5001 http://localhost:3001 http://127.0.0.1:3001 http://localhost:5001 http://127.0.0.1:5001 https://*.supabase.co https://otnlburbcvilvzgbjzqi.supabase.co",
+      "connect-src 'self' ws://localhost:3001 ws://127.0.0.1:3001 ws://localhost:5001 ws://127.0.0.1:5001 http://localhost:3001 http://127.0.0.1:3001 http://localhost:5001 http://127.0.0.1:5001 https://*.supabase.co https://aahtbntnjeppixdounji.supabase.co",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",

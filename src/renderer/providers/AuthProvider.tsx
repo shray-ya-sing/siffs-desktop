@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { getSupabase, supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 type AuthContextType = {
   user: User | null;
@@ -9,6 +9,9 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signUp: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ data: any; error: any }>;
+  updatePassword: (newPassword: string) => Promise<{ data: any; error: any }>;
+  verifyOtp: (email: string, token: string, type?: 'email' | 'recovery') => Promise<{ data: any; error: any }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,20 +21,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const setupAuthListener = useCallback(async () => {
+  const setupAuthListener = useCallback(() => {
     try {
-      const client = await getSupabase();
-      
       // Set initial session
-      const { data: { session } } = await client.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      });
       
       // Listen for auth state changes
-      const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.debug('Auth state changed:', event);
-        }
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
       });
@@ -40,20 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscription?.unsubscribe();
       };
     } catch (error) {
-      // Only log in development
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Auth listener warning:', error);
-      }
-    } finally {
+      console.error('Auth setup error:', error);
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     const cleanup = setupAuthListener();
-    return () => {
-      cleanup.then(cleanupFn => cleanupFn?.());
-    };
+    return cleanup;
   }, [setupAuthListener]);
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -85,22 +80,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
     try {
-      const client = await getSupabase();
-      const { data, error } = await client.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+      
+      if (error) {
+        console.error('Sign up error:', error);
+      }
+      
       return { data, error };
     } catch (error) {
-      console.error('Sign up error:', error);
-      return { data: null, error };
+      console.error('Sign up exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: 'Failed to sign up. Please try again later.',
+          status: 500
+        } 
+      };
     }
-  };
+  }, []);
 
   const signOut = useCallback(async () => {
     try {
@@ -114,6 +119,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      // Send OTP code to email for password recovery
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: false, // Don't create new user if doesn't exist
+          data: {
+            type: 'recovery' // Specify this is for password recovery
+          }
+        }
+      });
+      
+      if (error) {
+        console.error('Reset password error:', error);
+      }
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Reset password exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: 'Failed to send reset code. Please try again later.',
+          status: 500
+        } 
+      };
+    }
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword: string) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) {
+        console.error('Update password error:', error);
+      }
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Update password exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: 'Failed to update password. Please try again later.',
+          status: 500
+        } 
+      };
+    }
+  }, []);
+
+  const verifyOtp = useCallback(async (email: string, token: string, type: 'email' | 'recovery' = 'recovery') => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: token,
+        type: type // Use 'recovery' for password reset, 'email' for login
+      });
+      
+      if (error) {
+        console.error('Verify OTP error:', error);
+      }
+      
+      return { data, error };
+    } catch (error) {
+      console.error('Verify OTP exception:', error);
+      return { 
+        data: null, 
+        error: { 
+          message: 'Failed to verify code. Please try again later.',
+          status: 500
+        } 
+      };
+    }
+  }, []);
+
   const value = {
     user,
     session,
@@ -121,6 +204,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
+    verifyOtp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

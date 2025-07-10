@@ -15,6 +15,7 @@ import { Toaster } from './components/ui/toaster';
 import { useToast } from './components/ui/use-toast';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordEmailSent from './pages/auth/ResetPasswordEmailSent';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import AuthLoading from './components/loading/AuthLoading';
 import { AgentChatPage } from './pages/agent-chat/AgentChatPage';
 import { FileItem } from './hooks/useFileTree';
@@ -39,6 +40,7 @@ function AppRouter() {
   const location = useLocation() as LocationWithState;
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isLoading } = useAuth();
 
   // Handle success message from signup
   useEffect(() => {
@@ -52,28 +54,65 @@ function AppRouter() {
     }
   }, [location.state, location.pathname, navigate, toast]);
 
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return <AuthLoading />;
+  }
 
   return (
     <>
       <Toaster />
-      <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Routes>
-            <Route path="/" element={
-               <HomePage />
-            } />
-            <Route path="/settings" element={
-              <SettingsPage />
-            } />
-
-            <Route path="/agent-chat" element={
-              <AgentChatPage />
-            } />
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<Navigate to="/404" replace />} />
-          </Routes>
-        </div>
-      </div>
+      <Routes>
+        {/* Public Auth Routes */}
+        <Route path="/auth/login" element={
+          user ? <Navigate to="/" replace /> : <LoginPage />
+        } />
+        <Route path="/auth/signup" element={
+          user ? <Navigate to="/" replace /> : <SignupPage />
+        } />
+        <Route path="/auth/forgot-password" element={
+          user ? <Navigate to="/" replace /> : <ForgotPasswordPage />
+        } />
+        <Route path="/auth/verify-email" element={<VerifyEmail />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/auth/reset-email-sent" element={<ResetPasswordEmailSent />} />
+        
+        {/* Protected Routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <HomePage />
+              </div>
+            </div>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <SettingsPage />
+              </div>
+            </div>
+          </ProtectedRoute>
+        } />
+        <Route path="/agent-chat" element={
+          <ProtectedRoute>
+            <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <AgentChatPage />
+              </div>
+            </div>
+          </ProtectedRoute>
+        } />
+        
+        {/* Fallback Routes */}
+        <Route path="/404" element={<NotFound />} />
+        <Route path="*" element={
+          user ? <Navigate to="/" replace /> : <Navigate to="/auth/login" replace />
+        } />
+      </Routes>
     </>
   );
 }
@@ -90,6 +129,8 @@ export function App() {
   }
 
   return (
+    <AuthProvider>
       <AppRouter />
+    </AuthProvider>
   );
 }
