@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import sys
+import json
 from langgraph_supervisor import create_supervisor
 from langchain_anthropic import ChatAnthropic
 from langgraph.checkpoint.memory import InMemorySaver
@@ -12,12 +13,17 @@ logger = logging.getLogger(__name__)
 ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
 
+# Add API key management
+python_server_path = Path(__file__).parent.parent.parent.parent
+sys.path.append(str(python_server_path))
+from api_key_management.providers.gemini_provider import GeminiProvider
+
 # Import local modules
-from agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMPT
-from agents.complex_task_agent.complex_excel_request_agent import ComplexExcelRequestAgent
-from agents.medium_complexity_agent.medium_excel_request_agent import MediumExcelRequestAgent
-from agents.prebuilt_agent import PrebuiltAgent
-from agents.supervisor.tools.tools import ALL_TOOLS
+from ai_services.agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMPT
+from ai_services.agents.complex_task_agent.complex_excel_request_agent import ComplexExcelRequestAgent
+from ai_services.agents.medium_complexity_agent.medium_excel_request_agent import MediumExcelRequestAgent
+from ai_services.agents.prebuilt_agent import PrebuiltAgent
+from ai_services.agents.supervisor.tools.tools import ALL_TOOLS
 
 class SupervisorAgent:
     _instance = None
@@ -33,43 +39,102 @@ class SupervisorAgent:
             return
             
         self._initialized = True
-        self._initialize_agents()
-        self._setup_supervisor()
-    
-    def _initialize_agents(self):
-        """Initialize the underlying agents"""
-        anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        self.current_user_id = None
+        self.supervisor_model = None
+        self.simple_agent = None
+        self.complex_agent = None
+        self.medium_agent = None
+        self.supervisor = None
+        self.agent_system = None
+        self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT
+
+    def initialize_with_user_api_key(self, user_id: str) -> bool:
+        """Initialize the agent for a specific user with their API key.
         
-        # Initialize models
-        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
-        if not GEMINI_API_KEY:
-            logger.error("GEMINI_API_KEY not found in environment variables")
+        Args:
+            user_id: The ID of the user to initialize for
+            
+        Returns:
+            bool: True if initialization was successful, False otherwise
+        """
+        if self.current_user_id == user_id:
+            logger.info(f"Agent already initialized for user {user_id}")
+            return True
+            
+        try:
+            # Clear any existing agents
+            #self._cleanup()
+            
+            # Initialize with user's API key
+            self.current_user_id = user_id
+            self._initialize_agents(user_id)
+            self._setup_supervisor()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize agent for user {user_id}: {str(e)}")
+            #self._cleanup()
+            return False
+
+    def _initialize_agents(self, user_id: str):
+        """Initialize the underlying agents"""
         gemini_pro = "gemini-2.5-pro"
         gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"    
-        self.supervisor_model = ChatGoogleGenerativeAI(
-            model=gemini_flash_lite,
-            temperature=0.2,
-            max_retries=3,
-            google_api_key=GEMINI_API_KEY
-        )
+
+        try:
+            self.supervisor_model = GeminiProvider.get_gemini_model(
+                user_id=user_id,
+                model=gemini_flash_lite,
+                temperature=0.2,
+                max_retries=3
+            )
+
+            if not self.supervisor_model:
+                logger.error("Failed to initialize supervisor model for user {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to initialize supervisor model for user {user_id}: {str(e)}")
         
-        # Initialize agents
-        self.simple_agent = PrebuiltAgent().with_model("claude-3-7-latest").get_agent()
-        self.complex_agent = ComplexExcelRequestAgent().with_model(gemini_flash_lite).get_agent()
-        self.medium_agent = MediumExcelRequestAgent().with_model(gemini_flash_lite).get_agent()
-        self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT 
+        try:
+            self.simple_agent = PrebuiltAgent().with_model(gemini_flash_lite, user_id).get_agent()
+            
+            if not self.simple_agent:
+                logger.error("Failed to initialize simple agent for user {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to initialize simple agent for user {user_id}: {str(e)}")
+
+        try:
+            self.complex_agent = ComplexExcelRequestAgent().with_model(gemini_flash_lite, user_id).get_agent()
+            
+            if not self.complex_agent:
+                logger.error("Failed to initialize complex agent for user {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to initialize complex agent for user {user_id}: {str(e)}")
+
+        try:
+            self.medium_agent = MediumExcelRequestAgent().with_model(gemini_flash_lite, user_id).get_agent()
+            
+            if not self.medium_agent:
+                logger.error("Failed to initialize medium agent for user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize medium agent for user {user_id}: {str(e)}")
     
     def _setup_supervisor(self):
         """Set up the supervisor with both agents"""
-        self.supervisor = create_supervisor(
-            [self.simple_agent, self.complex_agent, self.medium_agent],
-            tools=ALL_TOOLS,
-            model=self.supervisor_model,
-            prompt=self.enhanced_system_prompt,
-            output_mode="full_history",
-            
-        )
-        self.agent_system = self.supervisor.compile()
+        try:
+            self.supervisor = create_supervisor(
+                [self.simple_agent, self.complex_agent, self.medium_agent],
+                tools=ALL_TOOLS,
+                model=self.supervisor_model,
+                prompt=self.enhanced_system_prompt,
+                output_mode="full_history",
+            )
+            self.agent_system = self.supervisor.compile()
+
+            logger.info(f"Successfully compiled supervisor agent for user {self.current_user_id}")
+        except Exception as e:
+            logger.error(f"Failed to compile supervisor agent for user {self.current_user_id}: {str(e)}")
     
     def get_agent_system(self):
         """Get the compiled agent system"""

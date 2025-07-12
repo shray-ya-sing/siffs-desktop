@@ -12,7 +12,7 @@ ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
 from api.websocket_manager import manager
 from core.events import event_bus
-from agents.supervisor.supervisor_agent import agent_system
+from agents.supervisor.supervisor_agent import agent_system, supervisor_agent
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +139,62 @@ class SupervisorAgentOrchestrator:
                 client_id=client_id,
                 message_data=message.get("data", {})
             )
+        elif message.get("type") == "USER_AUTHENTICATION":
+            await self.handle_user_authentication(
+                client_id=client_id,
+                auth_data=message.get("data", {})
+            )
+    
+    async def handle_user_authentication(
+        self,
+        client_id: str,
+        auth_data: Dict[str, Any]
+    ):
+        """Handle user authentication message and associate user_id with client_id"""
+        try:
+            user_id = auth_data.get("user_id")
+            email = auth_data.get("email")
+            
+            if user_id:
+                # Store the user_id association in the WebSocket manager
+                manager.set_user_id(client_id, user_id)
+                logger.info(f"User authentication successful: client {client_id} -> user {user_id} ({email})")
+                
+                # Initialize the supervisor agent with the user_id
+                try:
+                    supervisor_agent.initialize_with_user_api_key(user_id)
+                    logger.info(f"Successfully configured supervisor agent for user {user_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to configure user-specific API key for {user_id}: {str(e)}")
+                    # Continue anyway - will use default/env API key
+                
+                # Send confirmation back to client
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "USER_AUTHENTICATION_SUCCESS",
+                        "message": "User authentication successful",
+                        "user_id": user_id
+                    }
+                )
+            else:
+                logger.warning(f"User authentication failed: no user_id provided for client {client_id}")
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "USER_AUTHENTICATION_FAILED",
+                        "message": "No user ID provided"
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Error handling user authentication for client {client_id}: {str(e)}")
+            await self._send_to_client(
+                client_id=client_id,
+                data={
+                    "type": "USER_AUTHENTICATION_FAILED",
+                    "message": "Authentication failed"
+                }
+            )
     
     async def handle_chat_message(
         self,
@@ -160,6 +216,7 @@ class SupervisorAgentOrchestrator:
             # Stream the supervisor's response
             async for chunk in self._stream_supervisor_response(
                 message_content,
+                client_id=client_id,
                 thread_id=thread_id,
                 request_id=request_id
             ):
@@ -224,6 +281,7 @@ class SupervisorAgentOrchestrator:
     async def _stream_supervisor_response(
         self,
         message: str,
+        client_id: str,
         thread_id: Optional[str] = None,
         request_id: Optional[str] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
@@ -257,7 +315,28 @@ class SupervisorAgentOrchestrator:
             
             assistant_message = ""
             # Stream both messages and custom data
-            async for stream_item in agent_system.astream(
+            if not supervisor_agent:
+                logger.error("Supervisor agent is NONE in _stream_supervisor_response")
+                yield {
+                    "type": "error",
+                    "error": "Agent configuration error: check API key setup",
+                    "requestId": request_id,
+                    "done": True
+                }
+                return
+            
+            supervisor_agent_system = supervisor_agent.get_agent_system()
+            if not supervisor_agent_system:
+                logger.error("Supervisor agent system is NONE in _stream_supervisor_response")
+                yield {
+                    "type": "error",
+                    "error": "Agent configuration error: check API key setup",
+                    "requestId": request_id,
+                    "done": True
+                }
+                return            
+
+            async for stream_item in supervisor_agent_system.astream(
                 inputs,
                 config,
                 subgraphs= True, # Enable streaming from sub-agents
@@ -367,6 +446,8 @@ class SupervisorAgentOrchestrator:
             error_message = "Your Google Gemini API key has expired. Please update your API key in the settings to continue using the AI assistant."
         elif 'invalid argument provided to gemini' in error_str:
             error_message = "There was an issue with the Google Gemini API configuration. Please check your API key and try again."
+        elif 'agent configuration error' in error_str:
+            error_message = "Agent configuration error: check API key setup"
         else:
             error_message = "An unexpected error occurred and the agent was forcibly terminated. Please try again."
         
