@@ -17,6 +17,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+python_server_dir_path = Path(__file__).parent.parent.parent.parent.parent
+sys.path.append(str(python_server_dir_path))
+from api_key_management.providers.gemini_provider import GeminiProvider
+
 # Add project root to path
 complex_agent_dir_path = Path(__file__).parent.parent
 sys.path.append(str(complex_agent_dir_path))
@@ -33,8 +37,6 @@ from read_write_tools.workspace_tools import load_conversation_cache, get_latest
 from typing import Annotated, Optional
 from typing_extensions import TypedDict
 from typing import List, Dict, Any
-
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Decorator for error handling and logging
 def log_errors(func):
@@ -54,21 +56,22 @@ def log_errors(func):
 
 # Initialize LLM
 try:
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY environment variable not set")
+    user_id = "eb2df68e-13b7-4543-8afd-056981a60a70"
     gemini_pro = "gemini-2.5-pro"
     gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
-    llm = ChatGoogleGenerativeAI(
-        model=gemini_pro,
-        temperature=0.3,
-        max_retries=3,
-        google_api_key=GEMINI_API_KEY
+    llm = GeminiProvider.get_gemini_model(
+        user_id=user_id,
+        model=gemini_flash_lite,
+        temperature=0.2,
+        max_retries=3
     )
-    logger.info("Successfully initialized Gemini LLM for high level determination")
+    if not llm:
+        logger.error("Failed to initialize Gemini LLM for complex_task_agent high level determination")
+    else:
+        logger.info("Successfully initialized Gemini LLM for complex_task_agent high level determination")
 except Exception as e:
-    logger.error(f"Failed to initialize Gemini LLM: {str(e)}")
-    raise
+    logger.error(f"Failed to initialize Gemini LLM for complex_task_agent high level determination: {str(e)}")
+
 
 from pydantic import BaseModel, Field
 # Pydantic Model for structured output

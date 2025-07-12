@@ -16,6 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+python_server_dir_path = Path(__file__).parent.parent.parent.parent.parent
+sys.path.append(str(python_server_dir_path))
+from api_key_management.providers.gemini_provider import GeminiProvider
+
 # Add project root to path
 agent_dir_path = Path(__file__).parent.parent
 sys.path.append(str(agent_dir_path))
@@ -49,21 +53,21 @@ from typing import List, Dict, Any
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 try:
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
-    if not GEMINI_API_KEY:
-        logger.error("GEMINI_API_KEY environment variable not set")
+    user_id = "eb2df68e-13b7-4543-8afd-056981a60a70"
     gemini_pro = "gemini-2.5-pro"
-    gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
-    llm = ChatGoogleGenerativeAI(
+    gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
+    llm = GeminiProvider.get_gemini_model(
+        user_id=user_id,
         model=gemini_flash_lite,
         temperature=0.2,
-        max_retries=3,
-        google_api_key=GEMINI_API_KEY
+        max_retries=3
     )
-    logger.info("Successfully initialized Gemini LLM for final evaluation")
+    if not llm:
+        logger.error("Failed to initialize Gemini LLM for medium_complexity_agent final_evaluation_nodes")
+    else:
+        logger.info("Successfully initialized Gemini LLM for medium_complexity_agent final_evaluation_nodes")
 except Exception as e:
-    logger.error(f"Failed to initialize Gemini LLM: {str(e)}")
-    raise
+    logger.error(f"Failed to initialize Gemini LLM for medium_complexity_agent final_evaluation_nodes: {str(e)}")
 
 from pydantic import BaseModel, Field
 # Pydantic Model for structured output

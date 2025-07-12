@@ -10,6 +10,12 @@ from langgraph.store.memory import InMemoryStore
 from langchain.chat_models import init_chat_model
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+python_server_dir = Path(__file__).parent.parent.parent.parent    
+sys.path.append(str(python_server_dir))
+
+# Add API key management
+from api_key_management.providers.gemini_provider import GeminiProvider
+
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
 
@@ -83,31 +89,29 @@ class ComplexExcelRequestAgent:
         }
 
 
-    def with_model(self, model_name: str) -> 'ComplexExcelRequestAgent':
+    def with_model(self, model_name: str, user_id: str) -> 'ComplexExcelRequestAgent':
         """Return an agent instance with the specified model."""
         if model_name in ComplexExcelRequestAgent._initialized_models:
             return ComplexExcelRequestAgent._initialized_models[model_name]
             
         new_instance = ComplexExcelRequestAgent()
-        new_instance._initialize_with_model(model_name)
+        new_instance._initialize_with_model(model_name, user_id)
         ComplexExcelRequestAgent._initialized_models[model_name] = new_instance
         return new_instance
 
-    def _initialize_with_model(self, model_name: str):
+    def _initialize_with_model(self, model_name: str, user_id: str):
         """Initialize the agent with a specific model and build the workflow."""
         provider_name = self._get_provider_name(model_name)
         if not provider_name:
             raise ValueError(f"Unsupported model: {model_name}")
             
-    
-        api_key = os.getenv("GEMINI_API_KEY")
         gemini_pro = "gemini-2.5-pro"
         gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
-        self.llm = ChatGoogleGenerativeAI(
-            model= gemini_flash_lite,
-            temperature=0.3,
-            max_retries=2,
-            google_api_key=api_key,
+        self.llm = GeminiProvider.get_gemini_model(
+            user_id=user_id,
+            model=gemini_flash_lite,
+            temperature=0.2,
+            max_retries=3
         )
 
         self.current_model = model_name

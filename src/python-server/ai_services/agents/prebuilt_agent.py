@@ -18,10 +18,11 @@ from langchain_core.tools import tool
 from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
 
-ai_services_path = Path(__file__).parent.parent
-sys.path.append(str(ai_services_path))
+python_server_dir = Path(__file__).parent.parent.parent
+sys.path.append(str(python_server_dir))
 
-from prompts.system_prompts import VOLUTE_SYSTEM_PROMPT
+from api_key_management.providers.gemini_provider import GeminiProvider
+from ai_services.prompts.system_prompts import VOLUTE_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +63,13 @@ class PrebuiltAgent:
                 "gpt-4o-mini"
             },
             "google": {
-                "gemini-2.5-pro"
+                "gemini-2.5-pro",
+                "gemini-2.5-flash-lite-preview-06-17"
             }
         }
         _initialized = True
         
-    def with_model(self, model_name: str) -> 'PrebuiltAgent':
+    def with_model(self, model_name: str, user_id: str) -> 'PrebuiltAgent':
         """
         Return an agent instance with the specified model.
         If the model is already initialized, returns the existing instance.
@@ -85,31 +87,36 @@ class PrebuiltAgent:
             
         # Otherwise, create a new instance and initialize it with the model
         new_instance = PrebuiltAgent()
-        new_instance._initialize_with_model(model_name)
+        new_instance._initialize_with_model(model_name, user_id)
         PrebuiltAgent._initialized_models[model_name] = new_instance
         return new_instance
 
     def get_agent(self):
         return self.agent
 
-    def _initialize_with_model(self, model_name: str):
+    def _initialize_with_model(self, model_name: str, user_id: str):
         """Initialize the agent with a specific model"""
         
         # Get the provider name for the model
         provider_name = self._get_provider_name(model_name)
         if not provider_name:
             logger.error(f"Provider not found for model: {model_name}")
-            provider_name = "anthropic"
-            model_name = "claude-3-7-sonnet-latest"
+            provider_name = "google"
+            model_name = "gemini-2.5-flash-lite-preview-06-17"
             
         # Initialize the LLM with the specified model
-        self.llm = init_chat_model(
-            model_name=f"{provider_name}:{model_name}", 
-            model_provider=provider_name
-        )
-        
-        # Use the imported tools
-        self.llm_with_tools = self.llm.bind_tools(ALL_TOOLS)
+        if model_name == "gemini-2.5-flash-lite-preview-06-17":
+            self.llm = GeminiProvider.get_gemini_model(
+                user_id=user_id,
+                model=model_name,
+                temperature=0.2,
+                max_retries=3
+            )
+        else:
+            self.llm = init_chat_model(
+                model_name=f"{provider_name}:{model_name}", 
+                model_provider=provider_name
+            )
 
         enhanced_system_prompt = VOLUTE_SYSTEM_PROMPT
         workspace_excel_files = self.view_files_in_workspace()
@@ -120,7 +127,7 @@ class PrebuiltAgent:
         # Create the agent
         logger.info(f"Creating agent with model: {provider_name}:{model_name}")
         self.agent = create_react_agent(
-            model=f"{provider_name}:{model_name}", 
+            model=self.llm, 
             tools=ALL_TOOLS,
             prompt=enhanced_system_prompt,
             store=self.in_memory_store,

@@ -36,6 +36,10 @@ def log_errors(func):
     return wrapper
 
 from pathlib import Path
+python_server_dir_path = Path(__file__).parent.parent.parent.parent.parent
+sys.path.append(str(python_server_dir_path))
+from api_key_management.providers.gemini_provider import GeminiProvider
+
 complex_agent_dir_path = Path(__file__).parent.parent
 sys.path.append(str(complex_agent_dir_path))
 from state.agent_state import InputState, OverallState, StepDecisionState, OutputState
@@ -51,23 +55,22 @@ from typing_extensions import TypedDict
 from typing import List, Dict, Any
 import json
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-
 try:
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCKG5TEgNCoswVOjcVyNnSHplU5KmnpyoI")
-    if not GEMINI_API_KEY:
-        logger.error("GEMINI_API_KEY not found in environment variables")
+    user_id = "eb2df68e-13b7-4543-8afd-056981a60a70"
     gemini_pro = "gemini-2.5-pro"
     gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
-    llm = ChatGoogleGenerativeAI(
+    llm = GeminiProvider.get_gemini_model(
+        user_id=user_id,
         model=gemini_flash_lite,
         temperature=0.2,
-        max_retries=3,
-        google_api_key=GEMINI_API_KEY
+        max_retries=3
     )
-    logger.info("Successfully initialized Gemini LLM")
+    if not llm:
+        logger.error("Failed to initialize Gemini LLM for complex_task_agent checking_nodes")
+    else:
+        logger.info("Successfully initialized Gemini LLM for complex_task_agent checking_nodes")
 except Exception as e:
-    logger.error(f"Failed to initialize Gemini LLM: {str(e)}")
+    logger.error(f"Failed to initialize Gemini LLM for complex_task_agent checking_nodes: {str(e)}")
 
 
 from pydantic import BaseModel, Field, RootModel

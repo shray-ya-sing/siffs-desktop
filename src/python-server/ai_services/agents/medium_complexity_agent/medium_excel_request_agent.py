@@ -10,25 +10,28 @@ from langgraph.store.memory import InMemoryStore
 from langchain.chat_models import init_chat_model
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-agent_dir = Path(__file__).parent.parent.absolute()    
-sys.path.append(str(agent_dir))
+python_server_dir = Path(__file__).parent.parent.parent.parent    
+sys.path.append(str(python_server_dir))
+
+# Add API key management
+from api_key_management.providers.gemini_provider import GeminiProvider
 
 # Import State 
-from medium_complexity_agent.state.agent_state import OverallState, InputState, StepDecisionState, OutputState
+from ai_services.agents.medium_complexity_agent.state.agent_state import OverallState, InputState, StepDecisionState, OutputState
 
 # Update imports for all node functions
-from medium_complexity_agent.nodes.high_level_determination_nodes import (
+from ai_services.agents.medium_complexity_agent.nodes.high_level_determination_nodes import (
     get_workspace_path,
     determine_implementation_sequence,
     decide_next_step
 )
-from medium_complexity_agent.nodes.step_level_nodes import (
+from ai_services.agents.medium_complexity_agent.nodes.step_level_nodes import (
     get_step_metadata,
     get_step_instructions,
     get_step_cell_formulas,
     write_step_cell_formulas
 )
-from medium_complexity_agent.nodes.error_nodes import (
+from ai_services.agents.medium_complexity_agent.nodes.error_nodes import (
     retry_failed,
     step_edit_failed,
     retry_edit_failed,
@@ -37,8 +40,8 @@ from medium_complexity_agent.nodes.error_nodes import (
     execution_failed,
     task_understanding_failed,
 )
-from medium_complexity_agent.nodes.final_evaluation_nodes import check_final_success, update_full_excel_metadata, terminate_success, terminate_failure
-from medium_complexity_agent.nodes.checking_nodes import (  
+from ai_services.agents.medium_complexity_agent.nodes.final_evaluation_nodes import check_final_success, update_full_excel_metadata, terminate_success, terminate_failure
+from ai_services.agents.medium_complexity_agent.nodes.checking_nodes import (  
     get_updated_excel_data_to_check,
     check_edit_success,
     get_updated_metadata_after_retry,
@@ -77,31 +80,29 @@ class MediumExcelRequestAgent:
         }
 
 
-    def with_model(self, model_name: str) -> 'MediumExcelRequestAgent':
+    def with_model(self, model_name: str, user_id: str) -> 'MediumExcelRequestAgent':
         """Return an agent instance with the specified model."""
         if model_name in MediumExcelRequestAgent._initialized_models:
             return MediumExcelRequestAgent._initialized_models[model_name]
             
         new_instance = MediumExcelRequestAgent()
-        new_instance._initialize_with_model(model_name)
+        new_instance._initialize_with_model(model_name, user_id)
         MediumExcelRequestAgent._initialized_models[model_name] = new_instance
         return new_instance
 
-    def _initialize_with_model(self, model_name: str):
+    def _initialize_with_model(self, model_name: str, user_id: str):
         """Initialize the agent with a specific model and build the workflow."""
         provider_name = self._get_provider_name(model_name)
         if not provider_name:
             raise ValueError(f"Unsupported model: {model_name}")
             
-    
-        api_key = os.getenv("GEMINI_API_KEY")
         gemini_pro = "gemini-2.5-pro"
         gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
-        self.llm = ChatGoogleGenerativeAI(
-            model= gemini_flash_lite,
-            temperature=0.3,
-            max_retries=2,
-            google_api_key=api_key,
+        self.llm = GeminiProvider.get_gemini_model(
+            user_id=user_id,
+            model=gemini_flash_lite,
+            temperature=0.2,
+            max_retries=3
         )
 
         self.current_model = model_name
