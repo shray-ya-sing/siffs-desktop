@@ -15,6 +15,7 @@ class ConnectionManager:
     def __init__(self, heartbeat_interval: int = 30, timeout: int = 300):
         self.active_connections: Dict[str, WebSocket] = {}
         self.client_info: Dict[str, dict] = {}
+        self.client_user_mapping: Dict[str, str] = {}  # Maps client_id to user_id
         self.heartbeat_interval = heartbeat_interval  # seconds between pings
         self.timeout = timeout  # seconds before considering connection dead
         self.heartbeat_task = None
@@ -103,6 +104,18 @@ class ConnectionManager:
         if client_id in self.client_info:
             self.client_info[client_id]["last_seen"] = datetime.utcnow()
         
+    def set_user_id(self, client_id: str, user_id: str):
+        """Associate a user_id with a client_id"""
+        if client_id in self.active_connections:
+            self.client_user_mapping[client_id] = user_id
+            logger.info(f"Associated client {client_id} with user {user_id}")
+        else:
+            logger.warning(f"Attempted to set user_id for non-existent client {client_id}")
+    
+    def get_user_id(self, client_id: str) -> Optional[str]:
+        """Get the user_id associated with a client_id"""
+        return self.client_user_mapping.get(client_id)
+    
     def disconnect(self, client_id: str):
         """Remove disconnected client"""
         if client_id in self.active_connections:
@@ -110,6 +123,10 @@ class ConnectionManager:
             
         if client_id in self.client_info:
             del self.client_info[client_id]
+            
+        # Remove user mapping
+        if client_id in self.client_user_mapping:
+            del self.client_user_mapping[client_id]
             
         # Stop heartbeat if no more clients
         if not self.active_connections and self.heartbeat_task:
