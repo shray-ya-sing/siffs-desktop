@@ -18,12 +18,26 @@ class APIKeyManager:
     
     def _load_api_keys(self) -> Dict[str, Dict[str, str]]:
         """Load API keys from cache file"""
+        logger.info(f"=== LOADING API KEYS ===")
+        logger.info(f"Cache file path: {self.api_keys_file}")
+        logger.info(f"File exists: {self.api_keys_file.exists()}")
+        
         try:
             if self.api_keys_file.exists():
                 with open(self.api_keys_file, 'r') as f:
-                    return json.load(f)
+                    content = f.read()
+                    logger.info(f"File content: {content}")
+                    f.seek(0)  # Reset file pointer
+                    data = json.load(f)
+                    logger.info(f"Loaded data: {data}")
+                    logger.info(f"========================")
+                    return data
+            else:
+                logger.info(f"Cache file does not exist, returning empty dict")
+                logger.info(f"========================")
         except Exception as e:
             logger.error(f"Error loading API keys: {e}")
+            logger.info(f"========================")
         return {}
     
     def _save_api_keys(self):
@@ -73,8 +87,16 @@ class APIKeyManager:
     
     def get_effective_api_key(self, user_id: str, provider: str) -> str:
         """Get user API key if available, otherwise fall back to environment variable"""
+        logger.info(f"=== API_KEY_MANAGER DEBUG ===")
+        logger.info(f"Getting effective API key for user_id: {user_id}, provider: {provider}")
+        logger.info(f"Current cache keys: {list(self._user_api_keys.keys())}")
+        
         user_key = self.get_user_api_key(user_id, provider)
+        logger.info(f"User key result: {user_key[:10] if user_key else 'None'}...")
+        
         if user_key:
+            logger.info(f"Using user-specific API key")
+            logger.info(f"=============================")
             return user_key
         
         # Fallback to environment variables
@@ -86,8 +108,13 @@ class APIKeyManager:
         
         env_key = env_key_map.get(provider)
         if env_key:
-            return os.getenv(env_key, "")
+            env_value = os.getenv(env_key, "")
+            logger.info(f"Fallback to env key {env_key}: {env_value[:10] if env_value else 'None'}...")
+            logger.info(f"=============================")
+            return env_value
         
+        logger.info(f"No API key found for provider {provider}")
+        logger.info(f"=============================")
         return ""
     
     def has_user_api_key(self, user_id: str, provider: str) -> bool:

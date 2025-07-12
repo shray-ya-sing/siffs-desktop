@@ -37,24 +37,33 @@ class GeminiProvider:
             ChatGoogleGenerativeAI instance
         """
         # Get the effective API key (user key or fallback to env)
+        logger.info(f"=== GEMINI_PROVIDER DEBUG ===")
+        logger.info(f"Getting API key for user_id: {user_id}")
+        
         api_key = api_key_manager.get_effective_api_key(user_id, "gemini")
+        logger.info(f"API key retrieved from manager: {api_key[:10] if api_key else 'None'}...")
         
         if not api_key:
             logger.warning(f"No Gemini API key found for user {user_id}")
-            # Try the fallback key from environment directly
-            api_key = os.getenv("GEMINI_API_KEY", "")
-            
+
         if not api_key:
-            raise ValueError(f"No Gemini API key available for user {user_id}")
+            logger.error(ValueError(f"No Gemini API key available for user {user_id}"))
         
+        logger.info(f"Final API key to use: {api_key[:10]}...")
         logger.info(f"Creating Gemini model for user {user_id} with model {model}")
+        logger.info(f"============================")
         
-        return ChatGoogleGenerativeAI(
+        llm = ChatGoogleGenerativeAI(
             model=model,
             temperature=temperature,
             max_retries=max_retries,
             google_api_key=api_key
         )
+
+        if not llm:
+            logger.error(ValueError(f"Failed to create Gemini model for user {user_id}"))
+        
+        return llm
     
     @staticmethod
     def create_structured_llm(user_id: str, output_schema, **kwargs):
