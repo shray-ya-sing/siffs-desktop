@@ -52,7 +52,7 @@ export class APIKeyService {
         data: {
           provider,
           api_key: apiKey,
-          user_id: userId
+          user_id: userId // Pass the user ID to backend
         },
         requestId
       });
@@ -68,14 +68,25 @@ export class APIKeyService {
       
       // Set up response handler
       const handleResponse = (response: APIKeyResponse) => {
+        console.log('=== API_KEY_SERVICE RESPONSE ===');
+        console.log('Received response:', response);
+        console.log('Expected requestId:', requestId);
+        console.log('Response requestId:', response.requestId);
+        console.log('Status data:', response.status);
+        console.log('==============================');
+        
         if (response.requestId === requestId) {
           webSocketService.off('API_KEY_STATUS', handleResponse);
           webSocketService.off('API_KEY_ERROR', handleError);
           if (response.status) {
+            console.log('Resolving with status:', response.status);
             resolve(response.status);
           } else {
+            console.log('Invalid response format - no status field');
             reject(new Error('Invalid response format'));
           }
+        } else {
+          console.log('Request ID mismatch - ignoring response');
         }
       };
 

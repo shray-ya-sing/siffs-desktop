@@ -85,6 +85,9 @@ class WebSocketService {
       console.log('WebSocket connected');
       this.isConnected = true;
       
+      // Send user ID to backend for API key association
+      this.sendUserIdToBackend();
+      
       // Process any queued messages
       this.messageQueue.forEach(message => {
         this.socket?.send(message);
@@ -96,6 +99,15 @@ class WebSocketService {
       try {
         const message = JSON.parse(event.data);
         console.log('Raw WebSocket message received:', message); // Debug log
+        
+        // Special debug for API key messages
+        if (message.type === 'API_KEY_STATUS') {
+          console.log('=== API_KEY_STATUS RECEIVED ===');
+          console.log('Full message:', JSON.stringify(message, null, 2));
+          console.log('Status data:', message.status);
+          console.log('Request ID:', message.requestId);
+          console.log('===============================');
+        }
         
         // Special handling for chunked messages
         if (message.type === 'ASSISTANT_MESSAGE_CHUNK' || 
@@ -114,7 +126,7 @@ class WebSocketService {
         
         // Normal message handling
         const handlers = this.eventHandlers.get(message.type) || [];
-        handlers.forEach(handler => handler(message.data || message)); // Handle both formats
+        handlers.forEach(handler => handler(message)); // Pass the entire message
       } catch (error) {
         console.error('Error processing WebSocket message:', error, event.data);
       }
@@ -245,6 +257,27 @@ class WebSocketService {
   public emit(event: string, data: any): void {
     const message = { type: event, data };
     this.sendMessage(message);
+  }
+
+  private async sendUserIdToBackend(): Promise<void> {
+    try {
+      const { supabase } = require('../../lib/supabase');
+      const { data } = await supabase.auth.getUser();
+      if (data?.user?.id) {
+        console.log('Sending user ID to backend:', data.user.id);
+        this.sendMessage({
+          type: 'USER_AUTHENTICATION',
+          data: {
+            user_id: data.user.id,
+            email: data.user.email
+          }
+        });
+      } else {
+        console.log('No authenticated user found for API key association');
+      }
+    } catch (error) {
+      console.warn('Failed to send user ID to backend:', error);
+    }
   }
 
   public disconnect(): void {

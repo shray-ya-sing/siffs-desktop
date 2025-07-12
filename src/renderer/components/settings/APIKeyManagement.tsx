@@ -8,6 +8,7 @@ import {
 } from '../../types/api-keys';
 import { apiKeyService } from '../../services/api-key.service';
 import { useToast } from '../ui/use-toast';
+import { useAuth } from '../../providers/AuthProvider';
 
 interface APIKeyCardProps {
   provider: Provider;
@@ -170,44 +171,22 @@ export function APIKeyManagement() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Add timeout to prevent infinite loading when backend is disconnected
-    const timeoutId = setTimeout(() => {
-      if (isInitialLoading) {
-        console.log('API key status loading timed out, showing default UI');
-        setStatus({
-          gemini: {
-            has_user_key: false,
-            has_env_key: false,
-            configured: false
-          },
-          openai: {
-            has_user_key: false,
-            has_env_key: false,
-            configured: false
-          },
-          anthropic: {
-            has_user_key: false,
-            has_env_key: false,
-            configured: false
-          }
-        });
-        setIsInitialLoading(false);
-      }
-    }, 3000); // 3 second timeout
-
     loadAPIKeyStatus();
-
-    return () => clearTimeout(timeoutId);
-  }, []);
+  }, [user?.id]); // Reload when user changes
 
   const loadAPIKeyStatus = async () => {
     try {
-      console.log('Loading API key status...');
-      const statusResponse = await apiKeyService.getAPIKeyStatus();
+      console.log('=== DEBUG: Supabase user object ===');
+      console.log('Full user object:', user);
+      console.log('User ID:', user?.id);
+      console.log('=====================================');
+      const statusResponse = await apiKeyService.getAPIKeyStatus(user?.id);
       console.log('API key status response:', statusResponse);
       setStatus(statusResponse);
+      setIsInitialLoading(false); // Clear loading state on success
     } catch (error) {
       console.error('Failed to load API key status (backend may be disconnected):', error);
       setIsConnected(false);
@@ -239,7 +218,8 @@ export function APIKeyManagement() {
   const handleSetKey = async (provider: Provider, apiKey: string) => {
     setIsLoading(true);
     try {
-      await apiKeyService.setAPIKey(provider, apiKey);
+      console.log('Setting API key for user:', user?.id);
+      await apiKeyService.setAPIKey(provider, apiKey, user?.id);
       await loadAPIKeyStatus(); // Refresh status
       toast({
         title: 'Success',
@@ -260,7 +240,8 @@ export function APIKeyManagement() {
   const handleRemoveKey = async (provider: Provider) => {
     setIsLoading(true);
     try {
-      await apiKeyService.removeAPIKey(provider);
+      console.log('Removing API key for user:', user?.id);
+      await apiKeyService.removeAPIKey(provider, user?.id);
       await loadAPIKeyStatus(); // Refresh status
       toast({
         title: 'Success',
