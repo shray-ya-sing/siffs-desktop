@@ -27,23 +27,25 @@ class SupervisorAgentOrchestrator:
     CONVERSATION_CACHE = CACHE_DIR / "conversation_cache.json"
     
     EXCLUDED_NODES = {
-    "determine_implementation_sequence",
-    "decide_next_step",
-    "get_step_metadata",
-    "get_step_cell_formulas",
-    "get_updated_excel_data_to_check",
-    "check_edit_success",
-    "revert_edit",
-    "decide_retry_edit",
-    "retry_edit",
-    "implement_retry",
-    "get_retry_edit_instructions",
-    "get_updated_metadata_after_retry",
-    "check_edit_success_after_retry",
-    "check_final_success",
-    "get_step_instructions",
-    "step_retry_succeeded",
-    "check_retry_edit_success"
+        "simple_excel_agent",
+        "tools", # tool calling node from langgraph,
+        "determine_implementation_sequence",
+        "decide_next_step",
+        "get_step_metadata",
+        "get_step_cell_formulas",
+        "get_updated_excel_data_to_check",
+        "check_edit_success",
+        "revert_edit",
+        "decide_retry_edit",
+        "retry_edit",
+        "implement_retry",
+        "get_retry_edit_instructions",
+        "get_updated_metadata_after_retry",
+        "check_edit_success_after_retry",
+        "check_final_success",
+        "get_step_instructions",
+        "step_retry_succeeded",
+        "check_retry_edit_success"
     }
     
     def __init__(self):
@@ -219,8 +221,6 @@ class SupervisorAgentOrchestrator:
             message_content = message_data.get("message", "").strip()
             thread_id = message_data.get("threadId")
             request_id = message_data.get("requestId")
-            
-            logger.info(f"Supervisor agent orchestrator received message: {message_content}")
             
             if not message_content:
                 logger.warning(f"Empty message received from client {client_id}")
@@ -424,6 +424,9 @@ class SupervisorAgentOrchestrator:
                         #logger.info(f"Stream item: {stream_item}")
                         message_chunk, metadata = chunk
 
+                        logger.info(f"METADATA: {metadata}")
+
+
                         # Check if this is a tool message, don't want to send these to client
                         if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
                             continue
@@ -433,9 +436,22 @@ class SupervisorAgentOrchestrator:
                             continue
                         
                         # Skip tokens from excluded nodes
-                        node_name = metadata.get("langgraph_node", "")
-                        if node_name in self.EXCLUDED_NODES:
-                            continue
+                        if 'langgraph_node' in metadata:
+                            node_name = metadata.get("langgraph_node", "")                        
+                            if node_name in self.EXCLUDED_NODES or 'simple_excel_agent' in node_name:
+                                continue
+
+                        if 'langgraph_checkpoint_ns' in metadata:
+                            checkpoint_name = metadata.get('langgraph_checkpoint_ns', '')
+                            if 'simple_excel_agent' in checkpoint_name:
+                                logger.info(f"Skipping simple_excel_agent checkpoint (langgraph_checkpoint_ns)")
+                                continue
+
+                        if 'checkpoint_ns' in metadata:
+                            checkpoint_name = metadata.get('checkpoint_ns', '')
+                            if 'simple_excel_agent' in checkpoint_name:
+                                logger.info(f"Skipping simple_excel_agent checkpoint (checkpoint_ns)")
+                                continue
                         
                         # Extract text content
                         text = self.extract_ai_message_content(message_chunk)
@@ -492,6 +508,7 @@ class SupervisorAgentOrchestrator:
             # Save assistant message
             if assistant_message:
                 self._append_message(thread_id, "assistant", assistant_message)
+                logger.info(f"Assistant message received on thread {thread_id}: {assistant_message}")
             
         except Exception as e:
             logger.error(f"Error in supervisor response stream: {str(e)}", exc_info=True)
