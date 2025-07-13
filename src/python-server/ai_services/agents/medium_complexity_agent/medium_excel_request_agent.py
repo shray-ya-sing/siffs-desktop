@@ -19,35 +19,12 @@ from api_key_management.providers.gemini_provider import GeminiProvider
 # Import State 
 from ai_services.agents.medium_complexity_agent.state.agent_state import OverallState, InputState, StepDecisionState, OutputState
 
-# Update imports for all node functions
-from ai_services.agents.medium_complexity_agent.nodes.high_level_determination_nodes import (
-    get_workspace_path,
-    determine_implementation_sequence,
-    decide_next_step
-)
-from ai_services.agents.medium_complexity_agent.nodes.step_level_nodes import (
-    get_step_metadata,
-    get_step_instructions,
-    get_step_cell_formulas,
-    write_step_cell_formulas
-)
-from ai_services.agents.medium_complexity_agent.nodes.error_nodes import (
-    retry_failed,
-    step_edit_failed,
-    retry_edit_failed,
-    revert_edit_failed,
-    llm_response_failure,
-    execution_failed,
-    task_understanding_failed,
-)
-from ai_services.agents.medium_complexity_agent.nodes.final_evaluation_nodes import check_final_success, update_full_excel_metadata, terminate_success, terminate_failure
-from ai_services.agents.medium_complexity_agent.nodes.checking_nodes import (  
-    get_updated_excel_data_to_check,
-    check_edit_success,
-    get_updated_metadata_after_retry,
-    check_edit_success_after_retry,
-    step_retry_succeeded
-)
+# Import node classes
+from ai_services.agents.medium_complexity_agent.nodes.high_level_determination_nodes import HighLevelDeterminationNodes
+from ai_services.agents.medium_complexity_agent.nodes.step_level_nodes import StepLevelNodes
+from ai_services.agents.medium_complexity_agent.nodes.error_nodes import ErrorNodes
+from ai_services.agents.medium_complexity_agent.nodes.final_evaluation_nodes import FinalEvaluationNodes
+from ai_services.agents.medium_complexity_agent.nodes.checking_nodes import CheckingNodes
 
 class MediumExcelRequestAgent:
     _instance = None
@@ -78,6 +55,12 @@ class MediumExcelRequestAgent:
             "openai": {"gpt-4", "gpt-4-turbo"},
             "anthropic": {"claude-3-opus-20240229"}
         }
+        # Node class instances
+        self.high_level_nodes = None
+        self.step_level_nodes = None
+        self.checking_nodes = None
+        self.final_evaluation_nodes = None
+        self.error_nodes = None
 
 
     def with_model(self, model_name: str, user_id: str) -> 'MediumExcelRequestAgent':
@@ -106,6 +89,7 @@ class MediumExcelRequestAgent:
         )
 
         self.current_model = model_name
+        self._initialize_node_classes(user_id)
         self._build_workflow()
 
     def _get_provider_name(self, model_name: str) -> Optional[str]:
@@ -115,6 +99,14 @@ class MediumExcelRequestAgent:
                 return provider
         return None
 
+    def _initialize_node_classes(self, user_id: str):
+        """Initialize all node classes with the user_id"""
+        self.high_level_nodes = HighLevelDeterminationNodes(user_id)
+        self.step_level_nodes = StepLevelNodes(user_id)
+        self.checking_nodes = CheckingNodes(user_id)
+        self.final_evaluation_nodes = FinalEvaluationNodes(user_id)
+        self.error_nodes = ErrorNodes(user_id)
+
     def get_agent(self):
         return self.medium_excel_request_agent
 
@@ -123,34 +115,34 @@ class MediumExcelRequestAgent:
         """Build the LangGraph workflow with all nodes."""
         medium_excel_request_agent= StateGraph(OverallState)
         
-        # Add all nodes without defining edges
-        medium_excel_request_agent.add_node("get_workspace_path", get_workspace_path)
-        medium_excel_request_agent.add_node("determine_implementation_sequence", determine_implementation_sequence)
-        medium_excel_request_agent.add_node("decide_next_step", decide_next_step)
+        # Add all nodes using class methods
+        medium_excel_request_agent.add_node("get_workspace_path", self.high_level_nodes.get_workspace_path)
+        medium_excel_request_agent.add_node("determine_implementation_sequence", self.high_level_nodes.determine_implementation_sequence)
+        medium_excel_request_agent.add_node("decide_next_step", self.high_level_nodes.decide_next_step)
         # STEP LEVEL
-        medium_excel_request_agent.add_node("get_step_metadata", get_step_metadata)
-        medium_excel_request_agent.add_node("get_step_instructions", get_step_instructions)
-        medium_excel_request_agent.add_node("get_step_cell_formulas", get_step_cell_formulas)
-        medium_excel_request_agent.add_node("write_step_cell_formulas", write_step_cell_formulas)
+        medium_excel_request_agent.add_node("get_step_metadata", self.step_level_nodes.get_step_metadata)
+        medium_excel_request_agent.add_node("get_step_instructions", self.step_level_nodes.get_step_instructions)
+        medium_excel_request_agent.add_node("get_step_cell_formulas", self.step_level_nodes.get_step_cell_formulas)
+        medium_excel_request_agent.add_node("write_step_cell_formulas", self.step_level_nodes.write_step_cell_formulas)
         # CHECKING
-        medium_excel_request_agent.add_node("get_updated_excel_data_to_check", get_updated_excel_data_to_check)
-        medium_excel_request_agent.add_node("check_edit_success", check_edit_success)
-        medium_excel_request_agent.add_node("get_updated_metadata_after_retry", get_updated_metadata_after_retry)
-        medium_excel_request_agent.add_node("check_edit_success_after_retry", check_edit_success_after_retry)
-        medium_excel_request_agent.add_node("step_retry_succeeded", step_retry_succeeded)
+        medium_excel_request_agent.add_node("get_updated_excel_data_to_check", self.checking_nodes.get_updated_excel_data_to_check)
+        medium_excel_request_agent.add_node("check_edit_success", self.checking_nodes.check_edit_success)
+        medium_excel_request_agent.add_node("get_updated_metadata_after_retry", self.checking_nodes.get_updated_metadata_after_retry)
+        medium_excel_request_agent.add_node("check_edit_success_after_retry", self.checking_nodes.check_edit_success_after_retry)
+        medium_excel_request_agent.add_node("step_retry_succeeded", self.checking_nodes.step_retry_succeeded)
         # ERROR
-        medium_excel_request_agent.add_node("retry_failed", retry_failed)
-        medium_excel_request_agent.add_node("step_edit_failed", step_edit_failed)
-        medium_excel_request_agent.add_node("retry_edit_failed", retry_edit_failed)
-        medium_excel_request_agent.add_node("revert_edit_failed", revert_edit_failed)
-        medium_excel_request_agent.add_node("llm_response_failure", llm_response_failure)
-        medium_excel_request_agent.add_node("execution_failed", execution_failed)
-        medium_excel_request_agent.add_node("task_understanding_failed", task_understanding_failed)
+        medium_excel_request_agent.add_node("retry_failed", self.error_nodes.retry_failed)
+        medium_excel_request_agent.add_node("step_edit_failed", self.error_nodes.step_edit_failed)
+        medium_excel_request_agent.add_node("retry_edit_failed", self.error_nodes.retry_edit_failed)
+        medium_excel_request_agent.add_node("revert_edit_failed", self.error_nodes.revert_edit_failed)
+        medium_excel_request_agent.add_node("llm_response_failure", self.error_nodes.llm_response_failure)
+        medium_excel_request_agent.add_node("execution_failed", self.error_nodes.execution_failed)
+        medium_excel_request_agent.add_node("task_understanding_failed", self.error_nodes.task_understanding_failed)
         # FINAL
-        medium_excel_request_agent.add_node("update_full_excel_metadata", update_full_excel_metadata)  
-        medium_excel_request_agent.add_node("check_final_success", check_final_success)
-        medium_excel_request_agent.add_node("terminate_success", terminate_success)
-        medium_excel_request_agent.add_node("terminate_failure", terminate_failure)
+        medium_excel_request_agent.add_node("update_full_excel_metadata", self.final_evaluation_nodes.update_full_excel_metadata)  
+        medium_excel_request_agent.add_node("check_final_success", self.final_evaluation_nodes.check_final_success)
+        medium_excel_request_agent.add_node("terminate_success", self.final_evaluation_nodes.terminate_success)
+        medium_excel_request_agent.add_node("terminate_failure", self.final_evaluation_nodes.terminate_failure)
         # Set entry point
         medium_excel_request_agent.set_entry_point("get_workspace_path")
         
