@@ -86,6 +86,22 @@ import MainLogo from '../logo/MainLogo'
         setDiscoveryMessages(prev => [...prev, `PowerPoint error: ${'Failed to process file'}`]);
         setIsDiscovering(true);
       };
+      
+      // PDF event handlers
+      const onPdfExtractionComplete = (data: any) => {
+        setDiscoveryMessages(prev => [...prev, `PDF extraction complete: ${data.totalPages} pages processed`]);
+        setIsDiscovering(true);
+      };
+    
+      const onPdfExtractionError = (error: any) => {
+        console.error('PDF extraction error:', error);
+        setDiscoveryMessages(prev => [...prev, `PDF error: ${'Failed to process file'}`]);
+        setIsDiscovering(true);
+      };
+      
+      const onPdfExtractionProgress = (data: any) => {
+        setDiscoveryMessages(prev => [...prev, `PDF processing: ${data.message} (${data.progress}%)`]);
+      };
     
       // Register event listeners
       webSocketService.on('CHUNK_EXTRACTED', onChunkExtracted);
@@ -95,6 +111,11 @@ import MainLogo from '../logo/MainLogo'
       // PowerPoint event listeners
       webSocketService.on('POWERPOINT_EXTRACTION_COMPLETE', onPowerPointExtractionComplete);
       webSocketService.on('POWERPOINT_EXTRACTION_ERROR', onPowerPointExtractionError);
+      
+      // PDF event listeners
+      webSocketService.on('PDF_EXTRACTION_COMPLETE', onPdfExtractionComplete);
+      webSocketService.on('PDF_EXTRACTION_ERROR', onPdfExtractionError);
+      webSocketService.on('PDF_EXTRACTION_PROGRESS', onPdfExtractionProgress);
     
       // Clean up on unmount
       return () => {
@@ -105,6 +126,11 @@ import MainLogo from '../logo/MainLogo'
         // PowerPoint cleanup
         webSocketService.off('POWERPOINT_EXTRACTION_COMPLETE', onPowerPointExtractionComplete);
         webSocketService.off('POWERPOINT_EXTRACTION_ERROR', onPowerPointExtractionError);
+        
+        // PDF cleanup
+        webSocketService.off('PDF_EXTRACTION_COMPLETE', onPdfExtractionComplete);
+        webSocketService.off('PDF_EXTRACTION_ERROR', onPdfExtractionError);
+        webSocketService.off('PDF_EXTRACTION_PROGRESS', onPdfExtractionProgress);
       };
     }, [onFolderConnect]);
 
@@ -149,7 +175,7 @@ import MainLogo from '../logo/MainLogo'
         await scanDirectory(dirHandle, fileList, []);
         console.log("File list:", fileList);
         
-        // Filter Excel and PowerPoint files
+        // Filter Excel, PowerPoint, and PDF files
         const excelFiles = fileList.filter(file => 
           !file.isDirectory && file.name.endsWith('.xlsx')
         );
@@ -158,10 +184,14 @@ import MainLogo from '../logo/MainLogo'
           !file.isDirectory && (file.name.endsWith('.pptx') || file.name.endsWith('.ppt'))
         );
         
-        const allSupportedFiles = [...excelFiles, ...powerPointFiles];
+        const pdfFiles = fileList.filter(file => 
+          !file.isDirectory && file.name.endsWith('.pdf')
+        );
+        
+        const allSupportedFiles = [...excelFiles, ...powerPointFiles, ...pdfFiles];
         
         if (allSupportedFiles.length === 0) {
-          setDiscoveryMessages(prev => [...prev, "No Excel or PowerPoint files found in the selected directory"]);
+          setDiscoveryMessages(prev => [...prev, "No Excel, PowerPoint, or PDF files found in the selected directory"]);
           return;
         }
     
@@ -191,6 +221,7 @@ import MainLogo from '../logo/MainLogo'
             // Determine file type and send appropriate extraction request
             const isExcelFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
             const isPowerPointFile = file.name.endsWith('.pptx') || file.name.endsWith('.ppt');
+            const isPdfFile = file.name.endsWith('.pdf');
             
             if (isExcelFile) {
               // Send Excel extraction request
@@ -207,6 +238,18 @@ import MainLogo from '../logo/MainLogo'
                 request_id: requestId,
                 file_path: `${dirName}/${file.path}`,
                 file_content: base64Content
+              });
+            } else if (isPdfFile) {
+              // Send PDF extraction request
+              webSocketService.emit('EXTRACT_PDF_CONTENT', {
+                client_id: clientId,
+                request_id: requestId,
+                file_path: `${dirName}/${file.path}`,
+                file_content: base64Content,
+                include_images: true,
+                include_tables: true,
+                include_forms: true,
+                ocr_images: false
               });
             }
     
@@ -353,7 +396,7 @@ import MainLogo from '../logo/MainLogo'
           {/* Instructions */}
           <div className="max-w-md mx-auto text-center">
             <p className="text-sm text-gray-500 leading-relaxed">
-              Select a folder to copy it to the agent workspace. Volute reads Excel (.xlsx) and PowerPoint (.pptx, .ppt) files, so any other file types will be ignored.
+              Select a folder to copy it to the agent workspace. Volute reads Excel (.xlsx), PowerPoint (.pptx, .ppt), and PDF (.pdf) files, so any other file types will be ignored.
             </p>
           </div>
         </div>

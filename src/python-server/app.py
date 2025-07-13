@@ -115,6 +115,12 @@ async def startup_event():
     logger.info("Starting up...ChunkExtractorHandler initialized")
     from powerpoint.metadata.extraction.event_handlers.powerpoint_cache_handler import PowerPointCacheHandler
     logger.info("Starting up...PowerPointCacheHandler initialized")
+    from pdf.orchestration.pdf_orchestrator import PDFOrchestrator
+    logger.info("Starting up...PDF orchestrator initialized")
+    from pdf.content.extraction.event_handlers.pdf_cache_handler import PDFCacheHandler
+    logger.info("Starting up...PDFCacheHandler initialized")
+    from pdf.content.extraction.event_handlers.pdf_content_handler import PDFContentHandler
+    logger.info("Starting up...PDFContentHandler initialized")
     from api_key_management.handlers.api_key_handler import api_key_handler
     logger.info("Starting up...APIKeyHandler initialized")
 
