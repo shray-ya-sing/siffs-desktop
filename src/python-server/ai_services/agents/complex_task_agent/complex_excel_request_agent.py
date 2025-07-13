@@ -22,41 +22,12 @@ sys.path.append(str(current_dir))
 # Import State 
 from state.agent_state import OverallState, InputState, StepDecisionState, OutputState
 
-# Update imports for all node functions
-from nodes.high_level_determination_nodes import (
-    determine_request_essence,
-    determine_excel_status,
-    determine_model_architecture,
-    determine_implementation_sequence,
-    decide_next_step
-)
-from nodes.step_level_nodes import (
-    get_step_metadata,
-    get_step_instructions,
-    get_step_cell_formulas,
-    write_step_cell_formulas
-)
-from nodes.error_nodes import (
-    retry_failed,
-    step_edit_failed,
-    retry_edit_failed,
-    revert_edit_failed,
-    llm_response_failure,
-    execution_failed,
-    task_understanding_failed,
-)
-from nodes.final_evaluation_nodes import check_final_success, update_full_excel_metadata, terminate_success, terminate_failure
-from nodes.checking_nodes import (  # Add this import
-    get_updated_excel_data_to_check,
-    check_edit_success,
-    revert_edit,
-    decide_retry_edit,
-    get_retry_edit_instructions,
-    implement_retry,
-    get_updated_metadata_after_retry,
-    check_edit_success_after_retry,
-    step_retry_succeeded
-)
+# Import node classes
+from nodes.high_level_determination_nodes import HighLevelDeterminationNodes
+from nodes.step_level_nodes import StepLevelNodes
+from nodes.error_nodes import ErrorNodes
+from nodes.final_evaluation_nodes import FinalEvaluationNodes
+from nodes.checking_nodes import CheckingNodes
 
 class ComplexExcelRequestAgent:
     _instance = None
@@ -87,6 +58,12 @@ class ComplexExcelRequestAgent:
             "openai": {"gpt-4", "gpt-4-turbo"},
             "anthropic": {"claude-3-opus-20240229"}
         }
+        # Node class instances
+        self.high_level_nodes = None
+        self.step_level_nodes = None
+        self.checking_nodes = None
+        self.final_evaluation_nodes = None
+        self.error_nodes = None
 
 
     def with_model(self, model_name: str, user_id: str) -> 'ComplexExcelRequestAgent':
@@ -115,6 +92,7 @@ class ComplexExcelRequestAgent:
         )
 
         self.current_model = model_name
+        self._initialize_node_classes(user_id)
         self._build_workflow()
 
     def _get_provider_name(self, model_name: str) -> Optional[str]:
@@ -124,6 +102,14 @@ class ComplexExcelRequestAgent:
                 return provider
         return None
 
+    def _initialize_node_classes(self, user_id: str):
+        """Initialize all node classes with the user_id"""
+        self.high_level_nodes = HighLevelDeterminationNodes(user_id)
+        self.step_level_nodes = StepLevelNodes(user_id)
+        self.checking_nodes = CheckingNodes(user_id)
+        self.final_evaluation_nodes = FinalEvaluationNodes(user_id)
+        self.error_nodes = ErrorNodes(user_id)
+
     def get_agent(self):
         return self.complex_excel_request_agent
 
@@ -132,39 +118,39 @@ class ComplexExcelRequestAgent:
         """Build the LangGraph workflow with all nodes."""
         complex_excel_request_agent= StateGraph(OverallState)
         
-        # Add all nodes without defining edges
-        complex_excel_request_agent.add_node("determine_request_essence", determine_request_essence)
-        complex_excel_request_agent.add_node("determine_excel_status", determine_excel_status)
-        complex_excel_request_agent.add_node("determine_model_architecture", determine_model_architecture)
-        complex_excel_request_agent.add_node("determine_implementation_sequence", determine_implementation_sequence)
-        complex_excel_request_agent.add_node("decide_next_step", decide_next_step)
+        # Add all nodes using class methods
+        complex_excel_request_agent.add_node("determine_request_essence", self.high_level_nodes.determine_request_essence)
+        complex_excel_request_agent.add_node("determine_excel_status", self.high_level_nodes.determine_excel_status)
+        complex_excel_request_agent.add_node("determine_model_architecture", self.high_level_nodes.determine_model_architecture)
+        complex_excel_request_agent.add_node("determine_implementation_sequence", self.high_level_nodes.determine_implementation_sequence)
+        complex_excel_request_agent.add_node("decide_next_step", self.high_level_nodes.decide_next_step)
         # STEP LEVEL
-        complex_excel_request_agent.add_node("get_step_metadata", get_step_metadata)
-        complex_excel_request_agent.add_node("get_step_instructions", get_step_instructions)
-        complex_excel_request_agent.add_node("get_step_cell_formulas", get_step_cell_formulas)
-        complex_excel_request_agent.add_node("write_step_cell_formulas", write_step_cell_formulas)
+        complex_excel_request_agent.add_node("get_step_metadata", self.step_level_nodes.get_step_metadata)
+        complex_excel_request_agent.add_node("get_step_instructions", self.step_level_nodes.get_step_instructions)
+        complex_excel_request_agent.add_node("get_step_cell_formulas", self.step_level_nodes.get_step_cell_formulas)
+        complex_excel_request_agent.add_node("write_step_cell_formulas", self.step_level_nodes.write_step_cell_formulas)
         # CHECKING
-        complex_excel_request_agent.add_node("get_updated_excel_data_to_check", get_updated_excel_data_to_check)
-        complex_excel_request_agent.add_node("check_edit_success", check_edit_success)
-        complex_excel_request_agent.add_node("revert_edit", revert_edit)
-        complex_excel_request_agent.add_node("decide_retry_edit", decide_retry_edit)
-        complex_excel_request_agent.add_node("get_retry_edit_instructions", get_retry_edit_instructions)
-        complex_excel_request_agent.add_node("implement_retry", implement_retry)
-        complex_excel_request_agent.add_node("get_updated_metadata_after_retry", get_updated_metadata_after_retry)
-        complex_excel_request_agent.add_node("check_edit_success_after_retry", check_edit_success_after_retry)
-        complex_excel_request_agent.add_node("step_retry_succeeded", step_retry_succeeded)
-        complex_excel_request_agent.add_node("retry_failed", retry_failed)
-        complex_excel_request_agent.add_node("step_edit_failed", step_edit_failed)
-        complex_excel_request_agent.add_node("retry_edit_failed", retry_edit_failed)
-        complex_excel_request_agent.add_node("revert_edit_failed", revert_edit_failed)
-        complex_excel_request_agent.add_node("llm_response_failure", llm_response_failure)
-        complex_excel_request_agent.add_node("execution_failed", execution_failed)
-        complex_excel_request_agent.add_node("task_understanding_failed", task_understanding_failed)
+        complex_excel_request_agent.add_node("get_updated_excel_data_to_check", self.checking_nodes.get_updated_excel_data_to_check)
+        complex_excel_request_agent.add_node("check_edit_success", self.checking_nodes.check_edit_success)
+        complex_excel_request_agent.add_node("revert_edit", self.checking_nodes.revert_edit)
+        complex_excel_request_agent.add_node("decide_retry_edit", self.checking_nodes.decide_retry_edit)
+        complex_excel_request_agent.add_node("get_retry_edit_instructions", self.checking_nodes.get_retry_edit_instructions)
+        complex_excel_request_agent.add_node("implement_retry", self.checking_nodes.implement_retry)
+        complex_excel_request_agent.add_node("get_updated_metadata_after_retry", self.checking_nodes.get_updated_metadata_after_retry)
+        complex_excel_request_agent.add_node("check_edit_success_after_retry", self.checking_nodes.check_edit_success_after_retry)
+        complex_excel_request_agent.add_node("step_retry_succeeded", self.checking_nodes.step_retry_succeeded)
+        complex_excel_request_agent.add_node("retry_failed", self.error_nodes.retry_failed)
+        complex_excel_request_agent.add_node("step_edit_failed", self.error_nodes.step_edit_failed)
+        complex_excel_request_agent.add_node("retry_edit_failed", self.error_nodes.retry_edit_failed)
+        complex_excel_request_agent.add_node("revert_edit_failed", self.error_nodes.revert_edit_failed)
+        complex_excel_request_agent.add_node("llm_response_failure", self.error_nodes.llm_response_failure)
+        complex_excel_request_agent.add_node("execution_failed", self.error_nodes.execution_failed)
+        complex_excel_request_agent.add_node("task_understanding_failed", self.error_nodes.task_understanding_failed)
         # FINAL
-        complex_excel_request_agent.add_node("update_full_excel_metadata", update_full_excel_metadata)  
-        complex_excel_request_agent.add_node("check_final_success", check_final_success)
-        complex_excel_request_agent.add_node("terminate_success", terminate_success)
-        complex_excel_request_agent.add_node("terminate_failure", terminate_failure)
+        complex_excel_request_agent.add_node("update_full_excel_metadata", self.final_evaluation_nodes.update_full_excel_metadata)  
+        complex_excel_request_agent.add_node("check_final_success", self.final_evaluation_nodes.check_final_success)
+        complex_excel_request_agent.add_node("terminate_success", self.final_evaluation_nodes.terminate_success)
+        complex_excel_request_agent.add_node("terminate_failure", self.final_evaluation_nodes.terminate_failure)
         # Set entry point
         complex_excel_request_agent.set_entry_point("determine_request_essence")
         
