@@ -31,7 +31,18 @@ export class APIKeyService {
         if (response.requestId === requestId) {
           webSocketService.off('API_KEY_SET', handleResponse);
           webSocketService.off('API_KEY_ERROR', handleError);
-          resolve();
+          
+          // After successfully setting the API key, trigger agent initialization
+          this.triggerAgentInitialization(provider, userId)
+            .then(() => {
+              console.log(`Agent initialization triggered for provider: ${provider}`);
+              resolve();
+            })
+            .catch((error) => {
+              console.warn(`Failed to trigger agent initialization: ${error.message}`);
+              // Still resolve since the API key was set successfully
+              resolve();
+            });
         }
       };
 
@@ -148,6 +159,58 @@ export class APIKeyService {
         },
         requestId
       });
+    });
+  }
+
+  /**
+   * Trigger agent initialization after API key is set
+   */
+  private async triggerAgentInitialization(provider: Provider, userId?: string): Promise<void> {
+    // Only trigger initialization for Gemini provider since that's what the supervisor agent uses
+    if (provider !== 'gemini') {
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      const requestId = uuidv4();
+      
+      // Set up response handler
+      const handleResponse = (response: any) => {
+        if (response.requestId === requestId) {
+          webSocketService.off('AGENT_INITIALIZATION_SUCCESS', handleResponse);
+          webSocketService.off('AGENT_INITIALIZATION_FAILED', handleError);
+          console.log('Agent initialization successful:', response.message);
+          resolve();
+        }
+      };
+
+      const handleError = (response: any) => {
+        if (response.requestId === requestId) {
+          webSocketService.off('AGENT_INITIALIZATION_SUCCESS', handleResponse);
+          webSocketService.off('AGENT_INITIALIZATION_FAILED', handleError);
+          console.warn('Agent initialization failed:', response.message);
+          reject(new Error(response.message || 'Failed to initialize agent'));
+        }
+      };
+
+      webSocketService.on('AGENT_INITIALIZATION_SUCCESS', handleResponse);
+      webSocketService.on('AGENT_INITIALIZATION_FAILED', handleError);
+
+      // Send the initialization request
+      webSocketService.sendMessage({
+        type: 'INITIALIZE_AGENT_WITH_API_KEY',
+        data: {
+          user_id: userId
+        },
+        requestId
+      });
+
+      // Set a timeout to avoid hanging forever
+      setTimeout(() => {
+        webSocketService.off('AGENT_INITIALIZATION_SUCCESS', handleResponse);
+        webSocketService.off('AGENT_INITIALIZATION_FAILED', handleError);
+        reject(new Error('Agent initialization timeout'));
+      }, 10000); // 10 second timeout
     });
   }
 
