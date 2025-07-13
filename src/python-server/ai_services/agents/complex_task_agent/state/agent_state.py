@@ -34,6 +34,7 @@ class OverallState(TypedDict):
     original_excel_metadata: Dict[str, Any] # before any nodes run
     final_excel_metadata: Dict[str, Any] # after all nodes run
     agent_succeeded: bool # succeeded in overall task
+    error: str # error message
 
 class StepDecisionState(TypedDict):
     step_instructions: str
@@ -53,3 +54,4 @@ class StepDecisionState(TypedDict):
     instructions_for_retry: str
     formulas_for_retry: List[Dict[str, Any]]
     workspace_path: str
+    error: str # error message
