@@ -55,25 +55,6 @@ def log_errors(func):
             raise  # Re-raise the exception after logging
     return wrapper
 
-# Initialize LLM
-try:
-    user_id = "eb2df68e-13b7-4543-8afd-056981a60a70"
-    gemini_pro = "gemini-2.5-pro"
-    gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
-    llm = GeminiProvider.get_gemini_model(
-        user_id=user_id,
-        model=gemini_flash_lite,
-        temperature=0.2,
-        max_retries=3
-    )
-    if not llm:
-        logger.error("Failed to initialize Gemini LLM for medium_complexity_agent high_level_determination_nodes")
-    else:
-        logger.info("Successfully initialized Gemini LLM for medium_complexity_agent high_level_determination_nodes")
-except Exception as e:
-    logger.error(f"Failed to initialize Gemini LLM for medium_complexity_agent high_level_determination_nodes: {str(e)}")
-  
-
 from pydantic import BaseModel, Field
 # Pydantic Model for structured output
 
@@ -93,139 +74,156 @@ class NextStep(BaseModel):
     all_steps_done: bool = Field(description="Whether all steps are done")
     reasoning: str = Field(description="Very Brief explanation for choosing this next step")
 
-# HIGH LEVEL DECOMPOSITION NODES
-@log_errors
-def get_workspace_path(state: InputState) -> OverallState:
-    writer = get_stream_writer()
-    writer({"analyzing": "Understanding request"})
-     # Get the latest conversation from cache
-    latest_conversation = get_latest_conversation()
-    if not latest_conversation:
-        raise ValueError("No recent conversation found in cache")
-    
-    thread_id = latest_conversation["thread_id"]
-    user_input = latest_conversation["user_message"]
-    messages = [{"role": "user", "content": user_input}]
-    workspace_files = list_workspace_files()
-    workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
-    messages.append({"role": "user", "content": workspace_prompt})
-    structured_llm = llm.with_structured_output(TaskSummary)
-    llm_response = structured_llm.invoke(messages)
-    if llm_response:
-        workspace_path = llm_response.workspace_path
-        if not workspace_path:
+class HighLevelDeterminationNodes:
+    def __init__(self, user_id: str):
+        try:
+            gemini_pro = "gemini-2.5-pro"
+            gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
+            self.llm = GeminiProvider.get_gemini_model(
+                user_id=user_id,
+                model=gemini_flash_lite,
+                temperature=0.2,
+                max_retries=3
+            )
+            if not self.llm:
+                logger.error("Failed to initialize Gemini LLM for medium_complexity_agent high_level_determination_nodes")
+            else:
+                logger.info("Successfully initialized Gemini LLM for medium_complexity_agent high_level_determination_nodes")
+        except Exception as e:
+            logger.error(f"Failed to initialize Gemini LLM for medium_complexity_agent high_level_determination_nodes: {str(e)}")
+
+    # HIGH LEVEL DECOMPOSITION NODES
+    @log_errors
+    def get_workspace_path(self, state: InputState) -> OverallState:
+        writer = get_stream_writer()
+        writer({"analyzing": "Understanding request"})
+        # Get the latest conversation from cache
+        latest_conversation = get_latest_conversation()
+        if not latest_conversation:
+            raise ValueError("No recent conversation found in cache")
+        
+        thread_id = latest_conversation["thread_id"]
+        user_input = latest_conversation["user_message"]
+        messages = [{"role": "user", "content": user_input}]
+        workspace_files = list_workspace_files()
+        workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
+        messages.append({"role": "user", "content": workspace_prompt})
+        structured_llm = self.llm.with_structured_output(TaskSummary)
+        llm_response = structured_llm.invoke(messages)
+        if llm_response:
+            workspace_path = llm_response.workspace_path
+            if not workspace_path:
+                return Command(
+                    goto= "llm_response_failure"
+                )
+            return Command(
+                update= {
+                    "workspace_path": workspace_path
+                },
+                goto= "determine_implementation_sequence"
+            )
+        else:
             return Command(
                 goto= "llm_response_failure"
             )
-        return Command(
-            update= {
-                "workspace_path": workspace_path
-            },
-            goto= "determine_implementation_sequence"
-        )
-    else:
-        return Command(
-            goto= "llm_response_failure"
-        )
 
 
-@log_errors
-def determine_implementation_sequence(state: OverallState) -> OverallState:
-    writer = get_stream_writer()
-    writer({"analyzing": "Planning implementation"})
-    
-    # Get the latest conversation from cache
-    latest_conversation = get_latest_conversation()
-    if not latest_conversation:
-        raise ValueError("No recent conversation found in cache")
-    
-    thread_id = latest_conversation["thread_id"]
-    user_input = latest_conversation["user_message"]
+    @log_errors
+    def determine_implementation_sequence(self, state: OverallState) -> OverallState:
+        writer = get_stream_writer()
+        writer({"analyzing": "Planning implementation"})
+        
+        # Get the latest conversation from cache
+        latest_conversation = get_latest_conversation()
+        if not latest_conversation:
+            raise ValueError("No recent conversation found in cache")
+        
+        thread_id = latest_conversation["thread_id"]
+        user_input = latest_conversation["user_message"]
 
-    messages = []    
-    workspace_files = list_workspace_files()
-    workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
-    # call the get full excel info tool to determine the status of the full excel file
-    full_excel_metadata = get_simplified_excel_metadata(state["workspace_path"])
-    if not full_excel_metadata:
-        logger.error("Failed to get full excel metadata")
-        full_excel_metadata = ""
-    full_excel_metadata_str = json.dumps(full_excel_metadata)
-    logger.info(f"Full excel metadata: {full_excel_metadata_str[0:200]}")
-    # call llm with the full excel metadata to determine the status of the excel file
-    get_excel_status_prompt = HighLevelDeterminePrompts.get_excel_status_prompt(full_excel_metadata_str)    
-    implementation_sequence_prompt = HighLevelDeterminePrompts.get_implementation_sequence_prompt()
-    enhanced_user_request = f"{get_excel_status_prompt}\n\n{implementation_sequence_prompt}"
-    messages.append({"role": "user", "content": enhanced_user_request})
-    structured_llm = llm.with_structured_output(Implementation)
-    llm_response = structured_llm.invoke(messages)
-    if llm_response:
-        llm_response_content = llm_response.model_dump_json()
-        messages.append({"role": "assistant", "content": llm_response_content})
-        implementation_sequence = llm_response.implementation_sequence
-        steps = llm_response.steps
-        return Command(
-            update= {"messages": [enhanced_user_request, llm_response_content], 
-            "latest_model_response": llm_response_content,
-            "implementation_sequence": implementation_sequence,
-            "steps": steps
-        },
-        goto= "decide_next_step"
-    )
-    else:
-        return Command(
-            goto= "llm_response_failure"
-        )
-
-
-@log_errors
-def decide_next_step(state: OverallState) -> OverallState:
-    writer = get_stream_writer()
-    writer({"analyzing": "Deciding next step"})
-    messages = state["messages"]
-    latest_step = state.get("current_step")
-    latest_step_number = state.get("current_step_number", 0)
-    implementation_sequence = state.get("implementation_sequence")
-    # call llm with the latest model response and latest excel metadata to determine the implementation sequence
-    prompt_template = StepLevelPrompts.decide_next_step_prompt()
-    if implementation_sequence is not None and latest_step_number != 0:
-        prompt_template += f"\nThis is the implementation sequence: {implementation_sequence}"
-    if latest_step_number != 0 and latest_step is not None:
-        prompt_template += f"\nThis is the latest step that the agent completed, determine the next step in the sequence: {latest_step}"
-    enhanced_user_request = f"{prompt_template}"
-    messages.append({"role": "user", "content": enhanced_user_request})
-    structured_llm = llm.with_structured_output(NextStep)
-    llm_response = structured_llm.invoke(messages)
-    if llm_response:
-        llm_response_content = llm_response.model_dump_json()
-        messages.append({"role": "assistant", "content": llm_response_content})
-    #parse the llm response to get the next step and next step number
-        next_step = llm_response.next_step
-        next_step_number = llm_response.next_step_number
-        all_steps_done = llm_response.all_steps_done
-        messages.append({"role": "assistant", "content": llm_response_content})
-        if not all_steps_done:
+        messages = []    
+        workspace_files = list_workspace_files()
+        workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
+        # call the get full excel info tool to determine the status of the full excel file
+        full_excel_metadata = get_simplified_excel_metadata(state["workspace_path"])
+        if not full_excel_metadata:
+            logger.error("Failed to get full excel metadata")
+            full_excel_metadata = ""
+        full_excel_metadata_str = json.dumps(full_excel_metadata)
+        logger.info(f"Full excel metadata: {full_excel_metadata_str[0:200]}")
+        # call llm with the full excel metadata to determine the status of the excel file
+        get_excel_status_prompt = HighLevelDeterminePrompts.get_excel_status_prompt(full_excel_metadata_str)    
+        implementation_sequence_prompt = HighLevelDeterminePrompts.get_implementation_sequence_prompt()
+        enhanced_user_request = f"{get_excel_status_prompt}\n\n{implementation_sequence_prompt}"
+        messages.append({"role": "user", "content": enhanced_user_request})
+        structured_llm = self.llm.with_structured_output(Implementation)
+        llm_response = structured_llm.invoke(messages)
+        if llm_response:
+            llm_response_content = llm_response.model_dump_json()
+            messages.append({"role": "assistant", "content": llm_response_content})
+            implementation_sequence = llm_response.implementation_sequence
+            steps = llm_response.steps
             return Command(
                 update= {"messages": [enhanced_user_request, llm_response_content], 
                 "latest_model_response": llm_response_content,
-                "current_step": next_step,
-                "current_step_number": next_step_number
+                "implementation_sequence": implementation_sequence,
+                "steps": steps
             },
-            goto= "get_step_metadata"
+            goto= "decide_next_step"
         )
         else:
             return Command(
-                update= {"messages": [enhanced_user_request, llm_response_content], 
-                "latest_model_response": llm_response_content,
-                "current_step": next_step,
-                "current_step_number": next_step_number
-            },
-            goto= "check_final_success"
-        
-        )
-    else:
-        return Command(
-            goto= "llm_response_failure"
-        )
-    
-    
+                goto= "llm_response_failure"
+            )
+
+
+    @log_errors
+    def decide_next_step(self, state: OverallState) -> OverallState:
+        writer = get_stream_writer()
+        writer({"analyzing": "Deciding next step"})
+        messages = state["messages"]
+        latest_step = state.get("current_step")
+        latest_step_number = state.get("current_step_number", 0)
+        implementation_sequence = state.get("implementation_sequence")
+        # call llm with the latest model response and latest excel metadata to determine the implementation sequence
+        prompt_template = StepLevelPrompts.decide_next_step_prompt()
+        if implementation_sequence is not None and latest_step_number != 0:
+            prompt_template += f"\nThis is the implementation sequence: {implementation_sequence}"
+        if latest_step_number != 0 and latest_step is not None:
+            prompt_template += f"\nThis is the latest step that the agent completed, determine the next step in the sequence: {latest_step}"
+        enhanced_user_request = f"{prompt_template}"
+        messages.append({"role": "user", "content": enhanced_user_request})
+        structured_llm = self.llm.with_structured_output(NextStep)
+        llm_response = structured_llm.invoke(messages)
+        if llm_response:
+            llm_response_content = llm_response.model_dump_json()
+            messages.append({"role": "assistant", "content": llm_response_content})
+            #parse the llm response to get the next step and next step number
+            next_step = llm_response.next_step
+            next_step_number = llm_response.next_step_number
+            all_steps_done = llm_response.all_steps_done
+            messages.append({"role": "assistant", "content": llm_response_content})
+            if not all_steps_done:
+                return Command(
+                    update= {"messages": [enhanced_user_request, llm_response_content], 
+                    "latest_model_response": llm_response_content,
+                    "current_step": next_step,
+                    "current_step_number": next_step_number
+                },
+                goto= "get_step_metadata"
+            )
+            else:
+                return Command(
+                    update= {"messages": [enhanced_user_request, llm_response_content], 
+                    "latest_model_response": llm_response_content,
+                    "current_step": next_step,
+                    "current_step_number": next_step_number
+                },
+                goto= "check_final_success"
+            )
+        else:
+            return Command(
+                goto= "llm_response_failure"
+            )
+
+
