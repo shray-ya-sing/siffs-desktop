@@ -81,6 +81,11 @@ function buildPython() {
         '--hidden-import=langchain-google-genai',   
         '--hidden-import=voyageai',
         '--hidden-import=langgraph_supervisor',
+        '--hidden-import=docx',
+        '--hidden-import=pptx',
+        '--hidden-import=fitz',
+        '--hidden-import=pdfplumber',
+        '--hidden-import=PyPDF2',
         // copy metadata needed by transformers lib
         '--copy-metadata', 'regex',
         '--copy-metadata', 'requests',
@@ -100,6 +105,11 @@ function buildPython() {
         '--copy-metadata', 'langchain-google-genai',
         '--copy-metadata', 'voyageai',
         '--copy-metadata', 'langgraph-supervisor',
+        '--copy-metadata', 'python-docx',
+        '--copy-metadata', 'python-pptx',
+        '--copy-metadata', 'PyMuPDF',
+        '--copy-metadata', 'pdfplumber',
+        '--copy-metadata', 'PyPDF2',
         // Add the python-server directory to the path
         '--paths', pythonDir,
         // Collect all Flask components
@@ -128,6 +138,11 @@ function buildPython() {
         '--collect-all', 'langchain-google-genai',
         '--collect-all', 'voyageai',
         '--collect-all', 'langgraph_supervisor',
+        '--collect-all', 'python-docx',
+        '--collect-all', 'python-pptx',
+        '--collect-all', 'PyMuPDF',
+        '--collect-all', 'pdfplumber',
+        '--collect-all', 'PyPDF2',
         // Name of the main python server dir
         '--name=python-server',        
         // Add all Python files in the python-server directory
