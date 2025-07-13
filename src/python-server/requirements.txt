@@ -65,6 +65,7 @@ pytest-asyncio
 pytest-cov
 python-dateutil
 python-dotenv
+python-docx
 pytz
 pywin32
 pywin32-ctypes

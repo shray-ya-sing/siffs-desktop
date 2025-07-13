@@ -1,0 +1,246 @@
+import sys
+import base64
+import tempfile
+import os
+from pathlib import Path
+import json
+
+parent_path = Path(__file__).parent.parent.parent
+sys.path.append(str(parent_path))
+
+from core.events import event_bus
+from api.websocket_manager import manager
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
+
+class WordOrchestrator:
+    """Orchestrates Word extraction operations using events"""
+    
+    def __init__(self):
+        self.setup_event_handlers()
+    
+    def setup_event_handlers(self):
+        """Register event handlers for Word extraction flow"""
+        # WebSocket message handler
+        event_bus.on_async("ws_message_received", self.handle_ws_message)
+        
+        # Extraction flow events
+        event_bus.on_async("EXTRACT_WORD_METADATA_REQUESTED", self.handle_extraction_request)
+        
+        # Progress and status events
+        event_bus.on_async("WORD_EXTRACTION_PROGRESS", self.forward_progress_to_client)
+        event_bus.on_async("WORD_METADATA_EXTRACTED", self.handle_extraction_complete)
+        event_bus.on_async("WORD_CACHED_METADATA_FOUND", self.handle_cached_metadata)
+        event_bus.on_async("WORD_EXTRACTION_ERROR", self.handle_extraction_error)
+        
+        logger.info("WordOrchestrator event handlers registered")
+        
+    async def handle_ws_message(self, event):
+        """Route incoming WebSocket messages for Word"""
+        client_id = event.data["client_id"]
+        message = event.data["message"]
+        
+        if message.get("type") == "EXTRACT_WORD_METADATA":
+            # Get data from the nested 'data' field
+            data = message.get("data", {})
+            logger.info(f"Emitting Word extraction request for file {data.get('file_path') or data.get('filePath')}")
+            await event_bus.emit("EXTRACT_WORD_METADATA_REQUESTED", {
+                "file_path": data.get("file_path") or data.get("filePath"),
+                "file_content": data.get("file_content") or data.get("fileContent"),
+                "client_id": client_id,
+                "request_id": data.get("request_id") or data.get("requestId"),
+                "force_refresh": data.get("force_refresh") or data.get("forceRefresh", False)
+            })
+            
+            # Send immediate acknowledgment
+            await manager.send_message(client_id, {
+                "type": "STATUS",
+                "message": "Starting Word metadata extraction...",
+                "requestId": data.get("request_id") or data.get("requestId")
+            })
+            
+    async def handle_extraction_request(self, event):
+        """Main entry point - coordinates the Word extraction"""
+        # Extract data from event
+        message = event.data if hasattr(event, 'data') else event
+
+        # Get file content and path from the message
+        file_content = message.get('fileContent') or message.get('file_content')
+        file_path = message.get('filePath') or message.get('file_path')
+        client_id = message.get('clientId') or message.get('client_id')
+        request_id = message.get('requestId') or message.get('request_id')
+        
+        logger.debug(f"Received Word extraction request with client_id: {client_id}, request_id: {request_id}")
+        logger.debug(f"File path: {file_path}, content present: {bool(file_content)}")
+        
+        logger.info(f"Word extraction requested for file {file_path}")
+
+        # Validate required parameters
+        missing = []
+        if not client_id:
+            missing.append('client_id')
+        if not file_content:
+            missing.append('file_content')
+        if not file_path:
+            missing.append('file_path')
+            
+        if missing:
+            error_msg = f"Missing required parameters: {', '.join(missing)}"
+            logger.error(error_msg)
+            # Try to send error back to client if we have the client_id
+            if client_id:
+                try:
+                    await manager.send_message(client_id, {
+                        "type": "WORD_EXTRACTION_ERROR",
+                        "error": error_msg,
+                        "requestId": request_id
+                    })
+                except Exception as e:
+                    logger.error(f"Failed to send error to client: {str(e)}")
+            return
+
+        try:
+            original_filename = os.path.basename(file_path)
+            # Create a temporary file with the same name in the system temp directory
+            fd, temp_file_path = tempfile.mkstemp(
+                prefix=f"tmp_{os.path.splitext(original_filename)[0]}_",  # Keep original name as prefix
+                suffix=os.path.splitext(original_filename)[1] or '.docx',  # Keep original extension
+                dir=None  # Uses system temp directory
+            )
+            
+            try:
+                # Write the decoded content
+                with os.fdopen(fd, 'wb') as temp_file:
+                    file_data = base64.b64decode(file_content)
+                    temp_file.write(file_data)
+                
+                logger.info(f"Temporary file copy of {file_path} created at {temp_file_path}. Updating file mapping.")
+                self.update_file_mapping(file_path, temp_file_path)
+
+                logger.info(f"Emitting check Word cache for metadata event.")
+                # Emit cache check event
+                await event_bus.emit("CHECK_WORD_CACHE", {
+                    "file_path": file_path,
+                    "temp_file_path": temp_file_path,
+                    "client_id": client_id,
+                    "request_id": request_id,
+                    "force_refresh": message.get("force_refresh", False)
+                })
+                
+            except Exception as e:
+                logger.error(f"Error processing Word file upload: {e}")
+                # Make sure to clean up if there's an error after file creation
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+                
+        
+        except Exception as e:
+            logger.error(f"Error processing Word file upload: {e}")
+            await event_bus.emit("WORD_EXTRACTION_ERROR", {
+                "client_id": client_id,
+                "error": str(e),
+                "request_id": message.get("requestId")
+            })
+        
+    async def forward_progress_to_client(self, event):
+        """Forward Word extraction progress to WebSocket client"""
+        client_id = event.data.get("client_id")
+        if not client_id:
+            return
+            
+        await manager.send_message(client_id, {
+            "type": "WORD_EXTRACTION_PROGRESS",
+            "stage": event.data.get("stage"),
+            "message": event.data.get("message"),
+            "progress": event.data.get("progress"),
+            "requestId": event.data.get("request_id")
+        })
+        
+    async def handle_extraction_complete(self, event):
+        """Handle Word extraction completion"""
+        client_id = event.data.get("client_id")
+        if not client_id:
+            return
+            
+        metadata = event.data.get("metadata", {})
+        
+        await manager.send_message(client_id, {
+            "type": "WORD_EXTRACTION_COMPLETE",
+            "documentName": metadata.get("documentName"),
+            "fromCache": event.data.get("from_cache", False),
+            "requestId": event.data.get("request_id")
+        })
+        
+        logger.info(f"Word extraction complete for client {client_id}: {metadata.get('documentName')}")
+    
+    async def handle_cached_metadata(self, event):
+        """Handle cached Word metadata found"""
+        client_id = event.data.get("client_id")
+        if not client_id:
+            return
+            
+        metadata = event.data.get("metadata", {})
+        
+        await manager.send_message(client_id, {
+            "type": "WORD_EXTRACTION_COMPLETE",
+            "documentName": metadata.get("documentName"),
+            "fromCache": True,
+            "requestId": event.data.get("request_id")
+        })
+        
+        logger.info(f"Word cached metadata found for client {client_id}: {metadata.get('documentName')}")
+        
+    async def handle_extraction_error(self, event):
+        """Handle Word extraction errors"""
+        client_id = event.data.get("client_id")
+        if not client_id:
+            return
+            
+        await manager.send_message(client_id, {
+            "type": "WORD_EXTRACTION_ERROR",
+            "error": event.data.get("error"),
+            "requestId": event.data.get("request_id")
+        })
+        
+        logger.error(f"Word extraction error for client {client_id}: {event.data.get('error')}")
+
+    async def cleanup_after_delay(self, cleanup):
+        """Cleanup after a delay"""
+        try:
+            await asyncio.sleep(5)
+            cleanup()
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+
+
+    def update_file_mapping(self, original_path: str, temp_path: str):
+        """Update the file mappings with a new entry."""
+        MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
+        MAPPINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize empty mappings
+        mappings = {}
+        
+        # Only try to read if file exists and has content
+        if MAPPINGS_FILE.exists() and MAPPINGS_FILE.stat().st_size > 0:
+            try:
+                with open(MAPPINGS_FILE, 'r') as f:
+                    mappings = json.load(f)
+            except json.JSONDecodeError:
+                logger.warning("Invalid JSON in mappings file, initializing new mappings")
+        
+        # Update with new mapping
+        mappings[original_path] = temp_path
+        
+        # Write back to file
+        with open(MAPPINGS_FILE, 'w') as f:
+            json.dump(mappings, f, indent=2)
+        
+        logger.info(f"Updated Word file mapping: {original_path} -> {temp_path}")
+
+# Create global orchestrator instance
+orchestrator = WordOrchestrator()

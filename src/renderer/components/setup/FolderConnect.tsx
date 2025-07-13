@@ -86,6 +86,18 @@ import MainLogo from '../logo/MainLogo'
         setDiscoveryMessages(prev => [...prev, `PowerPoint error: ${'Failed to process file'}`]);
         setIsDiscovering(true);
       };
+      
+      // Word event handlers
+      const onWordExtractionComplete = (data: any) => {
+        setDiscoveryMessages(prev => [...prev, `Word extraction complete: ${data.documentName} processed`]);
+        setIsDiscovering(true);
+      };
+    
+      const onWordExtractionError = (error: any) => {
+        console.error('Word extraction error:', error);
+        setDiscoveryMessages(prev => [...prev, `Word error: ${'Failed to process file'}`]);
+        setIsDiscovering(true);
+      };
     
       // Register event listeners
       webSocketService.on('CHUNK_EXTRACTED', onChunkExtracted);
@@ -95,6 +107,10 @@ import MainLogo from '../logo/MainLogo'
       // PowerPoint event listeners
       webSocketService.on('POWERPOINT_EXTRACTION_COMPLETE', onPowerPointExtractionComplete);
       webSocketService.on('POWERPOINT_EXTRACTION_ERROR', onPowerPointExtractionError);
+      
+      // Word event listeners
+      webSocketService.on('WORD_EXTRACTION_COMPLETE', onWordExtractionComplete);
+      webSocketService.on('WORD_EXTRACTION_ERROR', onWordExtractionError);
     
       // Clean up on unmount
       return () => {
@@ -105,6 +121,10 @@ import MainLogo from '../logo/MainLogo'
         // PowerPoint cleanup
         webSocketService.off('POWERPOINT_EXTRACTION_COMPLETE', onPowerPointExtractionComplete);
         webSocketService.off('POWERPOINT_EXTRACTION_ERROR', onPowerPointExtractionError);
+        
+        // Word cleanup
+        webSocketService.off('WORD_EXTRACTION_COMPLETE', onWordExtractionComplete);
+        webSocketService.off('WORD_EXTRACTION_ERROR', onWordExtractionError);
       };
     }, [onFolderConnect]);
 
@@ -158,7 +178,12 @@ import MainLogo from '../logo/MainLogo'
           !file.isDirectory && (file.name.endsWith('.pptx') || file.name.endsWith('.ppt'))
         );
         
-        const allSupportedFiles = [...excelFiles, ...powerPointFiles];
+// Filter Word files
+        const wordFiles = fileList.filter(file => 
+          !file.isDirectory && file.name.endsWith('.docx')
+        );
+        
+        const allSupportedFiles = [...excelFiles, ...powerPointFiles, ...wordFiles];
         
         if (allSupportedFiles.length === 0) {
           setDiscoveryMessages(prev => [...prev, "No Excel or PowerPoint files found in the selected directory"]);
@@ -189,8 +214,9 @@ import MainLogo from '../logo/MainLogo'
             });
             
             // Determine file type and send appropriate extraction request
-            const isExcelFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+const isExcelFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
             const isPowerPointFile = file.name.endsWith('.pptx') || file.name.endsWith('.ppt');
+            const isWordFile = file.name.endsWith('.docx');
             
             if (isExcelFile) {
               // Send Excel extraction request
@@ -203,6 +229,14 @@ import MainLogo from '../logo/MainLogo'
             } else if (isPowerPointFile) {
               // Send PowerPoint extraction request
               webSocketService.emit('EXTRACT_POWERPOINT_METADATA', {
+                client_id: clientId,
+                request_id: requestId,
+                file_path: `${dirName}/${file.path}`,
+                file_content: base64Content
+              });
+} else if (isWordFile) {
+              // Send Word extraction request
+              webSocketService.emit('EXTRACT_WORD_METADATA', {
                 client_id: clientId,
                 request_id: requestId,
                 file_path: `${dirName}/${file.path}`,
@@ -352,8 +386,8 @@ import MainLogo from '../logo/MainLogo'
   
           {/* Instructions */}
           <div className="max-w-md mx-auto text-center">
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Select a folder to copy it to the agent workspace. Volute reads Excel (.xlsx) and PowerPoint (.pptx, .ppt) files, so any other file types will be ignored.
+          <p className="text-sm text-gray-500 leading-relaxed">
+              Select a folder to copy it to the agent workspace. Volute reads Excel (.xlsx), PowerPoint (.pptx, .ppt), and Word (.docx) files, so any other file types will be ignored.
             </p>
           </div>
         </div>

@@ -1,0 +1,1 @@
+# word metadata module init

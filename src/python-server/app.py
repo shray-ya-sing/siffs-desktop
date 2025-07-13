@@ -115,6 +115,10 @@ async def startup_event():
     logger.info("Starting up...ChunkExtractorHandler initialized")
     from powerpoint.metadata.extraction.event_handlers.powerpoint_cache_handler import PowerPointCacheHandler
     logger.info("Starting up...PowerPointCacheHandler initialized")
+    from word.orchestration.word_orchestrator import WordOrchestrator
+    logger.info("Starting up...Word orchestrator initialized")
+    from word.metadata.extraction.event_handlers.word_cache_handler import WordCacheHandler
+    logger.info("Starting up...WordCacheHandler initialized")
     from api_key_management.handlers.api_key_handler import api_key_handler
     logger.info("Starting up...APIKeyHandler initialized")
 
