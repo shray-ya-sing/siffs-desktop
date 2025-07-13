@@ -6,6 +6,9 @@ def setup_logging():
     import os
     import io
     import codecs
+    
+    # Suppress PDFMiner debug logs
+    logging.getLogger('pdfminer').setLevel(logging.WARNING)
 
     # Custom UTF-8 safe console handler
     class UTF8ConsoleHandler(logging.StreamHandler):
