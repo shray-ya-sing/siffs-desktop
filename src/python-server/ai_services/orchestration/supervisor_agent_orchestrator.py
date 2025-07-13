@@ -14,6 +14,11 @@ from api.websocket_manager import manager
 from core.events import event_bus
 from agents.supervisor.supervisor_agent import agent_system, supervisor_agent
 
+# Add API key manager import
+python_server_path = Path(__file__).parent.parent.parent
+sys.path.append(str(python_server_path))
+from api_key_management.service.api_key_manager import api_key_manager
+
 logger = logging.getLogger(__name__)
 
 class SupervisorAgentOrchestrator:
@@ -22,23 +27,25 @@ class SupervisorAgentOrchestrator:
     CONVERSATION_CACHE = CACHE_DIR / "conversation_cache.json"
     
     EXCLUDED_NODES = {
-    "determine_implementation_sequence",
-    "decide_next_step",
-    "get_step_metadata",
-    "get_step_cell_formulas",
-    "get_updated_excel_data_to_check",
-    "check_edit_success",
-    "revert_edit",
-    "decide_retry_edit",
-    "retry_edit",
-    "implement_retry",
-    "get_retry_edit_instructions",
-    "get_updated_metadata_after_retry",
-    "check_edit_success_after_retry",
-    "check_final_success",
-    "get_step_instructions",
-    "step_retry_succeeded",
-    "check_retry_edit_success"
+        "simple_excel_agent",
+        "tools", # tool calling node from langgraph,
+        "determine_implementation_sequence",
+        "decide_next_step",
+        "get_step_metadata",
+        "get_step_cell_formulas",
+        "get_updated_excel_data_to_check",
+        "check_edit_success",
+        "revert_edit",
+        "decide_retry_edit",
+        "retry_edit",
+        "implement_retry",
+        "get_retry_edit_instructions",
+        "get_updated_metadata_after_retry",
+        "check_edit_success_after_retry",
+        "check_final_success",
+        "get_step_instructions",
+        "step_retry_succeeded",
+        "check_retry_edit_success"
     }
     
     def __init__(self):
@@ -144,6 +151,11 @@ class SupervisorAgentOrchestrator:
                 client_id=client_id,
                 auth_data=message.get("data", {})
             )
+        elif message.get("type") == "INITIALIZE_AGENT_WITH_API_KEY":
+            await self.handle_initialize_agent_with_api_key(
+                client_id=client_id,
+                data=message.get("data", {})
+            )
     
     async def handle_user_authentication(
         self,
@@ -160,13 +172,16 @@ class SupervisorAgentOrchestrator:
                 manager.set_user_id(client_id, user_id)
                 logger.info(f"User authentication successful: client {client_id} -> user {user_id} ({email})")
                 
-                # Initialize the supervisor agent with the user_id
-                try:
-                    supervisor_agent.initialize_with_user_api_key(user_id)
-                    logger.info(f"Successfully configured supervisor agent for user {user_id}")
-                except Exception as e:
-                    logger.warning(f"Failed to configure user-specific API key for {user_id}: {str(e)}")
-                    # Continue anyway - will use default/env API key
+                # Check if user has a Gemini API key before initializing
+                if api_key_manager.has_user_api_key(user_id, "gemini"):
+                    try:
+                        supervisor_agent.initialize_with_user_api_key(user_id)
+                        logger.info(f"Successfully configured supervisor agent for user {user_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to configure user-specific API key for {user_id}: {str(e)}")
+                else:
+                    logger.info(f"No Gemini API key found for user {user_id}, agent will be initialized when API key is set")
+
                 
                 # Send confirmation back to client
                 await self._send_to_client(
@@ -206,8 +221,6 @@ class SupervisorAgentOrchestrator:
             message_content = message_data.get("message", "").strip()
             thread_id = message_data.get("threadId")
             request_id = message_data.get("requestId")
-            
-            logger.info(f"Supervisor agent orchestrator received message: {message_content}")
             
             if not message_content:
                 logger.warning(f"Empty message received from client {client_id}")
@@ -276,6 +289,68 @@ class SupervisorAgentOrchestrator:
                 client_id=client_id,
                 error=str(e),
                 request_id=request_id
+            )
+    
+    async def handle_initialize_agent_with_api_key(
+        self,
+        client_id: str,
+        data: Dict[str, Any]
+    ):
+        """Handle request to initialize agent after API key is set"""
+        try:
+            user_id = manager.get_user_id(client_id)
+            
+            if not user_id:
+                logger.warning(f"No user_id found for client {client_id} during agent initialization")
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "AGENT_INITIALIZATION_FAILED",
+                        "message": "User not authenticated"
+                    }
+                )
+                return
+            
+            # Check if user has a Gemini API key
+            if api_key_manager.has_user_api_key(user_id, "gemini"):
+                try:
+                    supervisor_agent.initialize_with_user_api_key(user_id)
+                    logger.info(f"Successfully initialized supervisor agent for user {user_id} after API key was set")
+                    
+                    await self._send_to_client(
+                        client_id=client_id,
+                        data={
+                            "type": "AGENT_INITIALIZATION_SUCCESS",
+                            "message": "Agent successfully initialized with API key"
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to initialize agent for user {user_id}: {str(e)}")
+                    await self._send_to_client(
+                        client_id=client_id,
+                        data={
+                            "type": "AGENT_INITIALIZATION_FAILED",
+                            "message": f"Failed to initialize agent: {str(e)}"
+                        }
+                    )
+            else:
+                logger.warning(f"No Gemini API key found for user {user_id} during initialization request")
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "AGENT_INITIALIZATION_FAILED",
+                        "message": "No Gemini API key found"
+                    }
+                )
+                
+        except Exception as e:
+            logger.error(f"Error handling agent initialization for client {client_id}: {str(e)}")
+            await self._send_to_client(
+                client_id=client_id,
+                data={
+                    "type": "AGENT_INITIALIZATION_FAILED",
+                    "message": "Initialization failed"
+                }
             )
     
     async def _stream_supervisor_response(
@@ -349,6 +424,9 @@ class SupervisorAgentOrchestrator:
                         #logger.info(f"Stream item: {stream_item}")
                         message_chunk, metadata = chunk
 
+                        logger.info(f"METADATA: {metadata}")
+
+
                         # Check if this is a tool message, don't want to send these to client
                         if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
                             continue
@@ -358,9 +436,22 @@ class SupervisorAgentOrchestrator:
                             continue
                         
                         # Skip tokens from excluded nodes
-                        node_name = metadata.get("langgraph_node", "")
-                        if node_name in self.EXCLUDED_NODES:
-                            continue
+                        if 'langgraph_node' in metadata:
+                            node_name = metadata.get("langgraph_node", "")                        
+                            if node_name in self.EXCLUDED_NODES or 'simple_excel_agent' in node_name:
+                                continue
+
+                        if 'langgraph_checkpoint_ns' in metadata:
+                            checkpoint_name = metadata.get('langgraph_checkpoint_ns', '')
+                            if 'simple_excel_agent' in checkpoint_name:
+                                logger.info(f"Skipping simple_excel_agent checkpoint (langgraph_checkpoint_ns)")
+                                continue
+
+                        if 'checkpoint_ns' in metadata:
+                            checkpoint_name = metadata.get('checkpoint_ns', '')
+                            if 'simple_excel_agent' in checkpoint_name:
+                                logger.info(f"Skipping simple_excel_agent checkpoint (checkpoint_ns)")
+                                continue
                         
                         # Extract text content
                         text = self.extract_ai_message_content(message_chunk)
@@ -417,6 +508,7 @@ class SupervisorAgentOrchestrator:
             # Save assistant message
             if assistant_message:
                 self._append_message(thread_id, "assistant", assistant_message)
+                logger.info(f"Assistant message received on thread {thread_id}: {assistant_message}")
             
         except Exception as e:
             logger.error(f"Error in supervisor response stream: {str(e)}", exc_info=True)

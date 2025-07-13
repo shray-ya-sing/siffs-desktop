@@ -13,6 +13,9 @@ ROUTING RULES:
    - Direct lookups or single-step calculations
    - Requests explicitly mentioning specific cell references
    - When the user request is simply asking you to read the contents of the file to tell the user about something in the file, or when user asks you to check a model or audit something in the excel file
+   - **Reading, analyzing, or summarizing PDF documents, Word documents, or PowerPoint presentations**
+   - **Getting information about document contents, extracting text from non-Excel files**
+   - **Any request involving document analysis that is not Excel-related**
    
 
 2. Send to medium_agent if the request involves:

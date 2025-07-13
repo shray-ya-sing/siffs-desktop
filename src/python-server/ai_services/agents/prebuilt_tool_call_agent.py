@@ -8,6 +8,19 @@ import asyncio
 import time
 # Import tools from the tools module
 from .tools import ALL_TOOLS
+try:
+    from .prebuilt_agent.tools.prebuilt_agent_tools import NEW_DOCUMENT_TOOLS
+except ImportError:
+    try:
+        from prebuilt_agent.tools.prebuilt_agent_tools import NEW_DOCUMENT_TOOLS
+    except ImportError:
+        # Fallback to relative import from current directory structure
+        import sys
+        from pathlib import Path
+        current_dir = Path(__file__).parent
+        tools_dir = current_dir / "prebuilt_agent" / "tools"
+        sys.path.insert(0, str(tools_dir))
+        from prebuilt_agent_tools import NEW_DOCUMENT_TOOLS
 
 import langgraph
 from langgraph.checkpoint.memory import InMemorySaver
@@ -125,10 +138,12 @@ class PrebuiltAgent:
 
         
         # Create the agent
+        agent_tools = ALL_TOOLS
+        agent_tools.extend(NEW_DOCUMENT_TOOLS)
         logger.info(f"Creating agent with model: {provider_name}:{model_name}")
         self.agent = create_react_agent(
             model=self.llm, 
-            tools=ALL_TOOLS,
+            tools=agent_tools,
             prompt=enhanced_system_prompt,
             store=self.in_memory_store,
             checkpointer=self.checkpointer,
