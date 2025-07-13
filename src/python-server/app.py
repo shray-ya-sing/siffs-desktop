@@ -121,6 +121,10 @@ async def startup_event():
     logger.info("Starting up...PDFCacheHandler initialized")
     from pdf.content.extraction.event_handlers.pdf_content_handler import PDFContentHandler
     logger.info("Starting up...PDFContentHandler initialized")
+    from word.orchestration.word_orchestrator import WordOrchestrator
+    logger.info("Starting up...Word orchestrator initialized")
+    from word.metadata.extraction.event_handlers.word_cache_handler import WordCacheHandler
+    logger.info("Starting up...WordCacheHandler initialized")
     from api_key_management.handlers.api_key_handler import api_key_handler
     logger.info("Starting up...APIKeyHandler initialized")
 
