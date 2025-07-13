@@ -14,6 +14,11 @@ from api.websocket_manager import manager
 from core.events import event_bus
 from agents.supervisor.supervisor_agent import agent_system, supervisor_agent
 
+# Add API key manager import
+python_server_path = Path(__file__).parent.parent.parent
+sys.path.append(str(python_server_path))
+from api_key_management.service.api_key_manager import api_key_manager
+
 logger = logging.getLogger(__name__)
 
 class SupervisorAgentOrchestrator:
@@ -144,6 +149,11 @@ class SupervisorAgentOrchestrator:
                 client_id=client_id,
                 auth_data=message.get("data", {})
             )
+        elif message.get("type") == "INITIALIZE_AGENT_WITH_API_KEY":
+            await self.handle_initialize_agent_with_api_key(
+                client_id=client_id,
+                data=message.get("data", {})
+            )
     
     async def handle_user_authentication(
         self,
@@ -160,13 +170,16 @@ class SupervisorAgentOrchestrator:
                 manager.set_user_id(client_id, user_id)
                 logger.info(f"User authentication successful: client {client_id} -> user {user_id} ({email})")
                 
-                # Initialize the supervisor agent with the user_id
-                try:
-                    supervisor_agent.initialize_with_user_api_key(user_id)
-                    logger.info(f"Successfully configured supervisor agent for user {user_id}")
-                except Exception as e:
-                    logger.warning(f"Failed to configure user-specific API key for {user_id}: {str(e)}")
-                    # Continue anyway - will use default/env API key
+                # Check if user has a Gemini API key before initializing
+                if api_key_manager.has_user_api_key(user_id, "gemini"):
+                    try:
+                        supervisor_agent.initialize_with_user_api_key(user_id)
+                        logger.info(f"Successfully configured supervisor agent for user {user_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to configure user-specific API key for {user_id}: {str(e)}")
+                else:
+                    logger.info(f"No Gemini API key found for user {user_id}, agent will be initialized when API key is set")
+
                 
                 # Send confirmation back to client
                 await self._send_to_client(
@@ -276,6 +289,68 @@ class SupervisorAgentOrchestrator:
                 client_id=client_id,
                 error=str(e),
                 request_id=request_id
+            )
+    
+    async def handle_initialize_agent_with_api_key(
+        self,
+        client_id: str,
+        data: Dict[str, Any]
+    ):
+        """Handle request to initialize agent after API key is set"""
+        try:
+            user_id = manager.get_user_id(client_id)
+            
+            if not user_id:
+                logger.warning(f"No user_id found for client {client_id} during agent initialization")
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "AGENT_INITIALIZATION_FAILED",
+                        "message": "User not authenticated"
+                    }
+                )
+                return
+            
+            # Check if user has a Gemini API key
+            if api_key_manager.has_user_api_key(user_id, "gemini"):
+                try:
+                    supervisor_agent.initialize_with_user_api_key(user_id)
+                    logger.info(f"Successfully initialized supervisor agent for user {user_id} after API key was set")
+                    
+                    await self._send_to_client(
+                        client_id=client_id,
+                        data={
+                            "type": "AGENT_INITIALIZATION_SUCCESS",
+                            "message": "Agent successfully initialized with API key"
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to initialize agent for user {user_id}: {str(e)}")
+                    await self._send_to_client(
+                        client_id=client_id,
+                        data={
+                            "type": "AGENT_INITIALIZATION_FAILED",
+                            "message": f"Failed to initialize agent: {str(e)}"
+                        }
+                    )
+            else:
+                logger.warning(f"No Gemini API key found for user {user_id} during initialization request")
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "AGENT_INITIALIZATION_FAILED",
+                        "message": "No Gemini API key found"
+                    }
+                )
+                
+        except Exception as e:
+            logger.error(f"Error handling agent initialization for client {client_id}: {str(e)}")
+            await self._send_to_client(
+                client_id=client_id,
+                data={
+                    "type": "AGENT_INITIALIZATION_FAILED",
+                    "message": "Initialization failed"
+                }
             )
     
     async def _stream_supervisor_response(

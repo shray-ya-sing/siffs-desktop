@@ -22,7 +22,7 @@ from api_key_management.providers.gemini_provider import GeminiProvider
 from ai_services.agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMPT
 from ai_services.agents.complex_task_agent.complex_excel_request_agent import ComplexExcelRequestAgent
 from ai_services.agents.medium_complexity_agent.medium_excel_request_agent import MediumExcelRequestAgent
-from ai_services.agents.prebuilt_agent import PrebuiltAgent
+from ai_services.agents.prebuilt_tool_call_agent import PrebuiltAgent
 from ai_services.agents.supervisor.tools.tools import ALL_TOOLS
 
 class SupervisorAgent:
