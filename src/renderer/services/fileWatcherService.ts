@@ -30,7 +30,11 @@ export class FileWatcherService {
    * Set up IPC listeners for file watcher events from main process
    */
   private setupIpcListeners(): void {
-    if (this.isInitialized) return;
+    console.log('FileWatcherService: Initializing IPC listeners');
+    if (this.isInitialized) {
+      console.warn('FileWatcherService: IPC listeners already initialized');
+      return;
+    }
 
     const electron = (window as any).electron;
     if (!electron?.ipcRenderer) {
@@ -40,34 +44,87 @@ export class FileWatcherService {
 
     // Listen for file change events
     electron.ipcRenderer.on('file-change', (event: any, data: FileChangeEvent) => {
-      console.log('FileWatcher: Received file change event:', data);
-      this.notifyFileChangeCallbacks(data);
+      console.log('FileWatcher: Received file change event - Event:', event, 'Data:', data);
+      try {
+        if (!data) {
+          console.error('FileWatcher: Received null/undefined data for file-change event');
+          return;
+        }
+        this.notifyFileChangeCallbacks(data);
+      } catch (error) {
+        console.error('FileWatcher: Error handling file-change event:', error, 'Data:', data);
+      }
     });
 
     // Listen for watcher status events
     electron.ipcRenderer.on('file-watcher-started', (event: any, data: { watchedPath: string }) => {
-      console.log('FileWatcher: Watching started for:', data.watchedPath);
-      this.notifyStatusCallbacks({ type: 'started', data });
+      console.log('FileWatcher: Received file-watcher-started - Event:', event, 'Data:', data);
+      try {
+        // The data is actually in the event object, not the data parameter
+        const actualData = data || event;
+        if (!actualData || !actualData.watchedPath) {
+          console.error('FileWatcher: Received invalid data for file-watcher-started event. Event:', event, 'Data:', data);
+          return;
+        }
+        console.log('FileWatcher: Watching started for:', actualData.watchedPath);
+        this.notifyStatusCallbacks({ type: 'started', data: actualData });
+      } catch (error) {
+        console.error('FileWatcher: Error handling file-watcher-started event:', error, 'Event:', event, 'Data:', data);
+      }
     });
 
     electron.ipcRenderer.on('file-watcher-stopped', (event: any, data: { watchedPath: string }) => {
-      console.log('FileWatcher: Watching stopped for:', data.watchedPath);
-      this.notifyStatusCallbacks({ type: 'stopped', data });
+      console.log('FileWatcher: Received file-watcher-stopped - Event:', event, 'Data:', data);
+      try {
+        // The data is actually in the event object, not the data parameter
+        const actualData = data || event;
+        if (!actualData) {
+          console.error('FileWatcher: Received null/undefined data for file-watcher-stopped event. Event:', event, 'Data:', data);
+          return;
+        }
+        console.log('FileWatcher: Watching stopped for:', actualData.watchedPath || 'unknown path');
+        this.notifyStatusCallbacks({ type: 'stopped', data: actualData });
+      } catch (error) {
+        console.error('FileWatcher: Error handling file-watcher-stopped event:', error, 'Event:', event, 'Data:', data);
+      }
     });
 
     electron.ipcRenderer.on('file-watcher-ready', (event: any, data: { watchedPath: string }) => {
-      console.log('FileWatcher: Initial scan complete for:', data.watchedPath);
-      this.notifyStatusCallbacks({ type: 'ready', data });
+      console.log('FileWatcher: Received file-watcher-ready - Event:', event, 'Data:', data);
+      try {
+        // The data is actually in the event object, not the data parameter
+        const actualData = data || event;
+        if (!actualData) {
+          console.error('FileWatcher: Received null/undefined data for file-watcher-ready event. Event:', event, 'Data:', data);
+          return;
+        }
+        console.log('FileWatcher: Initial scan complete for:', actualData.watchedPath || 'unknown path');
+        this.notifyStatusCallbacks({ type: 'ready', data: actualData });
+      } catch (error) {
+        console.error('FileWatcher: Error handling file-watcher-ready event:', error, 'Event:', event, 'Data:', data);
+      }
     });
 
     electron.ipcRenderer.on('file-watcher-error', (event: any, data: { error: string; watchedPath?: string }) => {
-      console.error('FileWatcher: Error:', data.error);
-      const sanitizedData = { ...data };
-      if (!data.watchedPath) delete sanitizedData.watchedPath;
-      this.notifyStatusCallbacks({ type: 'error', data: sanitizedData });
+      console.log('FileWatcher: Received file-watcher-error - Event:', event, 'Data:', data);
+      try {
+        // The data is actually in the event object, not the data parameter
+        const actualData = data || event;
+        if (!actualData) {
+          console.error('FileWatcher: Received null/undefined data for file-watcher-error event. Event:', event, 'Data:', data);
+          return;
+        }
+        console.error('FileWatcher: Error:', actualData.error || 'Unknown error');
+        const sanitizedData = { ...actualData };
+        if (!actualData.watchedPath) delete sanitizedData.watchedPath;
+        this.notifyStatusCallbacks({ type: 'error', data: sanitizedData });
+      } catch (error) {
+        console.error('FileWatcher: Error handling file-watcher-error event:', error, 'Event:', event, 'Data:', data);
+      }
     });
 
     this.isInitialized = true;
+    console.log('FileWatcherService: IPC listeners set up successfully');
   }
 
   /**

@@ -227,8 +227,23 @@ export class FileWatcherService {
    * Send message to renderer process
    */
   private sendToRenderer(channel: string, data: any): void {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+    console.log(`FileWatcher: Sending IPC message to renderer - Channel: ${channel}, Data:`, data);
+    
+    if (!this.mainWindow) {
+      console.error('FileWatcher: Cannot send to renderer - mainWindow is null');
+      return;
+    }
+    
+    if (this.mainWindow.isDestroyed()) {
+      console.error('FileWatcher: Cannot send to renderer - mainWindow is destroyed');
+      return;
+    }
+    
+    try {
       this.mainWindow.webContents.send(channel, data);
+      console.log(`FileWatcher: Successfully sent IPC message - Channel: ${channel}`);
+    } catch (error) {
+      console.error(`FileWatcher: Error sending IPC message - Channel: ${channel}, Error:`, error);
     }
   }
 

@@ -301,21 +301,24 @@ import MainLogo from '../logo/MainLogo'
         
         // Start file watcher for the directory
         try {
-          console.log('Starting file watcher for directory:', dirName);
+          console.log('FolderConnect: Starting file watcher for directory:', dirName);
+          console.log('FolderConnect: Watch path:', watchPath);
+          console.log('FolderConnect: File watcher service available:', !!fileWatcherService);
           
           // Attempt to start file watcher using the actual file system path
           const watcherResult = await fileWatcherService.startWatching(watchPath);
+          console.log('FolderConnect: File watcher result:', watcherResult);
           
           if (watcherResult.success) {
             setDiscoveryMessages(prev => [...prev, "✅ File monitoring started successfully"]);
             setDiscoveryMessages(prev => [...prev, "✅ Automatic file processing enabled"]);
-            console.log('File watcher started successfully for path:', watcherResult.watchedPath);
+            console.log('FolderConnect: File watcher started successfully for path:', watcherResult.watchedPath);
           } else {
             setDiscoveryMessages(prev => [...prev, `⚠️ File monitoring could not be started: ${watcherResult.error}`]);
-            console.warn('Failed to start file watcher:', watcherResult.error);
+            console.error('FolderConnect: Failed to start file watcher:', watcherResult.error);
           }
         } catch (watcherError) {
-          console.error('Failed to start file watcher:', watcherError);
+          console.error('FolderConnect: Exception while starting file watcher:', watcherError);
           setDiscoveryMessages(prev => [...prev, "⚠️ Warning: File monitoring could not be started"]);
         }
         

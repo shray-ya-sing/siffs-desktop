@@ -328,32 +328,59 @@ const createWindow = (): void => {
 function setupFileWatcherIPC(): void {
   // Start watching a directory
   ipcMain.handle('file-watcher:start-watching', (event, directoryPath: string) => {
-    if (fileWatcherService) {
+    console.log('IPC: Received file-watcher:start-watching request for:', directoryPath);
+    try {
+      if (!fileWatcherService) {
+        console.error('IPC: File watcher service not initialized');
+        return { success: false, error: 'File watcher service not initialized' };
+      }
       fileWatcherService.startWatching(directoryPath);
-      return { success: true, watchedPath: directoryPath };
+      const result = { success: true, watchedPath: directoryPath };
+      console.log('IPC: file-watcher:start-watching result:', result);
+      return result;
+    } catch (error) {
+      console.error('IPC: Error in file-watcher:start-watching:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
-    return { success: false, error: 'File watcher service not initialized' };
   });
 
   // Stop watching
   ipcMain.handle('file-watcher:stop-watching', (event) => {
-    if (fileWatcherService) {
+    console.log('IPC: Received file-watcher:stop-watching request');
+    try {
+      if (!fileWatcherService) {
+        console.error('IPC: File watcher service not initialized');
+        return { success: false, error: 'File watcher service not initialized' };
+      }
       fileWatcherService.stopWatching();
-      return { success: true };
+      const result = { success: true };
+      console.log('IPC: file-watcher:stop-watching result:', result);
+      return result;
+    } catch (error) {
+      console.error('IPC: Error in file-watcher:stop-watching:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
-    return { success: false, error: 'File watcher service not initialized' };
   });
 
   // Get current watched path
   ipcMain.handle('file-watcher:get-watched-path', (event) => {
-    if (fileWatcherService) {
-      return {
+    console.log('IPC: Received file-watcher:get-watched-path request');
+    try {
+      if (!fileWatcherService) {
+        console.error('IPC: File watcher service not initialized');
+        return { success: false, error: 'File watcher service not initialized' };
+      }
+      const result = {
         success: true,
         watchedPath: fileWatcherService.getWatchedPath(),
         isWatching: fileWatcherService.getIsWatching()
       };
+      console.log('IPC: file-watcher:get-watched-path result:', result);
+      return result;
+    } catch (error) {
+      console.error('IPC: Error in file-watcher:get-watched-path:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
-    return { success: false, error: 'File watcher service not initialized' };
   });
 }
 

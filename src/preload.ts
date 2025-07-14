@@ -54,7 +54,11 @@ const electronAPI = {
       ipcRenderer.send(channel, ...args);
     },
     on: (channel: string, listener: (...args: any[]) => void) => {
-      const subscription = (_event: any, ...args: any[]) => listener(...args);
+      const subscription = (event: any, ...args: any[]) => {
+        console.log(`Preload: Forwarding IPC event - Channel: ${channel}, Event:`, event, 'Args:', args);
+        // Forward the event and args correctly - event as first param, data as second
+        listener(event, ...args);
+      };
       ipcRenderer.on(channel, subscription);
       
       // Return cleanup function
