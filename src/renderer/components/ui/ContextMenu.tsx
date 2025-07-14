@@ -27,6 +27,14 @@ export const ContextMenu = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState<{ x: number; y: number } | null>(null);
 
+  // Debug logging
+  console.log('🎯 ContextMenu render:', {
+    itemsCount: items.length,
+    position,
+    adjustedPosition,
+    hasMenuRef: !!menuRef.current
+  });
+
   useEffect(() => {
     if (!position) {
       setAdjustedPosition(null);

@@ -1,15 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+console.log('🔧 PRELOAD: Script started executing');
+
 // Define allowed environment variables
 const ALLOWED_KEYS = [
   'NODE_ENV'
 ];
+
+console.log('🔧 PRELOAD: Allowed keys defined:', ALLOWED_KEYS);
 
 // Create a safe environment object with only the allowed keys from process.env
 const env = ALLOWED_KEYS.reduce((acc, key) => {
   acc[key] = process.env[key] || '';
   return acc;
 }, {} as Record<string, string>);
+
+console.log('🔧 PRELOAD: Environment object created:', env);
 
 // Expose a safe API to the renderer process
 const electronAPI = {
@@ -121,9 +127,19 @@ const electronAPI = {
   }
 };
 
-// Expose the API to the renderer process
-contextBridge.exposeInMainWorld('electron', electronAPI);
-contextBridge.exposeInMainWorld('electronAPI', electronAPI);  // For backward compatibility
+console.log('🔧 PRELOAD: About to expose APIs to main world');
+console.log('🔧 PRELOAD: electronAPI object keys:', Object.keys(electronAPI));
+
+try {
+  // Expose the API to the renderer process
+  contextBridge.exposeInMainWorld('electron', electronAPI);
+  console.log('🔧 PRELOAD: Successfully exposed "electron" to main world');
+  
+  contextBridge.exposeInMainWorld('electronAPI', electronAPI);  // For backward compatibility
+  console.log('🔧 PRELOAD: Successfully exposed "electronAPI" to main world');
+} catch (error) {
+  console.error('🔧 PRELOAD: Error exposing APIs to main world:', error);
+}
 
 // Make this file a module
 export {};

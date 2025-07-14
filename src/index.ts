@@ -428,7 +428,7 @@ const createWindow = (): void => {
       contextIsolation: true,  // Enable context isolation for security
       webviewTag: true,        // Enable webview tag
       webSecurity: true,       // Enable web security
-      sandbox: true,           // Enable sandbox for better security
+      sandbox: false,          // Temporarily disable sandbox to test contextBridge
       // In Electron 12+, remote module is disabled by default
     },
   });

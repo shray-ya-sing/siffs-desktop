@@ -318,6 +318,7 @@ export const FileExplorer = ({
   const [createDialogParentPath, setCreateDialogParentPath] = useState('');
 
   const showContextMenu = (event: React.MouseEvent, item: FileItem) => {
+    console.log('🖱️ Context menu triggered for item:', item.name, 'at position:', { x: event.clientX, y: event.clientY });
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
 
     // Type assertion to ensure TypeScript recognizes the full electron API
