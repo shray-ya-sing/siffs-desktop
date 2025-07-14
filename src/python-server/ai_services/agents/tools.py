@@ -13,6 +13,7 @@ sys.path.append(str(python_server_dir))
 # Now import using relative path from vectors
 
 from excel.metadata.parsing.llm_metadata_parser import LLMMetadataParser
+from excel.editing.complex_agent_writer import ComplexAgentWriter
 from excel.editing.excel_writer import ExcelWriter
 from excel.editing.approval.excel_pending_edit_manager import ExcelPendingEditManager
 from excel.session_management.excel_session_manager import ExcelSessionManager
@@ -763,12 +764,14 @@ def implement_excel_edit(
             ]
         }
 
-        with ExcelWriter(visible=True) as writer:
-            success, updated_cells = writer.tool_write_data_to_existing(
-                data=parsed_data,
-                output_filepath=temp_file_path,
-                create_pending=False,
-            )
+        # Use ComplexAgentWriter for more advanced excel writing capabilities
+        writer = ComplexAgentWriter()
+        success, updated_cells = writer.write_to_existing(
+            data=parsed_data,
+            output_filepath=temp_file_path,
+            create_pending=False,
+            save=True
+        )
 
         if not success:
             return "Error: Failed to edit workbook"
@@ -1138,6 +1141,32 @@ async def create_new_excel(workbook_path: str, user_request: str) -> str:
     """
 
     try:
+        # Validate and resolve the workbook path
+        from pathlib import Path
+        
+        # Convert to Path object for validation
+        path_obj = Path(workbook_path)
+        
+        # Check if it's a relative path (not absolute)
+        if not path_obj.is_absolute():
+            return f"Error: The path '{workbook_path}' is not a full system path. Please provide a complete path like 'C:\\Users\\username\\Documents\\workbooks\\{workbook_path}' instead of just '{workbook_path}'."
+        
+        # Ensure the path has .xlsx extension
+        if not workbook_path.lower().endswith(('.xlsx', '.xls')):
+            return f"Error: The path '{workbook_path}' must end with .xlsx or .xls extension."
+        
+        # Ensure parent directory exists or can be created
+        parent_dir = path_obj.parent
+        if not parent_dir.exists():
+            try:
+                parent_dir.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Created directory: {parent_dir}")
+            except Exception as e:
+                return f"Error: Cannot create directory '{parent_dir}': {str(e)}"
+        
+        # Resolve to absolute path
+        resolved_path = str(path_obj.resolve())
+        logger.info(f"Creating new Excel file at resolved path: {resolved_path}")
 
         #generate metadata
 
@@ -1163,12 +1192,13 @@ async def create_new_excel(workbook_path: str, user_request: str) -> str:
 
         # edit
 
-        with ExcelWriter(visible=True) as writer:
-            success, request_pending_edits = writer.write_data_to_new(
-                data=parsed_data,
-                output_filepath=workbook_path,
-                create_pending=True
-            )
+        # Use ComplexAgentWriter for more advanced excel writing capabilities
+        writer = ComplexAgentWriter()
+        success, request_pending_edits = writer.create_new_excel(
+            data=parsed_data,
+            output_filepath=workbook_path,
+            create_pending=True
+        )
 
         if not success:
             return "Error: Error in writing to excel. Failed to create new workbook"

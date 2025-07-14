@@ -38,19 +38,18 @@ class GeminiProvider:
         """
         # Get the effective API key (user key or fallback to env)
         logger.info(f"=== GEMINI_PROVIDER DEBUG ===")
-        logger.info(f"Getting API key for user_id: {user_id}")
+        logger.info("Getting API key for user...")
         
         api_key = api_key_manager.get_effective_api_key(user_id, "gemini")
-        logger.info(f"API key retrieved from manager: {api_key[:10] if api_key else 'None'}...")
+        logger.info(f"API key retrieved: {'Available' if api_key else 'None'}")
         
         if not api_key:
-            logger.warning(f"No Gemini API key found for user {user_id}")
+            logger.warning("No Gemini API key found for user")
 
         if not api_key:
-            logger.error(ValueError(f"No Gemini API key available for user {user_id}"))
+            logger.error(ValueError("No Gemini API key available for user"))
         
-        logger.info(f"Final API key to use: {api_key[:10]}...")
-        logger.info(f"Creating Gemini model for user {user_id} with model {model}")
+        logger.info(f"Creating Gemini model with model {model}")
         logger.info(f"============================")
         
         llm = ChatGoogleGenerativeAI(
@@ -61,7 +60,7 @@ class GeminiProvider:
         )
 
         if not llm:
-            logger.error(ValueError(f"Failed to create Gemini model for user {user_id}"))
+            logger.error(ValueError("Failed to create Gemini model for user"))
         
         return llm
     

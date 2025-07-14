@@ -108,9 +108,9 @@ class ConnectionManager:
         """Associate a user_id with a client_id"""
         if client_id in self.active_connections:
             self.client_user_mapping[client_id] = user_id
-            logger.info(f"Associated client {client_id} with user {user_id}")
+            logger.info("Associated client with user")
         else:
-            logger.warning(f"Attempted to set user_id for non-existent client {client_id}")
+            logger.warning("Attempted to set user_id for non-existent client")
     
     def get_user_id(self, client_id: str) -> Optional[str]:
         """Get the user_id associated with a client_id"""

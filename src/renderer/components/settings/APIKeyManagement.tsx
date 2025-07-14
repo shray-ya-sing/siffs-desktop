@@ -179,12 +179,7 @@ export function APIKeyManagement() {
 
   const loadAPIKeyStatus = async () => {
     try {
-      console.log('=== DEBUG: Supabase user object ===');
-      console.log('Full user object:', user);
-      console.log('User ID:', user?.id);
-      console.log('=====================================');
       const statusResponse = await apiKeyService.getAPIKeyStatus(user?.id);
-      console.log('API key status response:', statusResponse);
       setStatus(statusResponse);
       setIsInitialLoading(false); // Clear loading state on success
     } catch (error) {
@@ -218,7 +213,7 @@ export function APIKeyManagement() {
   const handleSetKey = async (provider: Provider, apiKey: string) => {
     setIsLoading(true);
     try {
-      console.log('Setting API key for user:', user?.id);
+      // Setting API key for user
       await apiKeyService.setAPIKey(provider, apiKey, user?.id);
       await loadAPIKeyStatus(); // Refresh status
       toast({
@@ -240,7 +235,7 @@ export function APIKeyManagement() {
   const handleRemoveKey = async (provider: Provider) => {
     setIsLoading(true);
     try {
-      console.log('Removing API key for user:', user?.id);
+      // Removing API key for user
       await apiKeyService.removeAPIKey(provider, user?.id);
       await loadAPIKeyStatus(); // Refresh status
       toast({

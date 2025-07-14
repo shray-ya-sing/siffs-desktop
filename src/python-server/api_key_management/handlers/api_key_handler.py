@@ -65,9 +65,9 @@ class APIKeyHandler:
             api_key = data.get("api_key")
             
             logger.info(f"=== SET_API_KEY DEBUG ===")
-            logger.info(f"Received user_id from frontend: {data.get('user_id')}")
-            logger.info(f"WebSocket client_id: {client_id}")
-            logger.info(f"Final user_id being used: {user_id}")
+# Log reception of requests without sensitive info
+            logger.info("Received SET_API_KEY request via WebSocket.")
+            logger.info("User ID resolved for API key setting.")
             logger.info(f"Provider: {provider}")
             logger.info(f"=========================")
             
@@ -92,14 +92,14 @@ class APIKeyHandler:
             
             # Associate user_id with client_id in WebSocket manager
             manager.set_user_id(client_id, user_id)
-            logger.info(f"Associated client {client_id} with user {user_id} during API key setup")
+            logger.info("Associated client with user during API key setup.")
             
             # Trigger agent initialization if this is a Gemini API key
             if provider == "gemini":
                 from ai_services.agents.supervisor.supervisor_agent import supervisor_agent
                 try:
                     supervisor_agent.initialize_with_user_api_key(user_id)
-                    logger.info(f"Successfully initialized supervisor agent for user {user_id} after setting {provider} API key")
+                    logger.info("Successfully initialized supervisor agent after setting API key.")
                     
                     # Send agent initialization success message
                     await manager.send_message(client_id, {
@@ -107,7 +107,7 @@ class APIKeyHandler:
                         "message": "Agent successfully initialized with API key"
                     })
                 except Exception as e:
-                    logger.error(f"Failed to initialize agent for user {user_id} after setting API key: {str(e)}")
+                    logger.error(f"Failed to initialize agent after setting API key: {str(e)}")
                     
                     # Send agent initialization failure message
                     await manager.send_message(client_id, {
@@ -119,11 +119,11 @@ class APIKeyHandler:
             await manager.send_message(client_id, {
                 "type": "API_KEY_SET",
                 "provider": provider,
-                "message": f"API key set successfully for {provider}",
+                "message": "API key set successfully.",
                 "requestId": request_id
             })
             
-            logger.info(f"API key set for user {user_id}, provider {provider}")
+            logger.info("API key set successfully.")
             
         except Exception as e:
             logger.error(f"Error setting API key: {str(e)}")
@@ -143,9 +143,9 @@ class APIKeyHandler:
             user_id = data.get("user_id") or client_id
             
             logger.info(f"=== GET_API_KEY_STATUS DEBUG ===")
-            logger.info(f"Received user_id from frontend: {data.get('user_id')}")
-            logger.info(f"WebSocket client_id: {client_id}")
-            logger.info(f"Final user_id being used: {user_id}")
+# Log reception of requests without sensitive info
+            logger.info("Received GET_API_KEY_STATUS request via WebSocket.")
+            logger.info("User ID resolved for API key status check.")
             logger.info(f"====================================")
             
             # Check status for all supported providers
@@ -169,9 +169,7 @@ class APIKeyHandler:
             }
             
             logger.info(f"=== SENDING API_KEY_STATUS RESPONSE ===")
-            logger.info(f"Client ID: {client_id}")
-            logger.info(f"Request ID: {request_id}")
-            logger.info(f"Status: {status}")
+            logger.info("Sending API key status response to client")
             logger.info(f"===========================================")
             
             await manager.send_message(client_id, response_message)
@@ -194,6 +192,9 @@ class APIKeyHandler:
             user_id = data.get("user_id") or client_id
             provider = data.get("provider")
             
+            # Log reception of requests without sensitive info
+            logger.info("Received REMOVE_API_KEY request via WebSocket.")
+            
             if not provider:
                 await manager.send_message(client_id, {
                     "type": "API_KEY_ERROR",
@@ -208,11 +209,11 @@ class APIKeyHandler:
             await manager.send_message(client_id, {
                 "type": "API_KEY_REMOVED",
                 "provider": provider,
-                "message": f"API key removed for {provider}",
+                "message": "API key removed successfully.",
                 "requestId": request_id
             })
             
-            logger.info(f"API key removed for user {user_id}, provider {provider}")
+            logger.info("API key removed successfully.")
             
         except Exception as e:
             logger.error(f"Error removing API key: {str(e)}")

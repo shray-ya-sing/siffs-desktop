@@ -170,17 +170,17 @@ class SupervisorAgentOrchestrator:
             if user_id:
                 # Store the user_id association in the WebSocket manager
                 manager.set_user_id(client_id, user_id)
-                logger.info(f"User authentication successful: client {client_id} -> user {user_id} ({email})")
+                logger.info("User authentication successful")
                 
                 # Check if user has a Gemini API key before initializing
                 if api_key_manager.has_user_api_key(user_id, "gemini"):
                     try:
                         supervisor_agent.initialize_with_user_api_key(user_id)
-                        logger.info(f"Successfully configured supervisor agent for user {user_id}")
+                        logger.info("Successfully configured supervisor agent for user")
                     except Exception as e:
-                        logger.warning(f"Failed to configure user-specific API key for {user_id}: {str(e)}")
+                        logger.warning(f"Failed to configure user-specific API key: {str(e)}")
                 else:
-                    logger.info(f"No Gemini API key found for user {user_id}, agent will be initialized when API key is set")
+                    logger.info("No Gemini API key found for user, agent will be initialized when API key is set")
 
                 
                 # Send confirmation back to client
@@ -193,7 +193,7 @@ class SupervisorAgentOrchestrator:
                     }
                 )
             else:
-                logger.warning(f"User authentication failed: no user_id provided for client {client_id}")
+                logger.warning("User authentication failed: no user_id provided")
                 await self._send_to_client(
                     client_id=client_id,
                     data={
@@ -301,7 +301,7 @@ class SupervisorAgentOrchestrator:
             user_id = manager.get_user_id(client_id)
             
             if not user_id:
-                logger.warning(f"No user_id found for client {client_id} during agent initialization")
+                logger.warning("No user_id found for client during agent initialization")
                 await self._send_to_client(
                     client_id=client_id,
                     data={
@@ -315,7 +315,7 @@ class SupervisorAgentOrchestrator:
             if api_key_manager.has_user_api_key(user_id, "gemini"):
                 try:
                     supervisor_agent.initialize_with_user_api_key(user_id)
-                    logger.info(f"Successfully initialized supervisor agent for user {user_id} after API key was set")
+                    logger.info("Successfully initialized supervisor agent for user after API key was set")
                     
                     await self._send_to_client(
                         client_id=client_id,
@@ -325,7 +325,7 @@ class SupervisorAgentOrchestrator:
                         }
                     )
                 except Exception as e:
-                    logger.error(f"Failed to initialize agent for user {user_id}: {str(e)}")
+                    logger.error(f"Failed to initialize agent for user: {str(e)}")
                     await self._send_to_client(
                         client_id=client_id,
                         data={
@@ -334,7 +334,7 @@ class SupervisorAgentOrchestrator:
                         }
                     )
             else:
-                logger.warning(f"No Gemini API key found for user {user_id} during initialization request")
+                logger.warning("No Gemini API key found for user during initialization request")
                 await self._send_to_client(
                     client_id=client_id,
                     data={
@@ -523,7 +523,7 @@ class SupervisorAgentOrchestrator:
         if request_id and "requestId" not in data:
             data["requestId"] = request_id
         try:
-            logger.debug(f"Sending message to client {client_id}: {data}")
+            logger.debug(f"Sending message to client {client_id}")
             await manager.send_message(client_id, data)
         except Exception as e:
             logger.error(f"Failed to send message to client {client_id}: {str(e)}")

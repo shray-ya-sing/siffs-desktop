@@ -18,19 +18,19 @@ class APIKeyManager:
     
     def _load_api_keys(self) -> Dict[str, Dict[str, str]]:
         """Load API keys from cache file"""
-        logger.info(f"=== LOADING API KEYS ===")
+        logger.info("=== LOADING API KEYS ===")
         logger.info(f"Cache file path: {self.api_keys_file}")
-        logger.info(f"File exists: {self.api_keys_file.exists()}")
         
         try:
             if self.api_keys_file.exists():
                 with open(self.api_keys_file, 'r') as f:
                     content = f.read()
-                    logger.info(f"File content: {content}")
+# Redacted content for security purposes
                     f.seek(0)  # Reset file pointer
                     data = json.load(f)
-                    logger.info(f"Loaded data: {data}")
-                    logger.info(f"========================")
+# Log for successful data load
+                    logger.info("API keys loaded successfully.")
+                    logger.info("========================")
                     return data
             else:
                 logger.info(f"Cache file does not exist, returning empty dict")
@@ -47,7 +47,8 @@ class APIKeyManager:
                 json.dump(self._user_api_keys, f, indent=2)
             logger.info(f"=== CACHE SAVED ===")
             logger.info(f"Saved to file: {self.api_keys_file}")
-            logger.info(f"In-memory cache keys: {list(self._user_api_keys.keys())}")
+# Log status instead of sensitive keys
+            logger.info("In-memory cache keys updated.")
             logger.info(f"===================")
         except Exception as e:
             logger.error(f"Error saving API keys: {e}")
@@ -55,21 +56,20 @@ class APIKeyManager:
     def set_user_api_key(self, user_id: str, provider: str, api_key: str):
         """Set API key for a specific user and provider"""
         logger.info(f"=== API_KEY_MANAGER SET_USER_API_KEY ===")
-        logger.info(f"User ID: {user_id}")
-        logger.info(f"Provider: {provider}")
-        logger.info(f"API Key (first 10 chars): {api_key[:10]}...")
-        logger.info(f"Current cache keys: {list(self._user_api_keys.keys())}")
+# Log provider without exposing any sensitive information
+        logger.info(f"Provider set for API key.")
+        logger.info("Current cache keys loaded.")
         
         if user_id not in self._user_api_keys:
             self._user_api_keys[user_id] = {}
         
         self._user_api_keys[user_id][provider] = api_key
         
-        logger.info(f"After setting - cache keys: {list(self._user_api_keys.keys())}")
-        logger.info(f"User {user_id} providers: {list(self._user_api_keys[user_id].keys())}")
+        logger.info("Cache keys updated after setting.")
+        logger.info("User providers updated.")
         
         self._save_api_keys()
-        logger.info(f"API key saved to JSON cache for user {user_id}, provider {provider}")
+        logger.info("API key saved to JSON cache.")
         logger.info(f"==========================================")
     
     def get_user_api_key(self, user_id: str, provider: str) -> Optional[str]:
@@ -83,16 +83,17 @@ class APIKeyManager:
             if not self._user_api_keys[user_id]:  # Remove user if no keys left
                 del self._user_api_keys[user_id]
             self._save_api_keys()
-            logger.info(f"API key removed for user {user_id}, provider {provider}")
+            logger.info("API key removed successfully.")
     
     def get_effective_api_key(self, user_id: str, provider: str) -> str:
         """Get user API key if available, otherwise fall back to environment variable"""
         logger.info(f"=== API_KEY_MANAGER DEBUG ===")
-        logger.info(f"Getting effective API key for user_id: {user_id}, provider: {provider}")
-        logger.info(f"Current cache keys: {list(self._user_api_keys.keys())}")
+        logger.info("Retrieving effective API key for user..")
+        logger.info("Current cache keys available.")
         
         user_key = self.get_user_api_key(user_id, provider)
-        logger.info(f"User key result: {user_key[:10] if user_key else 'None'}...")
+# Log successful retrieval without sensitive info
+        logger.info("User key retrieved.")
         
         if user_key:
             logger.info(f"Using user-specific API key")
@@ -109,7 +110,7 @@ class APIKeyManager:
         env_key = env_key_map.get(provider)
         if env_key:
             env_value = os.getenv(env_key, "")
-            logger.info(f"Fallback to env key {env_key}: {env_value[:10] if env_value else 'None'}...")
+            logger.info(f"Fallback to environment key: {env_key}")
             logger.info(f"=============================")
             return env_value
         
@@ -121,14 +122,14 @@ class APIKeyManager:
         """Check if user has provided their own API key for the provider"""
         user_key = self.get_user_api_key(user_id, provider)
         logger.info(f"=== HAS_USER_API_KEY CHECK ===")
-        logger.info(f"User ID: {user_id}")
+        logger.info("Checking user API key availability.")
         logger.info(f"Provider: {provider}")
-        logger.info(f"Available user IDs in cache: {list(self._user_api_keys.keys())}")
+        logger.info("Available user IDs in cache checked.")
         logger.info(f"User key found: {user_key is not None}")
         if user_id in self._user_api_keys:
-            logger.info(f"User {user_id} providers: {list(self._user_api_keys[user_id].keys())}")
+            logger.info("User providers found in cache.")
         else:
-            logger.info(f"User {user_id} not found in cache")
+            logger.info("User not found in cache.")
         logger.info(f"=============================")
         return user_key is not None
 

@@ -634,6 +634,98 @@ class ComplexAgentWriter:
             logger.error(error_msg, exc_info=True)
             raise RuntimeError(error_msg) from e
     
+    def create_new_excel(
+        self,
+        data: Dict[str, List[Dict[str, Any]]],
+        output_filepath: str,
+        version_id: Optional[int] = 1,
+        create_pending: bool = True
+    ) -> Tuple[bool, Dict[str, List[str]]]:
+        """
+        Create a new workbook and write data to it with optional pending edit tracking.
+        
+        Args:
+            data: Dictionary mapping sheet names to lists of cell data
+            output_filepath: Path to the Excel file
+            version_id: Optional version ID
+            create_pending: Whether to create pending edits or apply directly
+            
+        Returns:
+            Tuple of (success, Dictionary mapping sheet names to lists of edit IDs)
+        """
+        if not data:
+            return False, {}
+
+        try:
+            # Use the singleton ExcelWorker to handle the workbook creation
+            def _create_new_excel():
+                # Resolve the output file path
+                file_path_obj = Path(output_filepath).resolve()
+                
+                # Check if file already exists and delete it to create fresh
+                if file_path_obj.exists():
+                    try:
+                        file_path_obj.unlink()
+                        logger.info(f"Deleted existing file: {file_path_obj}")
+                    except Exception as e:
+                        logger.warning(f"Could not delete existing file {file_path_obj}: {e}")
+                
+                # Create new Excel application instance if needed
+                if not xw.apps:
+                    app = xw.App(visible=self.visible)
+                else:
+                    app = xw.apps.active
+                    app.visible = self.visible
+                
+                # Create a new workbook
+                workbook = app.books.add()
+                
+                # Delete default sheets if they exist
+                try:
+                    while len(workbook.sheets) > 0:
+                        if workbook.sheets[0].name in ['Sheet', 'Sheet1', 'Sheet2', 'Sheet3']:
+                            workbook.sheets[0].delete()
+                        else:
+                            break
+                except Exception as e:
+                    logger.warning(f"Could not delete default sheets: {e}")
+                
+                # Set the worker's workbook reference
+                self._worker._workbook = workbook
+                self._worker._file_path = file_path_obj
+                
+                # Process data for each sheet
+                all_updated_cells = []
+                for sheet_name, cells_data in data.items():
+                    # Create worksheet
+                    try:
+                        sheet = workbook.sheets.add(sheet_name)
+                        logger.info(f"Created sheet: {sheet_name}")
+                    except Exception as e:
+                        logger.error(f"Error creating sheet {sheet_name}: {e}")
+                        continue
+                    
+                    # Write cells to the sheet using the worker's write_cells method
+                    # but without green highlighting for new files
+                    sheet_updated_cells = self._worker.write_cells(sheet_name, cells_data, apply_green_highlight=False)
+                    all_updated_cells.append({"sheet_name": sheet_name, "updated_cells": sheet_updated_cells})
+                
+                # Save the workbook to the specified path
+                try:
+                    workbook.save(str(file_path_obj))
+                    logger.info(f"Successfully created new Excel file: {file_path_obj}")
+                except Exception as e:
+                    logger.error(f"Error saving new workbook: {e}")
+                    raise
+                
+                return True, all_updated_cells
+
+            return self._worker._execute(_create_new_excel)
+
+        except Exception as e:
+            logger.error(f"Error creating new workbook: {e}")
+            return False, {}
+    
     @classmethod
     def cleanup(cls) -> None:
         """Clean up resources and close the Excel instance."""

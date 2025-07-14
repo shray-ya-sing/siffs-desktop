@@ -185,6 +185,16 @@ class HighLevelDeterminationNodes:
         latest_step = state.get("current_step")
         latest_step_number = state.get("current_step_number", 0)
         implementation_sequence = state.get("implementation_sequence")
+        
+        # Add infinite loop protection
+        max_steps = 10
+        if latest_step_number >= max_steps:
+            logger.warning(f"Reached maximum steps ({max_steps}), terminating to prevent infinite loop")
+            return Command(
+                update={"error": f"Maximum steps reached ({max_steps}). Process terminated to prevent infinite loop."},
+                goto="check_final_success"
+            )
+        
         # call llm with the latest model response and latest excel metadata to determine the implementation sequence
         prompt_template = StepLevelPrompts.decide_next_step_prompt()
         if implementation_sequence is not None and latest_step_number != 0:
@@ -194,7 +204,15 @@ class HighLevelDeterminationNodes:
         enhanced_user_request = f"{prompt_template}"
         messages.append({"role": "user", "content": enhanced_user_request})
         structured_llm = self.llm.with_structured_output(NextStep)
-        llm_response = structured_llm.invoke(messages)
+        
+        try:
+            llm_response = structured_llm.invoke(messages)
+        except Exception as e:
+            logger.error(f"Error invoking LLM in decide_next_step: {str(e)}")
+            return Command(
+                goto="llm_response_failure"
+            )
+            
         if llm_response:
             llm_response_content = llm_response.model_dump_json()
             messages.append({"role": "assistant", "content": llm_response_content})
@@ -202,7 +220,13 @@ class HighLevelDeterminationNodes:
             next_step = llm_response.next_step
             next_step_number = llm_response.next_step_number
             all_steps_done = llm_response.all_steps_done
-            messages.append({"role": "assistant", "content": llm_response_content})
+            
+            # Validate step progression
+            if next_step_number <= latest_step_number and latest_step_number > 0:
+                logger.warning(f"Step number not progressing: current={latest_step_number}, next={next_step_number}")
+                # Force completion to prevent loop
+                all_steps_done = True
+                
             if not all_steps_done:
                 return Command(
                     update= {"messages": [enhanced_user_request, llm_response_content], 
