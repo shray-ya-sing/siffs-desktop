@@ -43,7 +43,15 @@ export const ContextMenu = ({
 
     // Adjust position to keep menu within viewport
     const adjustPosition = () => {
-      if (!menuRef.current) return;
+      console.log('🔄 Adjusting position, menuRef.current:', !!menuRef.current);
+      
+      if (!menuRef.current) {
+        // If ref isn't ready, set initial position and try again
+        console.log('⏳ MenuRef not ready, setting initial position and retrying...');
+        setAdjustedPosition({ x: position.x, y: position.y });
+        setTimeout(adjustPosition, 10);
+        return;
+      }
 
       const menuRect = menuRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
@@ -51,6 +59,10 @@ export const ContextMenu = ({
 
       let x = position.x;
       let y = position.y;
+
+      console.log('📐 Menu dimensions:', { width: menuRect.width, height: menuRect.height });
+      console.log('📐 Viewport size:', { width: viewportWidth, height: viewportHeight });
+      console.log('📐 Initial position:', { x, y });
 
       // Adjust horizontal position if menu would overflow
       if (x + menuRect.width > viewportWidth) {
@@ -66,10 +78,14 @@ export const ContextMenu = ({
       x = Math.max(10, x);
       y = Math.max(10, y);
 
+      console.log('📐 Final adjusted position:', { x, y });
       setAdjustedPosition({ x, y });
     };
 
-    // Initial position adjustment
+    // Set initial position immediately to make menu visible
+    setAdjustedPosition({ x: position.x, y: position.y });
+    
+    // Then adjust position after a brief delay
     setTimeout(adjustPosition, 0);
 
     // Handle clicks outside the menu
