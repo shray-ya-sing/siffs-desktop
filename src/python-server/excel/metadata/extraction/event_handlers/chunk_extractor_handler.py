@@ -67,10 +67,10 @@ class ChunkExtractorHandler:
             await self.extract_lightweight_metadata_without_events(
                 extractor, 
                 file_path, 
+                workspace_path,
                 client_id, 
                 request_id,
-                session_id,
-                workspace_path
+                session_id
             )
             
         except Exception as e:

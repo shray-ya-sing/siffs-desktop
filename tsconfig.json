@@ -22,6 +22,6 @@
       "./node_modules/@types"
     ]
   },
-  "include": ["src/**/*", "webpack.*.ts"],
+  "include": ["src/**/*", "webpack.*.ts", "src/renderer/global.d.ts"],
   "exclude": ["node_modules", "dist", "out", "**/python-server/venv/Lib/site-packages/xlwings/js", "**/venv/**"]
 }

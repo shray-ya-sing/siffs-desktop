@@ -1,15 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+console.log('🔧 PRELOAD: Script started executing');
+
 // Define allowed environment variables
 const ALLOWED_KEYS = [
   'NODE_ENV'
 ];
+
+console.log('🔧 PRELOAD: Allowed keys defined:', ALLOWED_KEYS);
 
 // Create a safe environment object with only the allowed keys from process.env
 const env = ALLOWED_KEYS.reduce((acc, key) => {
   acc[key] = process.env[key] || '';
   return acc;
 }, {} as Record<string, string>);
+
+console.log('🔧 PRELOAD: Environment object created:', env);
 
 // Expose a safe API to the renderer process
 const electronAPI = {
@@ -54,7 +60,11 @@ const electronAPI = {
       ipcRenderer.send(channel, ...args);
     },
     on: (channel: string, listener: (...args: any[]) => void) => {
-      const subscription = (_event: any, ...args: any[]) => listener(...args);
+      const subscription = (event: any, ...args: any[]) => {
+        console.log(`Preload: Forwarding IPC event - Channel: ${channel}, Event:`, event, 'Args:', args);
+        // Forward the event and args correctly - event as first param, data as second
+        listener(event, ...args);
+      };
       ipcRenderer.on(channel, subscription);
       
       // Return cleanup function
@@ -65,12 +75,73 @@ const electronAPI = {
     invoke: (channel: string, ...args: any[]) => {
       return ipcRenderer.invoke(channel, ...args);
     }
+  },
+
+  // File system operations
+  fileSystem: {
+    revealInExplorer: (filePath: string) => ipcRenderer.invoke('reveal-in-explorer', filePath),
+    deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
+    deleteDirectory: (dirPath: string) => ipcRenderer.invoke('delete-directory', dirPath),
+    renameFile: (oldPath: string, newName: string) => ipcRenderer.invoke('rename-file', oldPath, newName),
+    createFile: (dirPath: string, fileName: string, template?: string) => ipcRenderer.invoke('create-file', dirPath, fileName, template),
+    createDirectory: (dirPath: string, folderName: string) => ipcRenderer.invoke('create-directory', dirPath, folderName),
+    copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
+    openWithDefault: (filePath: string) => ipcRenderer.invoke('open-with-default', filePath),
+    copyFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('copy-file', sourcePath, destinationPath),
+    moveFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('move-file', sourcePath, destinationPath),
+  },
+
+  // File watcher operations
+  fileWatcher: {
+    startWatching: (directoryPath: string) => ipcRenderer.invoke('file-watcher:start-watching', directoryPath),
+    stopWatching: () => ipcRenderer.invoke('file-watcher:stop-watching'),
+    getWatchedPath: () => ipcRenderer.invoke('file-watcher:get-watched-path'),
+    
+    onFileChange: (callback: (event: any, data: any) => void) => {
+      console.log('Preload: Setting up file-change listener');
+      const handler = (event: any, data: any) => {
+        console.log('Preload: Received file-change event:', { event, data });
+        // Handle case where data might be in event or as separate parameter
+        const eventData = data || event;
+        callback(event, eventData);
+      };
+      ipcRenderer.on('file-change', handler);
+      return () => {
+        console.log('Preload: Removing file-change listener');
+        ipcRenderer.removeListener('file-change', handler);
+      };
+    },
+    
+    onStatusChange: (callback: (event: any, data: any) => void) => {
+      console.log('Preload: Setting up status-change listener');
+      const handler = (event: any, data: any) => {
+        console.log('Preload: Received status-change event:', { event, data });
+        // Handle case where data might be in event or as separate parameter
+        const eventData = data || event;
+        callback(event, eventData);
+      };
+      ipcRenderer.on('status-change', handler);
+      return () => {
+        console.log('Preload: Removing status-change listener');
+        ipcRenderer.removeListener('status-change', handler);
+      };
+    }
   }
 };
 
-// Expose the API to the renderer process
-contextBridge.exposeInMainWorld('electron', electronAPI);
-contextBridge.exposeInMainWorld('electronAPI', electronAPI);  // For backward compatibility
+console.log('🔧 PRELOAD: About to expose APIs to main world');
+console.log('🔧 PRELOAD: electronAPI object keys:', Object.keys(electronAPI));
+
+try {
+  // Expose the API to the renderer process
+  contextBridge.exposeInMainWorld('electron', electronAPI);
+  console.log('🔧 PRELOAD: Successfully exposed "electron" to main world');
+  
+  contextBridge.exposeInMainWorld('electronAPI', electronAPI);  // For backward compatibility
+  console.log('🔧 PRELOAD: Successfully exposed "electronAPI" to main world');
+} catch (error) {
+  console.error('🔧 PRELOAD: Error exposing APIs to main world:', error);
+}
 
 // Make this file a module
 export {};

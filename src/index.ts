@@ -1,9 +1,11 @@
-import { app, BrowserWindow, session, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, clipboard, session } from 'electron';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
-import { spawn, execSync } from 'child_process';
 import * as fs from 'fs';
 import log from 'electron-log';
+import { spawn, ChildProcess } from 'child_process';
+import * as dotenv from 'dotenv';
+import { FileWatcherService } from './main/services/fileWatcherService';
+import * as ExcelJS from 'exceljs';
 
 //---------------------------------LOGGING CONFIG------------------------------------------------------
 // Configure electron-log - add this before any other code
@@ -30,8 +32,331 @@ const envPath = path.join(__dirname, '../../.env');
 console.log('Loading environment variables from:', envPath);
 dotenv.config({ path: envPath });
 let pythonProcess: any = null;
+let fileWatcherService: FileWatcherService | null = null;
 
 //---------------------------------MAIN PROCESS STARTS HERE------------------------------------------------------
+
+/**
+ * Create a proper Excel file using ExcelJS
+ */
+async function createExcelFile(filePath: string): Promise<void> {
+  console.log('🔧 Creating Excel file at:', filePath);
+  
+  try {
+    // Test if ExcelJS is available
+    console.log('🔧 ExcelJS module:', typeof ExcelJS);
+    console.log('🔧 ExcelJS.Workbook:', typeof ExcelJS.Workbook);
+    
+    const workbook = new ExcelJS.Workbook();
+    console.log('🔧 ExcelJS workbook created successfully');
+    
+    // Add a simple worksheet
+    const worksheet = workbook.addWorksheet('Sheet1');
+    console.log('🔧 Worksheet "Sheet1" added');
+    
+    // Add minimal content
+    
+    // Write the file
+    console.log('🔧 Writing Excel file to disk...');
+    await workbook.xlsx.writeFile(filePath);
+    console.log('✅ Excel file written successfully');
+    
+    // Verify the file was created and check its size
+    if (fs.existsSync(filePath)) {
+      const stats = fs.statSync(filePath);
+      console.log('✅ File verification successful:');
+      console.log('  - Path:', filePath);
+      console.log('  - Size:', stats.size, 'bytes');
+      console.log('  - Created:', stats.birthtime);
+      console.log('  - Modified:', stats.mtime);
+      
+      // Check if file size is reasonable (empty Excel files are typically 5-10KB)
+      if (stats.size < 1000) {
+        console.warn('⚠️ File size seems too small for a valid Excel file');
+      } else {
+        console.log('✅ File size looks reasonable for Excel format');
+      }
+    } else {
+      console.error('❌ File was not created at expected path');
+      throw new Error('File creation failed - file not found after write operation');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error creating Excel file:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    throw error; // Re-throw to propagate the error
+  }
+}
+
+/**
+ * Get template content for different file types
+ */
+function getTemplateContent(template: string, fileName: string): string {
+  const fileExtension = path.extname(fileName).toLowerCase();
+  
+  switch (template) {
+    case 'excel':
+      // For Excel files, we'll create an empty file that can be opened by Excel
+      // The actual Excel structure will be created when opened
+      return '';
+    case 'powerpoint':
+      // For PowerPoint files, we'll create an empty file
+      return '';
+    case 'word':
+      // For Word files, we'll create an empty file
+      return '';
+    case 'text':
+      return '';
+    case 'markdown':
+      return `# ${path.basename(fileName, fileExtension)}\n\nYour content here...\n`;
+    case 'json':
+      return '{\n  \n}';
+    case 'javascript':
+      return '// JavaScript file\nconsole.log("Hello, World!");\n';
+    case 'typescript':
+      return '// TypeScript file\nconsole.log("Hello, World!");\n';
+    case 'python':
+      return '#!/usr/bin/env python3\n# Python file\n\nif __name__ == "__main__":\n    print("Hello, World!")\n';
+    case 'html':
+      return `<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>${path.basename(fileName, fileExtension)}</title>\n</head>\n<body>\n    <h1>Hello, World!</h1>\n</body>\n</html>\n`;
+    case 'css':
+      return '/* CSS file */\nbody {\n    margin: 0;\n    padding: 0;\n    font-family: Arial, sans-serif;\n}\n';
+    default:
+      return '';
+  }
+}
+
+/**
+ * Set up IPC handlers that should be available immediately
+ */
+function setupIpcHandlers(): void {
+  // File system operation handlers
+  ipcMain.handle('reveal-in-explorer', async (event, filePath: string) => {
+    try {
+      shell.showItemInFolder(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error revealing file in explorer:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('delete-file', async (event, filePath: string) => {
+    try {
+      await fs.promises.unlink(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('delete-directory', async (event, dirPath: string) => {
+    try {
+      await fs.promises.rmdir(dirPath, { recursive: true });
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting directory:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('rename-file', async (event, oldPath: string, newName: string) => {
+    try {
+      const dir = path.dirname(oldPath);
+      const newPath = path.join(dir, newName);
+      await fs.promises.rename(oldPath, newPath);
+      return { success: true, newPath };
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('create-file', async (event, dirPath: string, fileName: string, template?: string) => {
+    try {
+      const filePath = path.join(dirPath, fileName);
+      
+      // Special handling for Excel files
+      if (template === 'excel' && (fileName.endsWith('.xlsx') || fileName.endsWith('.xls'))) {
+        await createExcelFile(filePath);
+      } else {
+        // For other file types, use the existing template system
+        let content = '';
+        if (template) {
+          content = getTemplateContent(template, fileName);
+        }
+        await fs.promises.writeFile(filePath, content);
+      }
+      
+      return { success: true, filePath };
+    } catch (error) {
+      console.error('Error creating file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('create-directory', async (event, dirPath: string, folderName: string) => {
+    try {
+      const folderPath = path.join(dirPath, folderName);
+      await fs.promises.mkdir(folderPath, { recursive: true });
+      return { success: true, folderPath };
+    } catch (error) {
+      console.error('Error creating directory:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('copy-to-clipboard', async (event, text: string) => {
+    try {
+      clipboard.writeText(text);
+      return { success: true };
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('open-with-default', async (event, filePath: string) => {
+    try {
+      await shell.openPath(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error opening file with default app:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('copy-file', async (event, sourcePath: string, destinationPath: string) => {
+    try {
+      // Check if source file exists
+      await fs.promises.access(sourcePath);
+      
+      // Ensure destination directory exists
+      const destinationDir = path.dirname(destinationPath);
+      await fs.promises.mkdir(destinationDir, { recursive: true });
+      
+      // Copy the file
+      await fs.promises.copyFile(sourcePath, destinationPath);
+      
+      return { success: true, destinationPath };
+    } catch (error) {
+      console.error('Error copying file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('move-file', async (event, sourcePath: string, destinationPath: string) => {
+    try {
+      // Check if source file exists
+      await fs.promises.access(sourcePath);
+      
+      // Ensure destination directory exists
+      const destinationDir = path.dirname(destinationPath);
+      await fs.promises.mkdir(destinationDir, { recursive: true });
+      
+      // Move the file (rename with new path)
+      await fs.promises.rename(sourcePath, destinationPath);
+      
+      return { success: true, destinationPath };
+    } catch (error) {
+      console.error('Error moving file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  // Show directory picker dialog
+  ipcMain.handle('dialog:show-directory-picker', async (event) => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Select Workspace Folder'
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+    
+    return { 
+      success: true, 
+      path: result.filePaths[0],
+      name: path.basename(result.filePaths[0])
+    };
+  });
+
+  // Scan directory for files
+  ipcMain.handle('fs:scan-directory', async (event, directoryPath: string) => {
+    try {
+      const scanDirectory = (dirPath: string, basePath: string = '', files: any[] = []): any[] => {
+        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const fullPath = path.join(dirPath, entry.name);
+          const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+          
+          if (entry.isDirectory()) {
+            files.push({
+              name: entry.name,
+              path: relativePath,
+              isDirectory: true
+            });
+            // Recursively scan subdirectories
+            scanDirectory(fullPath, relativePath, files);
+          } else {
+            files.push({
+              name: entry.name,
+              path: relativePath,
+              isDirectory: false
+            });
+          }
+        }
+        
+        return files;
+      };
+      
+      const files = scanDirectory(directoryPath);
+      return { success: true, files };
+    } catch (error) {
+      console.error('Error scanning directory:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  });
+
+  // Read file content as base64
+  ipcMain.handle('fs:read-file', async (event, filePath: string) => {
+    try {
+      const fileBuffer = fs.readFileSync(filePath);
+      const base64Content = fileBuffer.toString('base64');
+      return { success: true, content: base64Content };
+    } catch (error) {
+      console.error('Error reading file:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  });
+
+}
+
+// Define allowed environment variables
+const ALLOWED_ENV_KEYS = [
+  'NODE_ENV'
+];
+
+// Register IPC handlers immediately when the module loads
+setupIpcHandlers();
+
+// IPC handler to get environment variables
+ipcMain.handle('get-env', (event, key: string) => {
+  if (ALLOWED_ENV_KEYS.includes(key)) {
+    return process.env[key];
+  }
+  console.warn(`Attempted to access unauthorized environment variable: ${key}`);
+  return null;
+});
 // Debug: Log loaded environment variables
 console.log('Environment variables loaded:', {
   NODE_ENV: process.env.NODE_ENV || 'development'
@@ -42,11 +367,6 @@ console.log('Environment variables loaded:', {
 // whether you're running in development or production).
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
-
-// Define allowed environment variables
-const ALLOWED_ENV_KEYS = [
-  'NODE_ENV'
-];
 
 // Create a safe environment object
 const env = ALLOWED_ENV_KEYS.reduce((acc, key) => {
@@ -204,7 +524,7 @@ const createWindow = (): void => {
       contextIsolation: true,  // Enable context isolation for security
       webviewTag: true,        // Enable webview tag
       webSecurity: true,       // Enable web security
-      sandbox: true,           // Enable sandbox for better security
+      sandbox: false,          // Temporarily disable sandbox to test contextBridge
       // In Electron 12+, remote module is disabled by default
     },
   });
@@ -219,20 +539,77 @@ const createWindow = (): void => {
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();
   }
-   
+
+  // Initialize file watcher service
+  fileWatcherService = new FileWatcherService(mainWindow);
   
+  // Set up file watcher IPC handlers
+  setupFileWatcherIPC();
 };
 
+
 /**
- * IPC handler to get environment variables
+ * Set up file watcher IPC handlers
  */
-ipcMain.handle('get-env', (event, key: string) => {
-  if (ALLOWED_ENV_KEYS.includes(key)) {
-    return process.env[key];
-  }
-  console.warn(`Attempted to access unauthorized environment variable: ${key}`);
-  return null;
-});
+function setupFileWatcherIPC(): void {
+  // Start watching a directory
+  ipcMain.handle('file-watcher:start-watching', (event, directoryPath: string) => {
+    console.log('IPC: Received file-watcher:start-watching request for:', directoryPath);
+    try {
+      if (!fileWatcherService) {
+        console.error('IPC: File watcher service not initialized');
+        return { success: false, error: 'File watcher service not initialized' };
+      }
+      fileWatcherService.startWatching(directoryPath);
+      const result = { success: true, watchedPath: directoryPath };
+      console.log('IPC: file-watcher:start-watching result:', result);
+      return result;
+    } catch (error) {
+      console.error('IPC: Error in file-watcher:start-watching:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  // Stop watching
+  ipcMain.handle('file-watcher:stop-watching', (event) => {
+    console.log('IPC: Received file-watcher:stop-watching request');
+    try {
+      if (!fileWatcherService) {
+        console.error('IPC: File watcher service not initialized');
+        return { success: false, error: 'File watcher service not initialized' };
+      }
+      fileWatcherService.stopWatching();
+      const result = { success: true };
+      console.log('IPC: file-watcher:stop-watching result:', result);
+      return result;
+    } catch (error) {
+      console.error('IPC: Error in file-watcher:stop-watching:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  // Get current watched path
+  ipcMain.handle('file-watcher:get-watched-path', (event) => {
+    console.log('IPC: Received file-watcher:get-watched-path request');
+    try {
+      if (!fileWatcherService) {
+        console.error('IPC: File watcher service not initialized');
+        return { success: false, error: 'File watcher service not initialized' };
+      }
+      const result = {
+        success: true,
+        watchedPath: fileWatcherService.getWatchedPath(),
+        isWatching: fileWatcherService.getIsWatching()
+      };
+      console.log('IPC: file-watcher:get-watched-path result:', result);
+      return result;
+    } catch (error) {
+      console.error('IPC: Error in file-watcher:get-watched-path:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+}
+
 
 /**
  * This method will be called when Electron has finished
@@ -300,9 +677,19 @@ function cleanupPythonProcess() {
   }
 }
 
+function cleanupFileWatcher() {
+  if (fileWatcherService) {
+    console.log('🔄 Cleaning up file watcher service...');
+    fileWatcherService.destroy();
+    fileWatcherService = null;
+    console.log('✅ File watcher service cleaned up');
+  }
+}
+
 app.on('before-quit', (event) => {
-  console.log('🔄 App is quitting, cleaning up Python process...');
+  console.log('🔄 App is quitting, cleaning up...');
   cleanupPythonProcess();
+  cleanupFileWatcher();
   
   // If you need to wait for cleanup to complete before quitting:
   // event.preventDefault();
@@ -320,6 +707,7 @@ app.on('window-all-closed', () => {
   // Stop Python server
   console.log('🚪 All windows closed, cleaning up...');
   cleanupPythonProcess();
+  cleanupFileWatcher();
   // Quit the electron app
   if (process.platform !== 'darwin') {
     app.quit();
@@ -338,12 +726,14 @@ app.on('activate', () => {
 process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT, cleaning up...');
   cleanupPythonProcess();
+  cleanupFileWatcher();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, cleaning up...');
   cleanupPythonProcess();
+  cleanupFileWatcher();
   process.exit(0);
 });
 // In this file you can include the rest of your app's specific main process

@@ -3,6 +3,8 @@ import { FolderOpen, FileText, Folder, Check } from "lucide-react";
 import FileDiscoveryProgress from "./FileDiscoveryProgress"
 import { v4 as uuidv4 } from 'uuid';
 import { webSocketService } from '../../services/websocket/websocket.service';
+import { fileWatcherService } from '../../services/fileWatcherService';
+import { fileProcessingService } from '../../services/fileProcessingService';
 import { useNavigate } from "react-router-dom";
 import WatermarkLogo from '../logo/WaterMarkLogo'
 import MainLogo from '../logo/MainLogo'
@@ -155,49 +157,49 @@ import MainLogo from '../logo/MainLogo'
     }, [onFolderConnect]);
 
 
-    const scanDirectory = async (dirHandle: any, fileList: FileItem[] = [], path: string[] = []) => {
-      try {
-        // @ts-ignore - TypeScript doesn't have types for File System Access API
-        for await (const entry of dirHandle.values()) {
-          const entryPath = [...path, entry.name];
-          
-          if (entry.kind === 'file') {
-            fileList.push({
-              name: entry.name,
-              path: entryPath.join('/'),
-              isDirectory: false
-            });
-          } else if (entry.kind === 'directory') {
-            // Add directory to the list
-            fileList.push({
-              name: entry.name,
-              path: entryPath.join('/'),
-              isDirectory: true
-            });
-            
-            // Recursively scan subdirectories
-            await scanDirectory(entry, fileList, entryPath);
-          }
-        }
-      } catch (error) {
-        console.error('Error scanning directory:', error);
-        throw error;
-      }
-    };
     
-    const processDirectory = async (dirHandle: any, dirName: string) => {
+    const processDirectory = async (fullPath: string, dirName: string, watchPath: string) => {
       setIsConnecting(true);
       setIsDiscovering(true);
       setDiscoveryMessages(prev => [...prev, "Scanning directory..."]);
     
       try {
-        const fileList: FileItem[] = [];
-        await scanDirectory(dirHandle, fileList, []);
-        console.log("File list:", fileList);
+        // Scan the directory using IPC call to main process
+        const electron = (window as any).electron;
+        console.log('Checking electron API for directory scanning:', {
+          electron: !!electron,
+          ipcRenderer: !!electron?.ipcRenderer,
+          invoke: !!electron?.ipcRenderer?.invoke
+        });
+        
+        if (!electron) {
+          throw new Error('Electron API not available - check preload script');
+        }
+        
+        if (!electron.ipcRenderer) {
+          throw new Error('Electron IPC renderer not available');
+        }
+        
+        if (!electron.ipcRenderer.invoke) {
+          throw new Error('Electron IPC invoke method not available');
+        }
+        
+        // Request file scanning from main process
+        const scanResult = await electron.ipcRenderer.invoke('fs:scan-directory', fullPath);
+        
+        if (!scanResult.success) {
+          throw new Error(scanResult.error || 'Failed to scan directory');
+        }
+        
+        const fileList: FileItem[] = scanResult.files;
+        
+        setDiscoveryMessages(prev => [...prev, `Selected directory: ${fullPath}`]);
+        setDiscoveryMessages(prev => [...prev, `Found ${fileList.length} files and folders`]);
+        console.log("Processing directory:", fullPath);
         
         // Filter Excel, PowerPoint, and PDF files
         const excelFiles = fileList.filter(file => 
-          !file.isDirectory && file.name.endsWith('.xlsx')
+          !file.isDirectory && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))
         );
         
         const powerPointFiles = fileList.filter(file => 
@@ -216,23 +218,27 @@ import MainLogo from '../logo/MainLogo'
         const allSupportedFiles = [...excelFiles, ...powerPointFiles, ...pdfFiles, ...wordFiles];
         
         if (allSupportedFiles.length === 0) {
-          setDiscoveryMessages(prev => [...prev, "No Excel, PowerPoint, or PDF files found in the selected directory"]);
-          return;
+          setDiscoveryMessages(prev => [...prev, "No supported files (.xlsx, .pptx, .pdf, .docx) found in the selected directory"]);
+        } else {
+          setDiscoveryMessages(prev => [...prev, `Found ${allSupportedFiles.length} supported files`]);
         }
     
         // Trigger extraction for each supported file
         for (const file of allSupportedFiles) {
-          const message = `Found file: ${file.name}`;
+          const message = `Processing file: ${file.name}`;
           setDiscoveryMessages(prev => [...prev, message]);
           
           try {
-            // Get file content as ArrayBuffer
-            const fileHandle = await dirHandle.getFileHandle(file.name);
-            const fileContent = await fileHandle.getFile();
-            const arrayBuffer = await fileContent.arrayBuffer();
+            // Get file content from main process
+            const fileResult = await electron.ipcRenderer.invoke('fs:read-file', 
+              `${fullPath}/${file.path}`
+            );
             
-            // Convert ArrayBuffer to base64
-            const base64Content = arrayBufferToBase64(arrayBuffer);
+            if (!fileResult.success) {
+              throw new Error(fileResult.error || 'Failed to read file');
+            }
+            
+            const base64Content = fileResult.content;
             const requestId = uuidv4();
 
             // Debug log
@@ -290,18 +296,48 @@ import MainLogo from '../logo/MainLogo'
             // Small delay between files
             await new Promise(resolve => setTimeout(resolve, 300));
           } catch (fileError) {
-            console.error(`Error processing file ${file.name}:`, fileError);
-            setDiscoveryMessages(prev => [...prev, `Error processing ${file.name}`]);
+            console.error(`Error processing file ${file.name} at ${file.path}:`, fileError);
+            setDiscoveryMessages(prev => [...prev, `Error processing ${file.name}: ${fileError}`]);
           }
         }
 
-         // Build file tree
-         const fileTree = buildFileTree(fileList);
-         console.log("File tree:", fileTree);
-         setFiles(fileTree);
-         
-         // Call onConnect with the files
-         onFolderConnect(fileTree);
+        // Build file tree
+        const fileTree = buildFileTree(fileList);
+        console.log("File tree:", fileTree);
+        setFiles(fileTree);
+        
+        // Set up file processing context for automatic processing
+        fileProcessingService.setProcessingContext({
+          workspacePath: fullPath,
+          clientId: clientId,
+          workspaceName: dirName
+        });
+        
+        // Start file watcher for the directory
+        try {
+          console.log('FolderConnect: Starting file watcher for directory:', dirName);
+          console.log('FolderConnect: Watch path:', watchPath);
+          console.log('FolderConnect: File watcher service available:', !!fileWatcherService);
+          
+          // Attempt to start file watcher using the actual file system path
+          const watcherResult = await fileWatcherService.startWatching(watchPath);
+          console.log('FolderConnect: File watcher result:', watcherResult);
+          
+          if (watcherResult.success) {
+            setDiscoveryMessages(prev => [...prev, "✅ File monitoring started successfully"]);
+            setDiscoveryMessages(prev => [...prev, "✅ Automatic file processing enabled"]);
+            console.log('FolderConnect: File watcher started successfully for path:', watcherResult.watchedPath);
+          } else {
+            setDiscoveryMessages(prev => [...prev, `⚠️ File monitoring could not be started: ${watcherResult.error}`]);
+            console.error('FolderConnect: Failed to start file watcher:', watcherResult.error);
+          }
+        } catch (watcherError) {
+          console.error('FolderConnect: Exception while starting file watcher:', watcherError);
+          setDiscoveryMessages(prev => [...prev, "⚠️ Warning: File monitoring could not be started"]);
+        }
+        
+        // Call onConnect with the files
+        onFolderConnect(fileTree);
     
       } catch (error) {
         console.error('Error processing directory:', error);
@@ -310,15 +346,6 @@ import MainLogo from '../logo/MainLogo'
       }
     };
     
-    // Helper function to convert ArrayBuffer to base64
-    const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
-      let binary = '';
-      const bytes = new Uint8Array(buffer);
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary);
-    };
 
     // Helper function to build the file tree
     const buildFileTree = (files: FileItem[]): FileItem[] => {
@@ -354,27 +381,58 @@ import MainLogo from '../logo/MainLogo'
       setDiscoveryMessages([]);
     
       try {
-        // @ts-ignore - showDirectoryPicker is not in TypeScript types yet
-        const dirHandle = await window.showDirectoryPicker();
-        const dirName = dirHandle.name;
-        const fullPath = await getFullPath(dirHandle);
-        await processDirectory(dirHandle, fullPath);
+        // Check if we're running in Electron environment
+        console.log('Window object keys:', Object.keys(window));
+        console.log('Window.electron:', (window as any).electron);
+        console.log('Window.electronAPI:', (window as any).electronAPI);
+        
+        // Use Electron's native dialog instead of File System Access API
+        const electron = (window as any).electron;
+        console.log('Checking electron API availability:', {
+          electron: !!electron,
+          electronType: typeof electron,
+          electronKeys: electron ? Object.keys(electron) : [],
+          ipcRenderer: !!electron?.ipcRenderer,
+          invoke: !!electron?.ipcRenderer?.invoke
+        });
+        
+        if (!electron) {
+          throw new Error('Electron API not available - check preload script');
+        }
+        
+        if (!electron.ipcRenderer) {
+          throw new Error('Electron IPC renderer not available');
+        }
+        
+        if (!electron.ipcRenderer.invoke) {
+          throw new Error('Electron IPC invoke method not available');
+        }
+        
+        const result = await electron.ipcRenderer.invoke('dialog:show-directory-picker');
+        
+        if (!result.success) {
+          if (result.canceled) {
+            console.log("User cancelled folder selection");
+          } else {
+            console.error("Dialog error:", result.error);
+          }
+          setIsConnecting(false);
+          setIsDiscovering(false);
+          return;
+        }
+        
+        // We now have the actual file system path!
+        const fullPath = result.path;
+        const dirName = result.name;
+        
+        await processDirectory(fullPath, dirName, fullPath);
       } catch (err) {
-        console.log("User cancelled folder selection");
+        console.error("Error opening folder:", err);
         setIsConnecting(false);
         setIsDiscovering(false);
       }
     };
 
-    const getFullPath = async (dirHandle: any): Promise<string> => {
-      try {
-        // Just return the directory name instead of trying to resolve the full path
-        return dirHandle.name;
-      } catch (error) {
-        console.error('Error getting full path:', error);
-        return dirHandle.name || 'workspace';
-      }
-    };
   
     return (
       <div

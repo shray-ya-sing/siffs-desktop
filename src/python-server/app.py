@@ -67,8 +67,14 @@ from api.websocket_manager import manager
 from core.events import event_bus
 from fastapi import WebSocket, WebSocketDisconnect
 
+# Import routers
+from api.routes.cache import router as cache_router
+
 # Create FastAPI app
 app = FastAPI(title="Volute API")
+
+# Include routers
+app.include_router(cache_router)
 
 def clear_metadata_cache():
     """Clear the metadata cache directory"""
