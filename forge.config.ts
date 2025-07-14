@@ -28,7 +28,10 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     // Windows
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      setupIcon: './src/assets/icons/icon.ico'
+      // iconUrl and loadingGif removed - not needed
+    }),
     // MacOS 
     new MakerZIP({}, ['darwin']),
     new MakerDMG({

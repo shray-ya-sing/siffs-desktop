@@ -90,6 +90,31 @@ class APIKeyHandler:
             # Set the API key
             api_key_manager.set_user_api_key(user_id, provider, api_key)
             
+            # Associate user_id with client_id in WebSocket manager
+            manager.set_user_id(client_id, user_id)
+            logger.info(f"Associated client {client_id} with user {user_id} during API key setup")
+            
+            # Trigger agent initialization if this is a Gemini API key
+            if provider == "gemini":
+                from ai_services.agents.supervisor.supervisor_agent import supervisor_agent
+                try:
+                    supervisor_agent.initialize_with_user_api_key(user_id)
+                    logger.info(f"Successfully initialized supervisor agent for user {user_id} after setting {provider} API key")
+                    
+                    # Send agent initialization success message
+                    await manager.send_message(client_id, {
+                        "type": "AGENT_INITIALIZATION_SUCCESS",
+                        "message": "Agent successfully initialized with API key"
+                    })
+                except Exception as e:
+                    logger.error(f"Failed to initialize agent for user {user_id} after setting API key: {str(e)}")
+                    
+                    # Send agent initialization failure message
+                    await manager.send_message(client_id, {
+                        "type": "AGENT_INITIALIZATION_FAILED",
+                        "message": f"Failed to initialize agent: {str(e)}"
+                    })
+            
             # Send success response
             await manager.send_message(client_id, {
                 "type": "API_KEY_SET",

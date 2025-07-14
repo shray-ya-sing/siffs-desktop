@@ -9,11 +9,7 @@ from langgraph.store.memory import InMemoryStore
 from langchain_google_genai import ChatGoogleGenerativeAI
 import logging
 logger = logging.getLogger(__name__)
-# Setup path
-ai_services_path = Path(__file__).parent.parent
-sys.path.append(str(ai_services_path))
-
-# Add API key management
+# Setup path to python-server root
 python_server_path = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(python_server_path))
 from api_key_management.providers.gemini_provider import GeminiProvider
