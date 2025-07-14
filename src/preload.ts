@@ -91,6 +91,15 @@ const electronAPI = {
     moveFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('move-file', sourcePath, destinationPath),
   },
 
+  // Window controls
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    unmaximize: () => ipcRenderer.invoke('window:unmaximize'),
+    isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  },
+
   // File watcher operations
   fileWatcher: {
     startWatching: (directoryPath: string) => ipcRenderer.invoke('file-watcher:start-watching', directoryPath),

@@ -339,6 +339,44 @@ function setupIpcHandlers(): void {
     }
   });
 
+  // Window control handlers
+  ipcMain.handle('window:minimize', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      window.minimize();
+    }
+  });
+
+  ipcMain.handle('window:close', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      window.close();
+    }
+  });
+
+  ipcMain.handle('window:maximize', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      if (window.isMaximized()) {
+        window.unmaximize();
+      } else {
+        window.maximize();
+      }
+    }
+  });
+
+  ipcMain.handle('window:unmaximize', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      window.unmaximize();
+    }
+  });
+
+  ipcMain.handle('window:is-maximized', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    return window ? window.isMaximized() : false;
+  });
+
 }
 
 // Define allowed environment variables

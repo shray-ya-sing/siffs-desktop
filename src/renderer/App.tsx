@@ -19,6 +19,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import AuthLoading from './components/loading/AuthLoading';
 import { AgentChatPage } from './pages/agent-chat/AgentChatPage';
 import { FileItem } from './hooks/useFileTree';
+import { TitleBar } from './components/titlebar/TitleBar';
 
 // Extend the Location interface to include state
 type LocationState = {
@@ -82,7 +83,8 @@ function AppRouter() {
         <Route path="/" element={
           <ProtectedRoute>
             <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <TitleBar />
+              <div className="flex-1 flex flex-col overflow-hidden pt-8">
                 <HomePage />
               </div>
             </div>
@@ -91,7 +93,8 @@ function AppRouter() {
         <Route path="/settings" element={
           <ProtectedRoute>
             <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <TitleBar />
+              <div className="flex-1 flex flex-col overflow-hidden pt-8">
                 <SettingsPage />
               </div>
             </div>
@@ -100,7 +103,8 @@ function AppRouter() {
         <Route path="/agent-chat" element={
           <ProtectedRoute>
             <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <TitleBar />
+              <div className="flex-1 flex flex-col overflow-hidden pt-8">
                 <AgentChatPage />
               </div>
             </div>
