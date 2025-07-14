@@ -6,6 +6,7 @@ from fastapi import Request
 import shutil
 from pathlib import Path
 import atexit
+from cache_management import initialize_cache_service, shutdown_cache_service
 
 
 # Set UTF-8 encoding for all outputs
@@ -133,6 +134,14 @@ async def startup_event():
     logger.info("Starting up...WordCacheHandler initialized")
     from api_key_management.handlers.api_key_handler import api_key_handler
     logger.info("Starting up...APIKeyHandler initialized")
+    
+    # Initialize cache service
+    try:
+        server_dir = Path(__file__).parent
+        cache_service = initialize_cache_service(server_dir)
+        logger.info("Starting up...Cache service initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize cache service: {e}")
 
     
     # Print all registered routes
@@ -228,6 +237,17 @@ async def log_requests(request: Request, call_next):
     logger.info(f"=== RESPONSE: {response.status_code} ===")
     return response
 
+
+# Register cleanup function to run on exit
+def cleanup_on_exit():
+    """Cleanup function to run on application exit"""
+    try:
+        shutdown_cache_service()
+        logger.info("Cache service shut down successfully")
+    except Exception as e:
+        logger.error(f"Error shutting down cache service: {e}")
+
+atexit.register(cleanup_on_exit)
 
 if __name__ == '__main__':
     import uvicorn

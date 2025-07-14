@@ -13,6 +13,9 @@ from api.websocket_manager import manager
 import asyncio
 import logging
 
+# Import the new cache manager
+from cache_management.cache_manager import CacheManager
+
 logger = logging.getLogger(__name__)
 
 class PowerPointOrchestrator:
@@ -20,6 +23,10 @@ class PowerPointOrchestrator:
     
     def __init__(self):
         self.setup_event_handlers()
+        
+        # Initialize cache manager
+        server_dir = Path(__file__).parent.parent.parent
+        self.cache_manager = CacheManager(server_dir)
     
     def setup_event_handlers(self):
         """Register event handlers for PowerPoint extraction flow"""
@@ -243,29 +250,8 @@ class PowerPointOrchestrator:
 
 
     def update_file_mapping(self, original_path: str, temp_path: str):
-        """Update the file mappings with a new entry."""
-        MAPPINGS_FILE = Path(__file__).parent.parent.parent / "metadata" / "__cache" / "files_mappings.json"
-        MAPPINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Initialize empty mappings
-        mappings = {}
-        
-        # Only try to read if file exists and has content
-        if MAPPINGS_FILE.exists() and MAPPINGS_FILE.stat().st_size > 0:
-            try:
-                with open(MAPPINGS_FILE, 'r') as f:
-                    mappings = json.load(f)
-            except json.JSONDecodeError:
-                logger.warning("Invalid JSON in mappings file, initializing new mappings")
-        
-        # Update with new mapping
-        mappings[original_path] = temp_path
-        
-        # Write back to file
-        with open(MAPPINGS_FILE, 'w') as f:
-            json.dump(mappings, f, indent=2)
-        
-        logger.info(f"Updated PowerPoint file mapping: {original_path} -> {temp_path}")
+        """Update the file mappings with a new entry using the cache manager."""
+        self.cache_manager.update_file_mapping(original_path, temp_path, cleanup_old=True)
 
 # Create global orchestrator instance
 orchestrator = PowerPointOrchestrator()
