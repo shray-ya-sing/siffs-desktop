@@ -25,6 +25,7 @@ import { fileProcessingService } from '../services/fileProcessingService';
 
 import ContextMenu, { ContextMenuItem } from '../components/ui/ContextMenu';
 import CreateFileDialog from '../components/ui/CreateFileDialog';
+import RenameDialog from '../components/ui/RenameDialog';
 
 export interface FileItem {
   name: string;
@@ -316,6 +317,8 @@ export const FileExplorer = ({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createDialogIsDirectory, setCreateDialogIsDirectory] = useState(false);
   const [createDialogParentPath, setCreateDialogParentPath] = useState('');
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);  
+  const [renameItem, setRenameItem] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null);
 
   const showContextMenu = (event: React.MouseEvent, item: FileItem) => {
     console.log('🖱️ Context menu triggered for item:', item.name, 'at position:', { x: event.clientX, y: event.clientY });
@@ -335,11 +338,9 @@ export const FileExplorer = ({
       { label: 'Copy Path', action: () => electron.fileSystem.copyToClipboard(item.path) },
       {
         label: 'Rename',
-        action: async () => {
-          const newName = prompt('Enter new name:', item.name);
-          if (newName) {
-            await electron.fileSystem.renameFile(item.path, newName);
-          }
+        action: () => {
+          setRenameItem({ path: item.path, name: item.name, isDirectory: item.isDirectory });
+          setRenameDialogOpen(true);
         }
       },
       {
@@ -453,6 +454,29 @@ export const FileExplorer = ({
         onConfirm={handleCreateFile}
         isDirectory={createDialogIsDirectory}
         parentPath={createDialogParentPath}
+      />
+
+      <RenameDialog
+        isOpen={renameDialogOpen}
+        onClose={() => setRenameDialogOpen(false)}
+        onConfirm={async (newName) => {
+          if (renameItem) {
+            try {
+              const result = await (window as any).electron.fileSystem.renameFile(renameItem.path, newName);
+              if (result.success) {
+                console.log('File renamed successfully:', result.newPath);
+              } else {
+                console.error('Failed to rename file:', result.error);
+                alert('Failed to rename file: ' + result.error);
+              }
+            } catch (error) {
+              console.error('Error renaming file:', error);
+              alert('An error occurred while renaming the file/folder');
+            }
+          }
+        }}
+        currentName={renameItem?.name || ''}
+        isDirectory={renameItem?.isDirectory || false}
       />
     </div>
   );
