@@ -1,5 +1,5 @@
 // File: src/renderer/components/workspace/FileExplorer.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Folder, 
   FolderOpen, 
@@ -13,6 +13,8 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
+import { fileWatcherService, FileWatcherService, FileChangeEvent } from '../services/fileWatcherService';
+import { fileProcessingService } from '../services/fileProcessingService';
 
 export interface FileItem {
   name: string;
@@ -153,6 +155,49 @@ export const FileExplorer = ({
   const [fileTree, setFileTree] = useState<FileItem[]>(() => 
     files.map(file => ({ ...file, expanded: false }))
   );
+  const [watcherPath, setWatcherPath] = useState<string | null>(null);
+
+  // Set up file watcher when files change
+  useEffect(() => {
+    const handleFileChange = (event: FileChangeEvent) => {
+      console.log('File change detected in FileExplorer:', event);
+      
+      // Forward all file change events to the file processing service
+      // This handles cache invalidation and automatic backend processing
+      fileProcessingService.handleFileChange(event);
+      
+      // Add new files/directories to the tree
+      if (event.type === 'add' || event.type === 'addDir') {
+        const newItem: FileItem = {
+          name: event.relativePath.split('/').pop() || '',
+          path: event.relativePath,
+          isDirectory: event.type === 'addDir',
+          expanded: false
+        };
+        
+        setFileTree(currentTree => {
+          // Check if item already exists to prevent duplicates
+          const exists = findFileInTree(currentTree, newItem.path);
+          if (exists) return currentTree;
+          
+          return addFileToTree(currentTree, newItem);
+        });
+      }
+      
+      // Remove files/directories from the tree
+      if (event.type === 'unlink' || event.type === 'unlinkDir') {
+        setFileTree(currentTree => removeFileFromTree(currentTree, event.relativePath));
+      }
+      
+      // For file changes, the file processing service handles metadata refresh
+      if (event.type === 'change' && FileWatcherService.shouldProcessFile(event.relativePath)) {
+        console.log('Supported file changed, automatic processing queued:', event.relativePath);
+      }
+    };
+
+    const unsubscribe = fileWatcherService.onFileChange(handleFileChange);
+    return () => unsubscribe();
+  }, []);
 
   const toggleExpand = (item: FileItem) => {
     const updateItem = (items: FileItem[]): FileItem[] => {
@@ -174,6 +219,77 @@ export const FileExplorer = ({
     if (onFileSelect && !file.isDirectory) {
       onFileSelect(file);
     }
+  };
+
+  // Helper function to find a file in the tree
+  const findFileInTree = (tree: FileItem[], path: string): FileItem | null => {
+    for (const item of tree) {
+      if (item.path === path) {
+        return item;
+      }
+      if (item.children) {
+        const found = findFileInTree(item.children, path);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  // Helper function to add a file to the tree
+  const addFileToTree = (tree: FileItem[], newItem: FileItem): FileItem[] => {
+    const pathParts = newItem.path.split('/');
+    
+    // If it's a root level item
+    if (pathParts.length === 1) {
+      return [...tree, newItem];
+    }
+    
+    // Find the parent directory
+    const parentPath = pathParts.slice(0, -1).join('/');
+    
+    return tree.map(item => {
+      if (item.path === parentPath && item.isDirectory) {
+        return {
+          ...item,
+          children: [...(item.children || []), newItem]
+        };
+      }
+      
+      if (item.children) {
+        return {
+          ...item,
+          children: addFileToTree(item.children, newItem)
+        };
+      }
+      
+      return item;
+    });
+  };
+
+  // Helper function to remove a file from the tree
+  const removeFileFromTree = (tree: FileItem[], path: string): FileItem[] => {
+    return tree.filter(item => {
+      if (item.path === path) {
+        return false; // Remove this item
+      }
+      
+      if (item.children) {
+        return {
+          ...item,
+          children: removeFileFromTree(item.children, path)
+        };
+      }
+      
+      return true;
+    }).map(item => {
+      if (item.children) {
+        return {
+          ...item,
+          children: removeFileFromTree(item.children, path)
+        };
+      }
+      return item;
+    });
   };
 
   console.log("Rendering File tree:", fileTree);
