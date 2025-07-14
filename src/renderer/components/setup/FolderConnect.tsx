@@ -166,8 +166,22 @@ import MainLogo from '../logo/MainLogo'
       try {
         // Scan the directory using IPC call to main process
         const electron = (window as any).electron;
-        if (!electron?.ipcRenderer) {
-          throw new Error('Electron IPC not available');
+        console.log('Checking electron API for directory scanning:', {
+          electron: !!electron,
+          ipcRenderer: !!electron?.ipcRenderer,
+          invoke: !!electron?.ipcRenderer?.invoke
+        });
+        
+        if (!electron) {
+          throw new Error('Electron API not available - check preload script');
+        }
+        
+        if (!electron.ipcRenderer) {
+          throw new Error('Electron IPC renderer not available');
+        }
+        
+        if (!electron.ipcRenderer.invoke) {
+          throw new Error('Electron IPC invoke method not available');
         }
         
         // Request file scanning from main process
@@ -367,10 +381,31 @@ import MainLogo from '../logo/MainLogo'
       setDiscoveryMessages([]);
     
       try {
+        // Check if we're running in Electron environment
+        console.log('Window object keys:', Object.keys(window));
+        console.log('Window.electron:', (window as any).electron);
+        console.log('Window.electronAPI:', (window as any).electronAPI);
+        
         // Use Electron's native dialog instead of File System Access API
         const electron = (window as any).electron;
-        if (!electron?.ipcRenderer) {
-          throw new Error('Electron IPC not available');
+        console.log('Checking electron API availability:', {
+          electron: !!electron,
+          electronType: typeof electron,
+          electronKeys: electron ? Object.keys(electron) : [],
+          ipcRenderer: !!electron?.ipcRenderer,
+          invoke: !!electron?.ipcRenderer?.invoke
+        });
+        
+        if (!electron) {
+          throw new Error('Electron API not available - check preload script');
+        }
+        
+        if (!electron.ipcRenderer) {
+          throw new Error('Electron IPC renderer not available');
+        }
+        
+        if (!electron.ipcRenderer.invoke) {
+          throw new Error('Electron IPC invoke method not available');
         }
         
         const result = await electron.ipcRenderer.invoke('dialog:show-directory-picker');
