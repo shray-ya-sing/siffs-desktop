@@ -320,6 +320,16 @@ export const FileExplorer = ({
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);  
   const [renameItem, setRenameItem] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null);
 
+  // Helper function to resolve relative path to absolute path
+  const resolveToAbsolutePath = (relativePath: string): string => {
+    const processingContext = (fileProcessingService as any).processingContext;
+    if (processingContext && processingContext.workspacePath) {
+      return `${processingContext.workspacePath}/${relativePath}`.replace(/\/+/g, '/');
+    }
+    // Fallback to relative path if no workspace context
+    return relativePath;
+  };
+
   const showContextMenu = (event: React.MouseEvent, item: FileItem) => {
     console.log('🖱️ Context menu triggered for item:', item.name, 'at position:', { x: event.clientX, y: event.clientY });
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
@@ -327,19 +337,22 @@ export const FileExplorer = ({
     // Type assertion to ensure TypeScript recognizes the full electron API
     const electron = (window as any).electron;
 
+    // Resolve item path to absolute path for file operations
+    const absolutePath = resolveToAbsolutePath(item.path);
+
     const commonItems: ContextMenuItem[] = [
       {
         label: 'Reveal in File Explorer',
-        action: () => electron.fileSystem.revealInExplorer(item.path),
+        action: () => electron.fileSystem.revealInExplorer(absolutePath),
         disabled: item.isDirectory
       },
       { label: 'Cut', action: () => {/* implementation */}, disabled: true },
-      { label: 'Copy', action: () => electron.fileSystem.copyToClipboard(item.path) },
-      { label: 'Copy Path', action: () => electron.fileSystem.copyToClipboard(item.path) },
+      { label: 'Copy', action: () => electron.fileSystem.copyToClipboard(absolutePath) },
+      { label: 'Copy Path', action: () => electron.fileSystem.copyToClipboard(absolutePath) },
       {
         label: 'Rename',
         action: () => {
-          setRenameItem({ path: item.path, name: item.name, isDirectory: item.isDirectory });
+          setRenameItem({ path: absolutePath, name: item.name, isDirectory: item.isDirectory });
           setRenameDialogOpen(true);
         }
       },
@@ -349,9 +362,9 @@ export const FileExplorer = ({
           const confirmed = confirm(`Are you sure you want to delete ${item.name}?`);
           if (confirmed) {
             if (item.isDirectory) {
-              await electron.fileSystem.deleteDirectory(item.path);
+              await electron.fileSystem.deleteDirectory(absolutePath);
             } else {
-              await electron.fileSystem.deleteFile(item.path);
+              await electron.fileSystem.deleteFile(absolutePath);
             }
           }
         },
@@ -364,7 +377,7 @@ export const FileExplorer = ({
         label: 'New File...',
         action: () => {
           setCreateDialogIsDirectory(false);
-          setCreateDialogParentPath(item.path);
+          setCreateDialogParentPath(absolutePath);
           setShowCreateDialog(true);
         }
       },
@@ -372,7 +385,7 @@ export const FileExplorer = ({
         label: 'New Folder...',
         action: () => {
           setCreateDialogIsDirectory(true);
-          setCreateDialogParentPath(item.path);
+          setCreateDialogParentPath(absolutePath);
           setShowCreateDialog(true);
         }
       }
@@ -381,7 +394,7 @@ export const FileExplorer = ({
     const fileSpecificItems: ContextMenuItem[] = [
       {
         label: 'Open With...',
-        action: () => electron.fileSystem.openWithDefault(item.path),
+        action: () => electron.fileSystem.openWithDefault(absolutePath),
         disabled: item.isDirectory
       }
     ];
