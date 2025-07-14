@@ -88,6 +88,7 @@ const electronAPI = {
     copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
     openWithDefault: (filePath: string) => ipcRenderer.invoke('open-with-default', filePath),
     copyFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('copy-file', sourcePath, destinationPath),
+    moveFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('move-file', sourcePath, destinationPath),
   },
 
   // File watcher operations

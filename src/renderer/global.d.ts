@@ -64,6 +64,7 @@ declare global {
       copyToClipboard: (text: string) => Promise<{ success: boolean; error?: string }>;
       openWithDefault: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       copyFile: (sourcePath: string, destinationPath: string) => Promise<{ success: boolean; destinationPath?: string; error?: string }>;
+      moveFile: (sourcePath: string, destinationPath: string) => Promise<{ success: boolean; destinationPath?: string; error?: string }>;
     };
       fileWatcher: {
         startWatching: (directoryPath: string) => Promise<any>;

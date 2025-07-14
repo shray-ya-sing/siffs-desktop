@@ -94,13 +94,23 @@ const FileTreeItem = ({
   level = 0, 
   onToggle, 
   onSelect,
-  showContextMenu
+  showContextMenu,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  draggedItem,
+  dragOverItem
 }: { 
   item: FileItem; 
   level: number; 
   showContextMenu: (event: React.MouseEvent, item: FileItem) => void;
   onToggle: (item: FileItem) => void;
   onSelect?: (item: FileItem) => void;
+  onDragStart?: (item: FileItem) => void;
+  onDragOver?: (event: React.DragEvent, item: FileItem) => void;
+  onDrop?: (event: React.DragEvent, item: FileItem) => void;
+  draggedItem?: FileItem | null;
+  dragOverItem?: FileItem | null;
 }) => {
   const isExpandable = item.isDirectory && (item.children?.length ?? 0) > 0;
   
@@ -110,10 +120,47 @@ const FileTreeItem = ({
         className={`
           flex items-center py-1.5 px-3 rounded-md mx-2 my-0.5
           ${!item.isDirectory ? 'hover:bg-gray-700/40' : ''}
+          ${draggedItem?.path === item.path ? 'opacity-50' : ''}
+          ${dragOverItem?.path === item.path && item.isDirectory ? 'bg-blue-600/30 border border-blue-500' : ''}
           transition-colors duration-150
           ${level > 0 ? 'ml-2' : ''}
+          cursor-pointer
         `}
-style={{ paddingLeft: `${level * 12 + 8}px` }}
+        style={{ paddingLeft: `${level * 12 + 8}px` }}
+        draggable={true}
+        onDragStart={(e) => {
+          e.stopPropagation();
+          if (onDragStart) {
+            onDragStart(item);
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onDragOver && item.isDirectory) {
+            onDragOver(e, item);
+          }
+        }}
+        onDragLeave={(e) => {
+          e.stopPropagation();
+          // Only clear drag over if we're leaving the actual item
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = e.clientX;
+          const y = e.clientY;
+          
+          if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            if (onDragOver) {
+              onDragOver(e, null as any);
+            }
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onDrop && item.isDirectory) {
+            onDrop(e, item);
+          }
+        }}
         onClick={() => {
             if (item.isDirectory) {
               onToggle(item);
@@ -158,6 +205,11 @@ style={{ paddingLeft: `${level * 12 + 8}px` }}
               onToggle={onToggle}
               onSelect={onSelect}
               showContextMenu={showContextMenu}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              draggedItem={draggedItem}
+              dragOverItem={dragOverItem}
             />
           ))}
         </div>
@@ -321,6 +373,8 @@ export const FileExplorer = ({
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);  
   const [renameItem, setRenameItem] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null);
   const [copiedFile, setCopiedFile] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null);
+  const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<FileItem | null>(null);
 
   // Helper function to resolve relative path to absolute path
   const resolveToAbsolutePath = (relativePath: string): string => {
@@ -506,6 +560,66 @@ export const FileExplorer = ({
     setShowCreateDialog(false);
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (item: FileItem) => {
+    console.log('🚚 Drag started for:', item.name);
+    setDraggedItem(item);
+  };
+
+  const handleDragOver = (event: React.DragEvent, targetItem: FileItem | null) => {
+    if (targetItem && targetItem.isDirectory) {
+      setDragOverItem(targetItem);
+    } else {
+      setDragOverItem(null);
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent, targetItem: FileItem) => {
+    console.log('📁 Drop detected:', { draggedItem, targetItem });
+    
+    if (!draggedItem || !targetItem.isDirectory || draggedItem.path === targetItem.path) {
+      setDraggedItem(null);
+      setDragOverItem(null);
+      return;
+    }
+
+    // Prevent dropping a folder into itself or its children
+    if (draggedItem.isDirectory && targetItem.path.startsWith(draggedItem.path)) {
+      console.warn('Cannot move folder into itself or its children');
+      alert('Cannot move a folder into itself or its children');
+      setDraggedItem(null);
+      setDragOverItem(null);
+      return;
+    }
+
+    try {
+      const electron = (window as any).electron;
+      const sourceAbsolutePath = resolveToAbsolutePath(draggedItem.path);
+      const targetAbsolutePath = resolveToAbsolutePath(targetItem.path);
+      const destinationPath = targetAbsolutePath + (navigator.platform.toLowerCase().includes('win') ? '\\' : '/') + draggedItem.name;
+      
+      console.log('🚚 Moving file/folder:', {
+        source: sourceAbsolutePath,
+        destination: destinationPath
+      });
+      
+      const result = await electron.fileSystem.moveFile(sourceAbsolutePath, destinationPath);
+      
+      if (result.success) {
+        console.log('✅ File/folder moved successfully:', result.destinationPath);
+      } else {
+        console.error('❌ Failed to move file/folder:', result.error);
+        alert('Failed to move file/folder: ' + result.error);
+      }
+    } catch (error) {
+      console.error('❌ Error moving file/folder:', error);
+      alert('An error occurred while moving the file/folder');
+    }
+    
+    setDraggedItem(null);
+    setDragOverItem(null);
+  };
+
   const showWorkspaceContextMenu = (event: React.MouseEvent) => {
     // Only show workspace context menu if the target is the container itself or the py-2 div
     const target = event.target as HTMLElement;
@@ -602,6 +716,11 @@ export const FileExplorer = ({
                 level={0}
                 onToggle={toggleExpand}
                 onSelect={onFileSelect}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                draggedItem={draggedItem}
+                dragOverItem={dragOverItem}
               />
             ))}
           </>
