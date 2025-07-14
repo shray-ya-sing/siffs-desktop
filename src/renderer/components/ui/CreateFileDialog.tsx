@@ -8,6 +8,11 @@ interface CreateFileDialogProps {
   onConfirm: (name: string, template?: string) => void;
   isDirectory: boolean;
   parentPath: string;
+  fileType?: {
+    label: string;
+    extension: string;
+    template: string;
+  };
 }
 
 interface FileTemplate {
@@ -103,10 +108,21 @@ export const CreateFileDialog: React.FC<CreateFileDialogProps> = ({
   onClose,
   onConfirm,
   isDirectory,
-  parentPath
+  parentPath,
+  fileType
 }) => {
   const [name, setName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<FileTemplate | null>(null);
+
+  // Pre-select template based on fileType prop
+  React.useEffect(() => {
+    if (fileType && isOpen) {
+      const matchingTemplate = FILE_TEMPLATES.find(t => 
+        t.extension === fileType.extension && t.template === fileType.template
+      );
+      setSelectedTemplate(matchingTemplate || null);
+    }
+  }, [fileType, isOpen]);
 
   const handleConfirm = () => {
     if (!name.trim()) return;

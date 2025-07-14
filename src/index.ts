@@ -1,10 +1,11 @@
-import { app, BrowserWindow, session, ipcMain, dialog, shell, clipboard } from 'electron';
-import { spawn, ChildProcess, execSync } from 'child_process';
+import { app, BrowserWindow, ipcMain, shell, dialog, clipboard, session } from 'electron';
 import * as path from 'path';
-import { FileWatcherService } from './main/services/fileWatcherService';
 import * as fs from 'fs';
 import log from 'electron-log';
+import { spawn, ChildProcess } from 'child_process';
 import * as dotenv from 'dotenv';
+import { FileWatcherService } from './main/services/fileWatcherService';
+import * as ExcelJS from 'exceljs';
 
 //---------------------------------LOGGING CONFIG------------------------------------------------------
 // Configure electron-log - add this before any other code
@@ -34,6 +35,58 @@ let pythonProcess: any = null;
 let fileWatcherService: FileWatcherService | null = null;
 
 //---------------------------------MAIN PROCESS STARTS HERE------------------------------------------------------
+
+/**
+ * Create a proper Excel file using ExcelJS
+ */
+async function createExcelFile(filePath: string): Promise<void> {
+  console.log('🔧 Creating Excel file at:', filePath);
+  
+  try {
+    // Test if ExcelJS is available
+    console.log('🔧 ExcelJS module:', typeof ExcelJS);
+    console.log('🔧 ExcelJS.Workbook:', typeof ExcelJS.Workbook);
+    
+    const workbook = new ExcelJS.Workbook();
+    console.log('🔧 ExcelJS workbook created successfully');
+    
+    // Add a simple worksheet
+    const worksheet = workbook.addWorksheet('Sheet1');
+    console.log('🔧 Worksheet "Sheet1" added');
+    
+    // Add minimal content
+    
+    // Write the file
+    console.log('🔧 Writing Excel file to disk...');
+    await workbook.xlsx.writeFile(filePath);
+    console.log('✅ Excel file written successfully');
+    
+    // Verify the file was created and check its size
+    if (fs.existsSync(filePath)) {
+      const stats = fs.statSync(filePath);
+      console.log('✅ File verification successful:');
+      console.log('  - Path:', filePath);
+      console.log('  - Size:', stats.size, 'bytes');
+      console.log('  - Created:', stats.birthtime);
+      console.log('  - Modified:', stats.mtime);
+      
+      // Check if file size is reasonable (empty Excel files are typically 5-10KB)
+      if (stats.size < 1000) {
+        console.warn('⚠️ File size seems too small for a valid Excel file');
+      } else {
+        console.log('✅ File size looks reasonable for Excel format');
+      }
+    } else {
+      console.error('❌ File was not created at expected path');
+      throw new Error('File creation failed - file not found after write operation');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error creating Excel file:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    throw error; // Re-throw to propagate the error
+  }
+}
 
 /**
  * Get template content for different file types
@@ -124,13 +177,18 @@ function setupIpcHandlers(): void {
     try {
       const filePath = path.join(dirPath, fileName);
       
-      let content = '';
-      if (template) {
-        // Create template content based on file type
-        content = getTemplateContent(template, fileName);
+      // Special handling for Excel files
+      if (template === 'excel' && (fileName.endsWith('.xlsx') || fileName.endsWith('.xls'))) {
+        await createExcelFile(filePath);
+      } else {
+        // For other file types, use the existing template system
+        let content = '';
+        if (template) {
+          content = getTemplateContent(template, fileName);
+        }
+        await fs.promises.writeFile(filePath, content);
       }
       
-      await fs.promises.writeFile(filePath, content);
       return { success: true, filePath };
     } catch (error) {
       console.error('Error creating file:', error);
