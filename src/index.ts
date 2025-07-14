@@ -34,8 +34,6 @@ let pythonProcess: any = null;
 //---------------------------------MAIN PROCESS STARTS HERE------------------------------------------------------
 // Debug: Log loaded environment variables
 console.log('Environment variables loaded:', {
-  SUPABASE_URL: process.env.REACT_APP_SUPABASE_URL ? '***' : 'NOT FOUND',
-  SUPABASE_ANON_KEY: process.env.REACT_APP_SUPABASE_ANON_KEY ? '***' : 'NOT FOUND',
   NODE_ENV: process.env.NODE_ENV || 'development'
 });
 
@@ -47,8 +45,6 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 // Define allowed environment variables
 const ALLOWED_ENV_KEYS = [
-  'REACT_APP_SUPABASE_URL',
-  'REACT_APP_SUPABASE_ANON_KEY',
   'NODE_ENV'
 ];
 
@@ -248,7 +244,7 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const csp = [
       "default-src 'self'",
-      "connect-src 'self' ws://localhost:3001 ws://127.0.0.1:3001 ws://localhost:5001 ws://127.0.0.1:5001 http://localhost:3001 http://127.0.0.1:3001 http://localhost:5001 http://127.0.0.1:5001 https://*.supabase.co https://aahtbntnjeppixdounji.supabase.co",
+      "connect-src 'self' ws://localhost:3001 ws://127.0.0.1:3001 ws://localhost:5001 ws://127.0.0.1:5001 http://localhost:3001 http://127.0.0.1:3001 http://localhost:5001 http://127.0.0.1:5001 https://volute-auth-proxy.vercel.app",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",

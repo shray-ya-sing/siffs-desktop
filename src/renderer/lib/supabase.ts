@@ -1,36 +1,16 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+// This file is now deprecated - we use the auth proxy instead of direct Supabase client
+// Keeping this file for backward compatibility but all auth is now handled via the proxy
 
-// Get Supabase credentials from environment variables
-const SUPABASE_URL = 'https://aahtbntnjeppixdounji.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhaHRibnRuamVwcGl4ZG91bmppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NTgyMzQsImV4cCI6MjA2NDAzNDIzNH0.-2u_pZiayWoqyNBW4iUaROyvQqtVpFJ-VLxhkAqmPJA';
+// Note: This app now uses the backend auth proxy at https://your-proxy-domain.vercel.app/api/auth/*
+// No Supabase credentials are needed in the frontend anymore
 
-// Create the Supabase client with consistent configuration
-const createSupabaseClient = () => {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false, // Important for Electron apps
-      storageKey: 'cori-auth-token',
-    },
-    global: {
-      headers: {
-        'X-Client-Info': 'cori-app'
-      }
-    }
-  });
+console.warn('⚠️  supabase.ts is deprecated - this app now uses the auth proxy. Please use authAPI service instead.');
+
+// Export empty objects to prevent breaking existing imports
+export const supabase = null;
+export const getCurrentSession = () => {
+  throw new Error('getCurrentSession is deprecated - use sessionStorage.getSession() instead');
 };
-
-// Single consistent client instance
-export const supabase = createSupabaseClient();
-
-// Helper functions using the consistent client
-export const getCurrentSession = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-};
-
-export const getCurrentUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+export const getCurrentUser = () => {
+  throw new Error('getCurrentUser is deprecated - use sessionStorage.getUser() instead');
 };

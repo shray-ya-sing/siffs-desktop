@@ -87,9 +87,7 @@ export const rendererConfig: Configuration = {
     }),
     new webpack.DefinePlugin({
       'process.env': JSON.stringify({
-        NODE_ENV: mergedEnv.NODE_ENV || 'development',
-        REACT_APP_SUPABASE_URL: mergedEnv.REACT_APP_SUPABASE_URL || '',
-        REACT_APP_SUPABASE_ANON_KEY: mergedEnv.REACT_APP_SUPABASE_ANON_KEY || ''
+        NODE_ENV: mergedEnv.NODE_ENV || 'development'
       })
     })
   ],

@@ -261,15 +261,15 @@ class WebSocketService {
 
   private async sendUserIdToBackend(): Promise<void> {
     try {
-      const { supabase } = require('../../lib/supabase');
-      const { data } = await supabase.auth.getUser();
-      if (data?.user?.id) {
-        console.log('Sending user ID to backend:', data.user.id);
+      const { sessionStorage } = require('../../services/session-storage.service');
+      const user = sessionStorage.getUser();
+      if (user?.id) {
+        console.log('Sending user ID to backend:', user.id);
         this.sendMessage({
           type: 'USER_AUTHENTICATION',
           data: {
-            user_id: data.user.id,
-            email: data.user.email
+            user_id: user.id,
+            email: user.email
           }
         });
       } else {

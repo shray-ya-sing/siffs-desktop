@@ -2,8 +2,6 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Define allowed environment variables
 const ALLOWED_KEYS = [
-  'REACT_APP_SUPABASE_URL',
-  'REACT_APP_SUPABASE_ANON_KEY',
   'NODE_ENV'
 ];
 

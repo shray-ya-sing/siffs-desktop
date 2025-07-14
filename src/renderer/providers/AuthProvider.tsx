@@ -1,75 +1,72 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { authAPI, AuthUser, AuthSession } from '../services/auth-api.service';
+import { sessionStorage } from '../services/session-storage.service';
 
 type AuthContextType = {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: AuthSession | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signUp: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ data: any; error: any }>;
-  updatePassword: (newPassword: string) => Promise<{ data: any; error: any }>;
+  updatePassword: (email: string, newPassword: string) => Promise<{ data: any; error: any }>;
   verifyOtp: (email: string, token: string, type?: 'email' | 'recovery') => Promise<{ data: any; error: any }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const setupAuthListener = useCallback(() => {
+  const initializeAuth = useCallback(async () => {
     try {
-      // Set initial session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-      });
+      // Try to load existing session from storage
+      const savedSession = sessionStorage.getSession();
+      const savedUser = sessionStorage.getUser();
       
-      // Listen for auth state changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-      });
+      if (savedSession && savedUser) {
+        // Validate the session by trying to get user profile
+        try {
+          const { data: profileData, error } = await authAPI.getUserProfile();
+          if (!error && profileData) {
+            setSession(savedSession.session);
+            setUser(savedUser);
+          } else {
+            // Session is invalid, clear it
+            sessionStorage.clear();
+          }
+        } catch (error) {
+          // Session validation failed, clear it
+          sessionStorage.clear();
+        }
+      }
       
-      return () => {
-        subscription?.unsubscribe();
-      };
+      setIsLoading(false);
     } catch (error) {
-      console.error('Auth setup error:', error);
+      console.error('Auth initialization error:', error);
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const cleanup = setupAuthListener();
-    return cleanup;
-  }, [setupAuthListener]);
+    initializeAuth();
+  }, [initializeAuth]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await authAPI.signIn(email, password);
       
-      if (error) {
-        // Handle specific error cases
-        if (error.status === 400) {
-          error.message = 'Invalid email or password';
-        } else if (error.status === 429) {
-          error.message = 'Too many attempts. Please try again later.';
-        }
+      if (!error && data && data.user && data.session) {
+        setUser(data.user);
+        setSession(data.session);
+        sessionStorage.setSession(data.user, data.session);
       }
       
       return { data, error };
     } catch (error) {
-      // Don't log to console, just return a clean error
       return { 
         data: null, 
         error: { 
@@ -82,21 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = useCallback(async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      
-      if (error) {
-        console.error('Sign up error:', error);
-      }
-      
+      const { data, error } = await authAPI.signUp(email, password);
       return { data, error };
     } catch (error) {
-      console.error('Sign up exception:', error);
       return { 
         data: null, 
         error: { 
@@ -109,36 +94,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      await authAPI.signOut();
+      setUser(null);
+      setSession(null);
+      sessionStorage.clear();
     } catch (error) {
-      // Silently handle sign out errors
+      // Even if the API call fails, clear local state
+      setUser(null);
+      setSession(null);
+      sessionStorage.clear();
+      
       if (process.env.NODE_ENV === 'development') {
         console.warn('Sign out warning:', error);
       }
-      throw error;
     }
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
     try {
-      // Send OTP code to email for password recovery
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          shouldCreateUser: false, // Don't create new user if doesn't exist
-          data: {
-            type: 'recovery' // Specify this is for password recovery
-          }
-        }
-      });
-      
-      if (error) {
-        console.error('Reset password error:', error);
-      }
-      
+      const { data, error } = await authAPI.resetPassword(email);
       return { data, error };
     } catch (error) {
-      console.error('Reset password exception:', error);
       return { 
         data: null, 
         error: { 
@@ -149,19 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const updatePassword = useCallback(async (newPassword: string) => {
+  const updatePassword = useCallback(async (email: string, newPassword: string) => {
     try {
-      const { data, error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      
-      if (error) {
-        console.error('Update password error:', error);
-      }
-      
+      const { data, error } = await authAPI.updatePassword(email, newPassword);
       return { data, error };
     } catch (error) {
-      console.error('Update password exception:', error);
       return { 
         data: null, 
         error: { 
@@ -174,19 +142,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyOtp = useCallback(async (email: string, token: string, type: 'email' | 'recovery' = 'recovery') => {
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: email,
-        token: token,
-        type: type // Use 'recovery' for password reset, 'email' for login
-      });
+      const { data, error } = await authAPI.verifyOtp(email, token, type);
       
-      if (error) {
-        console.error('Verify OTP error:', error);
+      if (!error && data && data.user && data.session) {
+        setUser(data.user);
+        setSession(data.session);
+        sessionStorage.setSession(data.user, data.session);
       }
       
       return { data, error };
     } catch (error) {
-      console.error('Verify OTP exception:', error);
       return { 
         data: null, 
         error: { 
