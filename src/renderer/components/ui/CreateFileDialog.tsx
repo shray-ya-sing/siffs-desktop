@@ -44,62 +44,6 @@ const FILE_TEMPLATES: FileTemplate[] = [
     extension: '.docx',
     icon: <FileText className="w-5 h-5 text-blue-500" />,
     template: 'word'
-  },
-  {
-    id: 'text',
-    label: 'Text File',
-    extension: '.txt',
-    icon: <FileText className="w-5 h-5 text-gray-400" />,
-    template: 'text'
-  },
-  {
-    id: 'markdown',
-    label: 'Markdown File',
-    extension: '.md',
-    icon: <FileText className="w-5 h-5 text-gray-400" />,
-    template: 'markdown'
-  },
-  {
-    id: 'json',
-    label: 'JSON File',
-    extension: '.json',
-    icon: <FileCode className="w-5 h-5 text-yellow-500" />,
-    template: 'json'
-  },
-  {
-    id: 'javascript',
-    label: 'JavaScript File',
-    extension: '.js',
-    icon: <FileCode className="w-5 h-5 text-yellow-400" />,
-    template: 'javascript'
-  },
-  {
-    id: 'typescript',
-    label: 'TypeScript File',
-    extension: '.ts',
-    icon: <FileCode className="w-5 h-5 text-blue-400" />,
-    template: 'typescript'
-  },
-  {
-    id: 'python',
-    label: 'Python File',
-    extension: '.py',
-    icon: <FileCode className="w-5 h-5 text-blue-400" />,
-    template: 'python'
-  },
-  {
-    id: 'html',
-    label: 'HTML File',
-    extension: '.html',
-    icon: <FileCode className="w-5 h-5 text-orange-400" />,
-    template: 'html'
-  },
-  {
-    id: 'css',
-    label: 'CSS File',
-    extension: '.css',
-    icon: <FileCode className="w-5 h-5 text-blue-300" />,
-    template: 'css'
   }
 ];
 
