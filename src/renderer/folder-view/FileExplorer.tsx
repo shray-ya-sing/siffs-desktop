@@ -324,7 +324,17 @@ export const FileExplorer = ({
   const resolveToAbsolutePath = (relativePath: string): string => {
     const processingContext = (fileProcessingService as any).processingContext;
     if (processingContext && processingContext.workspacePath) {
-      return `${processingContext.workspacePath}/${relativePath}`.replace(/\/+/g, '/');
+      // Normalize the relative path to use forward slashes for joining
+      const normalizedRelativePath = relativePath.replace(/\\/g, '/');
+      const fullPath = `${processingContext.workspacePath}/${normalizedRelativePath}`;
+      
+      // On Windows, convert all path separators to backslashes
+      if (navigator.platform.toLowerCase().includes('win')) {
+        return fullPath.replace(/\//g, '\\');
+      }
+      
+      // On other platforms, use forward slashes
+      return fullPath.replace(/\/+/g, '/');
     }
     // Fallback to relative path if no workspace context
     return relativePath;
