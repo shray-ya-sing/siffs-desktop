@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, session, ipcMain, dialog, shell, clipboard } from 'electron';
 import { spawn, ChildProcess, execSync } from 'child_process';
 import * as path from 'path';
 import { FileWatcherService } from './main/services/fileWatcherService';
@@ -36,9 +36,139 @@ let fileWatcherService: FileWatcherService | null = null;
 //---------------------------------MAIN PROCESS STARTS HERE------------------------------------------------------
 
 /**
+ * Get template content for different file types
+ */
+function getTemplateContent(template: string, fileName: string): string {
+  const fileExtension = path.extname(fileName).toLowerCase();
+  
+  switch (template) {
+    case 'excel':
+      // For Excel files, we'll create an empty file that can be opened by Excel
+      // The actual Excel structure will be created when opened
+      return '';
+    case 'powerpoint':
+      // For PowerPoint files, we'll create an empty file
+      return '';
+    case 'word':
+      // For Word files, we'll create an empty file
+      return '';
+    case 'text':
+      return '';
+    case 'markdown':
+      return `# ${path.basename(fileName, fileExtension)}\n\nYour content here...\n`;
+    case 'json':
+      return '{\n  \n}';
+    case 'javascript':
+      return '// JavaScript file\nconsole.log("Hello, World!");\n';
+    case 'typescript':
+      return '// TypeScript file\nconsole.log("Hello, World!");\n';
+    case 'python':
+      return '#!/usr/bin/env python3\n# Python file\n\nif __name__ == "__main__":\n    print("Hello, World!")\n';
+    case 'html':
+      return `<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>${path.basename(fileName, fileExtension)}</title>\n</head>\n<body>\n    <h1>Hello, World!</h1>\n</body>\n</html>\n`;
+    case 'css':
+      return '/* CSS file */\nbody {\n    margin: 0;\n    padding: 0;\n    font-family: Arial, sans-serif;\n}\n';
+    default:
+      return '';
+  }
+}
+
+/**
  * Set up IPC handlers that should be available immediately
  */
 function setupIpcHandlers(): void {
+  // File system operation handlers
+  ipcMain.handle('reveal-in-explorer', async (event, filePath: string) => {
+    try {
+      shell.showItemInFolder(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error revealing file in explorer:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('delete-file', async (event, filePath: string) => {
+    try {
+      await fs.promises.unlink(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('delete-directory', async (event, dirPath: string) => {
+    try {
+      await fs.promises.rmdir(dirPath, { recursive: true });
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting directory:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('rename-file', async (event, oldPath: string, newName: string) => {
+    try {
+      const dir = path.dirname(oldPath);
+      const newPath = path.join(dir, newName);
+      await fs.promises.rename(oldPath, newPath);
+      return { success: true, newPath };
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('create-file', async (event, dirPath: string, fileName: string, template?: string) => {
+    try {
+      const filePath = path.join(dirPath, fileName);
+      
+      let content = '';
+      if (template) {
+        // Create template content based on file type
+        content = getTemplateContent(template, fileName);
+      }
+      
+      await fs.promises.writeFile(filePath, content);
+      return { success: true, filePath };
+    } catch (error) {
+      console.error('Error creating file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('create-directory', async (event, dirPath: string, folderName: string) => {
+    try {
+      const folderPath = path.join(dirPath, folderName);
+      await fs.promises.mkdir(folderPath, { recursive: true });
+      return { success: true, folderPath };
+    } catch (error) {
+      console.error('Error creating directory:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('copy-to-clipboard', async (event, text: string) => {
+    try {
+      clipboard.writeText(text);
+      return { success: true };
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
+  ipcMain.handle('open-with-default', async (event, filePath: string) => {
+    try {
+      await shell.openPath(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error opening file with default app:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
   // Show directory picker dialog
   ipcMain.handle('dialog:show-directory-picker', async (event) => {
     const result = await dialog.showOpenDialog({

@@ -69,6 +69,55 @@ const electronAPI = {
     invoke: (channel: string, ...args: any[]) => {
       return ipcRenderer.invoke(channel, ...args);
     }
+  },
+
+  // File system operations
+  fileSystem: {
+    revealInExplorer: (filePath: string) => ipcRenderer.invoke('reveal-in-explorer', filePath),
+    deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
+    deleteDirectory: (dirPath: string) => ipcRenderer.invoke('delete-directory', dirPath),
+    renameFile: (oldPath: string, newName: string) => ipcRenderer.invoke('rename-file', oldPath, newName),
+    createFile: (dirPath: string, fileName: string, template?: string) => ipcRenderer.invoke('create-file', dirPath, fileName, template),
+    createDirectory: (dirPath: string, folderName: string) => ipcRenderer.invoke('create-directory', dirPath, folderName),
+    copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
+    openWithDefault: (filePath: string) => ipcRenderer.invoke('open-with-default', filePath),
+  },
+
+  // File watcher operations
+  fileWatcher: {
+    startWatching: (directoryPath: string) => ipcRenderer.invoke('file-watcher:start-watching', directoryPath),
+    stopWatching: () => ipcRenderer.invoke('file-watcher:stop-watching'),
+    getWatchedPath: () => ipcRenderer.invoke('file-watcher:get-watched-path'),
+    
+    onFileChange: (callback: (event: any, data: any) => void) => {
+      console.log('Preload: Setting up file-change listener');
+      const handler = (event: any, data: any) => {
+        console.log('Preload: Received file-change event:', { event, data });
+        // Handle case where data might be in event or as separate parameter
+        const eventData = data || event;
+        callback(event, eventData);
+      };
+      ipcRenderer.on('file-change', handler);
+      return () => {
+        console.log('Preload: Removing file-change listener');
+        ipcRenderer.removeListener('file-change', handler);
+      };
+    },
+    
+    onStatusChange: (callback: (event: any, data: any) => void) => {
+      console.log('Preload: Setting up status-change listener');
+      const handler = (event: any, data: any) => {
+        console.log('Preload: Received status-change event:', { event, data });
+        // Handle case where data might be in event or as separate parameter
+        const eventData = data || event;
+        callback(event, eventData);
+      };
+      ipcRenderer.on('status-change', handler);
+      return () => {
+        console.log('Preload: Removing status-change listener');
+        ipcRenderer.removeListener('status-change', handler);
+      };
+    }
   }
 };
 

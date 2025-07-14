@@ -11,10 +11,20 @@ import {
   FileImage, 
   FileCode,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ExternalLink,
+  Copy,
+  Scissors,
+  Edit,
+  Trash2,
+  FolderPlus,
+  FilePlus
 } from 'lucide-react';
 import { fileWatcherService, FileWatcherService, FileChangeEvent } from '../services/fileWatcherService';
 import { fileProcessingService } from '../services/fileProcessingService';
+
+import ContextMenu, { ContextMenuItem } from '../components/ui/ContextMenu';
+import CreateFileDialog from '../components/ui/CreateFileDialog';
 
 export interface FileItem {
   name: string;
@@ -78,14 +88,16 @@ const getFileIcon = (fileName: string) => {
 
 
  
-const FileItem = ({ 
+const FileTreeItem = ({ 
   item, 
   level = 0, 
   onToggle, 
-  onSelect 
+  onSelect,
+  showContextMenu
 }: { 
   item: FileItem; 
   level: number; 
+  showContextMenu: (event: React.MouseEvent, item: FileItem) => void;
   onToggle: (item: FileItem) => void;
   onSelect?: (item: FileItem) => void;
 }) => {
@@ -100,7 +112,7 @@ const FileItem = ({
           transition-colors duration-150
           ${level > 0 ? 'ml-2' : ''}
         `}
-        style={{ paddingLeft: `${level * 12 + 8}px` }}
+style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={() => {
             if (item.isDirectory) {
               onToggle(item);
@@ -108,6 +120,10 @@ const FileItem = ({
               onSelect(item);
             }
           }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          showContextMenu(event, item);
+        }}
       >
         {item.isDirectory ? (
           <div className="flex items-center text-gray-300">
@@ -133,12 +149,13 @@ const FileItem = ({
       {item.expanded && item.children && (
         <div className="w-full">
           {item.children.map((child) => (
-            <FileItem
+            <FileTreeItem
               key={child.path}
               item={child}
               level={level + 1}
               onToggle={onToggle}
               onSelect={onSelect}
+              showContextMenu={showContextMenu}
             />
           ))}
         </div>
@@ -294,6 +311,111 @@ export const FileExplorer = ({
 
   console.log("Rendering File tree:", fileTree);
 
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [contextMenuItems, setContextMenuItems] = useState<ContextMenuItem[]>([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createDialogIsDirectory, setCreateDialogIsDirectory] = useState(false);
+  const [createDialogParentPath, setCreateDialogParentPath] = useState('');
+
+  const showContextMenu = (event: React.MouseEvent, item: FileItem) => {
+    setContextMenuPosition({ x: event.clientX, y: event.clientY });
+
+    const commonItems: ContextMenuItem[] = [
+      {
+        label: 'Reveal in File Explorer',
+        action: () => window.electron.fileSystem.revealInExplorer(item.path),
+        disabled: item.isDirectory
+      },
+      { label: 'Cut', action: () => {/* implementation */}, disabled: true },
+      { label: 'Copy', action: () => window.electron.fileSystem.copyToClipboard(item.path) },
+      { label: 'Copy Path', action: () => window.electron.fileSystem.copyToClipboard(item.path) },
+      {
+        label: 'Rename',
+        action: async () => {
+          const newName = prompt('Enter new name:', item.name);
+          if (newName) {
+            await window.electron.fileSystem.renameFile(item.path, newName);
+          }
+        }
+      },
+      {
+        label: 'Delete',
+        action: async () => {
+          const confirmed = confirm(`Are you sure you want to delete ${item.name}?`);
+          if (confirmed) {
+            if (item.isDirectory) {
+              await window.electron.fileSystem.deleteDirectory(item.path);
+            } else {
+              await window.electron.fileSystem.deleteFile(item.path);
+            }
+          }
+        },
+        destructive: true
+      }
+    ];
+
+    const folderSpecificItems: ContextMenuItem[] = [
+      {
+        label: 'New File...',
+        action: () => {
+          setCreateDialogIsDirectory(false);
+          setCreateDialogParentPath(item.path);
+          setShowCreateDialog(true);
+        }
+      },
+      {
+        label: 'New Folder...',
+        action: () => {
+          setCreateDialogIsDirectory(true);
+          setCreateDialogParentPath(item.path);
+          setShowCreateDialog(true);
+        }
+      }
+    ];
+
+    const fileSpecificItems: ContextMenuItem[] = [
+      {
+        label: 'Open With...',
+        action: () => window.electron.fileSystem.openWithDefault(item.path),
+        disabled: item.isDirectory
+      }
+    ];
+
+    const items = item.isDirectory ? [...folderSpecificItems, ...commonItems] : [...fileSpecificItems, ...commonItems];
+    setContextMenuItems(items);
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuPosition(null);
+    setContextMenuItems([]);
+  };
+
+  const handleCreateFile = async (name: string, template?: string) => {
+    try {
+      if (createDialogIsDirectory) {
+        const result = await window.electron.fileSystem.createDirectory(createDialogParentPath, name);
+        if (result.success) {
+          console.log('Folder created successfully:', result.folderPath);
+        } else {
+          console.error('Failed to create folder:', result.error);
+          alert('Failed to create folder: ' + result.error);
+        }
+      } else {
+        const result = await window.electron.fileSystem.createFile(createDialogParentPath, name, template);
+        if (result.success) {
+          console.log('File created successfully:', result.filePath);
+        } else {
+          console.error('Failed to create file:', result.error);
+          alert('Failed to create file: ' + result.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating file/folder:', error);
+      alert('An error occurred while creating the ' + (createDialogIsDirectory ? 'folder' : 'file'));
+    }
+    setShowCreateDialog(false);
+  };
+
   return (
     <div className={`h-full overflow-y-auto bg-transparent ${className}`}>
       <div className="py-2">
@@ -302,17 +424,29 @@ export const FileExplorer = ({
             No files found
           </div>
         ) : (
-          fileTree.map((item) => (
-            <FileItem
-              key={item.path}
-              item={item}
-              level={0}
-              onToggle={toggleExpand}
-              onSelect={onFileSelect}
-            />
-          ))
+          <>
+            <ContextMenu items={contextMenuItems} position={contextMenuPosition} onClose={handleCloseContextMenu} />
+            {fileTree.map((item) => (
+              <FileTreeItem
+                showContextMenu={showContextMenu}
+                key={item.path}
+                item={item}
+                level={0}
+                onToggle={toggleExpand}
+                onSelect={onFileSelect}
+              />
+            ))}
+          </>
         )}
       </div>
+      
+      <CreateFileDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onConfirm={handleCreateFile}
+        isDirectory={createDialogIsDirectory}
+        parentPath={createDialogParentPath}
+      />
     </div>
   );
 };

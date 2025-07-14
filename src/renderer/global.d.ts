@@ -72,6 +72,23 @@ declare global {
         send: (channel: string, ...args: any[]) => void;
         on: (channel: string, listener: (...args: any[]) => void) => () => void;
       };
+      fileSystem: {
+        revealInExplorer: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+        deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+        deleteDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
+        renameFile: (oldPath: string, newName: string) => Promise<{ success: boolean; newPath?: string; error?: string }>;
+        createFile: (dirPath: string, fileName: string, template?: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+        createDirectory: (dirPath: string, folderName: string) => Promise<{ success: boolean; folderPath?: string; error?: string }>;
+        copyToClipboard: (text: string) => Promise<{ success: boolean; error?: string }>;
+        openWithDefault: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+      };
+      fileWatcher: {
+        startWatching: (directoryPath: string) => Promise<any>;
+        stopWatching: () => Promise<any>;
+        getWatchedPath: () => Promise<any>;
+        onFileChange: (callback: (event: any, data: any) => void) => () => void;
+        onStatusChange: (callback: (event: any, data: any) => void) => () => void;
+      };
     };
   }
 }
