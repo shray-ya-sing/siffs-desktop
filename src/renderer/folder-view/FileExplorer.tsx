@@ -123,6 +123,7 @@ style={{ paddingLeft: `${level * 12 + 8}px` }}
           }}
         onContextMenu={(event) => {
           event.preventDefault();
+          event.stopPropagation(); // Prevent workspace context menu from showing
           showContextMenu(event, item);
         }}
       >
@@ -319,6 +320,7 @@ export const FileExplorer = ({
   const [createDialogParentPath, setCreateDialogParentPath] = useState('');
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);  
   const [renameItem, setRenameItem] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null);
+  const [copiedFile, setCopiedFile] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null);
 
   // Helper function to resolve relative path to absolute path
   const resolveToAbsolutePath = (relativePath: string): string => {
@@ -353,11 +355,17 @@ export const FileExplorer = ({
     const commonItems: ContextMenuItem[] = [
       {
         label: 'Reveal in File Explorer',
-        action: () => electron.fileSystem.revealInExplorer(absolutePath),
-        disabled: item.isDirectory
+        action: () => electron.fileSystem.revealInExplorer(absolutePath)
       },
       { label: 'Cut', action: () => {/* implementation */}, disabled: true },
-      { label: 'Copy', action: () => electron.fileSystem.copyToClipboard(absolutePath) },
+      { 
+        label: 'Copy', 
+        action: () => {
+          // Copy any file or folder
+          setCopiedFile({ path: item.path, name: item.name, isDirectory: item.isDirectory });
+          console.log('📋 Copied:', item.isDirectory ? 'folder' : 'file', item.name);
+        }
+      },
       { label: 'Copy Path', action: () => electron.fileSystem.copyToClipboard(absolutePath) },
       {
         label: 'Rename',
@@ -398,12 +406,63 @@ export const FileExplorer = ({
           setCreateDialogParentPath(absolutePath);
           setShowCreateDialog(true);
         }
+      },
+      {
+        label: 'Paste',
+        action: async () => {
+          if (copiedFile) {
+            try {
+              const sourceAbsolutePath = resolveToAbsolutePath(copiedFile.path);
+              
+              // Generate destination filename with "copy" suffix
+              const originalName = copiedFile.name;
+              const lastDotIndex = originalName.lastIndexOf('.');
+              let destinationFileName;
+              
+              if (lastDotIndex === -1) {
+                // No extension
+                destinationFileName = originalName + ' copy';
+              } else {
+                // Has extension
+                const nameWithoutExt = originalName.substring(0, lastDotIndex);
+                const extension = originalName.substring(lastDotIndex);
+                destinationFileName = nameWithoutExt + ' copy' + extension;
+              }
+              
+              const destinationAbsolutePath = absolutePath + (navigator.platform.toLowerCase().includes('win') ? '\\' : '/') + destinationFileName;
+              
+              console.log('📋 Pasting file:', {
+                source: sourceAbsolutePath,
+                destination: destinationAbsolutePath,
+                originalName,
+                newName: destinationFileName
+              });
+              
+              // Debug: Check if copyFile function exists
+              console.log('🔍 Checking electron.fileSystem.copyFile:', typeof electron.fileSystem.copyFile);
+              
+              const result = await electron.fileSystem.copyFile(sourceAbsolutePath, destinationAbsolutePath);
+              if (result.success) {
+                console.log('✅ File pasted successfully:', result.destinationPath);
+                // Clear the copied file after successful paste
+                setCopiedFile(null);
+              } else {
+                console.error('❌ Failed to paste file:', result.error);
+                alert('Failed to paste file: ' + result.error);
+              }
+            } catch (error) {
+              console.error('❌ Error pasting file:', error);
+              alert('An error occurred while pasting the file');
+            }
+          }
+        },
+        disabled: !copiedFile
       }
     ];
 
     const fileSpecificItems: ContextMenuItem[] = [
       {
-        label: 'Open With...',
+        label: 'Open',
         action: () => electron.fileSystem.openWithDefault(absolutePath),
         disabled: item.isDirectory
       }
@@ -447,8 +506,86 @@ export const FileExplorer = ({
     setShowCreateDialog(false);
   };
 
+  const showWorkspaceContextMenu = (event: React.MouseEvent) => {
+    // Only show workspace context menu if the target is the container itself or the py-2 div
+    const target = event.target as HTMLElement;
+    const isWorkspaceContainer = target.classList.contains('h-full') || 
+                                target.classList.contains('py-2') ||
+                                target.tagName === 'DIV' && !target.closest('[data-file-item]');
+    
+    if (!isWorkspaceContainer) {
+      return; // Don't show workspace context menu if clicking on file items
+    }
+
+    console.log('🖱️ Workspace context menu triggered at position:', { x: event.clientX, y: event.clientY });
+    event.preventDefault();
+    setContextMenuPosition({ x: event.clientX, y: event.clientY });
+
+    const electron = (window as any).electron;
+    const processingContext = (fileProcessingService as any).processingContext;
+    
+    const workspaceRootItems: ContextMenuItem[] = [
+      {
+        label: 'Paste',
+        action: async () => {
+          if (copiedFile && processingContext && processingContext.workspacePath) {
+            try {
+              const sourceAbsolutePath = resolveToAbsolutePath(copiedFile.path);
+              
+              // Generate destination filename with "copy" suffix
+              const originalName = copiedFile.name;
+              const lastDotIndex = originalName.lastIndexOf('.');
+              let destinationFileName;
+              
+              if (lastDotIndex === -1) {
+                // No extension
+                destinationFileName = originalName + ' copy';
+              } else {
+                // Has extension
+                const nameWithoutExt = originalName.substring(0, lastDotIndex);
+                const extension = originalName.substring(lastDotIndex);
+                destinationFileName = nameWithoutExt + ' copy' + extension;
+              }
+              
+              const destinationAbsolutePath = processingContext.workspacePath + (navigator.platform.toLowerCase().includes('win') ? '\\' : '/') + destinationFileName;
+              
+              console.log('📋 Pasting file to workspace root:', {
+                source: sourceAbsolutePath,
+                destination: destinationAbsolutePath,
+                originalName,
+                newName: destinationFileName
+              });
+              
+              // Debug: Check if copyFile function exists
+              console.log('🔍 Checking electron.fileSystem.copyFile:', typeof electron.fileSystem.copyFile);
+              
+              const result = await electron.fileSystem.copyFile(sourceAbsolutePath, destinationAbsolutePath);
+              if (result.success) {
+                console.log('✅ File pasted to workspace root successfully:', result.destinationPath);
+                // Clear the copied file after successful paste
+                setCopiedFile(null);
+              } else {
+                console.error('❌ Failed to paste file to workspace root:', result.error);
+                alert('Failed to paste file: ' + result.error);
+              }
+            } catch (error) {
+              console.error('❌ Error pasting file to workspace root:', error);
+              alert('An error occurred while pasting the file');
+            }
+          }
+        },
+        disabled: !copiedFile
+      }
+    ];
+
+    setContextMenuItems(workspaceRootItems);
+  };
+
   return (
-    <div className={`h-full overflow-y-auto bg-transparent ${className}`}>
+    <div 
+      className={`h-full overflow-y-auto bg-transparent ${className}`}
+      onContextMenu={showWorkspaceContextMenu}
+    >
       <div className="py-2">
         {fileTree.length === 0 ? (
           <div className="text-center py-4 text-gray-500 text-sm">

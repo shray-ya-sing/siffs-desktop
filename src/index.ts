@@ -227,6 +227,25 @@ function setupIpcHandlers(): void {
     }
   });
 
+  ipcMain.handle('copy-file', async (event, sourcePath: string, destinationPath: string) => {
+    try {
+      // Check if source file exists
+      await fs.promises.access(sourcePath);
+      
+      // Ensure destination directory exists
+      const destinationDir = path.dirname(destinationPath);
+      await fs.promises.mkdir(destinationDir, { recursive: true });
+      
+      // Copy the file
+      await fs.promises.copyFile(sourcePath, destinationPath);
+      
+      return { success: true, destinationPath };
+    } catch (error) {
+      console.error('Error copying file:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
   // Show directory picker dialog
   ipcMain.handle('dialog:show-directory-picker', async (event) => {
     const result = await dialog.showOpenDialog({

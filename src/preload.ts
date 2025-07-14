@@ -87,6 +87,7 @@ const electronAPI = {
     createDirectory: (dirPath: string, folderName: string) => ipcRenderer.invoke('create-directory', dirPath, folderName),
     copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
     openWithDefault: (filePath: string) => ipcRenderer.invoke('open-with-default', filePath),
+    copyFile: (sourcePath: string, destinationPath: string) => ipcRenderer.invoke('copy-file', sourcePath, destinationPath),
   },
 
   // File watcher operations
