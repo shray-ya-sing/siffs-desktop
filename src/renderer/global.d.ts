@@ -1,6 +1,3 @@
-// Import your preload type
-import { ElectronAPI } from '../main/preload';
-
 // Support for CSS modules
 declare module '*.module.css' {
   const classes: { [key: string]: string };
@@ -38,25 +35,10 @@ declare namespace NodeJS {
   }
 }
 
-// Extend the existing ElectronAPI interface to include ipcRenderer and log
-interface ExtendedElectronAPI extends ElectronAPI {
-  log: {
-    info: (message: string) => void;
-    error: (message: string) => void;
-    warn: (message: string) => void;
-    debug: (message: string) => void;
-  };
-  ipcRenderer: {
-    invoke: (channel: string, ...args: any[]) => Promise<any>;
-    send: (channel: string, ...args: any[]) => void;
-    on: (channel: string, listener: (...args: any[]) => void) => () => void;
-  };
-}
-
 declare global {
   interface Window {
     // For backward compatibility
-    electronAPI: ElectronAPI;
+    electronAPI: any;
     
     // New electron object with extended API
     electron: {

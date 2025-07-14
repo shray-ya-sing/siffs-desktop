@@ -23,7 +23,7 @@ export const ContextMenu = ({
   position,
   onClose,
   children,
-}: ContextMenuProps) => {
+}: ContextMenuProps): React.ReactElement | null => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -87,9 +87,7 @@ export const ContextMenu = ({
     };
   }, [position, onClose]);
 
-  if (!position || !adjustedPosition) return children || null;
-
-  const menuContent = (
+  const menuContent = position && adjustedPosition ? (
     <div
       ref={menuRef}
       className="fixed z-50 min-w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg py-1"
@@ -134,12 +132,12 @@ export const ContextMenu = ({
         );
       })}
     </div>
-  );
+  ) : null;
 
   return (
     <>
       {children}
-      {createPortal(menuContent, document.body)}
+      {menuContent && createPortal(menuContent, document.body)}
     </>
   );
 };
