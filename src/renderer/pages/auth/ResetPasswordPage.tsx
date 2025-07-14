@@ -5,9 +5,9 @@ import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Label } from '../../components/ui/label';
 import AuthLayout from '../../components/auth/AuthLayout';
-import { supabase } from '../../lib/supabase';
 import { Loader2, Lock, AlertCircle, Check, Eye, EyeOff, KeyRound, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
+import { sessionStorage } from '../../services/session-storage.service';
 
 type LocationState = {
   isOTPFlow?: boolean;
@@ -42,11 +42,12 @@ export default function ResetPasswordPage() {
   const email = locationState?.email || '';
 
   useEffect(() => {
-    // If we have tokens, set the session and go directly to password step
+    // If we have tokens, go directly to password step
     if (accessToken && refreshToken) {
-      supabase.auth.setSession({
+      // Store tokens in session storage for auth API to use
+      sessionStorage.set('reset_tokens', {
         access_token: accessToken,
-        refresh_token: refreshToken,
+        refresh_token: refreshToken
       });
       setStep('password');
     }
@@ -87,13 +88,21 @@ export default function ResetPasswordPage() {
     setError('');
     
     try {
-      const { error } = await verifyOtp(email, otpCode, 'recovery');
+      const { data, error } = await verifyOtp(email, otpCode, 'recovery');
       
       if (error) {
         throw error;
       }
       
-      // OTP verified successfully, user is now authenticated, proceed to password reset
+      // Store the recovery session tokens for password update
+      if (data?.session) {
+        sessionStorage.set('reset_tokens', {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+      }
+      
+      // OTP verified successfully, proceed to password reset
       setStep('password');
     } catch (error) {
       console.error('OTP verification error:', error);
@@ -125,7 +134,7 @@ export default function ResetPasswordPage() {
     setError('');
     
     try {
-      const { error } = await updatePassword(password);
+      const { error } = await updatePassword(email, password);
       
       if (error) {
         throw error;
