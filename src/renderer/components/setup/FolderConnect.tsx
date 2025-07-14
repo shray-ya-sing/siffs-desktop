@@ -222,12 +222,12 @@ import MainLogo from '../logo/MainLogo'
     
         // Trigger extraction for each supported file
         for (const file of allSupportedFiles) {
-          const message = `Found file: ${file.name}`;
+          const message = `Found file: ${file.name} at ${file.path}`;
           setDiscoveryMessages(prev => [...prev, message]);
           
           try {
-            // Get file content as ArrayBuffer
-            const fileHandle = await dirHandle.getFileHandle(file.name);
+            // Get file content as ArrayBuffer - handle nested files properly
+            const fileHandle = await getNestedFileHandle(dirHandle, file.path);
             const fileContent = await fileHandle.getFile();
             const arrayBuffer = await fileContent.arrayBuffer();
             
@@ -290,8 +290,8 @@ import MainLogo from '../logo/MainLogo'
             // Small delay between files
             await new Promise(resolve => setTimeout(resolve, 300));
           } catch (fileError) {
-            console.error(`Error processing file ${file.name}:`, fileError);
-            setDiscoveryMessages(prev => [...prev, `Error processing ${file.name}`]);
+            console.error(`Error processing file ${file.name} at ${file.path}:`, fileError);
+            setDiscoveryMessages(prev => [...prev, `Error processing ${file.name} at ${file.path}`]);
           }
         }
 
@@ -308,6 +308,21 @@ import MainLogo from '../logo/MainLogo'
         setDiscoveryMessages(prev => [...prev, "Error processing directory"]);
         setIsDiscovering(true);
       }
+    };
+    
+    // Helper function to get file handle for nested files
+    const getNestedFileHandle = async (rootHandle: any, filePath: string): Promise<any> => {
+      const pathParts = filePath.split('/');
+      let currentHandle = rootHandle;
+      
+      // Navigate through directories to reach the file
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        currentHandle = await currentHandle.getDirectoryHandle(pathParts[i]);
+      }
+      
+      // Get the final file handle
+      const fileName = pathParts[pathParts.length - 1];
+      return await currentHandle.getFileHandle(fileName);
     };
     
     // Helper function to convert ArrayBuffer to base64
