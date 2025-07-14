@@ -320,21 +320,24 @@ export const FileExplorer = ({
   const showContextMenu = (event: React.MouseEvent, item: FileItem) => {
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
 
+    // Type assertion to ensure TypeScript recognizes the full electron API
+    const electron = (window as any).electron;
+
     const commonItems: ContextMenuItem[] = [
       {
         label: 'Reveal in File Explorer',
-        action: () => window.electron.fileSystem.revealInExplorer(item.path),
+        action: () => electron.fileSystem.revealInExplorer(item.path),
         disabled: item.isDirectory
       },
       { label: 'Cut', action: () => {/* implementation */}, disabled: true },
-      { label: 'Copy', action: () => window.electron.fileSystem.copyToClipboard(item.path) },
-      { label: 'Copy Path', action: () => window.electron.fileSystem.copyToClipboard(item.path) },
+      { label: 'Copy', action: () => electron.fileSystem.copyToClipboard(item.path) },
+      { label: 'Copy Path', action: () => electron.fileSystem.copyToClipboard(item.path) },
       {
         label: 'Rename',
         action: async () => {
           const newName = prompt('Enter new name:', item.name);
           if (newName) {
-            await window.electron.fileSystem.renameFile(item.path, newName);
+            await electron.fileSystem.renameFile(item.path, newName);
           }
         }
       },
@@ -344,9 +347,9 @@ export const FileExplorer = ({
           const confirmed = confirm(`Are you sure you want to delete ${item.name}?`);
           if (confirmed) {
             if (item.isDirectory) {
-              await window.electron.fileSystem.deleteDirectory(item.path);
+              await electron.fileSystem.deleteDirectory(item.path);
             } else {
-              await window.electron.fileSystem.deleteFile(item.path);
+              await electron.fileSystem.deleteFile(item.path);
             }
           }
         },
@@ -376,7 +379,7 @@ export const FileExplorer = ({
     const fileSpecificItems: ContextMenuItem[] = [
       {
         label: 'Open With...',
-        action: () => window.electron.fileSystem.openWithDefault(item.path),
+        action: () => electron.fileSystem.openWithDefault(item.path),
         disabled: item.isDirectory
       }
     ];
@@ -392,8 +395,11 @@ export const FileExplorer = ({
 
   const handleCreateFile = async (name: string, template?: string) => {
     try {
+      // Type assertion to ensure TypeScript recognizes the full electron API
+      const electron = (window as any).electron;
+      
       if (createDialogIsDirectory) {
-        const result = await window.electron.fileSystem.createDirectory(createDialogParentPath, name);
+        const result = await electron.fileSystem.createDirectory(createDialogParentPath, name);
         if (result.success) {
           console.log('Folder created successfully:', result.folderPath);
         } else {
@@ -401,7 +407,7 @@ export const FileExplorer = ({
           alert('Failed to create folder: ' + result.error);
         }
       } else {
-        const result = await window.electron.fileSystem.createFile(createDialogParentPath, name, template);
+        const result = await electron.fileSystem.createFile(createDialogParentPath, name, template);
         if (result.success) {
           console.log('File created successfully:', result.filePath);
         } else {
