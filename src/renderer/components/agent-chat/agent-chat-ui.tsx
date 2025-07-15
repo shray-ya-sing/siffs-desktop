@@ -57,7 +57,7 @@ const MODEL_OPTIONS: ModelOption[] = [
 ]
 
 
-export default function AIChatUI() {
+export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -448,7 +448,7 @@ export default function AIChatUI() {
           <div key={message.id} className="space-y-2">
             {message.role === "user" ? (
               <div className="flex justify-center">
-                <div className="max-w-full w-4/5">
+                <div className="max-w-full w-full px-8">
                   <div
                     className="rounded-3xl px-3 py-2 text-gray-300 text-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                     style={{
@@ -462,7 +462,7 @@ export default function AIChatUI() {
               </div>
             ) : message.role === 'custom_event' ? (
               <div className="flex justify-center">
-                <div className="max-w-full w-4/5">
+                <div className="max-w-full w-full px-8">
                   <EventCard
                     type={message.event_type as EventType}
                     message={message.event_message}
@@ -474,7 +474,7 @@ export default function AIChatUI() {
               </div>
             ) : (
               <div className="flex justify-center">
-                <div className="max-w-full w-4/5">
+                <div className="max-w-full w-full px-8">
                 <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20 [&>pre]:m-0 [&>pre]:p-0">
                   <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
                     <MarkdownRenderer content={message.content} />
@@ -503,7 +503,7 @@ export default function AIChatUI() {
           
           return (
             <div className="flex justify-center animate-fade-in">
-              <div className="max-w-full w-4/5">
+              <div className="max-w-full w-full px-8">
                 <div className="rounded-3xl px-3 py-2">
                   <div className="flex items-center gap-2 text-gray-400">
                     <div className="flex gap-1">
@@ -527,7 +527,7 @@ export default function AIChatUI() {
 
         {isTyping && !isLoading && (
           <div className="flex justify-center animate-fade-in">
-            <div className="max-w-full w-4/5">
+            <div className="max-w-full w-full px-8">
               <div className="rounded-3xl px-3 py-2">
                 <div className="flex items-center gap-2 text-gray-500">
                   <div className="flex gap-1">
@@ -552,7 +552,11 @@ export default function AIChatUI() {
       </div>
 
       {/* Input - Fixed at bottom center */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20 space-y-2" style={{ marginBottom: '10px' }}>
+      <div className={`fixed bottom-4 w-full max-w-2xl px-8 z-20 space-y-2 transition-all duration-300 ${
+        isSidebarOpen 
+          ? 'left-1/2 transform -translate-x-1/2 ml-36' 
+          : 'left-1/2 transform -translate-x-1/2'
+      }`} style={{ marginBottom: '10px' }}>
       {/* ProviderDropdown positioned above the input */}
         <div className="relative w-full">
           <ProviderDropdown 

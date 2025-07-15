@@ -82,7 +82,7 @@ return (
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
         isSidebarOpen ? 'ml-72' : 'ml-0'
         } pt-8`}>
-        <AIChatUI />
+        <AIChatUI isSidebarOpen={isSidebarOpen} />
       </div>
   
       {/* Toggle button when sidebar is closed - Add delay to match animation */}
