@@ -241,3 +241,34 @@ async def cleanup_same_directory_files_endpoint():
             status_code=500,
             content={"success": False, "error": str(e)}
         )
+
+@router.post("/cleanup-deleted-files")
+async def cleanup_deleted_files_endpoint():
+    """API endpoint to cleanup deleted files from cache"""
+    try:
+        from cache_management import get_cache_service
+        cache_service = get_cache_service()
+        cache_manager = cache_service.cache_manager
+        
+        # Run the deleted files cleanup
+        deleted_files = cache_manager.cleanup_deleted_files()
+        
+        # Get updated stats
+        stats = cache_manager.get_cache_stats()
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": f"Cleaned up {len(deleted_files)} deleted files from cache",
+                "deleted_files": deleted_files,
+                "remaining_count": stats["total_mappings"],
+                "cache_stats": stats
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error cleaning deleted files via API: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )

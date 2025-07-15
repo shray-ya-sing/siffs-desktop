@@ -67,11 +67,14 @@ class CacheManager:
         
         for original_path, temp_path in mappings.items():
             # Check if either the original file or temp file exists
-            if os.path.exists(original_path) or os.path.exists(temp_path):
+            original_exists = os.path.exists(original_path)
+            temp_exists = os.path.exists(temp_path)
+            
+            if original_exists or temp_exists:
                 updated_mappings[original_path] = temp_path
             else:
                 stale_paths.append(original_path)
-                logger.info(f"Removing stale mapping: {original_path}")
+                logger.info(f"Removing stale mapping (neither original nor temp file exists): {original_path}")
         
         # Save updated mappings if any were removed
         if stale_paths:
@@ -80,7 +83,7 @@ class CacheManager:
         return stale_paths
     
     def cleanup_stale_metadata_cache(self, stale_paths: List[str]):
-        """Remove metadata cache files for stale file paths"""
+        """Remove specific metadata cache entries for stale file paths"""
         if not stale_paths:
             return
         
@@ -90,22 +93,41 @@ class CacheManager:
                 with open(cache_file, 'r') as f:
                     cache_data = json.load(f)
                 
-                # Check if this cache file references any stale paths
-                needs_cleanup = False
+                # Check if this cache file references any stale paths and remove specific entries
                 if isinstance(cache_data, dict):
+                    modified = False
+                    entries_to_remove = []
+                    
                     for stale_path in stale_paths:
-                        # Check various ways the file path might be stored
-                        if (stale_path in str(cache_data) or 
-                            any(stale_path in str(value) for value in cache_data.values() if isinstance(value, (str, dict, list)))):
-                            needs_cleanup = True
-                            break
-                
-                if needs_cleanup:
-                    logger.info(f"Removing stale metadata cache file: {cache_file}")
-                    cache_file.unlink()
+                        # Check if any keys in the cache data match the stale path exactly
+                        if stale_path in cache_data:
+                            entries_to_remove.append(stale_path)
+                            modified = True
+                        
+                        # Also check if any values contain the stale path as a workspace_path
+                        for key, value in cache_data.items():
+                            if isinstance(value, dict) and value.get('workspace_path') == stale_path:
+                                entries_to_remove.append(key)
+                                modified = True
+                    
+                    # Remove the stale entries
+                    for entry_key in entries_to_remove:
+                        if entry_key in cache_data:
+                            del cache_data[entry_key]
+                            logger.info(f"Removed stale cache entry for: {entry_key}")
+                    
+                    # Write back the modified cache if we made changes
+                    if modified:
+                        if cache_data:  # If there are still entries left
+                            with open(cache_file, 'w') as f:
+                                json.dump(cache_data, f, indent=2)
+                            logger.info(f"Updated cache file: {cache_file}")
+                        else:  # If no entries left, remove the file
+                            cache_file.unlink()
+                            logger.info(f"Removed empty cache file: {cache_file}")
                     
             except Exception as e:
-                logger.warning(f"Error checking cache file {cache_file}: {e}")
+                logger.warning(f"Error cleaning cache file {cache_file}: {e}")
     
     def update_file_mapping(self, original_path: str, temp_path: str, cleanup_old: bool = True):
         """Update file mappings and optionally cleanup old entries"""
@@ -142,17 +164,28 @@ class CacheManager:
                         # Check if this might be a rename by looking at the temp files
                         existing_temp_path = mappings[existing_path]
                         if os.path.exists(existing_temp_path) and os.path.exists(temp_path):
-                            # Compare file sizes and modification times to detect renames
+                            # Only consider it a rename if the files have the same extension
+                            # and very similar file sizes and timestamps
                             try:
                                 existing_stat = os.stat(existing_temp_path)
                                 new_stat = os.stat(temp_path)
                                 
-                                # If files have very similar timestamps (within 60 seconds), 
-                                # it's likely a rename or quick re-upload
-                                time_diff = abs(existing_stat.st_mtime - new_stat.st_mtime)
-                                if time_diff < 60:  # 60 second threshold
-                                    paths_to_remove.append(existing_path)
-                                    logger.info(f"Removing old mapping for likely renamed file: {existing_path}")
+                                # Check if files have the same extension
+                                existing_ext = os.path.splitext(existing_path)[1].lower()
+                                new_ext = os.path.splitext(original_path)[1].lower()
+                                
+                                # Only consider it a rename if:
+                                # 1. Same file extension
+                                # 2. Similar file sizes (within 10% or 1MB)
+                                # 3. Very similar timestamps (within 10 seconds)
+                                if existing_ext == new_ext:
+                                    size_diff = abs(existing_stat.st_size - new_stat.st_size)
+                                    size_threshold = max(1024 * 1024, existing_stat.st_size * 0.1)  # 1MB or 10%
+                                    time_diff = abs(existing_stat.st_mtime - new_stat.st_mtime)
+                                    
+                                    if size_diff < size_threshold and time_diff < 10:
+                                        paths_to_remove.append(existing_path)
+                                        logger.info(f"Removing old mapping for likely renamed file: {existing_path}")
                             except OSError:
                                 # If we can't stat the files, err on the side of caution
                                 pass
@@ -231,6 +264,31 @@ class CacheManager:
         
         logger.info(f"Cache cleanup completed. Removed {len(stale_paths)} stale entries.")
         return len(stale_paths)
+    
+    def cleanup_deleted_files(self) -> List[str]:
+        """Specifically check for and remove deleted files from cache"""
+        mappings = self.load_file_mappings()
+        if not mappings:
+            return []
+        
+        deleted_files = []
+        updated_mappings = {}
+        
+        for original_path, temp_path in mappings.items():
+            # Check if the original file exists
+            if os.path.exists(original_path):
+                updated_mappings[original_path] = temp_path
+            else:
+                deleted_files.append(original_path)
+                logger.info(f"Detected deleted file: {original_path}")
+        
+        # Save updated mappings if any deleted files were found
+        if deleted_files:
+            self.save_file_mappings(updated_mappings)
+            # Clean up associated metadata cache
+            self.cleanup_stale_metadata_cache(deleted_files)
+        
+        return deleted_files
     
     def get_cache_stats(self) -> Dict[str, int]:
         """Get statistics about the current cache state"""

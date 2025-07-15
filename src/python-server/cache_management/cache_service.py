@@ -85,9 +85,17 @@ class CacheService:
     def cleanup_cache(self) -> int:
         """Perform cache cleanup and return number of cleaned entries"""
         try:
-            cleaned_count = self.cache_manager.cleanup_all_stale_entries()
-            logger.info(f"Cache cleanup completed. Removed {cleaned_count} stale entries.")
-            return cleaned_count
+            # First, cleanup deleted files specifically
+            deleted_files = self.cache_manager.cleanup_deleted_files()
+            logger.info(f"Deleted files cleanup completed. Removed {len(deleted_files)} entries.")
+            
+            # Then, run comprehensive cleanup for any remaining stale entries
+            stale_cleaned = self.cache_manager.cleanup_all_stale_entries()
+            logger.info(f"Stale entries cleanup completed. Removed {stale_cleaned} additional entries.")
+            
+            total_cleaned = len(deleted_files) + stale_cleaned
+            logger.info(f"Total cache cleanup completed. Removed {total_cleaned} entries.")
+            return total_cleaned
         except Exception as e:
             logger.error(f"Error during cache cleanup: {e}")
             raise
