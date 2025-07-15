@@ -113,7 +113,7 @@ class StepLevelNodes:
         # validate the metadata range returned from llm
         metadata = []
         if llm_response.sheets:
-            logger.info(f"Received cell range from llm: {llm_response.sheets}")
+            logger.info(f"Received cell range for metadata gathering from llm: {llm_response.sheets}")
             json_dict = clean_json_string(llm_response.sheets)
             if isinstance(json_dict, str):
                 return Command(
@@ -193,10 +193,10 @@ class StepLevelNodes:
                 "latest_model_response": llm_response.content
                 }
             cell_data = None
-            logger.info(f"Received cell range from llm: {llm_response.content[0:200]}")
+            logger.info(f"Received cell formulas from llm: {llm_response.content[0:200]}")
             try:
                 cell_data = parse_markdown_formulas(llm_response.content)
-                logger.info("Parsed sheets data into formulas")
+                logger.info("Parsed cell formulas into formulas")
                 json_str = json.dumps(cell_data, indent=2)
                 #logger.info(f"Parsed cell data: {json_str[0:200]}")
             except Exception as e:

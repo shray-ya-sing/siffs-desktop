@@ -17,8 +17,7 @@ class HighLevelDeterminePrompts:
     @staticmethod
     def get_excel_status_prompt(excel_metadata):
         return f"""
-        Based on the excel file metadata supplied to you, determine the current status of the excel file and status of completion 
-        for each step to be done in building the model. 
+        Use the excel file metadata to determine the implementation sequence. 
         
         IMPORTANT RULES:
         1. NEVER overwrite or modify any existing data, formulas, or structure with new or unrelated data unless specfied in user request-- only modify the formulas and links if necessary to integrate with new edits
@@ -29,12 +28,8 @@ class HighLevelDeterminePrompts:
         
         Check what foundation is already laid out in the model, and what, if anything, remains to be done. 
         We do not need to repeat what we already have, we just need to determine what remains for us to do. 
-        
-        Output your response in a text paragraph summary:
-        1. List what already exists in the excel that's relevant to the request
-        2. Summarize what exists that can be utilized
-        3. List only what remains to be done, considering the existing structure
 
+        Here is the excel metadata:
         {excel_metadata}
         """
 
@@ -77,7 +72,7 @@ class HighLevelDeterminePrompts:
     @staticmethod
     def get_implementation_sequence_prompt():
         return """
-        Create a detailed implementation sequence for the financial model, following these CRITICAL RULES:
+        Create a detailed implementation sequence for the task, following these CRITICAL RULES:
         
         DATA PRESERVATION RULES:
         1. NEVER overwrite or modify any existing data, formulas, or structure
@@ -98,7 +93,7 @@ class HighLevelDeterminePrompts:
         
         Return a JSON object with this exact structure:
         {
-            "implementation_sequence": "Description of the sequence, listed step by step in a numbered text paragraph",
+            "implementation_sequence": "Description of the sequence, listed step by step in numbered bullets",
             "steps": [
                 {
                     "step_number": 1,

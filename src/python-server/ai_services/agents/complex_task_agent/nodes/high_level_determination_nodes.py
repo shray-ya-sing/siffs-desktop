@@ -62,7 +62,7 @@ class Essence(BaseModel):
 
 class Implementation(BaseModel):
     """Implementation of the request."""
-    implementation_sequence: List[Dict[str, Any]] = Field(description="The implementation sequence")
+    implementation_sequence: str = Field(description="The implementation sequence")
     steps: List[Dict[str, Any]] = Field(description="The steps in the implementation sequence"
     )
 
@@ -215,9 +215,10 @@ class HighLevelDeterminationNodes:
             goto= "decide_next_step"
         )
         else:
-            return Command(
-                goto= "llm_response_failure"
-            )
+            #return Command(
+            #    goto= "llm_response_failure"
+            #)
+            raise ValueError("LLM response failed")
 
 
     @log_errors
