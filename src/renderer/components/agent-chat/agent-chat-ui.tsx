@@ -49,10 +49,11 @@ const MODEL_OPTIONS: ModelOption[] = [
 //  { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
 //  { id: "openai-o3", name: "OpenAI o-3", provider: "OpenAI" },
 //  { id: "claude-sonnet-4-20250514", name: "Claude sonnet 4", provider: "Anthropic" },
-  { id: "claude-3-7-sonnet-latest", name: "Claude sonnet 3.7", provider: "Anthropic" },
+//  { id: "claude-3-7-sonnet-latest", name: "Claude sonnet 3.7", provider: "Anthropic" },
 //  { id: "xai-grok-3", name: "Grok-3", provider: "xAI" },
 //  { id: "deepseek-v3", name: "DeepSeek v3", provider: "DeepSeek" },
-//  { id: "gemini-2.5-pro", name: "Gemini 2.5 pro", provider: "Google" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 pro", provider: "Google" },
+  { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 flash lite", provider: "Google" },
 ]
 
 
@@ -65,7 +66,7 @@ export default function AIChatUI() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("claude-sonnet-4")
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite-preview-06-17")
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [threadId, setThreadId] = useState<string>(() => localStorage.getItem('threadId') || uuidv4());
   const [streamingMessage, setStreamingMessage] = useState<{
@@ -487,28 +488,41 @@ export default function AIChatUI() {
           </div>
         ))}
 
-        {isLoading && (
-          <div className="flex justify-start animate-fade-in">
-            <div className="max-w-4xl">
-              <div className="rounded-3xl px-3 py-2">
-                <div className="flex items-center gap-2 text-gray-400">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse"></div>
-                    <div
-                      className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse"
-                      style={{ animationDelay: "0.2s" }}
-                    ></div>
-                    <div
-                      className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse"
-                      style={{ animationDelay: "0.4s" }}
-                    ></div>
+        {isLoading && (() => {
+          // Check if the latest message is a custom event with error type
+          const latestMessage = messages[messages.length - 1];
+          const isLatestMessageError = latestMessage && 
+            latestMessage.role === 'custom_event' && 
+            (latestMessage as CustomEventMessage).event_type === 'error';
+          
+          // Don't show generating text if latest message is an error
+          if (isLatestMessageError) {
+            return null;
+          }
+          
+          return (
+            <div className="flex justify-start animate-fade-in">
+              <div className="max-w-4xl">
+                <div className="rounded-3xl px-3 py-2">
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse"></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-pulse"
+                        style={{ animationDelay: "0.4s" }}
+                      ></div>
+                    </div>
+                    <span className="text-xs">Generating...</span>
                   </div>
-                  <span className="text-xs">Generating...</span>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {isTyping && !isLoading && (
           <div className="flex justify-start animate-fade-in">
@@ -538,7 +552,7 @@ export default function AIChatUI() {
 
       {/* Input - Fixed at bottom center */}
       <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20 space-y-2">
-      {/* ProviderDropdown positioned above the input 
+      {/* ProviderDropdown positioned above the input */}
         <div className="relative w-full">
           <ProviderDropdown 
             value={selectedModel}
@@ -548,7 +562,7 @@ export default function AIChatUI() {
             onToggle={setIsDropdownOpen}
             className="w-full"
           />
-        </div>*/}
+        </div>
 
         {showMentions && (
           <MentionDropdown
@@ -595,6 +609,13 @@ export default function AIChatUI() {
               <ArrowRight size={12} className="text-gray-300 hover:text-blue-300" />
             </button>
           </div>
+        </div>
+        
+        {/* Important note about file edits */}
+        <div className="text-center mt-2">
+          <p className="text-gray-500 text-xs">
+            Volute makes all file edits in temporary copies to avoid corrupting workspace originals. You can save Volute's copies in your preferred locations once you finish iterating. Otherwise, you may not be able to access Volute's copies again.
+          </p>
         </div>
       </div>
     </div>
