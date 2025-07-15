@@ -133,6 +133,12 @@ class ConnectionManager:
             asyncio.create_task(self.stop_heartbeat())
             self.heartbeat_task = None
             
+        # Cancel any pending requests for this client
+        from ai_services.orchestration.cancellation_manager import cancellation_manager
+        cancelled_count = cancellation_manager.cancel_client_requests(client_id)
+        if cancelled_count > 0:
+            logger.info(f"Cancelled {cancelled_count} pending requests for disconnected client {client_id}")
+        
         # Emit disconnection event
         asyncio.create_task(event_bus.emit("client_disconnected", {"client_id": client_id}))
         logger.info(f"Client {client_id} disconnected")

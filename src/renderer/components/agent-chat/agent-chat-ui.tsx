@@ -72,6 +72,7 @@ export default function AIChatUI() {
     requestId: string | null;
     content: string;
   }>({ requestId: null, content: '' });
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
   
 
   const { fileTree } = useFileTree()
@@ -125,6 +126,7 @@ export default function AIChatUI() {
     if (!input.trim()) return
 
     const requestId = uuidv4();
+    setCurrentRequestId(requestId);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -148,13 +150,22 @@ export default function AIChatUI() {
     } catch (error) {
       console.error("Error sending message:", error);
       setIsLoading(false);
+      setCurrentRequestId(null);
     }
   }, [input, selectedModel, threadId]);
 
   const handleCancel = useCallback(() => {
+    // Send cancellation request to backend
+    if (currentRequestId) {
+      console.log('Sending cancellation request for:', currentRequestId);
+      webSocketService.sendCancelRequest(currentRequestId);
+    }
+    
+    // Reset UI state
     setIsLoading(false)
     setIsTyping(false)
-  }, [])
+    setCurrentRequestId(null)
+  }, [currentRequestId])
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     handleMentionKeyDown(e, handleMentionSelect)
@@ -241,6 +252,7 @@ export default function AIChatUI() {
       else if (message.type === 'ASSISTANT_MESSAGE_DONE') {
         console.log('handleAssistantChunk received message done streaming signal', message);
         setIsLoading(false);
+        setCurrentRequestId(null);
       }
     };
 
@@ -254,6 +266,12 @@ export default function AIChatUI() {
       if (message.type === 'CUSTOM_EVENT' && message.event_message) {
         console.log('handleCustomEvent received CUSTOM_EVENT for streaming');
         
+        // If this is an error message, clear the loading state
+        if (message.event_type === 'error') {
+          setIsLoading(false);
+          setCurrentRequestId(null);
+        }
+
         /**
          * Add a new message for a custom event to the conversation history.
          *
@@ -358,12 +376,29 @@ export default function AIChatUI() {
       });
     };
   
+    const handleCancellationResponse = (message: any) => {
+      console.log('Cancellation response received:', message);
+      if (message.type === 'REQUEST_CANCELLED' && message.success) {
+        setIsLoading(false);
+        setCurrentRequestId(null);
+        // Optionally show a notification that the request was cancelled
+        console.log('Request cancelled successfully');
+      } else if (message.type === 'CLIENT_REQUESTS_CANCELLED') {
+        setIsLoading(false);
+        setCurrentRequestId(null);
+        console.log(`${message.cancelled_count} requests cancelled`);
+      }
+    };
+
     webSocketService.on('CHAT_RESPONSE', handleChatResponse);
     webSocketService.on('TOOL_CALL', handleToolCall);
     webSocketService.on('TOOL_RESULT', handleToolResult);
     webSocketService.on('ASSISTANT_MESSAGE_CHUNK', handleAssistantChunk);
     webSocketService.on('ASSISTANT_MESSAGE_DONE', handleAssistantChunk);
     webSocketService.on('CUSTOM_EVENT', handleCustomEvent);
+    webSocketService.on('REQUEST_CANCELLED', handleCancellationResponse);
+    webSocketService.on('CLIENT_REQUESTS_CANCELLED', handleCancellationResponse);
+    webSocketService.on('CANCELLATION_FAILED', handleCancellationResponse);
     
     
     
@@ -374,6 +409,9 @@ export default function AIChatUI() {
       webSocketService.off('ASSISTANT_MESSAGE_CHUNK', handleAssistantChunk);
       webSocketService.off('ASSISTANT_MESSAGE_DONE', handleAssistantChunk);
       webSocketService.off('CUSTOM_EVENT', handleCustomEvent);
+      webSocketService.off('REQUEST_CANCELLED', handleCancellationResponse);
+      webSocketService.off('CLIENT_REQUESTS_CANCELLED', handleCancellationResponse);
+      webSocketService.off('CANCELLATION_FAILED', handleCancellationResponse);
     };
   }, []);
 

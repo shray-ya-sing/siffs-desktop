@@ -19,6 +19,7 @@ from agents.supervisor.supervisor_agent import agent_system, supervisor_agent
 python_server_path = Path(__file__).parent.parent.parent
 sys.path.append(str(python_server_path))
 from api_key_management.service.api_key_manager import api_key_manager
+from ai_services.orchestration.cancellation_manager import cancellation_manager, CancellationError
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +155,11 @@ class SupervisorAgentOrchestrator:
             )
         elif message.get("type") == "INITIALIZE_AGENT_WITH_API_KEY":
             await self.handle_initialize_agent_with_api_key(
+                client_id=client_id,
+                data=message.get("data", {})
+            )
+        elif message.get("type") == "CANCEL_REQUEST":
+            await self.handle_cancel_request(
                 client_id=client_id,
                 data=message.get("data", {})
             )
@@ -354,6 +360,53 @@ class SupervisorAgentOrchestrator:
                 }
             )
     
+    async def handle_cancel_request(
+        self,
+        client_id: str,
+        data: Dict[str, Any]
+    ):
+        """Handle request cancellation message"""
+        try:
+            request_id = data.get("requestId")
+            
+            if request_id:
+                # Cancel the specific request
+                success = cancellation_manager.cancel_request(request_id)
+                logger.info(f"Request {request_id} cancellation {'successful' if success else 'failed'}")
+                
+                # Send confirmation to client
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "REQUEST_CANCELLED",
+                        "requestId": request_id,
+                        "success": success
+                    }
+                )
+            else:
+                # Cancel all requests for this client
+                cancelled_count = cancellation_manager.cancel_client_requests(client_id)
+                logger.info(f"Cancelled {cancelled_count} requests for client {client_id}")
+                
+                # Send confirmation to client
+                await self._send_to_client(
+                    client_id=client_id,
+                    data={
+                        "type": "CLIENT_REQUESTS_CANCELLED",
+                        "cancelled_count": cancelled_count
+                    }
+                )
+                
+        except Exception as e:
+            logger.error(f"Error handling cancellation request: {str(e)}")
+            await self._send_to_client(
+                client_id=client_id,
+                data={
+                    "type": "CANCELLATION_FAILED",
+                    "error": str(e)
+                }
+            )
+    
     async def _stream_supervisor_response(
         self,
         message: str,
@@ -363,6 +416,9 @@ class SupervisorAgentOrchestrator:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream the supervisor agent's response"""
         try:
+            # Register the request with cancellation manager
+            if request_id:
+                cancellation_manager.start_request(request_id, client_id)
 
             # Get or create thread_id if not provided
             if not thread_id:
@@ -419,14 +475,22 @@ class SupervisorAgentOrchestrator:
                     subgraphs=True,  # Enable streaming from sub-agents
                     stream_mode=["messages", "custom"]
                 ):
+                    # Check for cancellation before processing each item
+                    if request_id and cancellation_manager.is_cancelled(request_id):
+                        logger.info(f"Request {request_id} cancelled, stopping stream")
+                        yield {
+                            "type": "error",
+                            "error": "Request was cancelled",
+                            "requestId": request_id
+                        }
+                        return
+                    
                     if isinstance(stream_item, tuple):
                         node_id, mode, chunk = stream_item
                         if mode == "messages":
                             # log a representation of the stream item
                             #logger.info(f"Stream item: {stream_item}")
                             message_chunk, metadata = chunk
-
-                            logger.info(f"METADATA: {metadata}")
 
                             # Check if this is a tool message, don't want to send these to client
                             if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
@@ -588,6 +652,10 @@ class SupervisorAgentOrchestrator:
                 "error": str(e),
                 "requestId": request_id
             }
+        finally:
+            # Clean up the request from cancellation manager
+            if request_id:
+                cancellation_manager.finish_request(request_id)
             
     async def _send_to_client(self, client_id: str, data: Dict, request_id: Optional[str] = None):
         """Helper to send data to WebSocket client"""

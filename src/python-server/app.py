@@ -103,6 +103,19 @@ def clear_metadata_cache():
     except Exception as e:
         logger.error(f"Error clearing metadata cache: {str(e)}")
 
+async def periodic_cleanup():
+    """Periodic cleanup of old requests"""
+    while True:
+        try:
+            await asyncio.sleep(3600)  # Run every hour
+            from ai_services.orchestration.cancellation_manager import cancellation_manager
+            cleaned_count = cancellation_manager.cleanup_old_requests(max_age_minutes=60)
+            if cleaned_count > 0:
+                logger.info(f"Periodic cleanup removed {cleaned_count} old requests")
+        except Exception as e:
+            logger.error(f"Error in periodic cleanup: {e}")
+            await asyncio.sleep(60)  # Wait 1 minute before retrying
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -142,6 +155,14 @@ async def startup_event():
         logger.info("Starting up...Cache service initialized")
     except Exception as e:
         logger.error(f"Failed to initialize cache service: {e}")
+    
+    # Initialize cancellation manager and start cleanup task
+    try:
+        from ai_services.orchestration.cancellation_manager import cancellation_manager
+        asyncio.create_task(periodic_cleanup())
+        logger.info("Starting up...Cancellation manager initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize cancellation manager: {e}")
 
     
     # Print all registered routes

@@ -194,6 +194,16 @@ class WebSocketService {
     return payload; // Return the payload in case you need the ID/timestamp
   }
 
+  sendCancelRequest(requestId?: string) {
+    const payload = {
+      type: 'CANCEL_REQUEST',
+      timestamp: new Date().toISOString(),
+      data: requestId ? { requestId } : {}
+    };
+    this.sendMessage(payload);
+    return payload;
+  }
+
   sendToolCallEvent(toolName: string, query: string, requestId: string) {
     const payload = {
       type: 'TOOL_CALL',
