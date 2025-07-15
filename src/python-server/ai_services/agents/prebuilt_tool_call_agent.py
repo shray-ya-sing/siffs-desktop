@@ -10,9 +10,11 @@ import time
 from .tools import ALL_TOOLS
 try:
     from .prebuilt_agent.tools.prebuilt_agent_tools import NEW_DOCUMENT_TOOLS
+    from .prebuilt_agent.tools.excel_editing_tools import EXCEL_TOOLS
 except ImportError:
     try:
         from prebuilt_agent.tools.prebuilt_agent_tools import NEW_DOCUMENT_TOOLS
+        from prebuilt_agent.tools.excel_editing_tools import EXCEL_TOOLS
     except ImportError:
         # Fallback to relative import from current directory structure
         import sys
@@ -21,6 +23,7 @@ except ImportError:
         tools_dir = current_dir / "prebuilt_agent" / "tools"
         sys.path.insert(0, str(tools_dir))
         from prebuilt_agent_tools import NEW_DOCUMENT_TOOLS
+        from excel_editing_tools import EXCEL_TOOLS
 
 import langgraph
 from langgraph.checkpoint.memory import InMemorySaver
@@ -35,7 +38,7 @@ python_server_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(python_server_dir))
 
 from api_key_management.providers.gemini_provider import GeminiProvider
-from ai_services.prompts.system_prompts import VOLUTE_SYSTEM_PROMPT
+from ai_services.prompts.system_prompts import VOLUTE_SYSTEM_PROMPT, EXCEL_AGENT_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +134,8 @@ class PrebuiltAgent:
                 model_provider=provider_name
             )
 
-        enhanced_system_prompt = VOLUTE_SYSTEM_PROMPT
+        #enhanced_system_prompt = VOLUTE_SYSTEM_PROMPT
+        enhanced_system_prompt = EXCEL_AGENT_SYSTEM_PROMPT #TODO: test with excel agent prompt
         workspace_excel_files = self.view_files_in_workspace()
         enhanced_system_prompt += f"\n\nHere are the files the user added to the workspace that you have access to:\n{workspace_excel_files}"
 
@@ -140,10 +144,11 @@ class PrebuiltAgent:
         # Create the agent
         agent_tools = ALL_TOOLS
         agent_tools.extend(NEW_DOCUMENT_TOOLS)
+        excel_tools = EXCEL_TOOLS
         logger.info(f"Creating agent with model: {provider_name}:{model_name}")
         self.agent = create_react_agent(
             model=self.llm, 
-            tools=agent_tools,
+            tools=excel_tools,#TODO: test with only excel tools
             prompt=enhanced_system_prompt,
             store=self.in_memory_store,
             checkpointer=self.checkpointer,
