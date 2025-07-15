@@ -270,18 +270,14 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
         """Clean and unescape formula string while preserving internal quotes"""
         if not formula:
             return formula
-            
+
         formula = formula.strip()
-        # Only strip outer matching quotes if they exist and the formula is not just quotes
+        # Always remove outer quotes for Excel formulas
         if (formula.startswith('"') and formula.endswith('"')) or \
            (formula.startswith("'") and formula.endswith("'")):
-            # Check if there are matching quotes inside the formula
+            # Remove outer quotes and unescape
             inner = formula[1:-1]
-            if not (('"' in inner) or ("'" in inner)):
-                formula = inner
-            else:
-                # Unescape any escaped quotes inside the formula
-                formula = formula[1:-1].replace('\\"', '"').replace("\\'", "'")
+            formula = inner.replace('\\"', '"').replace("\\'", "'")
         return formula
 
     def is_valid_cell_reference(ref: str) -> bool:
@@ -329,7 +325,26 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     continue
                     
                 # Split into cell reference, formula/value, and formatting properties
-                cell_parts = [p.strip() for p in entry.split(',')]
+                # Use CSV-aware parsing to handle commas inside quoted strings
+                import csv
+                import io
+                
+                try:
+                    # Pre-process entry to remove spaces around commas for proper CSV parsing
+                    # But preserve spaces inside quoted strings
+                    processed_entry = entry
+                    
+                    # Simple approach: replace ', ' with ',' outside of quotes
+                    import re
+                    # This regex matches comma followed by space, but not inside quotes
+                    processed_entry = re.sub(r',\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', ',', entry)
+                    
+                    # Use CSV reader to properly handle quoted strings with commas
+                    csv_reader = csv.reader(io.StringIO(processed_entry), delimiter=',')
+                    cell_parts = [p.strip() for p in next(csv_reader)]
+                except (csv.Error, StopIteration):
+                    # Fall back to simple split if CSV parsing fails
+                    cell_parts = [p.strip() for p in entry.split(',')]
                 if len(cell_parts) < 2:
                     logger.warning(f"Invalid cell entry format: {entry}")
                     continue
@@ -425,6 +440,30 @@ def parse_cell_formulas(formula_input: Union[str, dict]) -> Optional[Dict[str, D
         else:
             formula_dict = formula_input
             logger.debug("Using input as dictionary directly")
+        
+        # Clean formulas that might have extra quotes from JSON parsing
+        def clean_formula_from_json(formula: str) -> str:
+            """Clean formulas that might have extra quotes from JSON parsing"""
+            if not formula:
+                return formula
+            formula = formula.strip()
+            # Remove outer quotes if they exist (both matching or just leading)
+            if (formula.startswith('"') and formula.endswith('"')) or \
+               (formula.startswith("'") and formula.endswith("'")):
+                formula = formula[1:-1]
+            elif formula.startswith('"') or formula.startswith("'"):
+                # Remove only leading quote if no matching trailing quote
+                formula = formula[1:]
+            return formula
+        
+        # Clean all formulas in the dictionary
+        for sheet_name, cell_formulas in formula_dict.items():
+            if isinstance(cell_formulas, dict):
+                for cell_ref, formula in cell_formulas.items():
+                    if isinstance(formula, str):
+                        formula_dict[sheet_name][cell_ref] = clean_formula_from_json(formula)
+                    elif isinstance(formula, dict) and 'formula' in formula:
+                        formula_dict[sheet_name][cell_ref]['formula'] = clean_formula_from_json(formula['formula'])
         
         # Validate the cell formats
         logger.debug("Validating cell formats")

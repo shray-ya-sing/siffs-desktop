@@ -66,7 +66,8 @@ export default function AIChatUI() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite-preview-06-17")
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro")
+
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [threadId, setThreadId] = useState<string>(() => localStorage.getItem('threadId') || uuidv4());
   const [streamingMessage, setStreamingMessage] = useState<{

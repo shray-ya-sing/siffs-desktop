@@ -130,7 +130,7 @@ class PrebuiltAgentOrchestrator:
         if request_id and "requestId" not in data:
             data["requestId"] = request_id
         try:
-            logger.info(f"Sending message to client {client_id}: {data}")
+            #logger.info(f"Sending message to client {client_id}: {data}")
             await manager.send_message(client_id, data)
         except Exception as e:
             logger.error(f"Failed to send message to client {client_id}: {str(e)}")

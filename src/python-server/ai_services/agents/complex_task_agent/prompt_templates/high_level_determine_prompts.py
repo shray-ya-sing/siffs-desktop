@@ -77,7 +77,7 @@ class HighLevelDeterminePrompts:
     @staticmethod
     def get_implementation_sequence_prompt():
         return """
-        Create a detailed implementation sequence for the financial model, following these CRITICAL RULES:
+        Create a detailed implementation sequence for the task, following these CRITICAL RULES:
         
         DATA PRESERVATION RULES:
         1. NEVER overwrite or modify any existing data, formulas, or structure

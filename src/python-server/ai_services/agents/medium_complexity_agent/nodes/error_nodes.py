@@ -51,9 +51,10 @@ from typing_extensions import TypedDict
 from typing import List, Dict, Any
 
 class ErrorNodes:
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17"):
         # Error nodes don't need LLM initialization since they just handle error routing
         self.user_id = user_id
+        self.model = model  # Store model for consistency, even though not used
         logger.info(f"Initialized ErrorNodes for user {user_id}")
 
 

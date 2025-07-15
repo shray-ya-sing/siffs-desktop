@@ -62,7 +62,7 @@ class Essence(BaseModel):
 
 class Implementation(BaseModel):
     """Implementation of the request."""
-    implementation_sequence: List[Dict[str, Any]] = Field(description="The implementation sequence")
+    implementation_sequence: str = Field(description="The implementation sequence")
     steps: List[Dict[str, Any]] = Field(description="The steps in the implementation sequence"
     )
 
@@ -75,13 +75,11 @@ class NextStep(BaseModel):
 
 # Initialize LLM
 class HighLevelDeterminationNodes:
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17"):
         try:
-            gemini_pro = "gemini-2.5-pro"
-            gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
             self.llm = GeminiProvider.get_gemini_model(
                 user_id=user_id,
-                model=gemini_flash_lite,
+                model=model,
                 temperature=0.2,
                 max_retries=3
             )
@@ -215,9 +213,10 @@ class HighLevelDeterminationNodes:
             goto= "decide_next_step"
         )
         else:
-            return Command(
-                goto= "llm_response_failure"
-            )
+            #return Command(
+            #    goto= "llm_response_failure"
+            #)
+            raise ValueError("LLM response failed")
 
 
     @log_errors

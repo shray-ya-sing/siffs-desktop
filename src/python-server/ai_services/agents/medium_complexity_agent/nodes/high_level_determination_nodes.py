@@ -64,7 +64,7 @@ class TaskSummary(BaseModel):
 
 class Implementation(BaseModel):
     """Implementation of the request."""    
-    implementation_sequence: List[Dict[str, Any]] = Field(description="The implementation sequence")
+    implementation_sequence: str = Field(description="The implementation sequence")
     steps: List[Dict[str, Any]] = Field(description="The steps in the implementation sequence")
 
 class NextStep(BaseModel):
@@ -75,13 +75,11 @@ class NextStep(BaseModel):
     reasoning: str = Field(description="Very Brief explanation for choosing this next step")
 
 class HighLevelDeterminationNodes:
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17"):
         try:
-            gemini_pro = "gemini-2.5-pro"
-            gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
             self.llm = GeminiProvider.get_gemini_model(
                 user_id=user_id,
-                model=gemini_flash_lite,
+                model=model,
                 temperature=0.2,
                 max_retries=3
             )
@@ -102,11 +100,15 @@ class HighLevelDeterminationNodes:
         if not latest_conversation:
             raise ValueError("No recent conversation found in cache")
         
-        thread_id = latest_conversation["thread_id"]
-        user_input = latest_conversation["user_message"]
+        thread_id = latest_conversation.get("thread_id")
+        user_input = latest_conversation.get("user_message")
+        if not thread_id or not user_input:
+            raise ValueError("No recent conversation found in cache")
+
         messages = [{"role": "user", "content": user_input}]
         workspace_files = list_workspace_files()
         workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
+        workspace_prompt+= f"\n\nHere's the user's request for which you have to get the workspace path: {user_input}"
         messages.append({"role": "user", "content": workspace_prompt})
         structured_llm = self.llm.with_structured_output(TaskSummary)
         llm_response = structured_llm.invoke(messages)
@@ -138,14 +140,19 @@ class HighLevelDeterminationNodes:
         if not latest_conversation:
             raise ValueError("No recent conversation found in cache")
         
-        thread_id = latest_conversation["thread_id"]
-        user_input = latest_conversation["user_message"]
+        thread_id = latest_conversation.get("thread_id")
+        user_input = latest_conversation.get("user_message")
+        if not thread_id or not user_input:
+            raise ValueError("No recent conversation found in cache")
 
         messages = []    
         workspace_files = list_workspace_files()
         workspace_prompt= f"Choose the workspace path the user intends to edit from the list of available paths. Return the FULL path: {workspace_files}"
         # call the get full excel info tool to determine the status of the full excel file
-        full_excel_metadata = get_simplified_excel_metadata(state["workspace_path"])
+        workspace_path = state.get("workspace_path")
+        if not workspace_path:
+            raise ValueError("No workspace path found in state")
+        full_excel_metadata = get_simplified_excel_metadata(workspace_path)
         if not full_excel_metadata:
             logger.error("Failed to get full excel metadata")
             full_excel_metadata = ""
@@ -172,9 +179,10 @@ class HighLevelDeterminationNodes:
             goto= "decide_next_step"
         )
         else:
-            return Command(
-                goto= "llm_response_failure"
-            )
+            #return Command(
+            #    goto= "llm_response_failure"
+            #)
+            raise ValueError("LLM response failed")
 
 
     @log_errors
