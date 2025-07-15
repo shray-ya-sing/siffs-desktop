@@ -1,6 +1,7 @@
 import React from 'react';
 import { MinusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { NavIcons } from '../navigation/NavIcons';
+// Use SVG from assets folder
 
 interface TitleBarProps {
   title?: string;
@@ -35,29 +36,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         WebkitAppRegion: 'drag'
       } as React.CSSProperties}
     >
-      {/* Left side - App title */}
-      <div className="flex items-center space-x-2 flex-1">
-        <span className="text-gray-300 text-sm font-medium">
-          {title}
-        </span>
+      {/* Left side - Logo and Navigation Icons */}
+      <div 
+        className="flex items-center space-x-3"
+        style={{
+          // Make logo and navigation clickable (not draggable)
+          WebkitAppRegion: 'no-drag'
+        } as React.CSSProperties}
+      >
+        {/* App Logo */}
+        <img 
+          src={require('../../../assets/icons/svg/volute_icon.svg').default || require('../../../assets/icons/svg/volute_icon.svg')} 
+          alt="Volute" 
+          className="w-5 h-5" 
+        />
+        
+        {/* Navigation Icons */}
+        {showNavigation && <NavIcons />}
       </div>
-
-      {/* Center - Navigation Icons */}
-      {showNavigation && (
-        <div 
-          className="flex items-center justify-center flex-1"
-          style={{
-            // Make navigation clickable (not draggable)
-            WebkitAppRegion: 'no-drag'
-          } as React.CSSProperties}
-        >
-          <NavIcons />
-        </div>
-      )}
 
       {/* Right side - Window controls */}
       <div 
-        className="flex items-center space-x-2 flex-1 justify-end"
+        className="flex items-center space-x-2"
         style={{
           // Make buttons clickable (not draggable)
           WebkitAppRegion: 'no-drag'

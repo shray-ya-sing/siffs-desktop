@@ -67,6 +67,11 @@ rules.push(
   {
     test: /\.(png|jpe?g|gif)$/i,
     type: 'asset/resource',
+  },
+  // Add support for SVG files
+  {
+    test: /\.svg$/i,
+    type: 'asset/resource',
   }
 );
 
@@ -92,7 +97,7 @@ export const rendererConfig: Configuration = {
     })
   ],
   resolve: {
-    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
+    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json', '.svg'],
     fallback: {
       // Disable all Node.js core modules in the renderer process
       path: false,
