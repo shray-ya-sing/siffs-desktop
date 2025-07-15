@@ -425,14 +425,14 @@ export default function AIChatUI() {
 
   return (
     <div
-      className="flex flex-col h-screen text-white pb-20 relative overflow-hidden"
+      className="flex flex-col h-screen text-white relative overflow-hidden"
       style={{ backgroundColor: "#0a0a0a" }}
     >
-      {/* Circular gradient background */}
+      {/* Transparent background for assistant messages */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at center, rgba(20, 20, 20, 0.3) 0%, rgba(10, 10, 10, 0.8) 40%, rgba(10, 10, 10, 1) 70%)`,
+          backgroundColor: "transparent",
           zIndex: 1,
         }}
       />
@@ -443,12 +443,12 @@ export default function AIChatUI() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 relative z-10">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 relative z-10" style={{ paddingBottom: '200px' }}>
         {messages.map((message) => (
           <div key={message.id} className="space-y-2">
             {message.role === "user" ? (
-              <div className="flex justify-start">
-                <div className="max-w-6xl w-full">
+              <div className="flex justify-center">
+                <div className="max-w-full w-4/5">
                   <div
                     className="rounded-3xl px-3 py-2 text-gray-300 text-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                     style={{
@@ -461,8 +461,8 @@ export default function AIChatUI() {
                 </div>
               </div>
             ) : message.role === 'custom_event' ? (
-              <div className="flex justify-start">
-                <div className="max-w-6xl w-full">
+              <div className="flex justify-center">
+                <div className="max-w-full w-4/5">
                   <EventCard
                     type={message.event_type as EventType}
                     message={message.event_message}
@@ -473,8 +473,8 @@ export default function AIChatUI() {
                 </div>
               </div>
             ) : (
-              <div className="flex justify-start">
-                <div className="max-w-6xl w-full">
+              <div className="flex justify-center">
+                <div className="max-w-full w-4/5">
                 <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20 [&>pre]:m-0 [&>pre]:p-0">
                   <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
                     <MarkdownRenderer content={message.content} />
@@ -502,8 +502,8 @@ export default function AIChatUI() {
           }
           
           return (
-            <div className="flex justify-start animate-fade-in">
-              <div className="max-w-4xl">
+            <div className="flex justify-center animate-fade-in">
+              <div className="max-w-full w-4/5">
                 <div className="rounded-3xl px-3 py-2">
                   <div className="flex items-center gap-2 text-gray-400">
                     <div className="flex gap-1">
@@ -526,8 +526,8 @@ export default function AIChatUI() {
         })()}
 
         {isTyping && !isLoading && (
-          <div className="flex justify-start animate-fade-in">
-            <div className="max-w-4xl">
+          <div className="flex justify-center animate-fade-in">
+            <div className="max-w-full w-4/5">
               <div className="rounded-3xl px-3 py-2">
                 <div className="flex items-center gap-2 text-gray-500">
                   <div className="flex gap-1">
@@ -552,7 +552,7 @@ export default function AIChatUI() {
       </div>
 
       {/* Input - Fixed at bottom center */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20 space-y-2">
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20 space-y-2" style={{ marginBottom: '10px' }}>
       {/* ProviderDropdown positioned above the input */}
         <div className="relative w-full">
           <ProviderDropdown 

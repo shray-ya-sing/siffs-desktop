@@ -46,14 +46,14 @@ export function AgentChatPage() {
     setIsSidebarOpen(prev => !prev);
   }, []);
 
-  // Update the main container and sidebar styles in AgentChatPage.tsx
+// Update the main container and sidebar styles in AgentChatPage.tsx
 return (
-    <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden pt-[5%]">
+    <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden">
       {/* File explorer sidebar */}
       <div className={`
-        fixed left-0 top-0 h-[95%] bg-[#0f0f0f]/80 backdrop-blur-sm
+        fixed left-0 top-8 h-[calc(100vh-2rem)] bg-[#0f0f0f]/80 backdrop-blur-sm
         transition-all duration-300 ease-in-out overflow-hidden
-        border-r border-gray-700/50 mt-[5%]
+        border-r border-gray-700/50
         ${isSidebarOpen ? 'w-72' : 'w-0 pointer-events-none'}
         `}>
         <div className="h-full flex flex-col">
@@ -81,7 +81,7 @@ return (
       {/* Main chat area */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
         isSidebarOpen ? 'ml-72' : 'ml-0'
-        } mt-[5%]`}>
+        } pt-8`}>
         <AIChatUI />
       </div>
   
