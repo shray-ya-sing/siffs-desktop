@@ -118,7 +118,7 @@ class PrebuiltAgent:
             model_name = "gemini-2.5-flash-lite-preview-06-17"
             
         # Initialize the LLM with the specified model
-        if model_name == "gemini-2.5-flash-lite-preview-06-17":
+        if model_name in ["gemini-2.5-flash-lite-preview-06-17", "gemini-2.5-pro"]:
             self.llm = GeminiProvider.get_gemini_model(
                 user_id=user_id,
                 model=model_name,
@@ -127,7 +127,7 @@ class PrebuiltAgent:
             )
         else:
             self.llm = init_chat_model(
-                model_name=f"{provider_name}:{model_name}", 
+                model=f"{provider_name}:{model_name}", 
                 model_provider=provider_name
             )
 

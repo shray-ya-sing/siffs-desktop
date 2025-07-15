@@ -44,74 +44,76 @@ class SupervisorAgent:
         self.agent_system = None
         self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT
 
-    def initialize_with_user_api_key(self, user_id: str) -> bool:
+    def initialize_with_user_api_key(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17") -> bool:
         """Initialize the agent for a specific user with their API key.
         
         Args:
             user_id: The ID of the user to initialize for
+            model: The model to use for initialization
             
         Returns:
             bool: True if initialization was successful, False otherwise
         """
-        if self.current_user_id == user_id:
-            logger.info(f"Agent already initialized for user {user_id}")
+        # Always reinitialize if model changes, even for same user
+        if self.current_user_id == user_id and hasattr(self, '_current_model') and self._current_model == model:
+            logger.info(f"Agent already initialized for user {user_id} with model {model}")
             return True
             
         try:
             # Clear any existing agents
             #self._cleanup()
             
-            # Initialize with user's API key
+            # Initialize with user's API key and specified model
             self.current_user_id = user_id
-            self._initialize_agents(user_id)
+            self._current_model = model
+            self._initialize_agents(user_id, model)
             self._setup_supervisor()
             
             return True
             
         except Exception as e:
-            logger.error(f"Failed to initialize agent for user {user_id}: {str(e)}")
+            logger.error(f"Failed to initialize agent for user {user_id} with model {model}: {str(e)}")
             #self._cleanup()
             return False
 
-    def _initialize_agents(self, user_id: str):
-        """Initialize the underlying agents"""
-        gemini_pro = "gemini-2.5-pro"
-        gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"    
-
+    def _initialize_agents(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17"):
+        """Initialize the underlying agents with the specified model"""
+        logger.info(f"Initializing agents for user {user_id} with model {model}")
+        
         try:
             self.supervisor_model = GeminiProvider.get_gemini_model(
                 user_id=user_id,
-                model=gemini_flash_lite,
+                model=model,
                 temperature=0.2,
                 max_retries=3
             )
 
             if not self.supervisor_model:
-                logger.error("Failed to initialize supervisor model for user {user_id}")
+                logger.error(f"Failed to initialize supervisor model for user {user_id}")
         except Exception as e:
             logger.error(f"Failed to initialize supervisor model for user {user_id}: {str(e)}")
         
         try:
-            self.simple_agent = PrebuiltAgent().with_model(gemini_flash_lite, user_id).get_agent()
+            self.simple_agent = PrebuiltAgent().with_model(model, user_id).get_agent()
             
             if not self.simple_agent:
-                logger.error("Failed to initialize simple agent for user {user_id}")
+                logger.error(f"Failed to initialize simple agent for user {user_id}")
         except Exception as e:
             logger.error(f"Failed to initialize simple agent for user {user_id}: {str(e)}")
 
         try:
-            self.complex_agent = ComplexExcelRequestAgent().with_model(gemini_flash_lite, user_id).get_agent()
+            self.complex_agent = ComplexExcelRequestAgent().with_model(model, user_id).get_agent()
             
             if not self.complex_agent:
-                logger.error("Failed to initialize complex agent for user {user_id}")
+                logger.error(f"Failed to initialize complex agent for user {user_id}")
         except Exception as e:
             logger.error(f"Failed to initialize complex agent for user {user_id}: {str(e)}")
 
         try:
-            self.medium_agent = MediumExcelRequestAgent().with_model(gemini_flash_lite, user_id).get_agent()
+            self.medium_agent = MediumExcelRequestAgent().with_model(model, user_id).get_agent()
             
             if not self.medium_agent:
-                logger.error("Failed to initialize medium agent for user {user_id}")
+                logger.error(f"Failed to initialize medium agent for user {user_id}")
             
         except Exception as e:
             logger.error(f"Failed to initialize medium agent for user {user_id}: {str(e)}")

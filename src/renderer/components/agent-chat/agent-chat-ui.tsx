@@ -49,10 +49,11 @@ const MODEL_OPTIONS: ModelOption[] = [
 //  { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
 //  { id: "openai-o3", name: "OpenAI o-3", provider: "OpenAI" },
 //  { id: "claude-sonnet-4-20250514", name: "Claude sonnet 4", provider: "Anthropic" },
-  { id: "claude-3-7-sonnet-latest", name: "Claude sonnet 3.7", provider: "Anthropic" },
+//  { id: "claude-3-7-sonnet-latest", name: "Claude sonnet 3.7", provider: "Anthropic" },
 //  { id: "xai-grok-3", name: "Grok-3", provider: "xAI" },
 //  { id: "deepseek-v3", name: "DeepSeek v3", provider: "DeepSeek" },
-//  { id: "gemini-2.5-pro", name: "Gemini 2.5 pro", provider: "Google" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 pro", provider: "Google" },
+  { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 flash lite", provider: "Google" },
 ]
 
 
@@ -65,7 +66,7 @@ export default function AIChatUI() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("claude-sonnet-4")
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro")
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [threadId, setThreadId] = useState<string>(() => localStorage.getItem('threadId') || uuidv4());
   const [streamingMessage, setStreamingMessage] = useState<{
@@ -500,7 +501,7 @@ export default function AIChatUI() {
 
       {/* Input - Fixed at bottom center */}
       <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-20 space-y-2">
-      {/* ProviderDropdown positioned above the input 
+      {/* ProviderDropdown positioned above the input */}
         <div className="relative w-full">
           <ProviderDropdown 
             value={selectedModel}
@@ -510,7 +511,7 @@ export default function AIChatUI() {
             onToggle={setIsDropdownOpen}
             className="w-full"
           />
-        </div>*/}
+        </div>
 
         {showMentions && (
           <MentionDropdown

@@ -173,15 +173,8 @@ class SupervisorAgentOrchestrator:
                 manager.set_user_id(client_id, user_id)
                 logger.info("User authentication successful")
                 
-                # Check if user has a Gemini API key before initializing
-                if api_key_manager.has_user_api_key(user_id, "gemini"):
-                    try:
-                        supervisor_agent.initialize_with_user_api_key(user_id)
-                        logger.info("Successfully configured supervisor agent for user")
-                    except Exception as e:
-                        logger.warning(f"Failed to configure user-specific API key: {str(e)}")
-                else:
-                    logger.info("No Gemini API key found for user, agent will be initialized when API key is set")
+                # Agent will be initialized on first chat message with model selection
+                logger.info("User authenticated successfully, supervisor agent will be initialized on first chat message")
 
                 
                 # Send confirmation back to client
@@ -222,6 +215,7 @@ class SupervisorAgentOrchestrator:
             message_content = message_data.get("message", "").strip()
             thread_id = message_data.get("threadId")
             request_id = message_data.get("requestId")
+            model = message_data.get("model", "gemini-2.5-flash-lite-preview-06-17")  # Default to flash lite
             
             if not message_content:
                 logger.warning(f"Empty message received from client {client_id}")
@@ -232,7 +226,8 @@ class SupervisorAgentOrchestrator:
                 message_content,
                 client_id=client_id,
                 thread_id=thread_id,
-                request_id=request_id
+                request_id=request_id,
+                model=model
             ):
                 chunk_type = chunk.get("type")
                 
@@ -312,37 +307,14 @@ class SupervisorAgentOrchestrator:
                 )
                 return
             
-            # Check if user has a Gemini API key
-            if api_key_manager.has_user_api_key(user_id, "gemini"):
-                try:
-                    supervisor_agent.initialize_with_user_api_key(user_id)
-                    logger.info("Successfully initialized supervisor agent for user after API key was set")
-                    
-                    await self._send_to_client(
-                        client_id=client_id,
-                        data={
-                            "type": "AGENT_INITIALIZATION_SUCCESS",
-                            "message": "Agent successfully initialized with API key"
-                        }
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to initialize agent for user: {str(e)}")
-                    await self._send_to_client(
-                        client_id=client_id,
-                        data={
-                            "type": "AGENT_INITIALIZATION_FAILED",
-                            "message": f"Failed to initialize agent: {str(e)}"
-                        }
-                    )
-            else:
-                logger.warning("No Gemini API key found for user during initialization request")
-                await self._send_to_client(
-                    client_id=client_id,
-                    data={
-                        "type": "AGENT_INITIALIZATION_FAILED",
-                        "message": "No Gemini API key found"
-                    }
-                )
+            # Agent will be initialized on first chat message with model selection
+            await self._send_to_client(
+                client_id=client_id,
+                data={
+                    "type": "AGENT_INITIALIZATION_SUCCESS",
+                    "message": "Agent will be initialized on first chat message with model selection"
+                }
+            )
                 
         except Exception as e:
             logger.error(f"Error handling agent initialization for client {client_id}: {str(e)}")
@@ -359,10 +331,37 @@ class SupervisorAgentOrchestrator:
         message: str,
         client_id: str,
         thread_id: Optional[str] = None,
-        request_id: Optional[str] = None
+        request_id: Optional[str] = None,
+        model: str = "gemini-2.5-flash-lite-preview-06-17"
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream the supervisor agent's response"""
         try:
+            # Get user_id from the client
+            user_id = manager.get_user_id(client_id)
+            
+            if not user_id:
+                logger.error("No user_id found for client in _stream_supervisor_response")
+                yield {
+                    "type": "error",
+                    "error": "User not authenticated",
+                    "requestId": request_id,
+                    "done": True
+                }
+                return
+            
+            # Initialize the agent with the user's API key and selected model
+            if not supervisor_agent.current_user_id or supervisor_agent.current_user_id != user_id or not hasattr(supervisor_agent, '_current_model') or supervisor_agent._current_model != model:
+                if api_key_manager.has_user_api_key(user_id, "gemini"):
+                    supervisor_agent.initialize_with_user_api_key(user_id, model)
+                else:
+                    logger.error("No Gemini API key found for user")
+                    yield {
+                        "type": "error",
+                        "error": "No Gemini API key found. Please set up your API key first.",
+                        "requestId": request_id,
+                        "done": True
+                    }
+                    return
 
             # Get or create thread_id if not provided
             if not thread_id:

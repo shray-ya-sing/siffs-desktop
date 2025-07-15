@@ -325,7 +325,26 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     continue
                     
                 # Split into cell reference, formula/value, and formatting properties
-                cell_parts = [p.strip() for p in entry.split(',')]
+                # Use CSV-aware parsing to handle commas inside quoted strings
+                import csv
+                import io
+                
+                try:
+                    # Pre-process entry to remove spaces around commas for proper CSV parsing
+                    # But preserve spaces inside quoted strings
+                    processed_entry = entry
+                    
+                    # Simple approach: replace ', ' with ',' outside of quotes
+                    import re
+                    # This regex matches comma followed by space, but not inside quotes
+                    processed_entry = re.sub(r',\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', ',', entry)
+                    
+                    # Use CSV reader to properly handle quoted strings with commas
+                    csv_reader = csv.reader(io.StringIO(processed_entry), delimiter=',')
+                    cell_parts = [p.strip() for p in next(csv_reader)]
+                except (csv.Error, StopIteration):
+                    # Fall back to simple split if CSV parsing fails
+                    cell_parts = [p.strip() for p in entry.split(',')]
                 if len(cell_parts) < 2:
                     logger.warning(f"Invalid cell entry format: {entry}")
                     continue
@@ -429,10 +448,13 @@ def parse_cell_formulas(formula_input: Union[str, dict]) -> Optional[Dict[str, D
             if not formula:
                 return formula
             formula = formula.strip()
-            # Remove outer quotes if they exist
+            # Remove outer quotes if they exist (both matching or just leading)
             if (formula.startswith('"') and formula.endswith('"')) or \
                (formula.startswith("'") and formula.endswith("'")):
                 formula = formula[1:-1]
+            elif formula.startswith('"') or formula.startswith("'"):
+                # Remove only leading quote if no matching trailing quote
+                formula = formula[1:]
             return formula
         
         # Clean all formulas in the dictionary

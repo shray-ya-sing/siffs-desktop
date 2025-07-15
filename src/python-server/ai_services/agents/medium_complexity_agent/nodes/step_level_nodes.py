@@ -73,13 +73,11 @@ class ExcelMetadataForGathering(BaseModel):
     )
 
 class StepLevelNodes:
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17"):
         try:
-            gemini_pro = "gemini-2.5-pro"
-            gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"     
             self.llm = GeminiProvider.get_gemini_model(
                 user_id=user_id,
-                model=gemini_flash_lite,
+                model=model,
                 temperature=0.2,
                 max_retries=3
             )
@@ -193,7 +191,7 @@ class StepLevelNodes:
                 "latest_model_response": llm_response.content
                 }
             cell_data = None
-            logger.info(f"Received cell formulas from llm: {llm_response.content[0:200]}")
+            logger.info(f"Received cell formulas from llm: {llm_response.content}")
             try:
                 cell_data = parse_markdown_formulas(llm_response.content)
                 logger.info("Parsed cell formulas into formulas")

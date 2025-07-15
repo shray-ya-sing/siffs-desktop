@@ -82,11 +82,10 @@ class ComplexExcelRequestAgent:
         if not provider_name:
             raise ValueError(f"Unsupported model: {model_name}")
             
-        gemini_pro = "gemini-2.5-pro"
-        gemini_flash_lite = "gemini-2.5-flash-lite-preview-06-17"
+        # Use the passed model parameter instead of hardcoded value
         self.llm = GeminiProvider.get_gemini_model(
             user_id=user_id,
-            model=gemini_flash_lite,
+            model=model_name,
             temperature=0.2,
             max_retries=3
         )
@@ -103,12 +102,12 @@ class ComplexExcelRequestAgent:
         return None
 
     def _initialize_node_classes(self, user_id: str):
-        """Initialize all node classes with the user_id"""
-        self.high_level_nodes = HighLevelDeterminationNodes(user_id)
-        self.step_level_nodes = StepLevelNodes(user_id)
-        self.checking_nodes = CheckingNodes(user_id)
-        self.final_evaluation_nodes = FinalEvaluationNodes(user_id)
-        self.error_nodes = ErrorNodes(user_id)
+        """Initialize all node classes with the user_id and model"""
+        self.high_level_nodes = HighLevelDeterminationNodes(user_id, self.current_model)
+        self.step_level_nodes = StepLevelNodes(user_id, self.current_model)
+        self.checking_nodes = CheckingNodes(user_id, self.current_model)
+        self.final_evaluation_nodes = FinalEvaluationNodes(user_id, self.current_model)
+        self.error_nodes = ErrorNodes(user_id, self.current_model)
 
     def get_agent(self):
         return self.complex_excel_request_agent
