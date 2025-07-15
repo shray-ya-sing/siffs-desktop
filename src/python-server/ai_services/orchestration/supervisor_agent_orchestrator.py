@@ -2,6 +2,7 @@
 import logging
 from typing import Dict, Any, Optional, AsyncGenerator, List, Union
 import uuid
+import asyncio
 from datetime import datetime, timezone
 
 from pathlib import Path
@@ -411,97 +412,167 @@ class SupervisorAgentOrchestrator:
                 }
                 return            
 
-            async for stream_item in supervisor_agent_system.astream(
-                inputs,
-                config,
-                subgraphs= True, # Enable streaming from sub-agents
-                stream_mode=["messages", "custom"]
-            ):
-                if isinstance(stream_item, tuple):
-                    node_id, mode, chunk = stream_item
-                    if mode == "messages":
-                        # log a representation of the stream item
-                        #logger.info(f"Stream item: {stream_item}")
-                        message_chunk, metadata = chunk
+            try:
+                async for stream_item in supervisor_agent_system.astream(
+                    inputs,
+                    config,
+                    subgraphs=True,  # Enable streaming from sub-agents
+                    stream_mode=["messages", "custom"]
+                ):
+                    if isinstance(stream_item, tuple):
+                        node_id, mode, chunk = stream_item
+                        if mode == "messages":
+                            # log a representation of the stream item
+                            #logger.info(f"Stream item: {stream_item}")
+                            message_chunk, metadata = chunk
 
-                        logger.info(f"METADATA: {metadata}")
+                            logger.info(f"METADATA: {metadata}")
 
-
-                        # Check if this is a tool message, don't want to send these to client
-                        if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
-                            continue
-
-
-                        if not hasattr(message_chunk, 'content'):
-                            continue
-                        
-                        # Skip tokens from excluded nodes
-                        if 'langgraph_node' in metadata:
-                            node_name = metadata.get("langgraph_node", "")                        
-                            if node_name in self.EXCLUDED_NODES or 'simple_excel_agent' in node_name:
+                            # Check if this is a tool message, don't want to send these to client
+                            if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
                                 continue
 
-                        if 'langgraph_checkpoint_ns' in metadata:
-                            checkpoint_name = metadata.get('langgraph_checkpoint_ns', '')
-                            if 'simple_excel_agent' in checkpoint_name:
-                                logger.info(f"Skipping simple_excel_agent checkpoint (langgraph_checkpoint_ns)")
+                            if not hasattr(message_chunk, 'content'):
                                 continue
-
-                        if 'checkpoint_ns' in metadata:
-                            checkpoint_name = metadata.get('checkpoint_ns', '')
-                            if 'simple_excel_agent' in checkpoint_name:
-                                logger.info(f"Skipping simple_excel_agent checkpoint (checkpoint_ns)")
-                                continue
-                        
-                        # Extract text content
-                        text = self.extract_ai_message_content(message_chunk)
-                        if text == "":
-                            continue
-
-                        elif text == "Transferring back to supervisor":
-                            continue
                             
-                        if text:
-                            assistant_message += text
-                            yield {
-                                "type": "content",
-                                "content": text,
-                                "requestId": request_id
-                            }
+                            # Skip tokens from excluded nodes
+                            if 'langgraph_node' in metadata:
+                                node_name = metadata.get("langgraph_node", "")                        
+                                if node_name in self.EXCLUDED_NODES or 'simple_excel_agent' in node_name:
+                                    continue
+
+                            if 'langgraph_checkpoint_ns' in metadata:
+                                checkpoint_name = metadata.get('langgraph_checkpoint_ns', '')
+                                if 'simple_excel_agent' in checkpoint_name:
+                                    logger.info(f"Skipping simple_excel_agent checkpoint (langgraph_checkpoint_ns)")
+                                    continue
+
+                            if 'checkpoint_ns' in metadata:
+                                checkpoint_name = metadata.get('checkpoint_ns', '')
+                                if 'simple_excel_agent' in checkpoint_name:
+                                    logger.info(f"Skipping simple_excel_agent checkpoint (checkpoint_ns)")
+                                    continue
+                            
+                            # Extract text content
+                            text = self.extract_ai_message_content(message_chunk)
+                            if text == "":
+                                continue
+
+                            elif text == "Transferring back to supervisor":
+                                continue
+                                
+                            if text:
+                                assistant_message += text
+                                yield {
+                                    "type": "content",
+                                    "content": text,
+                                    "requestId": request_id
+                                }
                         
                     
-                    elif mode == "custom":
-                        if isinstance(chunk, dict):
-                            chunk_str = json.dumps(chunk)
-                            for key, value in chunk.items():
-                                event_type = key
-                                event_message = value
-                            logger.info(f"Custom event: {event_type}")
-                            logger.info(f"Custom event message: {event_message}")
-                            yield {
-                                "type": "custom_event",
-                                "event_type": event_type,
-                                "event_message": event_message,
-                                "requestId": request_id,
-                                "done": False
-                            }
+                        elif mode == "custom":
+                            if isinstance(chunk, dict):
+                                chunk_str = json.dumps(chunk)
+                                for key, value in chunk.items():
+                                    event_type = key
+                                    event_message = value
+                                logger.info(f"Custom event: {event_type}")
+                                logger.info(f"Custom event message: {event_message}")
+                                yield {
+                                    "type": "custom_event",
+                                    "event_type": event_type,
+                                    "event_message": event_message,
+                                    "requestId": request_id,
+                                    "done": False
+                                }
+                            
+                            if isinstance(chunk, str):
+                                logger.info(f"Custom chunk: {chunk}")
                         
-                        if isinstance(chunk, str):
-                            logger.info(f"Custom chunk: {chunk}")
+                        elif mode == "updates":
+                            # Handle model state updates
+                            if isinstance(chunk, dict):
+                                logger.info(f"Model update: {chunk}")
+                                yield {
+                                    "type": "update",
+                                    "data": chunk,
+                                    "requestId": request_id
+                                }
                     
-                    elif mode == "updates":
-                        # Handle model state updates
-                        if isinstance(chunk, dict):
-                            logger.info(f"Model update: {chunk}")
-                            yield {
-                                "type": "update",
-                                "data": chunk,
-                                "requestId": request_id
-                            }
+                    # else get a string representation of the stream_item and log it
+                    else:
+                        logger.info(f"Received stream_item of type: {type(stream_item)}")                                
+            except Exception as stream_error:
+                logger.error(f"Error in supervisor agent streaming: {str(stream_error)}", exc_info=True)
                 
-                # else get a string representation of the stream_item and log it
+                # Handle specific streaming errors
+                error_str = str(stream_error).lower()
+                error_type = type(stream_error).__name__
+                
+                # Handle asyncio.CancelledError specifically
+                if isinstance(stream_error, asyncio.CancelledError):
+                    logger.warning("Asyncio CancelledError detected during streaming")
+                    yield {
+                        "type": "error",
+                        "error": "Stream was cancelled. Please try again.",
+                        "requestId": request_id
+                    }
+                    return
+                    
+                # Handle consumer suspended errors
+                elif 'consumer_suspended' in error_str or 'CONSUMER_SUSPENDED' in str(stream_error):
+                    logger.warning("Consumer suspended error detected, attempting to gracefully terminate stream")
+                    yield {
+                        "type": "error",
+                        "error": "Stream was interrupted. Please try again.",
+                        "requestId": request_id
+                    }
+                    return
+                    
+                # Handle general cancellation errors
+                elif 'cancelled' in error_str or 'CancelledError' in error_type:
+                    logger.warning(f"Stream was cancelled: {error_type}")
+                    yield {
+                        "type": "error",
+                        "error": "Stream was cancelled. Please try again.",
+                        "requestId": request_id
+                    }
+                    return
+                    
+                # Handle timeout errors
+                elif 'timeout' in error_str or 'TimeoutError' in error_type:
+                    logger.warning("Stream timeout detected")
+                    yield {
+                        "type": "error",
+                        "error": "Stream timed out. Please try again.",
+                        "requestId": request_id
+                    }
+                    return
+                    
+                # Handle connection errors
+                elif 'connection' in error_str or 'ConnectionError' in error_type:
+                    logger.warning("Connection error during streaming")
+                    yield {
+                        "type": "error",
+                        "error": "Connection error occurred. Please try again.",
+                        "requestId": request_id
+                    }
+                    return
+                    
+                # Handle generator/iterator errors
+                elif 'StopIteration' in error_type or 'StopAsyncIteration' in error_type:
+                    logger.info("Stream ended normally")
+                    return
+                    
                 else:
-                    logger.info(f"Received stream_item of type: {type(stream_item)}")                                
+                    # Log the full error for debugging
+                    logger.error(f"Unexpected streaming error of type {error_type}: {stream_error}")
+                    yield {
+                        "type": "error",
+                        "error": "An unexpected error occurred during streaming. Please try again.",
+                        "requestId": request_id
+                    }
+                    return
         
             yield {"type": "done", "requestId": request_id}
             
