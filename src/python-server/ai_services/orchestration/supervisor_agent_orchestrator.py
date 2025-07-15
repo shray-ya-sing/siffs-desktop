@@ -419,6 +419,15 @@ class SupervisorAgentOrchestrator:
             # Register the request with cancellation manager
             if request_id:
                 cancellation_manager.start_request(request_id, client_id)
+                
+                # Cache the current request_id for tools to access
+                try:
+                    cache_file = python_server_path / "metadata" / "__cache" / "current_request.json"
+                    cache_file.parent.mkdir(parents=True, exist_ok=True)
+                    with open(cache_file, 'w') as f:
+                        json.dump({'request_id': request_id, 'client_id': client_id}, f)
+                except Exception as e:
+                    logger.warning(f"Failed to cache request_id: {e}")
 
             # Get or create thread_id if not provided
             if not thread_id:

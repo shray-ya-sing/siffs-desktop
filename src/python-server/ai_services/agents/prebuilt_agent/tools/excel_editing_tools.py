@@ -20,9 +20,35 @@ from excel.editing.complex_agent_writer import ComplexAgentWriter
 from api_key_management.providers.gemini_provider import GeminiProvider
 from ai_services.agents.complex_task_agent.read_write_tools.excel_edit_tools import parse_markdown_formulas, write_formulas_to_excel_complex_agent, parse_cell_formulas 
 from ai_services.agents.complex_task_agent.read_write_tools.excel_info_tools import update_excel_cache, get_full_metadata_from_cache, get_simplified_excel_metadata
+from ai_services.orchestration.cancellation_manager import cancellation_manager, CancellationError
 
+from decimal import Decimal
+import datetime
+
+class ExtendedJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+            return obj.isoformat()
+        elif isinstance(obj, Decimal):
+            return str(obj)  # Convert Decimal to string
+        return super().default(obj)
 
 # HELPER
+def get_request_id_from_cache():
+    """Get the current request_id from the request cache"""
+    try:
+        cache_file = server_dir_path / "metadata" / "__cache" / "current_request.json"
+        if not cache_file.exists():
+            return None
+        
+        with open(cache_file, 'r') as f:
+            cache_data = json.load(f)
+        
+        return cache_data.get('request_id')
+    except Exception as e:
+        logger.warning(f"Could not get request_id from cache: {e}")
+        return None
+
 def get_user_id_from_cache():
     """Get the user_id from the user_api_keys.json cache file"""
     try:
@@ -132,6 +158,14 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
     logger.info(f"SIMPLE_AGENT: Starting Excel edit for workspace: {workspace_path}")    
     logger.info(f"Edit instructions: {edit_instructions}")
     
+    # Get request_id for cancellation checks
+    request_id = get_request_id_from_cache()
+    
+    # Check for cancellation at the start
+    if request_id and cancellation_manager.is_cancelled(request_id):
+        logger.info(f"Request {request_id} cancelled before starting edit_excel")
+        return "Request was cancelled"
+    
     try:
         # Create the prompt for generating cell formulas
         prompt = f"""
@@ -202,11 +236,47 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
             logger.error(error_message)
             return error_message
         
+        # Check for cancellation before LLM call
+        if request_id and cancellation_manager.is_cancelled(request_id):
+            logger.info(f"Request {request_id} cancelled before LLM call")
+            return "Request was cancelled"
+        
         # Call the LLM to generate cell formulas
         logger.info("Calling LLM to generate cell formulas in simple agent")
         messages = [{"role": "user", "content": prompt}]
         try:
-            llm_response = llm.invoke(messages)
+            # Start the LLM call in a separate thread with timeout
+            import threading
+            import time
+            
+            llm_response = None
+            llm_error = None
+            
+            def llm_call_thread():
+                nonlocal llm_response, llm_error
+                try:
+                    llm_response = llm.invoke(messages)
+                except Exception as e:
+                    llm_error = e
+            
+            # Start the thread
+            thread = threading.Thread(target=llm_call_thread)
+            thread.start()
+            
+            # Wait for completion while checking for cancellation
+            while thread.is_alive():
+                if request_id and cancellation_manager.is_cancelled(request_id):
+                    logger.info(f"Request {request_id} cancelled during LLM call")
+                    return "Request was cancelled"
+                time.sleep(0.5)  # Check every 500ms
+            
+            # Wait for thread to complete
+            thread.join()
+            
+            # Check if there was an error
+            if llm_error:
+                raise llm_error
+                
         except Exception as e:
             error_message = f"Failed to get llm response: {e}"
             logger.error(error_message)
@@ -219,6 +289,11 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         
         markdown_response = llm_response.content
         logger.info(f"LLM generated markdown: {markdown_response}")
+        
+        # Check for cancellation after LLM call
+        if request_id and cancellation_manager.is_cancelled(request_id):
+            logger.info(f"Request {request_id} cancelled after LLM call")
+            return "Request was cancelled"
         
         # Parse the markdown response into JSON format
         logger.info("Parsing markdown formulas into JSON format")
@@ -244,6 +319,11 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
             return error_message
         
 
+        # Check for cancellation before Excel writing
+        if request_id and cancellation_manager.is_cancelled(request_id):
+            logger.info(f"Request {request_id} cancelled before Excel writing")
+            return "Request was cancelled"
+        
         # Write the formulas to Excel using ComplexAgentWriter
         logger.info("Writing formulas to Excel file")
         writer = get_stream_writer()
@@ -278,7 +358,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
             "cache_updated": cache_updated
         }
         
-        result_json = json.dumps(result, indent=2)
+        result_json = json.dumps(result, indent=2, cls=ExtendedJSONEncoder)
         logger.info(f"Successfully updated {len(updated_cells)} cells")
         return result_json
         
@@ -286,5 +366,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         error_msg = f"Error during Excel edit: {str(e)}"
         logger.error(error_msg, exc_info=True)
         return error_msg
+
+
 
 EXCEL_TOOLS = [get_full_excel_metadata, get_excel_metadata, edit_excel]
