@@ -148,3 +148,6 @@ excel_embeddings.db
 # Cache directories
 **/metadata/__cache/
 **/metadata/_cache/
+
+# Output directories
+src/python-server/output/

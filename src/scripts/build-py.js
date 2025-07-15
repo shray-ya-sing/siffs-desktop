@@ -164,6 +164,7 @@ function buildPython() {
         '--add-data', `${path.join(pythonDir, 'pdf')}${path.delimiter}pdf`,
         '--add-data', `${path.join(pythonDir, 'powerpoint')}${path.delimiter}powerpoint`,
         '--add-data', `${path.join(pythonDir, 'api_key_management')}${path.delimiter}api_key_management`,
+        '--add-data', `${path.join(pythonDir, 'cache_management')}${path.delimiter}cache_management`,
         // Entry point for prod server
         '--onedir',
         path.join(pythonDir, 'asgi.py')
