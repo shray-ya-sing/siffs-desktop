@@ -91,13 +91,18 @@ def clear_metadata_cache():
             logger.info(f"Cleared metadata cache at {cache_dir}")
             cache_dir = Path(__file__).parent / "metadata" / "__cache"
         if cache_dir.exists() and cache_dir.is_dir():
-            # Remove only the files_mappings.json file, if it exists
-            file_mappings_path = cache_dir / "files_mappings.json"
-            if file_mappings_path.exists() and file_mappings_path.is_file():
-                os.unlink(file_mappings_path)
-                logger.info(f"Removed file_mappings.json from {cache_dir}")
-            else:
-                logger.info(f"files_mappings.json does not exist in {cache_dir}, skipping delete")
+            # Remove all files except user_api_keys.json
+            for item in cache_dir.glob('*'):
+                if item.is_file() and item.name != "user_api_keys.json":
+                    os.unlink(item)
+                    logger.info(f"Removed {item.name} from {cache_dir}")
+                elif item.is_dir():
+                    shutil.rmtree(item)
+                    logger.info(f"Removed directory {item.name} from {cache_dir}")
+            # Log that user_api_keys.json was preserved
+            user_api_keys_path = cache_dir / "user_api_keys.json"
+            if user_api_keys_path.exists():
+                logger.info(f"Preserved user_api_keys.json in {cache_dir}")
         else:
             logger.info(f"Cache directory {cache_dir} does not exist, skipping clear")
     except Exception as e:

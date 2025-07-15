@@ -29,7 +29,7 @@ class SupervisorAgentOrchestrator:
     CONVERSATION_CACHE = CACHE_DIR / "conversation_cache.json"
     
     EXCLUDED_NODES = {
-        "simple_excel_agent",
+       # "simple_excel_agent",
         "tools", # tool calling node from langgraph,
         "determine_implementation_sequence",
         "decide_next_step",
@@ -419,6 +419,15 @@ class SupervisorAgentOrchestrator:
             # Register the request with cancellation manager
             if request_id:
                 cancellation_manager.start_request(request_id, client_id)
+                
+                # Cache the current request_id for tools to access
+                try:
+                    cache_file = python_server_path / "metadata" / "__cache" / "current_request.json"
+                    cache_file.parent.mkdir(parents=True, exist_ok=True)
+                    with open(cache_file, 'w') as f:
+                        json.dump({'request_id': request_id, 'client_id': client_id}, f)
+                except Exception as e:
+                    logger.warning(f"Failed to cache request_id: {e}")
 
             # Get or create thread_id if not provided
             if not thread_id:
@@ -492,6 +501,7 @@ class SupervisorAgentOrchestrator:
                             #logger.info(f"Stream item: {stream_item}")
                             message_chunk, metadata = chunk
 
+                            logger.info(f"MESSAGE CHUNK: {message_chunk}")
                             #logger.info(f"METADATA: {metadata}")
                             # Check if this is a tool message, don't want to send these to client
                             if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
@@ -503,19 +513,19 @@ class SupervisorAgentOrchestrator:
                             # Skip tokens from excluded nodes
                             if 'langgraph_node' in metadata:
                                 node_name = metadata.get("langgraph_node", "")                        
-                                if node_name in self.EXCLUDED_NODES or 'simple_excel_agent' in node_name:
+                                if node_name in self.EXCLUDED_NODES or 'supervisor' in node_name:
                                     continue
 
                             if 'langgraph_checkpoint_ns' in metadata:
                                 checkpoint_name = metadata.get('langgraph_checkpoint_ns', '')
-                                if 'simple_excel_agent' in checkpoint_name:
-                                    logger.info(f"Skipping simple_excel_agent checkpoint (langgraph_checkpoint_ns)")
+                                if 'supervisor' in checkpoint_name:
+                                    #logger.info(f"Skipping supervisor checkpoint (langgraph_checkpoint_ns)")
                                     continue
 
                             if 'checkpoint_ns' in metadata:
                                 checkpoint_name = metadata.get('checkpoint_ns', '')
-                                if 'simple_excel_agent' in checkpoint_name:
-                                    logger.info(f"Skipping simple_excel_agent checkpoint (checkpoint_ns)")
+                                if 'supervisor' in checkpoint_name:
+                                    #logger.info(f"Skipping supervisor checkpoint (checkpoint_ns)")
                                     continue
                             
                             # Extract text content
@@ -628,6 +638,15 @@ class SupervisorAgentOrchestrator:
                 elif 'StopIteration' in error_type or 'StopAsyncIteration' in error_type:
                     logger.info("Stream ended normally")
                     return
+
+                elif '500' in error_str:
+                    logger.warning("500 error detected, attempting to gracefully terminate stream")
+                    yield {
+                        "type": "error",
+                        "error": "An internal error occurred in the LLM provider and the agent was forcibly terminated. Please try again.",
+                        "requestId": request_id
+                    }
+                    return
                     
                 else:
                     # Log the full error for debugging
@@ -671,7 +690,10 @@ class SupervisorAgentOrchestrator:
     async def _send_error(self, client_id: str, error: str, request_id: Optional[str] = None):
         """Send error message to client"""
         error_str = str(error).lower()
+        original_error = error
         
+        if original_error == "":
+            error_message = "An unexpected error occurred and the agent was forcibly terminated. Please try again."
         if '429' in error:
             error_message = "Rate limit exceeded. Token usage has exceeded the limit. Create a new conversation to continue."
         elif 'api key expired' in error_str or 'api_key_invalid' in error_str:
@@ -681,7 +703,7 @@ class SupervisorAgentOrchestrator:
         elif 'agent configuration error' in error_str:
             error_message = "Agent configuration error: check API key setup"
         else:
-            error_message = "An unexpected error occurred and the agent was forcibly terminated. Please try again."
+            error_message = original_error
         
         error_msg = {
             "type": "CUSTOM_EVENT",
