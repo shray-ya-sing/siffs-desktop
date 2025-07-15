@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import FolderConnect from '../components/setup/FolderConnect';
 import { FileItem } from '../hooks/useFileTree';
 import { ConnectionStatus } from '../components/setup/ConnectionStatus';
-import { NavIcons } from '../components/navigation/NavIcons';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -24,10 +23,6 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] relative">
-      {/* Navigation icons */}
-      <div className="fixed left-4 top-4 z-50">
-        <NavIcons />
-      </div>
       <FolderConnect onFolderConnect={handleConnect} />
     </div>
   );

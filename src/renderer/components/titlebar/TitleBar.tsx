@@ -1,23 +1,24 @@
 import React from 'react';
 import { MinusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { NavIcons } from '../navigation/NavIcons';
 
 interface TitleBarProps {
   title?: string;
   className?: string;
+  showNavigation?: boolean;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({ 
   title = 'Volute', 
-  className = '' 
+  className = '',
+  showNavigation = true
 }) => {
   const handleMinimize = () => {
-    // You'll need to add this IPC handler to your preload script
-    (window as any).electron?.minimize?.();
+    (window as any).electron?.window?.minimize?.();
   };
 
   const handleClose = () => {
-    // You'll need to add this IPC handler to your preload script
-    (window as any).electron?.close?.();
+    (window as any).electron?.window?.close?.();
   };
 
   return (
@@ -35,15 +36,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       } as React.CSSProperties}
     >
       {/* Left side - App title */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 flex-1">
         <span className="text-gray-300 text-sm font-medium">
           {title}
         </span>
       </div>
 
+      {/* Center - Navigation Icons */}
+      {showNavigation && (
+        <div 
+          className="flex items-center justify-center flex-1"
+          style={{
+            // Make navigation clickable (not draggable)
+            WebkitAppRegion: 'no-drag'
+          } as React.CSSProperties}
+        >
+          <NavIcons />
+        </div>
+      )}
+
       {/* Right side - Window controls */}
       <div 
-        className="flex items-center space-x-2"
+        className="flex items-center space-x-2 flex-1 justify-end"
         style={{
           // Make buttons clickable (not draggable)
           WebkitAppRegion: 'no-drag'

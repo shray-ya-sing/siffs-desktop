@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { APIKeyManagement } from '../components/settings/APIKeyManagement';
-import { NavIcons } from '../components/navigation/NavIcons';
 
 interface UserData {
   name: string;
@@ -85,11 +84,6 @@ export function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white overflow-hidden">
-      {/* Navigation icons */}
-      <div className="fixed left-4 top-4 z-50">
-        <NavIcons />
-      </div>
-      
       {/* Main Content */}
       <div className="max-w-6xl w-full mx-auto px-4 space-y-6 pt-20">
         {/* Header */}

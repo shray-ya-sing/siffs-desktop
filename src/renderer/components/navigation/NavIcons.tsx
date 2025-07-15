@@ -22,33 +22,30 @@ export const NavIcons = ({ className = '' }: NavIconsProps) => {
   };
 
   return (
-    <div className={`flex flex-row gap-3 ${className}`}>
+    <div className={`flex flex-row gap-2 ${className}`}>
       <button
         onClick={() => navigate('/')}
-        className="p-2 rounded-full bg-gray-900/60 hover:bg-gray-800/70 backdrop-blur-sm 
-                 border border-gray-700/50 shadow-lg transition-all duration-200
+        className="p-1.5 rounded hover:bg-gray-700/50 transition-all duration-200
                  flex items-center justify-center"
         aria-label="Home"
       >
-        <TechHomeIcon className="w-5 h-5 text-gray-300" />
+        <TechHomeIcon className="w-4 h-4 text-gray-300 hover:text-white" />
       </button>
       <button
         onClick={() => navigate('/settings')}
-        className="p-2 rounded-full bg-gray-900/60 hover:bg-gray-800/70 backdrop-blur-sm 
-                 border border-gray-700/50 shadow-lg transition-all duration-200
+        className="p-1.5 rounded hover:bg-gray-700/50 transition-all duration-200
                  flex items-center justify-center"
         aria-label="Settings"
       >
-        <TechSettingsIcon className="w-5 h-5 text-gray-300" />
+        <TechSettingsIcon className="w-4 h-4 text-gray-300 hover:text-white" />
       </button>
       <button
         onClick={handleSignOut}
-        className="p-2 rounded-full bg-red-900/60 hover:bg-red-800/70 backdrop-blur-sm 
-                 border border-red-700/50 shadow-lg transition-all duration-200
+        className="p-1.5 rounded hover:bg-red-700/50 transition-all duration-200
                  flex items-center justify-center group"
         aria-label="Sign Out"
       >
-        <TechSignOutIcon className="w-5 h-5 text-red-300 group-hover:text-red-200" />
+        <TechSignOutIcon className="w-4 h-4 text-red-300 group-hover:text-red-200" />
       </button>
     </div>
   );

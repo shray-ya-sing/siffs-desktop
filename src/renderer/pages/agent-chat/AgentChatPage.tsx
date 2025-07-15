@@ -5,7 +5,6 @@ import { FileExplorer } from '../../folder-view/FileExplorer';
 import { FileItem } from '../../folder-view/FileExplorer';
 import { useFileTree } from '../../hooks/useFileTree';
 import { webSocketService } from '../../services/websocket/websocket.service';
-import { NavIcons } from '../../components/navigation/NavIcons';
 import WorkspaceHeader from '../../components/workspace/WorkspaceHeader';
 
 
@@ -50,10 +49,6 @@ export function AgentChatPage() {
   // Update the main container and sidebar styles in AgentChatPage.tsx
 return (
     <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden pt-[5%]">
-      {/* Navigation icons */}
-      <div className="fixed left-4 top-4 z-50">
-        <NavIcons />
-      </div>
       {/* File explorer sidebar */}
       <div className={`
         fixed left-0 top-0 h-[95%] bg-[#0f0f0f]/80 backdrop-blur-sm
