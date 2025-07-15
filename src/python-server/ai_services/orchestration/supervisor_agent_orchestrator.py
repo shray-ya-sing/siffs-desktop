@@ -20,6 +20,7 @@ python_server_path = Path(__file__).parent.parent.parent
 sys.path.append(str(python_server_path))
 from api_key_management.service.api_key_manager import api_key_manager
 from ai_services.orchestration.cancellation_manager import cancellation_manager, CancellationError
+from ai_services.utils.token_counter import TokenCounter, TokenCountResult
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,26 @@ class SupervisorAgentOrchestrator:
         logger.info("SupervisorAgentOrchestrator initialized")
         self.CACHE_DIR.mkdir(parents=True, exist_ok=True)
         self._conversations = self._load_conversations()
+        
+        # Initialize token counter with default model
+        self.token_counter = TokenCounter("default")
+        
+    def update_token_counter_model(self, model_name: str):
+        """Update token counter for a specific model"""
+        self.token_counter = TokenCounter(model_name)
+        logger.info(f"Token counter updated for model: {model_name}")
+        
+    def log_context_statistics(self, thread_id: str, context_health: Dict[str, Any]):
+        """Log context statistics for monitoring"""
+        logger.info(f"Context statistics for thread {thread_id}:")
+        logger.info(f"  Total tokens: {context_health['total_tokens']}")
+        logger.info(f"  Input tokens: {context_health.get('input_tokens', 'N/A')}")
+        logger.info(f"  Output tokens: {context_health.get('output_tokens', 'N/A')}")
+        logger.info(f"  Max input tokens: {context_health['max_input_tokens']}")
+        logger.info(f"  Input percentage: {context_health['input_percentage']:.2f}%")
+        logger.info(f"  Status: {context_health['status']}")
+        logger.info(f"  Needs truncation: {context_health['needs_truncation']}")
+        logger.info(f"  Estimated: {context_health.get('estimated', False)}")
     
     def _save_conversations(self):
         """Save conversations to cache file"""
@@ -406,6 +427,8 @@ class SupervisorAgentOrchestrator:
             if not supervisor_agent.current_user_id or supervisor_agent.current_user_id != user_id or not hasattr(supervisor_agent, '_current_model') or supervisor_agent._current_model != model:
                 if api_key_manager.has_user_api_key(user_id, "gemini"):
                     supervisor_agent.initialize_with_user_api_key(user_id, model)
+                    # Update token counter for the selected model
+                    self.update_token_counter_model(model)
                 else:
                     logger.error("No Gemini API key found for user")
                     yield {
@@ -439,6 +462,61 @@ class SupervisorAgentOrchestrator:
             # Get conversation history
             history = self._get_messages(thread_id)
             
+            # Convert conversation history to the format expected by token counter
+            conversation_messages = []
+            for msg in history:
+                conversation_messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                })
+            
+            # Add the current message to the conversation for token counting
+            conversation_messages.append({
+                "role": "user",
+                "content": message
+            })
+            
+            # Check context health using real token usage if available, otherwise use estimated
+            context_health = self.token_counter.check_context_health(thread_id)
+            
+            # If no real token usage data is available, use estimated approach
+            if context_health['total_tokens'] == 0:
+                context_health = self.token_counter.check_estimated_context_health(conversation_messages)
+            
+            self.log_context_statistics(thread_id, context_health)
+            
+            if context_health.get("needs_truncation", False):
+                logger.warning(f"Context truncation needed. Current tokens: {context_health['total_tokens']}, Max: {context_health['max_input_tokens']}")
+                
+                # Truncate the conversation messages
+                truncation_result = self.token_counter.truncate_messages(
+                    conversation_messages,
+                    preserve_recent_messages=3  # Keep last 3 messages (including current)
+                )
+                
+                logger.info(f"Context truncated: {truncation_result.truncated}, Messages removed: {truncation_result.removed_messages}")
+                logger.info(f"Final token count: {truncation_result.total_tokens}")
+                
+                # Update the conversation history in cache with truncated messages
+                if truncation_result.truncated:
+                    # Remove the current message from truncated result for updating cache
+                    truncated_history = truncation_result.messages[:-1] if truncation_result.messages else []
+                    
+                    # Update the conversation cache with truncated history
+                    if thread_id in self._conversations:
+                        self._conversations[thread_id]["messages"] = truncated_history
+                        self._conversations[thread_id]["metadata"]["truncated_at"] = datetime.utcnow().isoformat()
+                        self._conversations[thread_id]["metadata"]["removed_messages"] = truncation_result.removed_messages
+                        self._save_conversations()
+                        
+                        # Send truncation notification to client
+                        yield {
+                            "type": "custom_event",
+                            "event_type": "context_truncated",
+                            "event_message": f"Context length exceeded. Removed {truncation_result.removed_messages} older messages to stay within limits.",
+                            "requestId": request_id,
+                            "done": False
+                        }
             
             # Prepare the input for the supervisor
             inputs = {
@@ -502,6 +580,21 @@ class SupervisorAgentOrchestrator:
                             message_chunk, metadata = chunk
 
                             logger.info(f"MESSAGE CHUNK: {message_chunk}")
+                            
+                            # Extract and track token usage from message chunk
+                            if hasattr(message_chunk, 'usage_metadata') and message_chunk.usage_metadata:
+                                usage_metadata = message_chunk.usage_metadata
+                                logger.debug(f"Token usage metadata: {usage_metadata}")
+                                
+                                # Update token counter with real usage data
+                                self.token_counter.update_token_usage(thread_id, usage_metadata)
+                                
+                                # Log token usage update
+                                input_tokens = usage_metadata.get('input_tokens', 0)
+                                output_tokens = usage_metadata.get('output_tokens', 0)
+                                total_tokens = usage_metadata.get('total_tokens', 0)
+                                logger.info(f"Token usage updated for thread {thread_id}: input={input_tokens}, output={output_tokens}, total={total_tokens}")
+                            
                             #logger.info(f"METADATA: {metadata}")
                             # Check if this is a tool message, don't want to send these to client
                             if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
