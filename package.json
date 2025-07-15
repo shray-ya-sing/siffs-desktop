@@ -1,7 +1,7 @@
 {
   "name": "volute",
   "productName": "Volute",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Financial model agent",
   "main": ".webpack/main",
   "scripts": {
