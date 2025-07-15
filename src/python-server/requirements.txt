@@ -93,6 +93,7 @@ urllib3
 uvicorn
 voyageai
 waitress
+watchdog
 websockets
 Werkzeug
 xlwings

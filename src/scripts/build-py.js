@@ -86,6 +86,7 @@ function buildPython() {
         '--hidden-import=fitz',
         '--hidden-import=pdfplumber',
         '--hidden-import=PyPDF2',
+        '--hidden-import=watchdog',
         // copy metadata needed by transformers lib
         '--copy-metadata', 'regex',
         '--copy-metadata', 'requests',
@@ -110,6 +111,7 @@ function buildPython() {
         '--copy-metadata', 'PyMuPDF',
         '--copy-metadata', 'pdfplumber',
         '--copy-metadata', 'PyPDF2',
+        '--copy-metadata', 'watchdog',
         // Add the python-server directory to the path
         '--paths', pythonDir,
         // Collect all Flask components
@@ -143,6 +145,7 @@ function buildPython() {
         '--collect-all', 'PyMuPDF',
         '--collect-all', 'pdfplumber',
         '--collect-all', 'PyPDF2',
+        '--collect-all', 'watchdog',
         // Name of the main python server dir
         '--name=python-server',        
         // Add all Python files in the python-server directory
