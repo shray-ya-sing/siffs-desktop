@@ -270,18 +270,14 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
         """Clean and unescape formula string while preserving internal quotes"""
         if not formula:
             return formula
-            
+
         formula = formula.strip()
-        # Only strip outer matching quotes if they exist and the formula is not just quotes
+        # Always remove outer quotes for Excel formulas
         if (formula.startswith('"') and formula.endswith('"')) or \
            (formula.startswith("'") and formula.endswith("'")):
-            # Check if there are matching quotes inside the formula
+            # Remove outer quotes and unescape
             inner = formula[1:-1]
-            if not (('"' in inner) or ("'" in inner)):
-                formula = inner
-            else:
-                # Unescape any escaped quotes inside the formula
-                formula = formula[1:-1].replace('\\"', '"').replace("\\'", "'")
+            formula = inner.replace('\\"', '"').replace("\\'", "'")
         return formula
 
     def is_valid_cell_reference(ref: str) -> bool:
@@ -425,6 +421,27 @@ def parse_cell_formulas(formula_input: Union[str, dict]) -> Optional[Dict[str, D
         else:
             formula_dict = formula_input
             logger.debug("Using input as dictionary directly")
+        
+        # Clean formulas that might have extra quotes from JSON parsing
+        def clean_formula_from_json(formula: str) -> str:
+            """Clean formulas that might have extra quotes from JSON parsing"""
+            if not formula:
+                return formula
+            formula = formula.strip()
+            # Remove outer quotes if they exist
+            if (formula.startswith('"') and formula.endswith('"')) or \
+               (formula.startswith("'") and formula.endswith("'")):
+                formula = formula[1:-1]
+            return formula
+        
+        # Clean all formulas in the dictionary
+        for sheet_name, cell_formulas in formula_dict.items():
+            if isinstance(cell_formulas, dict):
+                for cell_ref, formula in cell_formulas.items():
+                    if isinstance(formula, str):
+                        formula_dict[sheet_name][cell_ref] = clean_formula_from_json(formula)
+                    elif isinstance(formula, dict) and 'formula' in formula:
+                        formula_dict[sheet_name][cell_ref]['formula'] = clean_formula_from_json(formula['formula'])
         
         # Validate the cell formats
         logger.debug("Validating cell formats")

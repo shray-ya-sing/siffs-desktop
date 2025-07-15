@@ -471,7 +471,7 @@ def get_full_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optiona
             # Log any requested but not found cells
             missing_cells = cell_refs_to_include - cell_refs_found
             if missing_cells:
-                logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+                logger.debug(f"{len(missing_cells)}Cells not found in sheet '{sheet_name}'")
                 
             if filtered_cells:
                 filtered_data[sheet_name] = filtered_cells
@@ -586,7 +586,7 @@ def get_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optional[Dic
             # Log any requested but not found cells
             missing_cells = cell_refs_to_include - cell_refs_found
             if missing_cells:
-                logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+                logger.debug(f"{len(missing_cells)}Cells not found in sheet '{sheet_name}'")
                 
             if filtered_cells:
                 filtered_data[sheet_name] = filtered_cells
@@ -736,7 +736,7 @@ def get_cell_formulas_from_cache(workspace_path: str, cell_dict: Dict[str, Dict[
                 # Log any missing cells
                 missing_cells = set(cell_refs.keys()) - found_cells
                 if missing_cells:
-                    logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+                    logger.debug(f"{len(missing_cells)}Cells not found in sheet '{sheet_name}'")
             else:
                 logger.warning(f"Sheet '{sheet_name}' not found in cache")
                 # Keep the empty strings for all cells in this sheet
@@ -895,7 +895,7 @@ def get_formulas_for_revert(
             # Log any requested but not found cells
             missing_cells = cell_refs_to_include - cell_refs_found
             if missing_cells:
-                logger.debug(f"Cells not found in sheet '{sheet_name}': {sorted(missing_cells)}")
+                logger.debug(f"{len(missing_cells)}Cells not found in sheet '{sheet_name}'")
         
         return result
 

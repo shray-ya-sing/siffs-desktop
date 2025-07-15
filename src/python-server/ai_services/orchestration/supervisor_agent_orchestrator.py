@@ -426,7 +426,7 @@ class SupervisorAgentOrchestrator:
                             #logger.info(f"Stream item: {stream_item}")
                             message_chunk, metadata = chunk
 
-                            logger.info(f"METADATA: {metadata}")
+                            #logger.info(f"METADATA: {metadata}")
 
                             # Check if this is a tool message, don't want to send these to client
                             if hasattr(message_chunk, '__class__') and 'ToolMessage' in str(message_chunk.__class__):
@@ -594,7 +594,7 @@ class SupervisorAgentOrchestrator:
         if request_id and "requestId" not in data:
             data["requestId"] = request_id
         try:
-            logger.debug(f"Sending message to client {client_id}")
+            #logger.debug(f"Sending message to client {client_id}")
             await manager.send_message(client_id, data)
         except Exception as e:
             logger.error(f"Failed to send message to client {client_id}: {str(e)}")
