@@ -14,7 +14,7 @@ type ActiveTab = 'profile' | 'password' | 'api-keys';
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('profile');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('api-keys');
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [userData, setUserData] = useState<UserData>({
@@ -92,10 +92,11 @@ export function SettingsPage() {
           <p className="text-gray-400 text-lg font-light">Configure your preferences and API keys</p>
         </div>
         
-        {/* Tabs */}
+        {/* Tabs - Profile and Password tabs temporarily hidden */}
         <div className="flex justify-center mb-8">
           <div className="flex space-x-4 p-1 bg-gray-900/60 backdrop-blur-sm rounded-full border border-gray-700/50">
-            <button
+            {/* Profile Tab - Commented Out Temporarily */}
+            {/* <button
               onClick={() => handleTabChange('profile')}
               className={`px-6 py-3 text-sm font-light rounded-full transition-all duration-300 ${
                 activeTab === 'profile'
@@ -104,8 +105,9 @@ export function SettingsPage() {
               }`}
             >
               Profile
-            </button>
-            <button
+            </button> */}
+            {/* Password Tab - Commented Out Temporarily */}
+            {/* <button
               onClick={() => handleTabChange('password')}
               className={`px-6 py-3 text-sm font-light rounded-full transition-all duration-300 ${
                 activeTab === 'password'
@@ -114,7 +116,7 @@ export function SettingsPage() {
               }`}
             >
               Password
-            </button>
+            </button> */}
             <button
               onClick={() => handleTabChange('api-keys')}
               className={`px-6 py-3 text-sm font-light rounded-full transition-all duration-300 ${
@@ -131,7 +133,7 @@ export function SettingsPage() {
         {/* Content Area */}
         <div className="flex justify-center">
           <div className="w-full max-w-3xl">
-            {/* Profile Tab */}
+            {/* Profile Tab - Commented Out Temporarily */}
             {activeTab === 'profile' && (
               <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">
                 <div className="space-y-6">
@@ -175,7 +177,7 @@ export function SettingsPage() {
               </div>
             )}
             
-            {/* Password Tab */}
+            {/* Password Tab - Commented Out Temporarily */}
             {activeTab === 'password' && (
               <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">
                 <div className="space-y-6">
