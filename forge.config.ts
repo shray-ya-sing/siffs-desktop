@@ -29,8 +29,8 @@ const config: ForgeConfig = {
   makers: [
     // Windows
     new MakerSquirrel({
-      setupIcon: './src/assets/icons/icon.ico'
-      // iconUrl and loadingGif removed - not needed
+      setupIcon: './src/assets/icons/icon.ico',
+      iconUrl: 'https://storage.googleapis.com/volute/assets/icon.ico' // URL to icon for Add/Remove Programs
     }),
     // MacOS 
     new MakerZIP({}, ['darwin']),
