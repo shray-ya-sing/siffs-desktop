@@ -87,6 +87,10 @@ function buildPython() {
         '--hidden-import=pdfplumber',
         '--hidden-import=PyPDF2',
         '--hidden-import=watchdog',
+        '--hidden-import=sentry_sdk',
+        '--hidden-import=sentry_sdk.integrations',
+        '--hidden-import=sentry_sdk.integrations.fastapi',
+        '--hidden-import=sentry_sdk.integrations.asgi',
         // copy metadata needed by transformers lib
         '--copy-metadata', 'regex',
         '--copy-metadata', 'requests',
@@ -146,6 +150,7 @@ function buildPython() {
         '--collect-all', 'pdfplumber',
         '--collect-all', 'PyPDF2',
         '--collect-all', 'watchdog',
+        '--collect-all', 'sentry_sdk',
         // Name of the main python server dir
         '--name=python-server',        
         // Add all Python files in the python-server directory
