@@ -4,9 +4,69 @@ import json
 import os
 import sys
 import logging
+logger = logging.getLogger(__name__)
 import asyncio
 import time
+from pathlib import Path
+try:
+    current_dir = Path(__file__).parent
+    sys.path.append(str(current_dir))
+    from prompts.system_prompt import GENERAL_AGENT_SYSTEM_PROMPT
+except ImportError as e:
+    logger.error(f"Failed to import tools or system prompt: {str(e)}")
+    # Set fallback values
+    GENERAL_AGENT_SYSTEM_PROMPT = f"""
+Your name is Volute.
+You are a helpful general assistant designed to handle conversations, questions, and tasks that don't require accessing or modifying specific files.
 
+Your primary role is to:
+- Answer general questions on any topic
+- Provide explanations about concepts, formulas, and methods
+- Handle greetings and casual conversation
+- Offer guidance on best practices and general knowledge
+
+## What You CAN Handle:
+- General knowledge questions (math, science, business, etc.)
+- Excel/Office concept explanations (how formulas work, what functions do)
+- Greetings, casual conversation, and general chat
+- Mathematical calculations and explanations
+- Best practices and methodology discussions
+- File listing requests ("What files do I have?", "Show me my workspace files")
+- General advice and guidance
+
+## What You CANNOT Handle:
+- Reading content from specific Excel, Word, PowerPoint, or PDF files
+- Making edits or modifications to any files
+- Analyzing data within files
+- Creating new files or documents
+- Any request that requires accessing file contents
+
+## Response Guidelines:
+- Be helpful, friendly, and conversational
+- Provide clear, accurate information
+- For Excel/Office questions, explain concepts without accessing files
+- If asked about file contents, politely explain you can only list files, not read them
+- Keep responses concise but comprehensive
+- Use natural language and avoid technical jargon unless necessary
+
+## Example Interactions:
+- "Hello!" → Respond with a friendly greeting
+- "What is NPV?" → Explain the concept without accessing files
+- "How do I create a VLOOKUP?" → Explain the formula and syntax
+- "What files do I have?" → Use list_workspace_files tool
+- "Calculate 20% of 500" → Perform the calculation and explain
+- "What's in my Excel file?" → Explain you can't read files, only list them
+
+## Key Principles:
+- Stay within your scope - don't attempt to access file contents
+- Be transparent about your limitations
+- Focus on general knowledge and conceptual help
+- Use the workspace file listing tool when appropriate
+- Maintain a helpful and professional tone
+
+Remember: You're designed to be the conversational and general knowledge component of the system. Focus on providing value through explanations, calculations, and general assistance while staying within your defined capabilities.
+"""
+        
 import langgraph
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
@@ -16,25 +76,18 @@ from langchain_core.tools import tool
 from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
 
-python_server_dir = Path(__file__).parent.parent.parent
+python_server_dir = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(python_server_dir))
 
 from api_key_management.providers.gemini_provider import GeminiProvider
-from ai_services.prompts.system_prompts import VOLUTE_SYSTEM_PROMPT, EXCEL_AGENT_SYSTEM_PROMPT
-from ai_services.agents.everything_agent.prompts.system_prompt import EVERYTHING_AGENT_SYSTEM_PROMPT
-from ai_services.tools.excel_tools import EXCEL_TOOLS
-from ai_services.tools.workspace_tools import WORKSPACE_TOOLS
-logger = logging.getLogger(__name__)
 
-
-
-class PrebuiltAgent:
+class GeneralAgent:
     _instance = None
     _initialized_models = {}
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(PrebuiltAgent, cls).__new__(cls)
+            cls._instance = super(GeneralAgent, cls).__new__(cls)
             cls._instance._initialized = False
             cls._instance._initialize()
         return cls._instance
@@ -53,9 +106,8 @@ class PrebuiltAgent:
         self.llm = None
         self.llm_with_tools = None
         self.agent = None
+        self.tools = []
         self.conversation_history = []
-        self.tools = EXCEL_TOOLS + WORKSPACE_TOOLS
-        self.system_prompt = EVERYTHING_AGENT_SYSTEM_PROMPT
         self.provider_models= {
             "anthropic": {
                 "claude-3-7-sonnet-latest"
@@ -71,7 +123,7 @@ class PrebuiltAgent:
         }
         _initialized = True
         
-    def with_model(self, model_name: str, user_id: str) -> 'PrebuiltAgent':
+    def with_model(self, model_name: str, user_id: str) -> 'GeneralAgent':
         """
         Return an agent instance with the specified model.
         If the model is already initialized, returns the existing instance.
@@ -81,16 +133,16 @@ class PrebuiltAgent:
             model_name: The name of the model to initialize
             
         Returns:
-            PrebuiltAgent: An instance configured with the specified model
+            GeneralAgent: An instance configured with the specified model
         """
         # If we already have an instance with this model, return it
-        if model_name in PrebuiltAgent._initialized_models:
-            return PrebuiltAgent._initialized_models[model_name]
+        if model_name in GeneralAgent._initialized_models:
+            return GeneralAgent._initialized_models[model_name]
             
         # Otherwise, create a new instance and initialize it with the model
-        new_instance = PrebuiltAgent()
+        new_instance = GeneralAgent()
         new_instance._initialize_with_model(model_name, user_id)
-        PrebuiltAgent._initialized_models[model_name] = new_instance
+        GeneralAgent._initialized_models[model_name] = new_instance
         return new_instance
 
     def get_agent(self):
@@ -112,8 +164,7 @@ class PrebuiltAgent:
                 user_id=user_id,
                 model=model_name,
                 temperature=0.2,
-                max_retries=3,
-                thinking_budget=-1 # TODO: experiment with this
+                max_retries=3
             )
         else:
             self.llm = init_chat_model(
@@ -121,14 +172,18 @@ class PrebuiltAgent:
                 model_provider=provider_name
             )
 
+        enhanced_system_prompt = GENERAL_AGENT_SYSTEM_PROMPT 
+        workspace_excel_files = self.view_files_in_workspace()
+
+        # Create the agent
         logger.info(f"Creating agent with model: {provider_name}:{model_name}")
         self.agent = create_react_agent(
             model=self.llm, 
             tools=self.tools,
-            prompt=self.system_prompt,
+            prompt=enhanced_system_prompt,
             store=self.in_memory_store,
             checkpointer=self.checkpointer,
-            name="simple_excel_agent"
+            name="general_agent"
         )
         
         self.current_model = model_name
@@ -156,12 +211,8 @@ class PrebuiltAgent:
         Yields:
             Dict containing chunk data with 'content', 'tool_calls', or 'error' keys
         """
-        try:
-            # Create a callback handler
-            callback = UsageMetadataCallbackHandler()
-        except Exception as e:
-            logger.error(f"Error creating callback handler, proceeding without: {str(e)}")
-            callback = None
+        # No callback handler needed for general agent
+        callback = None
 
         retry_attempt = 0
         retry_delay = 0 #initial delay in seconds -- 0 to make the first attempt immediately
@@ -396,4 +447,4 @@ class PrebuiltAgent:
 
         
 # Create global instance
-prebuilt_agent = PrebuiltAgent()
+general_agent = GeneralAgent()

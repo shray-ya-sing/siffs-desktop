@@ -21,7 +21,8 @@ class GeminiProvider:
         user_id: str,
         model: str = "gemini-2.5-flash-lite-preview-06-17",
         temperature: float = 0.3,
-        max_retries: int = 3
+        max_retries: int = 3,
+        thinking_budget: int = 512
     ) -> ChatGoogleGenerativeAI:
         """
         Get a ChatGoogleGenerativeAI instance using user's API key if available,
@@ -32,6 +33,7 @@ class GeminiProvider:
             model: The Gemini model to use
             temperature: Temperature setting for the model
             max_retries: Maximum number of retries
+            thinking_budget: Maximum number of tokens to use for thinking
             
         Returns:
             ChatGoogleGenerativeAI instance
@@ -51,12 +53,25 @@ class GeminiProvider:
         
         logger.info(f"Creating Gemini model with model {model}")
         logger.info(f"============================")
+
+        if thinking_budget == 0:
+            if model == "gemini-2.5-pro":
+                thinking_budget_for_model = 128  # Cannot be 0 for this model
+            else:
+                thinking_budget_for_model = 0
+        
+        if thinking_budget == -1:
+            if model in ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"]:
+                thinking_budget_for_model = -1
+            else:
+                thinking_budget_for_model = None
         
         llm = ChatGoogleGenerativeAI(
             model=model,
             temperature=temperature,
             max_retries=max_retries,
-            google_api_key=api_key
+            google_api_key=api_key,
+            thinking_budget=thinking_budget_for_model
         )
 
         if not llm:
