@@ -1,7 +1,7 @@
 {
   "name": "volute",
   "productName": "Volute",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Financial model agent",
   "main": ".webpack/main",
   "scripts": {
@@ -19,9 +19,9 @@
     "publish": "npm run build:python && electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "clean": "rimraf out",
-    "version:patch": "npm version patch -m 'chore: bump version to %s [skip ci]'",
-    "version:minor": "npm version minor -m 'chore: bump version to %s [skip ci]'",
-    "version:major": "npm version major -m 'chore: bump version to %s [skip ci]'"
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version"
   },
   "keywords": [],
   "author": {
