@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FolderPlus, FilePlus, FileSpreadsheet, FileText, Presentation, ChevronDown } from 'lucide-react';
+import { FolderPlus, FilePlus, ChevronDown } from 'lucide-react';
+import { TechExcelIcon, TechWordIcon, TechPowerPointIcon } from '../tech-icons/TechIcons';
 import { fileProcessingService } from '../../services/fileProcessingService';
 import CreateFileDialog from '../ui/CreateFileDialog';
 
@@ -19,19 +20,19 @@ const fileTypeOptions: FileTypeOption[] = [
   {
     label: 'Excel Spreadsheet',
     extension: '.xlsx',
-    icon: <FileSpreadsheet className="w-4 h-4 text-green-500" />,
+    icon: <TechExcelIcon className="w-4 h-4" />,
     template: 'excel'
   },
   {
     label: 'PowerPoint Presentation',
     extension: '.pptx',
-    icon: <Presentation className="w-4 h-4 text-orange-500" />,
+    icon: <TechPowerPointIcon className="w-4 h-4" />,
     template: 'powerpoint'
   },
   {
     label: 'Word Document',
     extension: '.docx',
-    icon: <FileText className="w-4 h-4 text-blue-500" />,
+    icon: <TechWordIcon className="w-4 h-4" />,
     template: 'word'
   }
 ];

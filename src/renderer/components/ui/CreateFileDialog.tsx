@@ -1,6 +1,7 @@
 // File: src/renderer/components/ui/CreateFileDialog.tsx
 import React, { useState } from 'react';
-import { File, Folder, FileSpreadsheet, FileText, FileImage, FileCode } from 'lucide-react';
+import { File, Folder, FileImage, FileCode } from 'lucide-react';
+import { TechExcelIcon, TechWordIcon, TechPowerPointIcon } from '../tech-icons/TechIcons';
 
 interface CreateFileDialogProps {
   isOpen: boolean;
@@ -28,21 +29,21 @@ const FILE_TEMPLATES: FileTemplate[] = [
     id: 'excel',
     label: 'Excel Workbook',
     extension: '.xlsx',
-    icon: <FileSpreadsheet className="w-4 h-4 text-green-500" />,
+    icon: <TechExcelIcon className="w-4 h-4" />,
     template: 'excel'
   },
   {
     id: 'powerpoint',
     label: 'PowerPoint Presentation',
     extension: '.pptx',
-    icon: <FileText className="w-4 h-4 text-orange-500" />,
+    icon: <TechPowerPointIcon className="w-4 h-4" />,
     template: 'powerpoint'
   },
   {
     id: 'word',
     label: 'Word Document',
     extension: '.docx',
-    icon: <FileText className="w-4 h-4 text-blue-500" />,
+    icon: <TechWordIcon className="w-4 h-4" />,
     template: 'word'
   }
 ];

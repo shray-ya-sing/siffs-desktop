@@ -20,6 +20,7 @@ import {
   FolderPlus,
   FilePlus
 } from 'lucide-react';
+import { TechExcelIcon, TechWordIcon, TechPowerPointIcon, TechPDFIcon } from '../components/tech-icons/TechIcons';
 import { fileWatcherService, FileWatcherService, FileChangeEvent } from '../services/fileWatcherService';
 import { fileProcessingService } from '../services/fileProcessingService';
 
@@ -48,15 +49,15 @@ const getFileIcon = (fileName: string) => {
     case 'xlsx':
     case 'xls':
     case 'csv':
-      return <FileSpreadsheet className="w-4 h-4 text-green-500" />;
+      return <TechExcelIcon className="w-4 h-4" />;
     case 'docx':
     case 'doc':
-      return <FileText className="w-4 h-4 text-blue-500" />;
+      return <TechWordIcon className="w-4 h-4" />;
     case 'pptx':
     case 'ppt':
-      return <FileText className="w-4 h-4 text-orange-500" />;
+      return <TechPowerPointIcon className="w-4 h-4" />;
     case 'pdf':
-      return <FileText className="w-4 h-4 text-red-500" />;
+      return <TechPDFIcon className="w-4 h-4" />;
     case 'json':
       return <FileJson className="w-4 h-4 text-yellow-500" />;
     case 'jpg':

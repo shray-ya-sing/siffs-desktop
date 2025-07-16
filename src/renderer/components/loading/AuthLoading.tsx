@@ -7,8 +7,8 @@ interface AuthLoadingProps {
 
 export default function AuthLoading({ message = 'Signing in...' }: AuthLoadingProps) {
     return (
-        <div className="w-full p-6">
-          <div className="max-w-xs mx-auto space-y-6 flex flex-col items-center">
+        <div className="w-full h-full flex items-center justify-center p-6">
+          <div className="max-w-xs space-y-6 flex flex-col items-center">
             {/* Spinner and message */}
             {/* Spinner with gradient */}
             <div className="relative w-16 h-16">

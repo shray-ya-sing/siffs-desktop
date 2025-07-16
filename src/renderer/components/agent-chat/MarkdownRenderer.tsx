@@ -31,7 +31,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                 </code>
                 ) : (
                 <code 
-                    className="bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 rounded px-1 py-0.5 text-sm" 
+                    className="bg-gray-100/30 text-gray-900 dark:bg-gray-800/30 dark:text-gray-100 rounded px-1 py-0.5 text-sm" 
                     {...props}
                 >
                     {children}
