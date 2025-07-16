@@ -75,6 +75,7 @@ requests
 requests-toolbelt
 rich
 safetensors
+sentry-sdk
 setuptools
 six
 sniffio
