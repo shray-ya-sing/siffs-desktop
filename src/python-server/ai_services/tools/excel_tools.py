@@ -22,6 +22,7 @@ from ai_services.agents.complex_task_agent.read_write_tools.excel_edit_tools imp
 from ai_services.agents.complex_task_agent.read_write_tools.excel_info_tools import update_excel_cache, get_full_metadata_from_cache, get_simplified_excel_metadata
 from ai_services.orchestration.cancellation_manager import cancellation_manager, CancellationError
 from ai_services.tools.tool_info.excel_formulas import EXCEL_FORMULAS
+from ai_services.tools.tool_info.excel_number_formats import DEFAULT_NUMBER_FORMATS
 from decimal import Decimal
 import datetime
 
@@ -222,6 +223,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         """
 
         prompt += f"\nHere are some guidelines for common Excel formulas:\n{EXCEL_FORMULAS}"
+        prompt += f"\nAs a best practice always generate a number format for a cell to be updated with formula, based on the kind of data the cell will display, even if not specified by the instruction. Here are some guidelines for common Excel number formats:\n{DEFAULT_NUMBER_FORMATS}"
 
         writer = get_stream_writer()
         writer({"generating": f"Planning task steps"})
