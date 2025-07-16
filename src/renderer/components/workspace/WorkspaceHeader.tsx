@@ -148,12 +148,12 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onToggleSideba
             </button>
 
             {showFileDropdown && (
-              <div className="absolute right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-md shadow-lg py-1 z-50 min-w-[200px]">
+              <div className="absolute right-0 top-full mt-1 bg-[#1a1a1a] border border-gray-700 rounded-md shadow-lg py-1 z-50 min-w-[200px]">
                 {fileTypeOptions.map((option) => (
                   <button
                     key={option.extension}
                     onClick={() => handleCreateFile(option)}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-200 hover:bg-gray-800 transition-colors text-left"
                   >
                     {option.icon}
                     <span>{option.label}</span>

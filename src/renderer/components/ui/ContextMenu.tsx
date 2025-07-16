@@ -114,7 +114,7 @@ export const ContextMenu = ({
   const menuContent = position && adjustedPosition ? (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-48 bg-gray-800 border border-gray-600 rounded-md shadow-lg py-1"
+      className="fixed z-50 min-w-48 bg-[#1a1a1a] border border-gray-700 rounded-md shadow-lg py-1"
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,
@@ -122,7 +122,7 @@ export const ContextMenu = ({
     >
       {items.map((item, index) => {
         if (item.separator) {
-          return <div key={index} className="h-px bg-gray-600 my-1" />;
+          return <div key={index} className="h-px bg-gray-700 my-1" />;
         }
 
         return (
@@ -134,7 +134,7 @@ export const ContextMenu = ({
                 ? 'text-gray-500 cursor-not-allowed' 
                 : item.destructive
                   ? 'text-red-400 hover:bg-red-500/20'
-                  : 'text-gray-200 hover:bg-gray-700'
+                  : 'text-gray-200 hover:bg-gray-800'
               }
               transition-colors duration-150
             `}

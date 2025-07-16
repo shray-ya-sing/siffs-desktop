@@ -28,21 +28,21 @@ const FILE_TEMPLATES: FileTemplate[] = [
     id: 'excel',
     label: 'Excel Workbook',
     extension: '.xlsx',
-    icon: <FileSpreadsheet className="w-5 h-5 text-green-500" />,
+    icon: <FileSpreadsheet className="w-4 h-4 text-green-500" />,
     template: 'excel'
   },
   {
     id: 'powerpoint',
     label: 'PowerPoint Presentation',
     extension: '.pptx',
-    icon: <FileText className="w-5 h-5 text-orange-500" />,
+    icon: <FileText className="w-4 h-4 text-orange-500" />,
     template: 'powerpoint'
   },
   {
     id: 'word',
     label: 'Word Document',
     extension: '.docx',
-    icon: <FileText className="w-5 h-5 text-blue-500" />,
+    icon: <FileText className="w-4 h-4 text-blue-500" />,
     template: 'word'
   }
 ];
@@ -98,8 +98,8 @@ export const CreateFileDialog: React.FC<CreateFileDialogProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-600">
+      <div className="bg-[#1a1a1a] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-700">
           <h2 className="text-xl font-semibold text-white">
             {isDirectory ? 'Create New Folder' : 'Create New File'}
           </h2>
@@ -117,7 +117,7 @@ export const CreateFileDialog: React.FC<CreateFileDialogProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-[#2a2a2a] border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               placeholder={isDirectory ? 'Enter folder name' : 'Enter file name'}
               autoFocus
               onKeyDown={(e) => {
@@ -135,29 +135,26 @@ export const CreateFileDialog: React.FC<CreateFileDialogProps> = ({
               <label className="block text-sm font-medium text-gray-300 mb-3">
                 File Template (Optional)
               </label>
-              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-1.5 sm:gap-2 max-h-64 overflow-y-auto">
                 {FILE_TEMPLATES.map((template) => (
                   <button
                     key={template.id}
                     onClick={() => setSelectedTemplate(template)}
                     className={`
-                      flex items-center gap-3 p-3 rounded-lg border transition-colors
+                      flex items-center gap-2 p-2 rounded-lg border transition-colors
                       ${selectedTemplate?.id === template.id
-                        ? 'bg-blue-600 border-blue-500 text-white'
-                        : 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'
+                        ? 'bg-gray-600 border-gray-500 text-white'
+                        : 'bg-[#2a2a2a] border-gray-600 text-gray-200 hover:bg-gray-700'
                       }
                     `}
                   >
                     {template.icon}
-                    <div className="text-left">
-                      <div className="text-sm font-medium">{template.label}</div>
-                      <div className="text-xs opacity-70">{template.extension}</div>
-                    </div>
+                    <div className="text-sm opacity-70">{template.extension}</div>
                   </button>
                 ))}
               </div>
               {selectedTemplate && (
-                <div className="mt-2 p-2 bg-gray-700 rounded text-xs text-gray-300">
+                <div className="mt-2 p-2 bg-[#2a2a2a] rounded text-xs text-gray-300">
                   Selected: {selectedTemplate.label} ({selectedTemplate.extension})
                 </div>
               )}
@@ -165,7 +162,7 @@ export const CreateFileDialog: React.FC<CreateFileDialogProps> = ({
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-600 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-gray-700 flex justify-end gap-3">
           <button
             onClick={handleClose}
             className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
@@ -175,7 +172,7 @@ export const CreateFileDialog: React.FC<CreateFileDialogProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!name.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Create
           </button>

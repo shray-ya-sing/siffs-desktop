@@ -77,8 +77,8 @@ export const RenameDialog: React.FC<RenameDialogProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-600">
+      <div className="bg-[#1a1a1a] rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="px-6 py-4 border-b border-gray-700">
           <h2 className="text-xl font-semibold text-white flex items-center gap-2">
             {isDirectory ? <Folder className="w-5 h-5" /> : <File className="w-5 h-5" />}
             Rename {isDirectory ? 'Folder' : 'File'}
@@ -98,7 +98,7 @@ export const RenameDialog: React.FC<RenameDialogProps> = ({
                 if (error) setError(''); // Clear error when user types
               }}
               onKeyDown={handleKeyDown}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-[#2a2a2a] border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               placeholder="Enter new name"
               autoFocus
               onFocus={(e) => {
@@ -125,7 +125,7 @@ export const RenameDialog: React.FC<RenameDialogProps> = ({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-600 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-gray-700 flex justify-end gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
@@ -135,7 +135,7 @@ export const RenameDialog: React.FC<RenameDialogProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!newName.trim() || !!error}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Rename
           </button>
