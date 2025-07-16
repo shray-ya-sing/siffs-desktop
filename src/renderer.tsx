@@ -26,6 +26,13 @@
  *  });
  * ```
  */
+import * as Sentry from "@sentry/electron/renderer";
+
+Sentry.init({
+  sendDefaultPii: true,
+  integrations: [
+  ],
+});
 
 import React from 'react';
 import { createRoot, Root } from 'react-dom/client';

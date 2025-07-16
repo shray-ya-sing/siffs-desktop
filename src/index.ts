@@ -6,6 +6,11 @@ import { spawn, ChildProcess } from 'child_process';
 import * as dotenv from 'dotenv';
 import { FileWatcherService } from './main/services/fileWatcherService';
 import * as ExcelJS from 'exceljs';
+//---------------------------------SENTRY CONFIG------------------------------------------------------
+import * as Sentry from '@sentry/electron/main';
+Sentry.init({
+  dsn: "https://14695b4df91683e11fbf7c069ebe2a5a@o4509679278686208.ingest.us.sentry.io/4509679280717824",
+});
 
 //---------------------------------LOGGING CONFIG------------------------------------------------------
 // Configure electron-log - add this before any other code

@@ -40,6 +40,16 @@ except Exception as e:
     logger = logging.getLogger(__name__)
     logger.error(f"Failed to setup logging: {e}")
 
+try:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn="https://be283732085f0e4933040ef4af259199@o4509679278686208.ingest.us.sentry.io/4509679595487232",
+        traces_sample_rate=1.0,
+        send_default_pii=True
+    )
+except Exception as e:
+    logger.error(f"Failed to initialize Sentry: {e}")
+
 from dotenv import load_dotenv
 
 # Get the project root directory (where .env is located)
