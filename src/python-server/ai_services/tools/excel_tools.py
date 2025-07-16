@@ -21,7 +21,7 @@ from api_key_management.providers.gemini_provider import GeminiProvider
 from ai_services.agents.complex_task_agent.read_write_tools.excel_edit_tools import parse_markdown_formulas, write_formulas_to_excel_complex_agent, parse_cell_formulas 
 from ai_services.agents.complex_task_agent.read_write_tools.excel_info_tools import update_excel_cache, get_full_metadata_from_cache, get_simplified_excel_metadata
 from ai_services.orchestration.cancellation_manager import cancellation_manager, CancellationError
-
+from ai_services.tools.tool_info.excel_formulas import EXCEL_FORMULAS
 from decimal import Decimal
 import datetime
 
@@ -168,6 +168,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         5. Clearly specify the exact cell range where new data should be placed
         6. You are a MODELING agent, which means you need to write to excel in a model style, which means using formulas, linkages, table structure for whatever task the user suggests. You should never simply be putting text statements in cells. 
         Modeling means setting up a spreadsheet for an analysis, not writing solution statements and paragraphs to excel.
+        In your instructions, you do not need to include all the formulas to be edited, instead give instructions about which formulas to use where, what formatting properties to apply to be consistent with the surrounding cells, how to link cells as needed. Remember to clearly state which sheet the cells to edit belong to, to avoid erroneous formulas when cells need to be linked across tabs.
         
     Returns:
         String containing the updated cell formulas in JSON format
@@ -218,17 +219,9 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         4. Do not insert new rows or columns that would shift existing data
         5. If you need to add new data, ensure it's placed in a completely blank area
         6. Double-check that your formulas only modify blank cells
-        
-        CORRECT EXCEL FORMULA GUIDELINES:
-        
-        AVERAGE: =AVERAGE(A1:A10) ✓ vs =AVERAGE(A1 A10) ✗ (missing comma)
-        SUM: =SUM(A1:A10) ✓ vs =SUM A1:A10 ✗ (missing parentheses)
-        VLOOKUP: =VLOOKUP("John", A2:B10, 2, FALSE) ✓ vs =VLOOKUP(John, A2:B10, 2, FALSE) ✗ (text without quotes)
-        IF: =IF(A1>10, "Yes", "No") ✓ vs =IF A1>10 "Yes" "No" ✗ (missing syntax)
-        SUMIF/SUMIFS: =SUMIF(A1:A10, ">10") ✓ vs =SUMIF(A1:A10 > 10) ✗ (incorrect syntax)
-        INDEX-MATCH: =INDEX(B1:B10, MATCH("John", A1:A10, 0)) ✓ vs =INDEX(B1:B10, MATCH("John", A1:A10)) ✗ (missing match_type)
-        COUNTIF/COUNTIFS: =COUNTIF(A1:A10, ">10") ✓ vs =COUNTIF("A1:A10", ">10") ✗ (range as text)
         """
+
+        prompt += f"\nHere are some guidelines for common Excel formulas:\n{EXCEL_FORMULAS}"
 
         writer = get_stream_writer()
         writer({"generating": f"Planning task steps"})
