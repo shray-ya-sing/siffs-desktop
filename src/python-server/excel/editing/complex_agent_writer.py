@@ -353,7 +353,7 @@ class ExcelWorker:
             safe_apply('fill color', lambda: self._apply_fill_color(cell, cell_data['fill_color']))
 
         # Apply font formatting
-        if any(key in cell_data for key in ['font_style', 'font_size', 'bold', 'italic', 'text_color']):
+        if any(key in cell_data for key in ['font_style', 'font_size', 'bold', 'italic', 'underline', 'strikethrough', 'text_color']):
             safe_apply('font formatting', lambda: self._apply_font_formatting(cell, cell_data))
 
         if any(key in cell_data for key in ["border_top", "border_bottom", "border_left", "border_right"]):
@@ -376,6 +376,14 @@ class ExcelWorker:
         # Apply wrap text: use xl_cell to access api
         if 'wrap' in cell_data:
             safe_apply('wrap text', lambda: setattr(xl_cell, 'WrapText', bool(cell_data['wrap'])))
+            
+        # Apply comment/note
+        if 'comment' in cell_data and cell_data['comment']:
+            safe_apply('comment', lambda: self._apply_comment(cell, cell_data['comment']))
+            
+        # Apply data validation
+        if 'data_validation' in cell_data and cell_data['data_validation']:
+            safe_apply('data validation', lambda: self._apply_data_validation(cell, cell_data['data_validation']))
             
         if updated_result:
             return updated_result
@@ -530,6 +538,25 @@ class ExcelWorker:
             except Exception as e:
                 logger.warning(f"Warning: Could not set italic for cell {cell_ref}: {e}")
         
+        # Apply underline
+        if 'underline' in cell_data:
+            try:
+                if cell_data['underline'] is not None:
+                    # xlwings uses the API for underline
+                    # 2 = single underline, 1 = none, 4 = double
+                    underline_value = 2 if bool(cell_data['underline']) else 1
+                    cell.api.Font.Underline = underline_value
+            except Exception as e:
+                logger.warning(f"Warning: Could not set underline for cell {cell_ref}: {e}")
+        
+        # Apply strikethrough
+        if 'strikethrough' in cell_data:
+            try:
+                if cell_data['strikethrough'] is not None:
+                    cell.api.Font.Strikethrough = bool(cell_data['strikethrough'])
+            except Exception as e:
+                logger.warning(f"Warning: Could not set strikethrough for cell {cell_ref}: {e}")
+        
         # Apply text color
         if 'text_color' in cell_data and cell_data['text_color']:
             try:
@@ -581,6 +608,156 @@ class ExcelWorker:
         except Exception as e:
             cell_ref = getattr(cell, 'address', 'unknown')
             logger.warning(f"Warning: Could not set fill color for cell {cell_ref}: {e}")
+    
+    def _apply_comment(self, cell: xw.Range, comment: str):
+        """Apply a comment to the cell."""
+        try:
+            # Check if cell already has a note and delete it first
+            if cell.note:
+                cell.note.delete()
+            
+            # Add new comment using the API
+            cell.api.AddComment(comment)
+        except Exception as e:
+            # Try alternative method with note property
+            try:
+                if hasattr(cell, 'note'):
+                    cell.note.text = comment
+            except Exception as e2:
+                cell_ref = getattr(cell, 'address', 'unknown')
+                logger.warning(f"Warning: Could not set comment for cell {cell_ref}: {e}, {e2}")
+    
+    def _apply_data_validation(self, cell: xw.Range, validation_string: str):
+        """Apply data validation to the cell."""
+        try:
+            # Parse validation string format: type:values
+            # Examples: list:Yes,No,Maybe | number:1,100 | date:2024-01-01,2024-12-31
+            if ':' not in validation_string:
+                logger.warning(f"Invalid validation format: {validation_string}")
+                return
+            
+            validation_type, values = validation_string.split(':', 1)
+            validation_type = validation_type.strip().lower()
+            
+            # Excel validation constants
+            xlValidateList = 3
+            xlValidateWholeNumber = 1
+            xlValidateDecimal = 2
+            xlValidateDate = 4
+            xlValidateTime = 5
+            xlValidateTextLength = 6
+            xlValidateCustom = 7
+            xlValidAlertStop = 1
+            xlBetween = 1
+            xlEqual = 3
+            
+            # Access validation object
+            validation = cell.api.Validation
+            
+            # Clear existing validation
+            try:
+                validation.Delete()
+            except:
+                pass
+            
+            # Apply validation based on type
+            if validation_type == 'list':
+                # Dropdown list validation
+                validation.Add(
+                    Type=xlValidateList,
+                    AlertStyle=xlValidAlertStop,
+                    Formula1=values.strip()
+                )
+            
+            elif validation_type == 'number':
+                # Whole number validation (between two values)
+                value_parts = values.split(',')
+                if len(value_parts) == 2:
+                    min_val, max_val = value_parts[0].strip(), value_parts[1].strip()
+                    validation.Add(
+                        Type=xlValidateWholeNumber,
+                        AlertStyle=xlValidAlertStop,
+                        Operator=xlBetween,
+                        Formula1=min_val,
+                        Formula2=max_val
+                    )
+                else:
+                    logger.warning(f"Number validation requires min,max format: {values}")
+            
+            elif validation_type == 'decimal':
+                # Decimal number validation (between two values)
+                value_parts = values.split(',')
+                if len(value_parts) == 2:
+                    min_val, max_val = value_parts[0].strip(), value_parts[1].strip()
+                    validation.Add(
+                        Type=xlValidateDecimal,
+                        AlertStyle=xlValidAlertStop,
+                        Operator=xlBetween,
+                        Formula1=min_val,
+                        Formula2=max_val
+                    )
+                else:
+                    logger.warning(f"Decimal validation requires min,max format: {values}")
+            
+            elif validation_type == 'date':
+                # Date validation (between two dates)
+                value_parts = values.split(',')
+                if len(value_parts) == 2:
+                    start_date, end_date = value_parts[0].strip(), value_parts[1].strip()
+                    validation.Add(
+                        Type=xlValidateDate,
+                        AlertStyle=xlValidAlertStop,
+                        Operator=xlBetween,
+                        Formula1=start_date,
+                        Formula2=end_date
+                    )
+                else:
+                    logger.warning(f"Date validation requires start_date,end_date format: {values}")
+            
+            elif validation_type == 'time':
+                # Time validation (between two times)
+                value_parts = values.split(',')
+                if len(value_parts) == 2:
+                    start_time, end_time = value_parts[0].strip(), value_parts[1].strip()
+                    validation.Add(
+                        Type=xlValidateTime,
+                        AlertStyle=xlValidAlertStop,
+                        Operator=xlBetween,
+                        Formula1=start_time,
+                        Formula2=end_time
+                    )
+                else:
+                    logger.warning(f"Time validation requires start_time,end_time format: {values}")
+            
+            elif validation_type == 'text_length':
+                # Text length validation (between min and max characters)
+                value_parts = values.split(',')
+                if len(value_parts) == 2:
+                    min_length, max_length = value_parts[0].strip(), value_parts[1].strip()
+                    validation.Add(
+                        Type=xlValidateTextLength,
+                        AlertStyle=xlValidAlertStop,
+                        Operator=xlBetween,
+                        Formula1=min_length,
+                        Formula2=max_length
+                    )
+                else:
+                    logger.warning(f"Text length validation requires min_length,max_length format: {values}")
+            
+            elif validation_type == 'custom':
+                # Custom validation with formula
+                validation.Add(
+                    Type=xlValidateCustom,
+                    AlertStyle=xlValidAlertStop,
+                    Formula1=values.strip()
+                )
+            
+            else:
+                logger.warning(f"Unknown validation type: {validation_type}")
+            
+        except Exception as e:
+            cell_ref = getattr(cell, 'address', 'unknown')
+            logger.warning(f"Warning: Could not set data validation for cell {cell_ref}: {e}")
     
     def _apply_border_formatting(self, cell: xw.Range, cell_data: Dict[str, Any]):
         """Apply cell border formatting."""        

@@ -558,6 +558,10 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                             cell_data['bold'] = value.lower() == 'true'
                         elif key == 'it':  # italic
                             cell_data['italic'] = value.lower() == 'true'
+                        elif key == 'u':  # underline
+                            cell_data['underline'] = value.lower() == 'true'
+                        elif key == 's':  # strikethrough
+                            cell_data['strikethrough'] = value.lower() == 'true'
                         elif key == 'sz':  # font size
                             try:
                                 cell_data['font_size'] = float(clean_formula(value))
@@ -589,6 +593,14 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                             if bracket_contents and len(bracket_contents) > 1:
                                 num_fmt = bracket_contents[1]
                                 cell_data['number_format'] = clean_number_format(num_fmt)
+                        elif key == 'cmt':  # comment
+                            if bracket_contents and len(bracket_contents) > 2:
+                                comment = bracket_contents[2]
+                                cell_data['comment'] = clean_formula(comment)  # Clean comment text
+                        elif key == 'dv':  # data validation
+                            if bracket_contents and len(bracket_contents) > 3:
+                                validation = bracket_contents[3]
+                                cell_data['data_validation'] = clean_formula(validation)  # Clean validation text
                     
                 result[current_sheet][cell_ref.upper()] = cell_data
         
