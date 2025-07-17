@@ -216,6 +216,7 @@ class ExcelMetadataExtractor:
         self.workbook_path = None
         self.workbook = None
         self.workbook_values = None
+        self.workbook_for_charts = None
         self.xlwings_extractor = None
         self.dependency_extractor = ExcelDependencyExtractor()
         self._initialize_xlwings()
@@ -284,6 +285,23 @@ class ExcelMetadataExtractor:
                     self.workbook.close()
                     self.workbook = None
                 logger.error(f"Failed to open workbook for values: {str(e)}")
+            
+            # Open workbook for charts (read_only=False to access drawing objects)
+            try:
+                self.workbook_for_charts = openpyxl.load_workbook(
+                    self.workbook_path,
+                    data_only=False,
+                    read_only=False,  # Must be False to access charts
+                    keep_links=False
+                )
+            except Exception as e:
+                if self.workbook:
+                    self.workbook.close()
+                    self.workbook = None
+                if self.workbook_values:
+                    self.workbook_values.close()
+                    self.workbook_values = None
+                logger.error(f"Failed to open workbook for charts: {str(e)}")
                 
         except Exception as e:
             self.close()
@@ -306,6 +324,14 @@ class ExcelMetadataExtractor:
             logger.warning(f"Warning: Error closing values workbook: {str(e)}")
         finally:
             self.workbook_values = None
+            
+        try:
+            if self.workbook_for_charts:
+                self.workbook_for_charts.close()
+        except Exception as e:
+            logger.warning(f"Warning: Error closing charts workbook: {str(e)}")
+        finally:
+            self.workbook_for_charts = None
 
     def __enter__(self):
         """Context manager entry."""
@@ -1138,10 +1164,20 @@ class ExcelMetadataExtractor:
         charts = []
         
         try:
-            if not hasattr(sheet, '_charts'):
+            # Get the corresponding sheet from workbook_for_charts (which has read_only=False)
+            charts_sheet = None
+            if self.workbook_for_charts and sheet.title in self.workbook_for_charts.sheetnames:
+                charts_sheet = self.workbook_for_charts[sheet.title]
+            
+            # If no charts workbook available, fallback to regular sheet
+            if not charts_sheet:
+                charts_sheet = sheet
+            
+            # Check if the charts sheet has charts
+            if not hasattr(charts_sheet, '_charts') or not charts_sheet._charts:
                 return charts
                 
-            for i, chart in enumerate(sheet._charts):
+            for i, chart in enumerate(charts_sheet._charts):
                 try:
                     chart_data = {
                         "chart_name": f"chart{i + 1}",
