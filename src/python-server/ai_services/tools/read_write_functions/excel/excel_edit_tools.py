@@ -134,10 +134,28 @@ def write_formulas_to_excel_complex_agent(
         temp_file_path = workspace_path
 
     try:
+        # Check if sheet_formulas is None or empty
+        if not sheet_formulas:
+            logger.warning("No sheet formulas provided")
+            return []
+        
         # Convert to the format expected by write_to_existing
         parsed_data = {}
         for sheet_name, cell_formulas in sheet_formulas.items():
             parsed_data[sheet_name] = []
+            
+            # Handle charts separately
+            if 'charts' in cell_formulas:
+                charts_data = cell_formulas['charts']
+                # Store charts data in a special format that the writer can recognize
+                for chart_name, chart_data in charts_data.items():
+                    chart_entry = {"chart": chart_name}
+                    chart_entry.update(chart_data)  # Add all chart properties
+                    parsed_data[sheet_name].append(chart_entry)
+                
+                # Remove charts from cell_formulas to avoid processing them as cells
+                cell_formulas = {k: v for k, v in cell_formulas.items() if k != 'charts'}
+            
             for cell, cell_data in cell_formulas.items():
                 if isinstance(cell_data, dict):
                     # New format with formatting properties
@@ -238,13 +256,25 @@ def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
             return False
             
         # Check each cell formula in the sheet
-        for cell_ref, formula in cell_formulas.items():
+        for cell_ref, cell_data in cell_formulas.items():
+            # Skip charts section during validation
+            if cell_ref == 'charts':
+                continue
+                
+            # Ensure there's a valid cell reference
+            if not cell_ref:
+                logger.error("Empty cell reference is not allowed")
+                return False
+
             #logger.debug(f"Validating cell {sheet_name}!{cell_ref}")
             
-            # Check cell reference format (e.g., "A1")
+            # Check cell reference format
             if not re.match(r'^[A-Z]+[0-9]+$', str(cell_ref)):
                 logger.error(f"Invalid cell reference format: {cell_ref}")
                 return False
+            
+            # cell_data can be either a string (formula) or dict (with formatting properties)
+            # We don't require a formula to be present - formatting-only changes are valid
             
     
     logger.debug("Cell format validation successful")
@@ -274,17 +304,83 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
         formula = formula.strip()
         # Always remove outer quotes for Excel formulas
         if (formula.startswith('"') and formula.endswith('"')) or \
-           (formula.startswith("'") and formula.endswith("'")):
+           (formula.startswith("'") and formula.endswith("'")) or \
+           (formula.startswith('[') and formula.endswith(']')):
             # Remove outer quotes and unescape
             inner = formula[1:-1]
             formula = inner.replace('\\"', '"').replace("\\'", "'")
         return formula
+    
+    def clean_number_format(number_format: str) -> str:
+        """Clean and unescape number format string while preserving internal quotes"""
+        if not number_format:
+            return number_format
+
+        number_format = number_format.strip()        
+        # Always remove outer quotes for Excel number formats
+        if (number_format.startswith('[') and number_format.endswith(']')) or \
+           (number_format.startswith("'") and number_format.endswith("'")) or \
+           (number_format.startswith('"') and number_format.endswith('"')):
+            # Remove outer quotes and unescape
+            number_format = number_format[1:-1]
+        elif number_format.startswith('"') or number_format.startswith("'") or number_format.startswith('['):
+            # Remove only leading quote if no matching trailing quote
+            number_format = number_format[1:]
+        elif number_format.endswith('"') or number_format.endswith("'") or number_format.endswith(']'):
+            # Remove only trailing quote if no matching leading quote
+            number_format = number_format[:-1]
+        number_format = number_format.replace('\\"', '"').replace("\\'", "'")
+        return number_format
 
     def is_valid_cell_reference(ref: str) -> bool:
         """Validate Excel cell reference format"""
         # Handles: A1, AA1, A$1, $A1, $A$1, Sheet1!A1, 'Sheet 1'!A1
         pattern = r'^(\'.?|(.*\'!))?(\$?[A-Za-z]+\$?[0-9]+|\$?[A-Za-z]+:\$?[A-Za-z]+\$?[0-9]+)$'
         return bool(re.match(pattern, ref))
+
+    def parse_border_properties(border_string):
+        """
+        Parse border string properties (l, c, w) into a dictionary.
+        
+        Args:
+            border_string (str): Border string in format "l=2c=#000000w=4" or "l=2, c=#000000, w=4"
+        
+        Returns:
+            dict: Dictionary with keys 'line_style', 'color', 'weight' and their respective values
+        
+        Examples:
+            >>> parse_border_properties("l=2c=#000000w=4")
+            {'line_style': 2, 'color': '#000000', 'weight': 4}
+            
+            >>> parse_border_properties("l=1, c=#FF0000, w=2")
+            {'line_style': 1, 'color': '#FF0000', 'weight': 2}
+        """
+        # Initialize result dictionary
+        result = {
+            'line_style': None,
+            'color': None,
+            'weight': None
+        }
+        
+        # Remove any spaces and quotes from the string
+        border_string = border_string.replace(' ', '').replace('"', '').replace("'", '')
+        
+        # Pattern to match l=value
+        line_style_match = re.search(r'l=(-?\d+)', border_string)
+        if line_style_match:
+            result['line_style'] = int(line_style_match.group(1))
+        
+        # Pattern to match c=#hexcode
+        color_match = re.search(r'c=(#[A-Fa-f0-9]{6})', border_string)
+        if color_match:
+            result['color'] = color_match.group(1)
+        
+        # Pattern to match w=value
+        weight_match = re.search(r'w=(\d+)', border_string)
+        if weight_match:
+            result['weight'] = int(weight_match.group(1))
+        
+        return result
     
     try:
         if not markdown_input or not isinstance(markdown_input, str):
@@ -301,7 +397,7 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
             if not section:
                 continue
                 
-            # Split into sheet name and cell entries
+            # Split into sheet name, cell, and chart entries
             parts = [p.strip() for p in section.split('|', 1)]
             if not parts:
                 continue
@@ -319,10 +415,24 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                 
             # Process cell entries
             cell_entries = [e.strip() for e in parts[1].split('|') if e.strip()]
-            
+
+
             for entry in cell_entries:
                 if not entry:
                     continue
+
+                #First, extract anything in square brackets
+                import re
+                bracket_contents = []
+                
+                # Find all content in square brackets and replace with placeholders
+                def replace_brackets(match):
+                    bracket_contents.append(match.group(1))  # Save the content
+                    return "" 
+                
+                # Replace all [...] with placeholders
+                entry_without_brackets = re.sub(r'\[(.*?)\]', replace_brackets, entry)
+    
                     
                 # Split into cell reference, formula/value, and formatting properties
                 # Use CSV-aware parsing to handle commas inside quoted strings
@@ -332,7 +442,7 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                 try:
                     # Pre-process entry to remove spaces around commas for proper CSV parsing
                     # But preserve spaces inside quoted strings
-                    processed_entry = entry
+                    processed_entry = entry_without_brackets
                     
                     # Simple approach: replace ', ' with ',' outside of quotes
                     import re
@@ -349,23 +459,89 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     logger.warning(f"Invalid cell entry format: {entry}")
                     continue
                     
-                cell_ref = cell_parts[0].strip()
-                formula = cell_parts[1].strip()
-                
+                cell_ref = cell_parts[0].strip()                
                 if not cell_ref:
                     logger.warning("Empty cell reference found, skipping")
                     continue
-                    
-                # Clean the formula while preserving internal quotes
-                formula = clean_formula(formula)
                 
-                # Validate cell reference format
-                if not is_valid_cell_reference(cell_ref):
-                    logger.warning(f"Invalid cell reference format: {cell_ref}")
+                # Check if this is a chart entry by looking for chart_name= in any of the parts
+                chart_name = None
+                chart_data = {}
+                is_chart_entry = False
+                
+                # Check if any part contains chart_name=
+                for part in cell_parts:
+                    if 'chart_name=' in part:
+                        # Extract the chart name
+                        key, value = part.split('=', 1)
+                        if key.strip() == 'chart_name':
+                            chart_name = value.strip().strip('"\'')
+                            is_chart_entry = True
+                            break
+                
+                # If no chart_name= found, check if cell_ref is not a valid cell reference (fallback)
+                if not is_chart_entry and not is_valid_cell_reference(cell_ref):
+                    # This might be a chart entry using old format
+                    chart_name = cell_ref
+                    is_chart_entry = True
+                
+                if is_chart_entry:
+                    # Process chart properties
+                    for i in range(1, len(cell_parts)):
+                        prop_part = cell_parts[i].strip()
+                        if '=' in prop_part:
+                            key, value = prop_part.split('=', 1)
+                            key = key.strip()
+                            value = value.strip().strip('"\'')
+                            
+                            # Skip the chart_name property as we already processed it
+                            if key == 'chart_name':
+                                continue
+                            
+                            # Parse chart properties
+                            if key == 'type':
+                                chart_data['type'] = value
+                            elif key == 'height':
+                                chart_data['height'] = value
+                            elif key == 'left':
+                                chart_data['left'] = value
+                            elif key == 'x' or key == 'x_axis':
+                                chart_data['x_axis'] = value
+                            elif key.startswith('s') and key[1:].isdigit():
+                                # Series data (s1, s2, s3, etc.)
+                                series_num = key[1:] if len(key) > 1 else '1'
+                                chart_data[f'series_{series_num}'] = value
+                            elif key.startswith('series_') and not key.endswith('_name'):
+                                # Series data (series_1, series_2, series_3, etc.)
+                                chart_data[key] = value
+                            elif key.startswith('series_') and key.endswith('_name'):
+                                # Series names (series_1_name, series_2_name, etc.)
+                                chart_data[key] = value
+                            elif key == 'delete':
+                                chart_data['delete'] = value.lower() == 'true'
+                            else:
+                                # Store any other chart properties (title, legend_pos, from_cell, etc.)
+                                chart_data[key] = value
+                    
+                    # Initialize charts section if it doesn't exist
+                    if 'charts' not in result[current_sheet]:
+                        result[current_sheet]['charts'] = {}
+                    
+                    result[current_sheet]['charts'][chart_name] = chart_data
                     continue
                 
+                if bracket_contents and len(bracket_contents) > 0:
+                    formula = bracket_contents[0]
+                else:
+                    formula = 'no_change'
+                # Clean the formula and unescape chars
+                formula = clean_formula(formula)
+                
                 # Parse formatting properties if they exist
-                cell_data = {'formula': formula}
+                cell_data = {}
+                if formula:
+                    if not formula.lower() == 'no_change': #no_change is shorthand when we don't want to update a cell formula
+                        cell_data['formula'] = formula
                 
                 # Process formatting properties from remaining parts
                 for i in range(2, len(cell_parts)):
@@ -380,8 +556,6 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                             cell_data['bold'] = value.lower() == 'true'
                         elif key == 'it':  # italic
                             cell_data['italic'] = value.lower() == 'true'
-                        elif key == 'num_fmt':  # number format
-                            cell_data['number_format'] = clean_formula(value)
                         elif key == 'sz':  # font size
                             try:
                                 cell_data['font_size'] = float(clean_formula(value))
@@ -393,6 +567,26 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                             cell_data['text_color'] = clean_formula(value)
                         elif key == 'fill':  # fill color
                             cell_data['fill_color'] = clean_formula(value)
+                        elif key == 'wrap':  # wrap text
+                            cell_data['wrap_text'] = value.lower() == 'true'
+                        elif key == 'ha':  # horizontal alignment
+                            cell_data['horizontal_alignment'] = value
+                        elif key == 'va':  # vertical alignment
+                            cell_data['vertical_alignment'] = value
+                        elif key == 'ind':  # indent
+                            cell_data['indent'] = value
+                        elif key == 'bord_t':  
+                            cell_data['border_top'] = parse_border_properties(value)
+                        elif key == 'bord_b':  
+                            cell_data['border_bottom'] = parse_border_properties(value)
+                        elif key == 'bord_l': 
+                            cell_data['border_left'] = parse_border_properties(value)
+                        elif key == 'bord_r':  
+                            cell_data['border_right'] = parse_border_properties(value)
+                        elif key == 'num_fmt':  # number format
+                            if bracket_contents and len(bracket_contents) > 1:
+                                num_fmt = bracket_contents[1]
+                                cell_data['number_format'] = clean_number_format(num_fmt)
                     
                 result[current_sheet][cell_ref.upper()] = cell_data
         
@@ -448,12 +642,16 @@ def parse_cell_formulas(formula_input: Union[str, dict]) -> Optional[Dict[str, D
                 return formula
             formula = formula.strip()
             # Remove outer quotes if they exist (both matching or just leading)
-            if (formula.startswith('"') and formula.endswith('"')) or \
+            # Remove outer square brackets if they exist (both matching or just leading)
+            if (formula.startswith('[') and formula.endswith(']')) or \
+               (formula.startswith('"') and formula.endswith('"')) or \
                (formula.startswith("'") and formula.endswith("'")):
                 formula = formula[1:-1]
-            elif formula.startswith('"') or formula.startswith("'"):
+            elif formula.startswith('"') or formula.startswith("'") or formula.startswith('['):
                 # Remove only leading quote if no matching trailing quote
                 formula = formula[1:]
+            formula = formula.strip()
+            formula = formula.replace('\\"', '"').replace("\\'", "'")
             return formula
         
         # Clean all formulas in the dictionary
