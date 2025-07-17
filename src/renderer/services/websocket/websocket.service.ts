@@ -179,7 +179,7 @@ class WebSocketService {
     }
   }
 
-  sendChatMessage(message: string, model: string, threadId: string, requestId: string) {
+  sendChatMessage(message: string, model: string, threadId: string, requestId: string, attachments?: Array<{type: 'image', data: string, mimeType: string, filename?: string}>) {
     const payload = {
       type: 'CHAT_MESSAGE',
       timestamp: new Date().toISOString(),
@@ -187,7 +187,8 @@ class WebSocketService {
         message,
         model,
         threadId,
-        requestId
+        requestId,
+        attachments: attachments || []
       }
     };
     this.sendMessage(payload);

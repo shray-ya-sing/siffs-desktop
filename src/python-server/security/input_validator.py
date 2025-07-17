@@ -198,6 +198,8 @@ class InputValidator:
         text = re.sub(r'javascript:', '', text, flags=re.IGNORECASE)
         
         # Remove data URIs
+        if re.search(r'data:.*?base64.*?', text, flags=re.IGNORECASE):
+            logger.debug("Base64 data URI detected, performing sanitization.")
         text = re.sub(r'data:.*?base64.*?', '', text, flags=re.IGNORECASE)
         
         # Remove excessive whitespace

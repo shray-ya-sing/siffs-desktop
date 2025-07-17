@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { ArrowRight, Square } from "lucide-react"
+import { ArrowRight, Square, Paperclip, X, Image } from "lucide-react"
 import { ProviderDropdown, ModelOption } from './ProviderDropdown'
 import WatermarkLogo from '../logo/WaterMarkLogo'
 import { webSocketService } from '../../services/websocket/websocket.service';
@@ -21,6 +21,7 @@ interface BaseMessage {
 
 interface UserMessage extends BaseMessage {
   role: 'user';
+  attachments?: Array<{type: 'image', data: string, mimeType: string, filename?: string}>;
 }
 
 interface AssistantMessage extends BaseMessage {
@@ -64,6 +65,7 @@ const MessageComponent = React.memo(({ message, isLastMessage, isLoading }: {
   isLoading: boolean; 
 }) => {
   if (message.role === "user") {
+    const userMessage = message as UserMessage;
     return (
       <div className="flex justify-center">
         <div className="max-w-full w-full px-8">
@@ -74,7 +76,26 @@ const MessageComponent = React.memo(({ message, isLastMessage, isLoading }: {
               border: "1px solid #333333",
             }}
           >
-            {message.content}
+            <div className="mb-2">{message.content}</div>
+            {userMessage.attachments && userMessage.attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {userMessage.attachments.map((attachment, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={attachment.data}
+                      alt={attachment.filename || 'Attached image'}
+                      className="max-w-48 max-h-48 rounded-lg border border-gray-600 object-cover"
+                      style={{ maxWidth: '12rem', maxHeight: '12rem' }}
+                    />
+                    {attachment.filename && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-b-lg truncate">
+                        {attachment.filename}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -125,6 +146,8 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
   const typingTimeoutRef = useRef<NodeJS.Timeout>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro")
+  const [attachments, setAttachments] = useState<Array<{type: 'image', data: string, mimeType: string, filename?: string}>>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [threadId, setThreadId] = useState<string>(() => localStorage.getItem('threadId') || uuidv4());
@@ -188,15 +211,17 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
     const requestId = uuidv4();
     setCurrentRequestId(requestId);
 
-    const userMessage: Message = {
+    const userMessage: UserMessage = {
       id: Date.now().toString(),
       content: input,
       role: "user",
       timestamp: new Date(),
+      attachments: attachments.length > 0 ? attachments : undefined,
     }
 
     setMessages(prev => [...prev, userMessage])
     setInput("")
+    setAttachments([])
     setIsLoading(true)
     setIsTyping(false)
 
@@ -206,13 +231,13 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
     }
 
     try {
-      webSocketService.sendChatMessage(input, selectedModel, threadId, requestId);
+      webSocketService.sendChatMessage(input, selectedModel, threadId, requestId, attachments.length > 0 ? attachments : undefined);
     } catch (error) {
       console.error("Error sending message:", error);
       setIsLoading(false);
       setCurrentRequestId(null);
     }
-  }, [input, selectedModel, threadId]);
+  }, [input, selectedModel, threadId, attachments]);
 
   const handleCancel = useCallback(() => {
     // Send cancellation request to backend
@@ -234,6 +259,38 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
       handleSend()
     }
   }, [handleSend, handleMentionKeyDown])
+
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files) return
+
+    Array.from(files).forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const base64Data = e.target?.result as string
+          setAttachments(prev => [...prev, {
+            type: 'image',
+            data: base64Data,
+            mimeType: file.type,
+            filename: file.name
+          }])
+        }
+        reader.readAsDataURL(file)
+      }
+    })
+
+    // Clear the input so the same file can be selected again
+    event.target.value = ''
+  }, [])
+
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const handleAttachClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
 
   const handleMentionSelect = useCallback((file: FileItem) => {
     const atIndex = input.lastIndexOf('@')
@@ -603,15 +660,46 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
           />
         )}
         
+        {/* Attachment preview */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {attachments.map((attachment, index) => (
+              <div key={index} className="relative group">
+                <div className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-800 rounded-lg border border-gray-600">
+                  <Image size={12} className="text-blue-400" />
+                  <span className="text-xs text-gray-300 truncate max-w-24">
+                    {attachment.filename || 'Image'}
+                  </span>
+                  <button
+                    onClick={() => removeAttachment(index)}
+                    className="p-0.5 hover:bg-red-900/20 rounded transition-colors"
+                    title="Remove attachment"
+                  >
+                    <X size={10} className="text-gray-400 hover:text-red-400" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
         {/* Message input */}
         <div className="relative">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
           <textarea
             ref={textareaRef}
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
             placeholder="Ask anything... (Shift+Enter for new line)"
-            className="w-full rounded-3xl px-3 py-2 pr-16 text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-gray-600 text-sm transition-all duration-200 hover:shadow-lg focus:shadow-xl"
+            className="w-full rounded-3xl px-3 py-2 pr-20 text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-gray-600 text-sm transition-all duration-200 hover:shadow-lg focus:shadow-xl"
             style={{
               background: "linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%)",
               border: "1px solid #333333",
@@ -621,6 +709,14 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
             disabled={isLoading}
           />
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+            <button
+              onClick={handleAttachClick}
+              disabled={isLoading}
+              className="p-1.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 hover:bg-gray-700/20 rounded"
+              title="Attach image"
+            >
+              <Paperclip size={12} className="text-gray-400 hover:text-gray-300" />
+            </button>
             {isLoading && (
               <button
                 onClick={handleCancel}
