@@ -197,7 +197,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        sheet_name: Name of the sheet| A1, [=SUM(B1:B10)] | B1, [Text value], b=true, it=true, sz="12", st="calibri", font="#000000", fill="#0f0f0f", ind="1", ha="center", va="center", bord_t="l=2c=#000000w=4", bord_b="l=2c=#000000w=4", bord_l="l=2c=#000000w=4", bord_r="l=2c=#000000w=4", num_fmt=[#,000.0] | C1, 123 | chart_name="chart1", type="line", height="200", left="50", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1"
+        sheet_name: Name of the sheet| A1, [=SUM(B1:B10)] | B1, [Text value], b=true, it=true, sz="12", st="calibri", font="#000000", fill="#0f0f0f", ind="1", ha="center", va="center", bord_t="l=2c=#000000w=4", bord_b="l=2c=#000000w=4", bord_l="l=2c=#000000w=4", bord_r="l=2c=#000000w=4", num_fmt=[#,000.0] | C1, 123 | chart_name="chart1", type="line", height="200", top="50", left="50", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC. 
         Just return the pipe-delimited markdown containing cell formulas and formatting properties in the specified format.
@@ -219,7 +219,8 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         Use these values for border weights: thinnest=1, thin(default)=2, thick=4
         13. "ha" and "va" should be the horizontal and vertical alignment of the cell. Both are string properties. Possible values for ha are "center", "right", "left". Possible values for va are "center", "top", "bottom"
         14. Instructions may require creation or editing of charts. Chart metadata should be created pipe delimited similar to cell metadata and positioned after the cell metadata of the sheet. KEY difference is that whereas cell metadata starts with the cell reference C1, A1, etc chart metadata item starts with chart_name="chart_name_here" to specify the chart name. Name is used to access the correct chart. The following chart types are available: 3d_area, 3d_area_stacked, 3d_area_stacked_100, 3d_bar_clustered, 3d_bar_stacked, 3d_bar_stacked_100, 3d_column, 3d_column_clustered, 3d_column_stacked, 3d_column_stacked_100, 3d_line, 3d_pie, 3d_pie_exploded, area, area_stacked, area_stacked_100, bar_clustered, bar_of_pie, bar_stacked, bar_stacked_100, bubble, bubble_3d_effect, column_clustered, column_stacked, column_stacked_100, combination, cone_bar_clustered, cone_bar_stacked, cone_bar_stacked_100, cone_col, cone_col_clustered, cone_col_stacked, cone_col_stacked_100, cylinder_bar_clustered, cylinder_bar_stacked, cylinder_bar_stacked_100, cylinder_col, cylinder_col_clustered, cylinder_col_stacked, cylinder_col_stacked_100, doughnut, doughnut_exploded, line, line_markers, line_markers_stacked, line_markers_stacked_100, line_stacked, line_stacked_100, pie, pie_exploded, pie_of_pie, pyramid_bar_clustered, pyramid_bar_stacked, pyramid_bar_stacked_100, pyramid_col, pyramid_col_clustered, pyramid_col_stacked, pyramid_col_stacked_100, radar, radar_filled, radar_markers, stock_hlc, stock_ohlc, stock_vhlc, stock_vohlc, surface, surface_top_view, surface_top_view_wireframe, surface_wireframe, xy_scatter, xy_scatter_lines, xy_scatter_lines_no_markers, xy_scatter_smooth, xy_scatter_smooth_no_markers. 
-        Specify the type of chart with type="chart_type". Specify height and position of the chart with height="height_value" and left="left_value". Width and size will be auto-set. Specify the source data range of the chart as: x_axis="x_axis_range", series_1="y_axis_range_1", series_2="y_axis_range_2", etc. Optionally specify series names with series_1_name="name_cell_1", series_2_name="name_cell_2", etc. For example, chart_name="my_chart", type="line", height="100", left="10", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1", series_3="D1:D10", series_3_name="D1".
+        Specify the type of chart with type="chart_type". Specify height and position of the chart with height="height_value", top="top_value", left="left_value". Width and size will be auto-set. Specify the source data range of the chart as: x_axis="x_axis_range", series_1="y_axis_range_1", series_2="y_axis_range_2", etc. Optionally specify series names with series_1_name="name_cell_1", series_2_name="name_cell_2", etc. For example, chart_name="my_chart", type="line", height="100", left="10", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1", series_3="D1:D10", series_3_name="D1".
+        top, height and left are INTEGERS ONLY, not cell references. something like left="B6" is invalid. 
 
         
         
@@ -250,6 +251,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         prompt += f"\nHere are some guidelines for common Excel formulas:\n{EXCEL_FORMULAS}"
         prompt += f"\nAs a best practice always generate a number format for cells displaying numbers, based on number type, even if not specified by the instruction. Here are some guidelines for common Excel number formats:\n{DEFAULT_NUMBER_FORMATS}"
 
+        # Stream to frontend
         writer = get_stream_writer()
         writer({"generating": f"Planning task steps"})
 
@@ -374,8 +376,15 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         except Exception as e:
             error_message = f"Failed to write formulas to excel: {e}"
             logger.error(error_message)
+            # Stream to frontend
+            writer = get_stream_writer()
+            writer({"error": f"Unexpected error occurred: failed to edit excel"})
             return error_message
         
+        # Stream to frontend
+        writer = get_stream_writer()
+        writer({"completed": f"Finished editing excel file {workspace_path}"})
+
         if not updated_cells:
             error_msg = "Error: No cells were updated"
             logger.error(error_msg)

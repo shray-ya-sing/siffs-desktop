@@ -776,8 +776,50 @@ class ExcelWorker:
         try:
             # Extract chart properties
             chart_type = chart_data.get('type', 'line')
-            height = int(chart_data.get('height', 300))
-            left = int(chart_data.get('left', 10))
+            
+            # Validate height parameter - ensure it's an integer with default
+            height_value = chart_data.get('height', 300)
+            try:
+                height = int(height_value)
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid height value '{height_value}', using default 300")
+                height = 300
+            
+            # Handle top position - can be cell reference or numeric value
+            top_value = chart_data.get('top', 10)
+            if isinstance(top_value, str) and re.match(r'^[A-Z]+\d+$', top_value.upper()):
+                # It's a cell reference, convert to position
+                try:
+                    cell_range = sheet.range(top_value)
+                    top = cell_range.top
+                except:
+                    # If cell reference fails, use default
+                    top = 10
+            else:
+                # It's a numeric value
+                try:
+                    top = int(top_value)
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid top value '{top_value}', using default 10")
+                    top = 10
+            
+            # Handle left position - can be cell reference or numeric value
+            left_value = chart_data.get('left', 10)
+            if isinstance(left_value, str) and re.match(r'^[A-Z]+\d+$', left_value.upper()):
+                # It's a cell reference, convert to position
+                try:
+                    cell_range = sheet.range(left_value)
+                    left = cell_range.left
+                except:
+                    # If cell reference fails, use default
+                    left = 10
+            else:
+                # It's a numeric value
+                try:
+                    left = int(left_value)
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid left value '{left_value}', using default 10")
+                    left = 10
             
             # Extract data ranges
             x_axis = chart_data.get('x_axis', chart_data.get('x'))
@@ -792,10 +834,6 @@ class ExcelWorker:
                 logger.warning(f"Chart {chart_name} missing required data ranges")
                 return
             
-            # Create chart with the first series
-            first_series_key = list(series_data.keys())[0]
-            first_series_range = list(series_data.values())[0]
-            
             # Map chart type to xlwings chart type
             chart_type_map = {
                 'line': 'line',
@@ -809,42 +847,98 @@ class ExcelWorker:
             xlwings_chart_type = chart_type_map.get(chart_type, 'line')
             
             # Create the chart
-            chart = sheet.charts.add(left=left, top=10, width=400, height=height)
+            chart = sheet.charts.add(left=left, top=top, width=400, height=height)
             chart.name = chart_name
             chart.chart_type = xlwings_chart_type
+
+            # Get the Chart object from the tuple returned by chart.api
+            # chart.api returns a tuple (ChartObject, Chart)
+            chart_obj = None
+            if hasattr(chart, 'api') and isinstance(chart.api, tuple) and len(chart.api) > 1:
+                chart_obj = chart.api[1]  # Get the Chart object (second element)
             
-            # Set data source
-            chart.set_source_data(sheet.range(f"{x_axis},{first_series_range}"))
-            
-            # Set name for the first series if provided
-            first_series_name_key = f"{first_series_key}_name"
-            if first_series_name_key in chart_data:
-                first_series_name_cell = chart_data[first_series_name_key]
-                try:
-                    # Get the first series and set its name
-                    first_series_obj = chart.api.SeriesCollection(1)
-                    first_series_obj.Name = sheet.range(first_series_name_cell).api
-                except Exception as e:
-                    logger.warning(f"Could not set first series name from {first_series_name_cell}: {e}")
-            
-            # Add additional series if they exist
-            for i, (series_key, series_range) in enumerate(list(series_data.items())[1:], 2):
-                try:
-                    chart.api.SeriesCollection().NewSeries()
-                    series = chart.api.SeriesCollection(i)
-                    series.XValues = sheet.range(x_axis).api
-                    series.Values = sheet.range(series_range).api
+            # Add all series
+            for i, (series_key, series_range) in enumerate(series_data.items(), 1):
+                logger.info(f"Attempting to add series {i}: {series_key} -> {series_range}")
+                
+                if not chart_obj:
+                    logger.error(f"Chart object is None, cannot add series {series_key}")
+                    continue
                     
-                    # Set series name if provided
+                if not hasattr(chart_obj, 'SeriesCollection'):
+                    logger.error(f"Chart object does not have SeriesCollection attribute for series {series_key}")
+                    continue
+                
+                try:
+                    # Step 1: Get current series count before creating new one
+                    initial_series_count = chart_obj.SeriesCollection().Count
+                    logger.debug(f"Initial series count: {initial_series_count}")
+                    
+                    # Step 2: Create new series and use it directly
+                    logger.debug(f"Creating new series for {series_key}")
+                    series = chart_obj.SeriesCollection().NewSeries()
+                    logger.debug(f"New series created successfully for {series_key}")
+                    
+                    # Step 3: Verify the series was created
+                    new_series_count = chart_obj.SeriesCollection().Count
+                    logger.debug(f"New series count: {new_series_count} (was {initial_series_count})")
+                    
+                    # Step 4: Verify we got a valid series object
+                    if series is None:
+                        logger.error(f"NewSeries() returned None for {series_key}")
+                        continue
+                    
+                    logger.debug(f"Series object type: {type(series)}")
+                    logger.debug(f"Series object attributes: {[attr for attr in dir(series) if not attr.startswith('_')][:10]}")
+                    
+                    # Step 5: Set Y values first (this is more reliable)
+                    logger.debug(f"Setting Y values for series {series_key}: {series_range}")
+                    y_values = sheet.range(series_range).api
+                    logger.debug(f"Y values range API type: {type(y_values)}")
+                    series.Values = y_values
+                    logger.debug(f"Y values set successfully for series {series_key}")
+                    
+                    # Step 6: Set X values (this should be the same for all series)
+                    logger.debug(f"Setting X values for series {series_key}: {x_axis}")
+                    x_values = sheet.range(x_axis).api
+                    logger.debug(f"X values range API type: {type(x_values)}")
+                    series.XValues = x_values
+                    logger.debug(f"X values set successfully for series {series_key}")
+                    
+                    # Step 7: Verify the series data was set correctly
+                    try:
+                        logger.debug(f"Verifying series {series_key} data: Values count = {series.Values.Count if hasattr(series.Values, 'Count') else 'N/A'}")
+                        logger.debug(f"Verifying series {series_key} data: XValues count = {series.XValues.Count if hasattr(series.XValues, 'Count') else 'N/A'}")
+                    except Exception as verify_e:
+                        logger.debug(f"Could not verify series data for {series_key}: {verify_e}")
+                    
+                    # Step 5: Set series name if provided
                     series_name_key = f"{series_key}_name"
                     if series_name_key in chart_data:
                         series_name_cell = chart_data[series_name_key]
                         try:
-                            series.Name = sheet.range(series_name_cell).api
+                            logger.debug(f"Setting series name for {series_key} from {series_name_cell}")
+                            series.Name = sheet.range(series_name_cell).value
+                            logger.info(f"Series name set successfully for {series_key} from {series_name_cell}")
                         except Exception as e:
-                            logger.warning(f"Could not set series name from {series_name_cell}: {e}")
+                            logger.warning(f"Could not set series name from {series_name_cell} for {series_key}: {e}")
+                    else:
+                        logger.debug(f"No series name provided for {series_key}")
+                    
+                    logger.info(f"Successfully added series {i}: {series_key} -> {series_range}")
+                    
                 except Exception as e:
-                    logger.warning(f"Could not add series {series_key} to chart {chart_name}: {e}")
+                    logger.error(f"Failed to add series {series_key} to chart {chart_name}: {e}")
+                    logger.debug(f"Series creation failed at step for {series_key}", exc_info=True)
+            
+            # Set chart title if provided
+            if 'title' in chart_data and chart_obj:
+                try:
+                    chart_obj.HasTitle = True
+                    chart_obj.ChartTitle.Text = chart_data['title']
+                    logger.info(f"Chart title set to: {chart_data['title']}")
+                except Exception as e:
+                    logger.warning(f"Could not set chart title: {e}")
             
             logger.info(f"Created chart {chart_name} with type {chart_type}")
             

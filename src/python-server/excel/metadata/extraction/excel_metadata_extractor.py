@@ -585,6 +585,15 @@ class ExcelMetadataExtractor:
                 logger.warning(f"Warning: Error extracting tables: {str(e)}")
                 logger.error(traceback.format_exc())
                 sheet_metadata["tables"] = []
+            
+            # Extract charts
+            try:
+                sheet_metadata["charts"] = self._extract_charts_from_sheet(sheet)
+            except Exception as e:
+                sheet_metadata["error"] = sheet_metadata.get("error", "") + f" Charts: {str(e)}"
+                logger.warning(f"Warning: Error extracting charts: {str(e)}")
+                logger.error(traceback.format_exc())
+                sheet_metadata["charts"] = []
 
             # TODO: Extract named ranges
             
@@ -1121,6 +1130,298 @@ class ExcelMetadataExtractor:
             logger.error(traceback.format_exc())
             
         return named_ranges
+
+    def _extract_charts_from_sheet(self, sheet) -> List[Dict[str, Any]]:
+        """
+        Extract comprehensive chart metadata from a worksheet using openpyxl.
+        """
+        charts = []
+        
+        try:
+            if not hasattr(sheet, '_charts'):
+                return charts
+                
+            for i, chart in enumerate(sheet._charts):
+                try:
+                    chart_data = {
+                        "chart_name": f"chart{i + 1}",
+                        "chart_type": type(chart).__name__,
+                        "height": chart.height,
+                        "width": chart.width,
+                        "style": chart.style,
+                        "series_data": {},
+                        "series_names": {}
+                    }
+                    
+                    # Extract chart title
+                    try:
+                        if chart.title and chart.title.tx and chart.title.tx.rich:
+                            chart_data["title"] = chart.title.tx.rich.p[0].r[0].t
+                        else:
+                            chart_data["title"] = None
+                    except Exception as e:
+                        chart_data["title"] = None
+                        logger.debug(f"Could not extract chart title: {str(e)}")
+                    
+                    # Extract position from anchor
+                    try:
+                        if hasattr(chart, 'anchor') and chart.anchor:
+                            anchor = chart.anchor
+                            if hasattr(anchor, '_from'):
+                                chart_data["position"] = {
+                                    "row": anchor._from.row,
+                                    "col": anchor._from.col,
+                                    "colOff": anchor._from.colOff,
+                                    "rowOff": anchor._from.rowOff
+                                }
+                                chart_data["left"] = anchor._from.col  # For backwards compatibility
+                    except Exception as e:
+                        logger.debug(f"Could not extract chart position: {str(e)}")
+                    
+                    # Extract legend properties
+                    try:
+                        if hasattr(chart, 'legend') and chart.legend:
+                            legend = chart.legend
+                            chart_data["legend"] = {
+                                "hasLegend": True,
+                                "position": getattr(legend, 'position', None),
+                                "overlay": getattr(legend, 'overlay', None)
+                            }
+                        else:
+                            chart_data["legend"] = {"hasLegend": False}
+                    except Exception as e:
+                        chart_data["legend"] = {"hasLegend": False}
+                        logger.debug(f"Could not extract legend properties: {str(e)}")
+                    
+                    # Extract axes properties
+                    try:
+                        chart_data["axes"] = {}
+                        
+                        # X-axis
+                        if hasattr(chart, 'x_axis') and chart.x_axis:
+                            x_axis = chart.x_axis
+                            chart_data["axes"]["x_axis"] = {
+                                "hasTitle": hasattr(x_axis, 'title') and x_axis.title is not None,
+                                "title": None,
+                                "hasMajorGridlines": getattr(x_axis, 'majorGridlines', None) is not None,
+                                "hasMinorGridlines": getattr(x_axis, 'minorGridlines', None) is not None
+                            }
+                            
+                            # Extract X-axis title
+                            try:
+                                if x_axis.title and x_axis.title.tx and x_axis.title.tx.rich:
+                                    chart_data["axes"]["x_axis"]["title"] = x_axis.title.tx.rich.p[0].r[0].t
+                                    chart_data["x_axis"] = x_axis.title.tx.rich.p[0].r[0].t  # For backwards compatibility
+                            except:
+                                pass
+                        
+                        # Y-axis
+                        if hasattr(chart, 'y_axis') and chart.y_axis:
+                            y_axis = chart.y_axis
+                            chart_data["axes"]["y_axis"] = {
+                                "hasTitle": hasattr(y_axis, 'title') and y_axis.title is not None,
+                                "title": None,
+                                "hasMajorGridlines": getattr(y_axis, 'majorGridlines', None) is not None,
+                                "hasMinorGridlines": getattr(y_axis, 'minorGridlines', None) is not None
+                            }
+                            
+                            # Extract Y-axis title
+                            try:
+                                if y_axis.title and y_axis.title.tx and y_axis.title.tx.rich:
+                                    chart_data["axes"]["y_axis"]["title"] = y_axis.title.tx.rich.p[0].r[0].t
+                            except:
+                                pass
+                    except Exception as e:
+                        logger.debug(f"Could not extract axes properties: {str(e)}")
+                    
+                    # Extract chart background and border properties
+                    try:
+                        if hasattr(chart, 'graphical_properties') and chart.graphical_properties:
+                            gp = chart.graphical_properties
+                            chart_data["background"] = {
+                                "hasFill": gp.solidFill is not None,
+                                "hasGradientFill": gp.gradFill is not None,
+                                "noFill": gp.noFill,
+                                "hasBorder": gp.ln is not None
+                            }
+                            
+                            # Extract border properties
+                            if gp.ln:
+                                chart_data["border"] = {
+                                    "width": gp.ln.w,
+                                    "style": gp.ln.prstDash,
+                                    "hasColor": gp.ln.solidFill is not None
+                                }
+                                
+                                # Extract color scheme reference
+                                if gp.ln.solidFill and hasattr(gp.ln.solidFill, 'schemeClr'):
+                                    chart_data["border"]["colorScheme"] = gp.ln.solidFill.schemeClr.val
+                            
+                            # Extract background color scheme
+                            if gp.solidFill and hasattr(gp.solidFill, 'schemeClr'):
+                                chart_data["background"]["colorScheme"] = gp.solidFill.schemeClr.val
+                    except Exception as e:
+                        logger.debug(f"Could not extract background properties: {str(e)}")
+                    
+                    # Extract comprehensive series information
+                    try:
+                        chart_data["series"] = []
+                        for j, series in enumerate(chart.series):
+                            series_key = f"series_{j + 1}"
+                            series_data = {
+                                "index": j,
+                                "values": series.val.numRef.f if series.val and series.val.numRef else None,
+                                "categories": series.cat.strRef.f if series.cat and series.cat.strRef else None,
+                                "title": None
+                            }
+                            
+                            # For backwards compatibility
+                            chart_data["series_data"][series_key] = series_data["values"]
+                            
+                            # Extract series title
+                            try:
+                                if series.tx and series.tx.strRef:
+                                    series_data["title"] = series.tx.strRef.f
+                                    chart_data["series_names"][f"{series_key}_name"] = series.tx.strRef.f
+                                elif series.tx and series.tx.v:
+                                    series_data["title"] = series.tx.v
+                                    chart_data["series_names"][f"{series_key}_name"] = series.tx.v
+                            except:
+                                pass
+                            
+                            # Extract line properties
+                            try:
+                                if hasattr(series, 'spPr') and series.spPr:
+                                    spPr = series.spPr
+                                    series_data["line"] = {
+                                        "width": spPr.ln.w if spPr.ln else None,
+                                        "cap": spPr.ln.cap if spPr.ln else None,
+                                        "compound": spPr.ln.cmpd if spPr.ln else None,
+                                        "dashStyle": spPr.ln.prstDash if spPr.ln else None,
+                                        "hasColor": spPr.ln.solidFill is not None if spPr.ln else False
+                                    }
+                                    
+                                    # Extract color scheme reference
+                                    if spPr.ln and spPr.ln.solidFill and hasattr(spPr.ln.solidFill, 'schemeClr'):
+                                        series_data["line"]["colorScheme"] = spPr.ln.solidFill.schemeClr.val
+                            except Exception as e:
+                                logger.debug(f"Could not extract series line properties: {str(e)}")
+                            
+                            # Extract marker properties
+                            try:
+                                if hasattr(series, 'marker') and series.marker:
+                                    marker = series.marker
+                                    series_data["marker"] = {
+                                        "hasMarker": True,
+                                        "symbol": getattr(marker, 'symbol', None),
+                                        "size": getattr(marker, 'size', None),
+                                        "hasGraphicalProperties": hasattr(marker, 'spPr') and marker.spPr is not None
+                                    }
+                                    
+                                    # Extract marker graphical properties
+                                    if hasattr(marker, 'spPr') and marker.spPr:
+                                        markerSpPr = marker.spPr
+                                        series_data["marker"]["graphicalProperties"] = {
+                                            "hasFill": markerSpPr.solidFill is not None,
+                                            "hasLine": markerSpPr.ln is not None
+                                        }
+                                        
+                                        # Extract marker colors
+                                        if markerSpPr.solidFill and hasattr(markerSpPr.solidFill, 'schemeClr'):
+                                            series_data["marker"]["graphicalProperties"]["fillColorScheme"] = markerSpPr.solidFill.schemeClr.val
+                                        if markerSpPr.ln and markerSpPr.ln.solidFill and hasattr(markerSpPr.ln.solidFill, 'schemeClr'):
+                                            series_data["marker"]["graphicalProperties"]["lineColorScheme"] = markerSpPr.ln.solidFill.schemeClr.val
+                                else:
+                                    series_data["marker"] = {"hasMarker": False}
+                            except Exception as e:
+                                series_data["marker"] = {"hasMarker": False}
+                                logger.debug(f"Could not extract marker properties: {str(e)}")
+                            
+                            # Extract data label properties
+                            try:
+                                if hasattr(series, 'dLbls') and series.dLbls:
+                                    dLbls = series.dLbls
+                                    series_data["dataLabels"] = {
+                                        "hasDataLabels": True,
+                                        "showValue": getattr(dLbls, 'showVal', None),
+                                        "showCategoryName": getattr(dLbls, 'showCatName', None),
+                                        "showSeriesName": getattr(dLbls, 'showSerName', None),
+                                        "showPercent": getattr(dLbls, 'showPercent', None),
+                                        "position": getattr(dLbls, 'position', None),
+                                        "hasTextProperties": hasattr(dLbls, 'txPr') and dLbls.txPr is not None
+                                    }
+                                    
+                                    # Extract data label font properties
+                                    if hasattr(dLbls, 'txPr') and dLbls.txPr:
+                                        try:
+                                            txPr = dLbls.txPr
+                                            if hasattr(txPr, 'p') and txPr.p:
+                                                for p in txPr.p:
+                                                    if hasattr(p, 'pPr') and p.pPr and hasattr(p.pPr, 'defRPr'):
+                                                        defRPr = p.pPr.defRPr
+                                                        series_data["dataLabels"]["font"] = {
+                                                            "size": defRPr.sz,
+                                                            "bold": defRPr.b,
+                                                            "italic": defRPr.i,
+                                                            "hasColor": defRPr.solidFill is not None
+                                                        }
+                                                        
+                                                        # Extract font family
+                                                        if hasattr(defRPr, 'latin') and defRPr.latin:
+                                                            series_data["dataLabels"]["font"]["family"] = defRPr.latin.typeface
+                                                        
+                                                        # Extract font color scheme
+                                                        if defRPr.solidFill and hasattr(defRPr.solidFill, 'schemeClr'):
+                                                            series_data["dataLabels"]["font"]["colorScheme"] = defRPr.solidFill.schemeClr.val
+                                                        break
+                                        except Exception as e:
+                                            logger.debug(f"Could not extract data label font properties: {str(e)}")
+                                else:
+                                    series_data["dataLabels"] = {"hasDataLabels": False}
+                            except Exception as e:
+                                series_data["dataLabels"] = {"hasDataLabels": False}
+                                logger.debug(f"Could not extract data label properties: {str(e)}")
+                            
+                            # Extract error bars
+                            try:
+                                series_data["errorBars"] = {
+                                    "hasErrorBars": hasattr(series, 'errBars') and series.errBars is not None
+                                }
+                            except Exception as e:
+                                series_data["errorBars"] = {"hasErrorBars": False}
+                            
+                            # Extract trendline
+                            try:
+                                series_data["trendline"] = {
+                                    "hasTrendline": hasattr(series, 'trendline') and series.trendline is not None
+                                }
+                            except Exception as e:
+                                series_data["trendline"] = {"hasTrendline": False}
+                            
+                            chart_data["series"].append(series_data)
+                    except Exception as e:
+                        logger.debug(f"Could not extract series information: {str(e)}")
+                    
+                    # Extract data table information
+                    try:
+                        chart_data["dataTable"] = {
+                            "hasDataTable": hasattr(chart, 'dataTable') and chart.dataTable is not None
+                        }
+                    except Exception as e:
+                        chart_data["dataTable"] = {"hasDataTable": False}
+                    
+                    charts.append(chart_data)
+                    
+                except Exception as e:
+                    logger.warning(f"Warning: Error processing chart {i}: {str(e)}")
+                    logger.error(traceback.format_exc())
+                    continue
+                    
+        except Exception as e:
+            logger.warning(f"Warning: Error extracting charts from sheet: {str(e)}")
+            logger.error(traceback.format_exc())
+            
+        return charts
 
     def _get_theme_colors(self) -> Dict[str, str]:
         """Get theme colors with fallback to defaults."""
@@ -1704,7 +2005,8 @@ class ExcelMetadataExtractor:
                         "rowCount": min(sheet.max_row or 0, 1048576),
                         "columnCount": min(sheet.max_column or 0, 16384),
                         "chunkIndex": 0,
-                        "cells": self._extract_sheet_cells_lightweight(sheet)
+                        "cells": self._extract_sheet_cells_lightweight(sheet),
+                        "charts": self._extract_charts_from_sheet(sheet)
                     }]
                 }
                 

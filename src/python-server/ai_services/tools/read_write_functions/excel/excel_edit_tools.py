@@ -505,6 +505,8 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                                 chart_data['height'] = value
                             elif key == 'left':
                                 chart_data['left'] = value
+                            elif key == 'top':
+                                chart_data['top'] = value
                             elif key == 'x' or key == 'x_axis':
                                 chart_data['x_axis'] = value
                             elif key.startswith('s') and key[1:].isdigit():
