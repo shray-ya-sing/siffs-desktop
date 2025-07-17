@@ -100,20 +100,6 @@ class APIKeyManager:
             logger.info(f"=============================")
             return user_key
         
-        # Fallback to environment variables
-        env_key_map = {
-            "gemini": "GEMINI_API_KEY",
-            "openai": "OPENAI_API_KEY", 
-            "anthropic": "ANTHROPIC_API_KEY"
-        }
-        
-        env_key = env_key_map.get(provider)
-        if env_key:
-            env_value = os.getenv(env_key, "")
-            logger.info(f"Fallback to environment key: {env_key}")
-            logger.info(f"=============================")
-            return env_value
-        
         logger.info(f"No API key found for provider {provider}")
         logger.info(f"=============================")
         return ""
