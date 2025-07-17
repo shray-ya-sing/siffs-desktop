@@ -83,18 +83,19 @@ class SupervisorAgent:
         """Initialize the underlying agents with the specified model"""
         logger.info(f"Initializing agents for user {user_id} with model {model}")
         
-        try:
-            self.supervisor_model = GeminiProvider.get_gemini_model(
-                user_id=user_id,
-                model=model,
-                temperature=0.2,
-                max_retries=3
-            )
+#        try:
+#            self.supervisor_model = GeminiProvider.get_gemini_model(
+#                user_id=user_id,
+#                model=model,
+#                temperature=0.2,
+#                max_retries=3,
+#                thinking_budget=-1
+#            )
 
-            if not self.supervisor_model:
-                logger.error(f"Failed to initialize supervisor model for user {user_id}")
-        except Exception as e:
-            logger.error(f"Failed to initialize supervisor model for user {user_id}: {str(e)}")
+#            if not self.supervisor_model:
+#                logger.error(f"Failed to initialize supervisor model for user {user_id}")
+#        except Exception as e:
+#            logger.error(f"Failed to initialize supervisor model for user {user_id}: {str(e)}")
         
         try:
             self.simple_agent = PrebuiltAgent().with_model(model, user_id).get_agent()
