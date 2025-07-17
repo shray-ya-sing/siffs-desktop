@@ -22,7 +22,7 @@ class GeminiProvider:
         model: str = "gemini-2.5-flash-lite-preview-06-17",
         temperature: float = 0.3,
         max_retries: int = 3,
-        thinking_budget: int = 512
+        thinking_budget: Optional[int] = 512
     ) -> ChatGoogleGenerativeAI:
         """
         Get a ChatGoogleGenerativeAI instance using user's API key if available,
@@ -54,10 +54,12 @@ class GeminiProvider:
         logger.info(f"Creating Gemini model with model {model}")
         logger.info(f"============================")
 
+        if not thinking_budget:
+            thinking_budget_for_model = 512
         if thinking_budget == 0:
             if model == "gemini-2.5-pro":
                 thinking_budget_for_model = 128  # Cannot be 0 for this model
-            else:
+            elif model in ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash-lite-preview-06-17"]:
                 thinking_budget_for_model = 0
         
         if thinking_budget == -1:
