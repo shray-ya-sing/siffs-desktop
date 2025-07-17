@@ -14,6 +14,27 @@ import logging
 logger = logging.getLogger(__name__)
 T = TypeVar('T')
 
+border_linestyles = {
+        "continuous_line": 1,
+        "dash_line": 2,
+        "dot_line": 3,
+        "dash_dot_line": 4,
+        "dash_dot_dot_line": 5,
+        "double_line": -4115,
+        "slant_dash_dot": -4118
+    }
+
+class BordersIndex:
+    xlDiagonalDown = 5  # from enum XlBordersIndex
+    xlDiagonalUp = 6  # from enum XlBordersIndex
+    xlEdgeBottom = 9  # from enum XlBordersIndex
+    xlEdgeLeft = 7  # from enum XlBordersIndex
+    xlEdgeRight = 10  # from enum XlBordersIndex
+    xlEdgeTop = 8  # from enum XlBordersIndex
+    xlInsideHorizontal = 12  # from enum XlBordersIndex
+    xlInsideVertical = 11  # from enum XlBordersIndex
+
+
 class ExcelWorker:
     """Thread-safe Excel worker that processes all Excel operations in a single thread.
     
@@ -187,7 +208,7 @@ class ExcelWorker:
         
         self._execute(_ensure_workbook)
     
-    def write_cells(self, sheet_name: str, cells: List[Dict[str, Any]], apply_green_highlight: bool = True) -> List[Dict[str, Any]]:
+    def write_cells(self, sheet_name: str, cells: List[Dict[str, Any]], apply_green_highlight: bool = False) -> List[Dict[str, Any]]:
         """Write data to cells in the specified sheet.
         
         Args:
@@ -227,6 +248,20 @@ class ExcelWorker:
                     return []
                 
                 for cell_data in cells:
+                    # Handle chart entries
+                    if 'chart' in cell_data:
+                        chart_name = cell_data.get('chart')
+                        if chart_name:
+                            try:
+                                chart_info = self._handle_chart(sheet, chart_name, cell_data)
+                                logger.info(f"Processed chart {chart_name} in sheet {sheet_name}")
+                                if chart_info:
+                                    updated_cells.append(chart_info)
+                            except Exception as e:
+                                logger.error(f"Error processing chart {chart_name}: {e}")
+                        continue
+                    
+                    # Handle cell entries
                     cell_ref = cell_data.get('cell')
                     if not cell_ref:
                         continue
@@ -237,10 +272,12 @@ class ExcelWorker:
                         #log the updated cell dict
                         #json_str = json.dumps(updated_cell, indent=2)
                         #logger.info(json_str)
-                        updated_cells.append(updated_cell)
+                        if updated_cell:
+                            updated_cells.append(updated_cell)
                         # Add a green highlight for visual indication of edit
                         if apply_green_highlight:
                             self._apply_green_highlight(cell)
+
 
                     except Exception as e:
                         logger.error(f"Error updating cell {cell_ref}: {e}")
@@ -301,6 +338,7 @@ class ExcelWorker:
                 return {}
 
         #----------------Set these properties directly on the xlwings range
+        updated_result = None
         
         # Set cell value or formula
         if 'formula' in cell_data and cell_data['formula'] is not None:
@@ -318,20 +356,31 @@ class ExcelWorker:
         if any(key in cell_data for key in ['font_style', 'font_size', 'bold', 'italic', 'text_color']):
             safe_apply('font formatting', lambda: self._apply_font_formatting(cell, cell_data))
 
-        #-------------------Need to access pywin32 api for these properties
+        if any(key in cell_data for key in ["border_top", "border_bottom", "border_left", "border_right"]):
+            safe_apply('border formatting', lambda: self._apply_border_formatting(cell, cell_data))
+
+        if any(key in cell_data for key in ["indent"]):
+            safe_apply('indent formatting', lambda: self._apply_indent(cell, cell_data))
 
         # Apply alignment: use xl_cell to access api
-        if 'horizontal_alignment' in cell_data or 'vertical_alignment' in cell_data:
+        if any(key in cell_data for key in ["horizontal_alignment", "vertical_alignment"]):
             safe_apply('alignment', lambda: self._apply_alignment(cell, cell_data))
+
+        #-------------------Need to access pywin32 api for these properties
+
+        
 
         # Get the cell's API object
         xl_cell = cell.api
         
         # Apply wrap text: use xl_cell to access api
-        if 'wrap_text' in cell_data:
-            safe_apply('wrap text', lambda: setattr(xl_cell, 'WrapText', bool(cell_data['wrap_text'])))
-
-        return updated_result
+        if 'wrap' in cell_data:
+            safe_apply('wrap text', lambda: setattr(xl_cell, 'WrapText', bool(cell_data['wrap'])))
+            
+        if updated_result:
+            return updated_result
+        else:
+            return None
 
     def _set_cell_value(self, cell: xw.Range, value)-> Dict[str, Any]:
         """Safely set cell value or formula with better error handling.
@@ -510,7 +559,7 @@ class ExcelWorker:
         try:
             if 'vertical_alignment' in cell_data:
                 v_align = cell_data['vertical_alignment'].lower()
-                if v_align == 'center':
+                if v_align == 'middle':
                     xl_cell.VerticalAlignment = -4108  # xlCenter
                 elif v_align == 'top':
                     xl_cell.VerticalAlignment = -4160  # xlTop
@@ -533,6 +582,121 @@ class ExcelWorker:
             cell_ref = getattr(cell, 'address', 'unknown')
             logger.warning(f"Warning: Could not set fill color for cell {cell_ref}: {e}")
     
+    def _apply_border_formatting(self, cell: xw.Range, cell_data: Dict[str, Any]):
+        """Apply cell border formatting."""        
+        if any(key in cell_data for key in ['border_top', 'border_bottom', 'border_left', 'border_right']):                
+            if cell_data.get('border_top'):
+                try:
+                    props = cell_data.get('border_top')
+                    if props and len(props) > 0:
+                        linestyle = props.get('line_style')
+                        if not linestyle:
+                            linestyle = 2
+                        color = props.get('color')
+                        if not color:
+                            color = '#000000'
+                        weight = props.get('weight')
+                        if not weight:
+                            weight = 2
+                        border = cell.api.Borders(BordersIndex.xlEdgeTop)
+                        border.Weight = weight
+                        border.Color = color
+                        border.LineStyle = linestyle
+                except Exception as e:  
+                    cell_ref = getattr(cell, 'address', 'unknown')
+                    logger.warning(f"Warning: Could not set border top for cell {cell_ref}: {e}")
+            if cell_data.get('border_bottom'):
+                try:
+                    props = cell_data.get('border_bottom')
+                    if props and len(props) > 0:
+                        linestyle = props.get('line_style')
+                        if not linestyle:
+                            linestyle=1
+                        color = props.get('color')
+                        if not color:
+                            color = "#000000"
+                        weight = props.get('weight')
+                        if not weight:
+                            weight = 2
+                        border = cell.api.Borders(BordersIndex.xlEdgeBottom)
+                        border.Weight = weight
+                        border.Color = color
+                        border.LineStyle = linestyle
+
+                except Exception as e:  
+                    cell_ref = getattr(cell, 'address', 'unknown')
+                    logger.warning(f"Warning: Could not set border bottom for cell {cell_ref}: {e}")
+            if cell_data.get('border_left'):
+                try:
+                    props = cell_data.get('border_left')
+                    if props and len(props) > 0:
+                        linestyle = props.get('line_style')
+                        if not linestyle:
+                            linestyle = 1
+                        color = props.get('color')
+                        if not color:
+                            color = '#000000'
+                        weight = props.get('weight')
+                        if not weight:
+                            weight = 2
+                        border = cell.api.Borders(BordersIndex.xlEdgeLeft)
+                        border.Weight = weight
+                        border.Color = color
+                        border.LineStyle = linestyle
+                except Exception as e:  
+                    cell_ref = getattr(cell, 'address', 'unknown')
+                    logger.warning(f"Warning: Could not set border left for cell {cell_ref}: {e}")
+            if cell_data.get('border_right'):
+                try:
+                    props = cell_data.get('border_right')
+                    if props and len(props) > 0:
+                        linestyle = props.get('line_style')
+                        if not linestyle:
+                            linestyle = 1
+                        color = props.get('color')
+                        if not color:
+                            color = '#000000'
+                        weight = props.get('weight')
+                        if not weight:
+                            weight = 2
+                        border = cell.api.Borders(BordersIndex.xlEdgeRight)
+                        border.Weight = weight
+                        border.Color = color
+                        border.LineStyle = linestyle
+                except Exception as e:  
+                    cell_ref = getattr(cell, 'address', 'unknown')
+                    logger.warning(f"Warning: Could not set border right for cell {cell_ref}: {e}")
+        
+    def _apply_indent(self, cell: xw.Range, cell_data: Dict[str, Any]):
+        """Apply cell indent formatting."""
+        try:
+            if 'indent' in cell_data and cell_data['indent'] is not None:
+                # Clean indent value by removing quotes and escaped characters
+                indent_value = str(cell_data['indent'])
+                
+                # Remove outer quotes if they exist
+                if indent_value.startswith('"') and indent_value.endswith('"'):
+                    indent_value = indent_value[1:-1]
+                elif indent_value.startswith("'") and indent_value.endswith("'"):
+                    indent_value = indent_value[1:-1]
+                
+                # Handle escaped quotes inside the string
+                indent_value = indent_value.replace('\\"', '"').replace("\\'", "'")
+                
+                # Remove any remaining quotes
+                indent_value = indent_value.strip('"\'')
+                
+                try:
+                    indent_int = int(indent_value)
+                    # Use the correct xlwings API for setting indent
+                    cell.api.IndentLevel = indent_int
+                except ValueError:
+                    logger.warning(f"Invalid indent value: {indent_value}, expected integer")
+        except Exception as e:
+            cell_ref = getattr(cell, 'address', 'unknown')
+            logger.warning(f"Warning: Could not set indent for cell {cell_ref}: {e}")
+    
+    
     def _apply_green_highlight(self, cell: xw.Range):
         """Safely apply green highlight to a cell with error handling."""
         if not hasattr(cell, 'color'):
@@ -543,6 +707,208 @@ class ExcelWorker:
         except Exception as e:
             cell_ref = getattr(cell, 'address', 'unknown')
             logger.warning(f"Warning: Could not set green highlight for cell {cell_ref}: {e}")
+
+    def _autofit_range(self, cell: xw.Range, columns: bool = True, rows: bool = False):
+        """Autofit the range."""
+        if not hasattr(cell, 'autofit'):
+            return
+        
+        try:
+            if columns:
+                cell.columns.autofit()
+            if rows:
+                cell.rows.autofit()
+        except Exception as e:
+            cell_ref = getattr(cell, 'address', 'unknown')
+            logger.warning(f"Warning: Could not autofit range for cell {cell_ref}: {e}")
+    
+    def _handle_chart(self, sheet: xw.Sheet, chart_name: str, chart_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle chart creation, modification, or deletion.
+        
+        Returns:
+            Dictionary with chart information for cache updates
+        """
+        try:
+            # Check if chart deletion is requested
+            if chart_data.get('delete', False):
+                self._delete_chart(sheet, chart_name)
+                return {
+                    'chart_name': chart_name,
+                    'action': 'deleted',
+                    'sheet_name': sheet.name
+                }
+            
+            # Check if chart already exists
+            existing_chart = None
+            for chart in sheet.charts:
+                if chart.name == chart_name:
+                    existing_chart = chart
+                    break
+            
+            if existing_chart:
+                # Update existing chart
+                self._update_chart(existing_chart, chart_data)
+                action = 'updated'
+            else:
+                # Create new chart
+                self._create_chart(sheet, chart_name, chart_data)
+                action = 'created'
+            
+            # Return chart information for cache updates
+            return {
+                'chart_name': chart_name,
+                'action': action,
+                'sheet_name': sheet.name,
+                'chart_type': chart_data.get('type', 'line'),
+                'height': chart_data.get('height', 300),
+                'left': chart_data.get('left', 10),
+                'x_axis': chart_data.get('x_axis', chart_data.get('x')),
+                'series_data': {k: v for k, v in chart_data.items() if k.startswith('series_') and not k.endswith('_name')},
+                'series_names': {k: v for k, v in chart_data.items() if k.startswith('series_') and k.endswith('_name')}
+            }
+                
+        except Exception as e:
+            logger.error(f"Error handling chart {chart_name}: {e}")
+            raise
+    
+    def _create_chart(self, sheet: xw.Sheet, chart_name: str, chart_data: Dict[str, Any]):
+        """Create a new chart in the specified sheet."""
+        try:
+            # Extract chart properties
+            chart_type = chart_data.get('type', 'line')
+            height = int(chart_data.get('height', 300))
+            left = int(chart_data.get('left', 10))
+            
+            # Extract data ranges
+            x_axis = chart_data.get('x_axis', chart_data.get('x'))
+            series_data = {}
+            
+            # Collect all series data (but not series names)
+            for key, value in chart_data.items():
+                if key.startswith('series_') and not key.endswith('_name'):
+                    series_data[key] = value
+            
+            if not x_axis or not series_data:
+                logger.warning(f"Chart {chart_name} missing required data ranges")
+                return
+            
+            # Create chart with the first series
+            first_series_key = list(series_data.keys())[0]
+            first_series_range = list(series_data.values())[0]
+            
+            # Map chart type to xlwings chart type
+            chart_type_map = {
+                'line': 'line',
+                'line_markers': 'line_markers',
+                'column_clustered': 'column_clustered',
+                'bar_clustered': 'bar_clustered',
+                'pie': 'pie',
+                'xy_scatter': 'xy_scatter'
+            }
+            
+            xlwings_chart_type = chart_type_map.get(chart_type, 'line')
+            
+            # Create the chart
+            chart = sheet.charts.add(left=left, top=10, width=400, height=height)
+            chart.name = chart_name
+            chart.chart_type = xlwings_chart_type
+            
+            # Set data source
+            chart.set_source_data(sheet.range(f"{x_axis},{first_series_range}"))
+            
+            # Set name for the first series if provided
+            first_series_name_key = f"{first_series_key}_name"
+            if first_series_name_key in chart_data:
+                first_series_name_cell = chart_data[first_series_name_key]
+                try:
+                    # Get the first series and set its name
+                    first_series_obj = chart.api.SeriesCollection(1)
+                    first_series_obj.Name = sheet.range(first_series_name_cell).api
+                except Exception as e:
+                    logger.warning(f"Could not set first series name from {first_series_name_cell}: {e}")
+            
+            # Add additional series if they exist
+            for i, (series_key, series_range) in enumerate(list(series_data.items())[1:], 2):
+                try:
+                    chart.api.SeriesCollection().NewSeries()
+                    series = chart.api.SeriesCollection(i)
+                    series.XValues = sheet.range(x_axis).api
+                    series.Values = sheet.range(series_range).api
+                    
+                    # Set series name if provided
+                    series_name_key = f"{series_key}_name"
+                    if series_name_key in chart_data:
+                        series_name_cell = chart_data[series_name_key]
+                        try:
+                            series.Name = sheet.range(series_name_cell).api
+                        except Exception as e:
+                            logger.warning(f"Could not set series name from {series_name_cell}: {e}")
+                except Exception as e:
+                    logger.warning(f"Could not add series {series_key} to chart {chart_name}: {e}")
+            
+            logger.info(f"Created chart {chart_name} with type {chart_type}")
+            
+        except Exception as e:
+            logger.error(f"Error creating chart {chart_name}: {e}")
+            raise
+    
+    def _update_chart(self, chart: xw.Chart, chart_data: Dict[str, Any]):
+        """Update an existing chart with new properties."""
+        try:
+            # Update chart type if specified
+            if 'type' in chart_data:
+                chart_type = chart_data['type']
+                chart_type_map = {
+                    'line': 'line',
+                    'line_markers': 'line_markers',
+                    'column_clustered': 'column_clustered',
+                    'bar_clustered': 'bar_clustered',
+                    'pie': 'pie',
+                    'xy_scatter': 'xy_scatter'
+                }
+                xlwings_chart_type = chart_type_map.get(chart_type, 'line')
+                chart.chart_type = xlwings_chart_type
+            
+            # Update position and size
+            if 'height' in chart_data:
+                chart.height = int(chart_data['height'])
+            if 'left' in chart_data:
+                chart.left = int(chart_data['left'])
+            
+            # Update data ranges if specified
+            x_axis = chart_data.get('x_axis', chart_data.get('x'))
+            if x_axis:
+                # Update data source
+                series_data = {}
+                for key, value in chart_data.items():
+                    if key.startswith('series_'):
+                        series_data[key] = value
+                
+                if series_data:
+                    first_series = list(series_data.values())[0]
+                    chart.set_source_data(chart.parent.range(f"{x_axis},{first_series}"))
+            
+            logger.info(f"Updated chart {chart.name}")
+            
+        except Exception as e:
+            logger.error(f"Error updating chart {chart.name}: {e}")
+            raise
+    
+    def _delete_chart(self, sheet: xw.Sheet, chart_name: str):
+        """Delete a chart from the sheet."""
+        try:
+            for chart in sheet.charts:
+                if chart.name == chart_name:
+                    chart.delete()
+                    logger.info(f"Deleted chart {chart_name}")
+                    return
+            
+            logger.warning(f"Chart {chart_name} not found for deletion")
+            
+        except Exception as e:
+            logger.error(f"Error deleting chart {chart_name}: {e}")
+            raise
+
 
     
 
