@@ -579,7 +579,7 @@ class SupervisorAgentOrchestrator:
                             #logger.info(f"Stream item: {stream_item}")
                             message_chunk, metadata = chunk
 
-                            logger.info(f"MESSAGE CHUNK: {message_chunk}")
+                            #logger.info(f"MESSAGE CHUNK: {message_chunk}")
                             
                             # Extract and track token usage from message chunk
                             if hasattr(message_chunk, 'usage_metadata') and message_chunk.usage_metadata:
