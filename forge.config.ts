@@ -22,7 +22,8 @@ const config: ForgeConfig = {
     extraResource: [
       '.env',      
       'resources/python/python-server',
-      'resources/asgi.py'
+      'resources/asgi.py',
+      'LICENSE'
     ],
   },
   rebuildConfig: {},
@@ -30,7 +31,7 @@ const config: ForgeConfig = {
     // Windows
     new MakerSquirrel({
       setupIcon: './src/assets/icons/icon.ico',
-      iconUrl: 'https://storage.googleapis.com/volute/assets/icon.ico' // URL to icon for Add/Remove Programs
+      iconUrl: 'https://storage.googleapis.com/volute/assets/icon.ico', // URL to icon for Add/Remove Programs
     }),
     // MacOS 
     new MakerZIP({}, ['darwin']),
