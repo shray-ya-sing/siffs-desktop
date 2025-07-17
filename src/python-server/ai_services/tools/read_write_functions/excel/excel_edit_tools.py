@@ -421,8 +421,20 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                 if not entry:
                     continue
 
-                #First, extract anything in square brackets
+                # First, extract data validation brackets separately to avoid CSV splitting issues
                 import re
+                
+                # Extract dv=[...] content first
+                dv_validation_content = None
+                def extract_dv_brackets(match):
+                    nonlocal dv_validation_content
+                    dv_validation_content = match.group(1)  # Save the content
+                    return "dv=DV_PLACEHOLDER"
+                
+                # Extract dv=[...] brackets separately
+                entry_dv_extracted = re.sub(r'dv=\[(.*?)\]', extract_dv_brackets, entry)
+                
+                # Now extract other brackets (formulas, number formats, comments)
                 bracket_contents = []
                 
                 # Find all content in square brackets and replace with placeholders
@@ -431,7 +443,7 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     return "" 
                 
                 # Replace all [...] with placeholders
-                entry_without_brackets = re.sub(r'\[(.*?)\]', replace_brackets, entry)
+                entry_without_brackets = re.sub(r'\[(.*?)\]', replace_brackets, entry_dv_extracted)
     
                     
                 # Split into cell reference, formula/value, and formatting properties
@@ -447,7 +459,7 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     # Simple approach: replace ', ' with ',' outside of quotes
                     import re
                     # This regex matches comma followed by space, but not inside quotes
-                    processed_entry = re.sub(r',\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', ',', entry)
+                    processed_entry = re.sub(r',\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', ',', processed_entry)
                     
                     # Use CSV reader to properly handle quoted strings with commas
                     csv_reader = csv.reader(io.StringIO(processed_entry), delimiter=',')
@@ -598,9 +610,18 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                                 comment = bracket_contents[2]
                                 cell_data['comment'] = clean_formula(comment)  # Clean comment text
                         elif key == 'dv':  # data validation
-                            if bracket_contents and len(bracket_contents) > 3:
-                                validation = bracket_contents[3]
-                                cell_data['data_validation'] = clean_formula(validation)  # Clean validation text
+                            # Use the extracted validation content from dv=[...] brackets
+                            if dv_validation_content:
+                                cell_data['data_validation'] = clean_formula(dv_validation_content)
+                            else:
+                                # Fallback: handle bracketed validation format manually
+                                validation_text = value
+                                if validation_text.startswith('[') and validation_text.endswith(']'):
+                                    validation_text = validation_text[1:-1]  # Remove brackets
+                                    cell_data['data_validation'] = clean_formula(validation_text)
+                                else:
+                                    # If no brackets, use the value as is
+                                    cell_data['data_validation'] = clean_formula(validation_text)
                     
                 result[current_sheet][cell_ref.upper()] = cell_data
         
