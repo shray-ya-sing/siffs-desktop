@@ -628,6 +628,9 @@ class SupervisorAgentOrchestrator:
 
                             elif text == "Transferring back to supervisor":
                                 continue
+
+                            elif text.startswith("<") or text.endswith(">"):
+                                continue
                                 
                             if text:
                                 assistant_message += text
