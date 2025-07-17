@@ -32,42 +32,58 @@ Financial Multiples
 
 Years in Financial Schedules
 •  "0" - Simple year format (e.g., 2024)
-•  "\"Year \"0" - With "Year" prefix (e.g., Year 2024)
-•  "\"FY\"0" - Fiscal year format (e.g., FY2024)
-•  "0\"/\"00" - Fiscal year range (e.g., 2024/25)
+•  ""Year "0" - With "Year" prefix (e.g., Year 2024)
+•  ""FY"0" - Fiscal year format (e.g., FY2024)
+•  "0"/"00" - Fiscal year range (e.g., 2024/25)
 
 Special Financial Formats
-•  "[>999999] #,##0,,\"M\";[>999] #,##0,\"K\";#,##0" - Auto-scale to M/K
+•  "[>999999] #,##0,,"M";[>999] #,##0,"K";#,##0" - Auto-scale to M/K
 •  "#,##0_);(#,##0)" - Parentheses for negatives, space for positives
 •  "#,##0.0_);[Red](#,##0.0)" - Red text for negatives
-•  "\"$\"#,##0.0,,\"M\"" - Millions format ($25.5M)
-•  "\"$\"#,##0,,\"M\";[Red](\"$\"#,##0,,\"M\")" - Millions with red negatives
+•  ""$"#,##0.0,,"M"" - Millions format ($25.5M)
+•  ""$"#,##0,,"M";[Red]("$"#,##0,,"M")" - Millions with red negatives
 
 Basis Points
-•  "0\"bp\"" - Basis points (e.g., 250bp)
-•  "#,##0\"bp\"" - Large basis points with separator
+•  "0"bp"" - Basis points (e.g., 250bp)
+•  "#,##0"bp"" - Large basis points with separator
 
 Ratios
 •  "0.0:1" - Ratio format (e.g., 2.5:1)
 •  "0.00:1.00" - Detailed ratio format
 
+Date Formats
+•  Short Date: m/d/yyyy or mm/dd/yyyy
+•  Long Date: dddd, mmmm d, yyyy
+•  Custom Date: Customizable formats using elements like yyyy, mmm, dd
+
+Day Formats
+•  Day Only: d or dd (shows the day of the month)
+•  Day Name Only: ddd or dddd (shows the name of the day, e.g., Mon or Monday)
+
 Common Financial Model Patterns
 """
 
 DEFAULT_NUMBER_FORMATS = """
-General Large Numbers:    "#,##0"
-General Small Numbers:    "0"
-General Decimal:          "0.0"
-Margins/Percentages:      "0.0%"
-Multiples (P/E, EV/EBITDA): "0.00x"
-Growth Rates:             "0.0%"
-Years:                    "0"
-USD Currency Small:       "$#,##0"
-USD Currency Detailed:    "$#,##0.00"
-Large USD Currency:       "$#,##0,,M"
-Financial figures (negative numbers in parenthesis, dashes for 0s): "_(* #,##0_);_(* (#,##0);_(*"-"_);_(@_)"
-Financial figures with USD currency: "$_(* $#,##0_);_(* ($#,##0);_(*"-"_);_(@_)"
-Fiscal year format (e.g., FY2025): "FY0"
-Expected year format (e.g., 2025E): "0E"
-Actual year format (e.g., 2025A): "0A"
+General Large Numbers, more than 3 digits:    #,##0
+General Small Numbers, less than 3 digits:    0
+General Decimal:          0.0
+Margins/Percentages:      0.0%
+Multiples (P/E, EV/EBITDA): 0.00x
+Growth Rates:             0.0%
+Years:                    0
+USD Currency Small:       $#,##0
+USD Currency Detailed:    $#,##0.00
+Large USD Currency:       $#,##0,,"M"
+Financial figures (negative numbers in parenthesis, dashes for 0s): _(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)
+Financial figures with USD currency: _($* #,##0_);_($* (#,##0);_($* "-"_);_(@_)
+Fiscal year format (e.g., FY2025): "FY"0
+Expected year format (e.g., 2025E): 0"E"
+Actual year format (e.g., 2025A): 0"A"
+Plain Year (e.g., 2025): 0
+Year with "Year" prefix (e.g., Year 2025): "Year "0
+Short Date (e.g., 07/16/2025): m/d/yyyy or mm/dd/yyyy
+Long Date (e.g., Thursday, July 16, 2025): dddd, mmmm d, yyyy
+Day Only (e.g., 16): d or dd
+Day Name Only (e.g., Thursday): ddd or dddd
+Custom Date: Customizable formats using elements like yyyy, mmm, dd
 """
