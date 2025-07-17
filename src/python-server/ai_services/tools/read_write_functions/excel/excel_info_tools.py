@@ -91,7 +91,7 @@ def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, An
                         workbook_data["sheets"] = {}
                         
                     if sheet_name not in workbook_data["sheets"]:
-                        workbook_data["sheets"][sheet_name] = {"chunks": [{"cells": []}]}
+                        workbook_data["sheets"][sheet_name] = {"chunks": [{"cells": []}], "charts": {}}
                     
                     sheet_data = workbook_data["sheets"][sheet_name]
                     
@@ -103,39 +103,63 @@ def update_excel_cache(workspace_path: str, all_updated_cells: List[Dict[str, An
                     if "cells" not in sheet_data["chunks"][0]:
                         sheet_data["chunks"][0]["cells"] = []
                     
+                    # Ensure charts section exists
+                    if "charts" not in sheet_data:
+                        sheet_data["charts"] = {}
+                    
                     # Create mapping of cell references to their indices
                     existing_cells = {
                         cell.get('a'): idx 
                         for idx, cell in enumerate(sheet_data["chunks"][0]["cells"])
                     }
                     
-                    # Process each cell update
+                    # Process updates
                     for cell_data in updated_cells:
                         try:
-                            cell_ref = cell_data.get('a')
-                            if not cell_ref:
-                                error_count += 1
-                                continue
-                            
-                            cell_entry = {
-                                'a': cell_ref,
-                                'f': cell_data.get('f'),
-                                'v': cell_data.get('v')
-                            }
-                            
-                            # Update existing cell or add new one
-                            if cell_ref in existing_cells:
-                                sheet_data["chunks"][0]["cells"][existing_cells[cell_ref]] = cell_entry
-                                #logger.info(f"Updated existing cell: {cell_ref}")
+                            # Determine if this is a cell or chart update
+                            if 'chart_name' in cell_data:
+                                # Chart update
+                                chart_name = cell_data['chart_name']
+                                chart_entry = {
+                                    'chart_name': chart_name,
+                                    'action': cell_data.get('action'),
+                                    'chart_type': cell_data.get('chart_type'),
+                                    'height': cell_data.get('height'),
+                                    'left': cell_data.get('left'),
+                                    'x_axis': cell_data.get('x_axis'),
+                                    'series_data': cell_data.get('series_data'),
+                                    'series_names': cell_data.get('series_names')
+                                }
+                                # Add or update chart entry
+                                sheet_data['charts'][chart_name] = chart_entry
+                                success_count += 1
+
                             else:
-                                sheet_data["chunks"][0]["cells"].append(cell_entry)
-                                #logger.info(f"Added new cell: {cell_ref}")
-                            
-                            success_count += 1
+                                # Cell update
+                                cell_ref = cell_data.get('a')
+                                if not cell_ref:
+                                    error_count += 1
+                                    continue
+                                
+                                cell_entry = {
+                                    'a': cell_ref,
+                                    'f': cell_data.get('f'),
+                                    'v': cell_data.get('v')
+                                }
+                                
+                                # Update existing cell or add new one
+                                if cell_ref in existing_cells:
+                                    sheet_data["chunks"][0]["cells"][existing_cells[cell_ref]] = cell_entry
+                                    #logger.info(f"Updated existing cell: {cell_ref}")
+                                else:
+                                    sheet_data["chunks"][0]["cells"].append(cell_entry)
+                                    #logger.info(f"Added new cell: {cell_ref}")
+                                
+                                success_count += 1
                             
                         except Exception as cell_error:
                             error_count += 1
-                            logger.error(f"Error updating cell {cell_data.get('a', 'unknown')}: {str(cell_error)}", 
+                            logger.error(f"Error updating cell or chart {cell_data.get('a', 'unknown')}: {str(cell_error)}", 
                                        exc_info=True)
                             continue
             
@@ -258,6 +282,105 @@ def get_simplified_excel_metadata(workspace_path: str) -> str:
         logger.error(f"Error retrieving simplified data: {str(e)}", exc_info=True)
         return 'Failed to get simplified data from cache'
 
+def get_simplified_excel_metadata_for_sheets(workspace_path: str, sheet_names: List[str]) -> str:
+    """
+    Retrieve simplified metadata for the specified excel file from the hotcache.
+    Only returns address, value, and formula for each cell.
+    
+    Args:
+        workspace_path: Full path to the excel file workbook in the format 'folder/workbook.xlsx'
+        sheet_names: List of sheet names to retrieve metadata for
+        For example: ["Sheet1", "Sheet2"]
+    
+    Returns:
+        A JSON string containing simplified metadata with only address, value, and formula:
+        {
+            "Sheet1": [
+                {
+                    "a": "A1", 
+                    "f": "=SUM(B1:B2)", 
+                    "v": 42
+                }
+            ],
+            "Sheet2": [...]
+        }
+    """
+    
+    MAPPINGS_FILE = server_dir_path / "metadata" / "__cache" / "files_mappings.json"
+    
+    try:
+        with open(MAPPINGS_FILE, 'r') as f:
+            mappings = json.load(f)
+        temp_file_path = mappings.get(workspace_path) or next(
+            (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+            workspace_path
+        )
+    except (json.JSONDecodeError, OSError):
+        temp_file_path = workspace_path
+
+    try:
+        # Get the cache file
+        cache_path = server_dir_path / "metadata" / "_cache" / "excel_metadata_hotcache.json"
+        
+        if not cache_path.exists():
+            return 'Cache file not found'
+
+        # Load the cache
+        with open(cache_path, 'r') as f:
+            cache_data = json.load(f)
+
+        # Find the workbook by matching the workbook_name
+        file_name = os.path.basename(temp_file_path)
+        workbook_data = None
+        
+        for cache_key, data in cache_data.items():
+            if isinstance(data, dict) and data.get('workbook_name') == file_name:
+                workbook_data = data
+                break
+        
+        if not workbook_data:
+            return 'Workbook not found in cache'
+            
+        # Extract simplified data
+        simplified_data = {}
+        
+        if 'sheets' in workbook_data:
+            for sheet_name, sheet_data in workbook_data['sheets'].items():
+                if sheet_name not in sheet_names:
+                    continue
+                simplified_data[sheet_name] = []
+                
+                # Process chunks if they exist
+                if 'chunks' in sheet_data:
+                    for chunk in sheet_data['chunks']:
+                        if 'cells' in chunk:
+                            for cell in chunk['cells']:
+                                # Only include address, value, and formula
+                                simplified_cell = {}
+                                
+                                # Address (always include)
+                                if 'a' in cell:
+                                    simplified_cell['a'] = cell['a']
+                                
+                                # Value (only if not None)
+                                if 'v' in cell and cell['v'] is not None:
+                                    simplified_cell['v'] = cell['v']
+                                
+                                # Formula (only if not None)
+                                if 'f' in cell and cell['f'] is not None:
+                                    simplified_cell['f'] = cell['f']
+                                
+                                # Only add cell if it has at least an address
+                                if 'a' in simplified_cell:
+                                    simplified_data[sheet_name].append(simplified_cell)
+        
+        return json.dumps(simplified_data, separators=(',', ':'))
+        
+    except json.JSONDecodeError:
+        return 'Failed to parse cache file'
+    except Exception as e:
+        logger.error(f"Error retrieving simplified data: {str(e)}", exc_info=True)
+        return 'Failed to get simplified data from cache'
 
 def get_full_excel_metadata(workspace_path: str) -> str:
     """
@@ -337,6 +460,7 @@ def get_full_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optiona
             ],
             "Sheet2": [...]
         }
+        If a sheet was not found in the excel file, an error message is added to the response.
     """
     def normalize_cell_ref(cell_ref: str) -> str:
         """Remove $ signs from cell reference and convert to uppercase."""
@@ -439,8 +563,10 @@ def get_full_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optiona
         
         # Filter the data based on the specified ranges
         filtered_data = {}
+        errors = []
         for sheet_name, ranges in sheet_cell_ranges.items():
             if sheet_name not in full_metadata.get('sheets', {}):
+                errors.append(f"Sheet '{sheet_name}' not found in workbook. This sheet has not been created yet.")
                 continue
 
             if isinstance(ranges, str):
@@ -471,10 +597,12 @@ def get_full_metadata_from_cache(workspace_path: str, sheet_cell_ranges: Optiona
             # Log any requested but not found cells
             missing_cells = cell_refs_to_include - cell_refs_found
             if missing_cells:
-                logger.debug(f"{len(missing_cells)}Cells not found in sheet '{sheet_name}'")
+                logger.debug(f"{len(missing_cells)} Cells not found in sheet '{sheet_name}'")
                 
             if filtered_cells:
                 filtered_data[sheet_name] = filtered_cells
+            if errors:
+                filtered_data['errors'] = errors
         
         return json.dumps(filtered_data, separators=(',', ':'))
 
