@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { ArrowRight, Square } from "lucide-react"
 import { ProviderDropdown, ModelOption } from './ProviderDropdown'
 import WatermarkLogo from '../logo/WaterMarkLogo'
@@ -57,6 +57,64 @@ const MODEL_OPTIONS: ModelOption[] = [
 ]
 
 
+// Memoized message component to prevent re-renders
+const MessageComponent = React.memo(({ message, isLastMessage, isLoading }: { 
+  message: Message; 
+  isLastMessage: boolean; 
+  isLoading: boolean; 
+}) => {
+  if (message.role === "user") {
+    return (
+      <div className="flex justify-center">
+        <div className="max-w-full w-full px-8">
+          <div
+            className="rounded-3xl px-3 py-2 text-gray-300 text-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+            style={{
+              background: "linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)",
+              border: "1px solid #333333",
+            }}
+          >
+            {message.content}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (message.role === 'custom_event') {
+    return (
+      <div className="flex justify-center">
+        <div className="max-w-full w-full px-8">
+          <EventCard
+            type={message.event_type as EventType}
+            message={message.event_message}
+            className="w-full"
+            isStreaming={message.done !== true}
+            timestamp={message.timestamp.getTime()}
+          />
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex justify-center">
+      <div className="max-w-full w-full px-8">
+        <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20 [&>pre]:m-0 [&>pre]:p-0">
+          <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
+            <MarkdownRenderer content={message.content} />
+            {isLoading && isLastMessage && (
+              <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
+            )}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+MessageComponent.displayName = 'MessageComponent';
+
 export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -106,7 +164,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  // Typing animation
+  // Memoized input change handler
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value)
     handleMentionInput(e, textareaRef.current)
@@ -122,7 +180,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false)
     }, 1000)
-  }, [isTyping])
+  }, [isTyping, handleMentionInput])
 
   const handleSend = useCallback(async () => {
     if (!input.trim()) return
@@ -175,15 +233,15 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
       e.preventDefault()
       handleSend()
     }
-  }, [handleSend])
+  }, [handleSend, handleMentionKeyDown])
 
-  const handleMentionSelect = (file: FileItem) => {
+  const handleMentionSelect = useCallback((file: FileItem) => {
     const atIndex = input.lastIndexOf('@')
     const newInput = input.substring(0, atIndex) + `@${file.name} `
     setInput(newInput)
     setShowMentions(false)
     textareaRef.current?.focus()
-  }
+  }, [input, setShowMentions])
 
   const handleModelChange = useCallback((modelId: string) => {
     setSelectedModel(modelId);
@@ -444,52 +502,19 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 relative z-10" style={{ paddingBottom: '200px' }}>
-        {messages.map((message) => (
+        {messages.map((message, index) => (
           <div key={message.id} className="space-y-2">
-            {message.role === "user" ? (
-              <div className="flex justify-center">
-                <div className="max-w-full w-full px-8">
-                  <div
-                    className="rounded-3xl px-3 py-2 text-gray-300 text-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
-                    style={{
-                      background: "linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)",
-                      border: "1px solid #333333",
-                    }}
-                  >
-                    {message.content}
-                  </div>
-                </div>
-              </div>
-            ) : message.role === 'custom_event' ? (
-              <div className="flex justify-center">
-                <div className="max-w-full w-full px-8">
-                  <EventCard
-                    type={message.event_type as EventType}
-                    message={message.event_message}
-                    className="w-full"
-                    isStreaming={message.done !== true}
-                    timestamp={message.timestamp.getTime()}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <div className="max-w-full w-full px-8">
-                <div className="rounded-3xl px-3 py-2 text-gray-200 text-sm transition-all duration-200 hover:bg-gray-900/20 [&>pre]:m-0 [&>pre]:p-0">
-                  <pre className="whitespace-pre-wrap text-sm" style={{ fontFamily: "inherit" }}>
-                    <MarkdownRenderer content={message.content} />
-                    {isLoading && messages[messages.length - 1]?.id === message.id && (
-                      <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
-                    )}
-                  </pre>
-                  </div>
-                </div>
-              </div>
-            )}
+            <MessageComponent 
+              message={message} 
+              isLastMessage={index === messages.length - 1}
+              isLoading={isLoading}
+            />
           </div>
         ))}
 
-        {isLoading && (() => {
+        {useMemo(() => {
+          if (!isLoading) return null;
+          
           // Check if the latest message is a custom event with error type
           const latestMessage = messages[messages.length - 1];
           const isLatestMessageError = latestMessage && 
@@ -523,7 +548,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
               </div>
             </div>
           );
-        })()}
+        }, [isLoading, messages])}
 
         {isTyping && !isLoading && (
           <div className="flex justify-center animate-fade-in">
