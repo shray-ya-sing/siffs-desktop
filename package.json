@@ -28,7 +28,7 @@
     "name": "Volute",
     "email": "github.suggest277@passinbox.com"
   },
-  "license": "MIT",
+  "license": "UNLICENSED",
   "dependencies": {
     "@electron-forge/maker-dmg": "^7.8.1",
     "@heroicons/react": "^2.2.0",
