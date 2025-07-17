@@ -18,8 +18,8 @@ sys.path.append(str(server_dir_path))
 # Import required modules
 from excel.editing.complex_agent_writer import ComplexAgentWriter
 from api_key_management.providers.gemini_provider import GeminiProvider
-from ai_services.agents.complex_task_agent.read_write_tools.excel_edit_tools import parse_markdown_formulas, write_formulas_to_excel_complex_agent, parse_cell_formulas 
-from ai_services.agents.complex_task_agent.read_write_tools.excel_info_tools import update_excel_cache, get_full_metadata_from_cache, get_simplified_excel_metadata
+from ai_services.tools.read_write_functions.excel.excel_edit_tools import parse_markdown_formulas, write_formulas_to_excel_complex_agent, parse_cell_formulas
+from ai_services.tools.read_write_functions.excel.excel_info_tools import update_excel_cache, get_full_metadata_from_cache, get_simplified_excel_metadata
 from ai_services.orchestration.cancellation_manager import cancellation_manager, CancellationError
 from ai_services.tools.tool_info.excel_formulas import EXCEL_FORMULAS
 from ai_services.tools.tool_info.excel_number_formats import DEFAULT_NUMBER_FORMATS
@@ -93,13 +93,15 @@ def get_user_id_from_cache():
 # TOOLS
 
 @tool
-def get_full_excel_metadata(workspace_path: str) -> str:
+def get_full_excel_metadata(workspace_path: str, sheet_names: List[str] = None) -> str:
     """
     Retrieve the full metadata of all the sheets for the specified excel file from the hotcache.
+    Optionally can pass a list of sheet names to retrieve metadata for, when you want to get the full metadata of selected sheets only.
     Only returns address, value, and formula for each cell.
     
     Args:
         workspace_path: Full path to the excel file workbook in the format 'folder/workbook.xlsx'
+        sheet_names: OPTIONAL. List of sheet names to retrieve metadata for, when you want to get the full metadata of a sheet.
     
     Returns:
         A JSON string containing simplified metadata with only address, value, and formula:
@@ -117,7 +119,10 @@ def get_full_excel_metadata(workspace_path: str) -> str:
     logger.info(f"SIMPLE_AGENT: Getting full Excel metadata for workspace: {workspace_path}")
     writer = get_stream_writer()
     writer({"analyzing": f"Analyzing contents of excel file {workspace_path}"})
-    return get_simplified_excel_metadata(workspace_path)
+    if not sheet_names:
+        return get_simplified_excel_metadata(workspace_path)
+    else:
+        return get_simplified_excel_metadata_for_sheets(workspace_path, sheet_names)
 
 @tool
 def get_excel_metadata(workspace_path: str, sheet_cell_ranges: Dict[str, List[str]]) -> str:
@@ -170,7 +175,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         6. You are a MODELING agent, which means you need to write to excel in a model style, which means using formulas, linkages, table structure for whatever task the user suggests. You should never simply be putting text statements in cells. 
         Modeling means setting up a spreadsheet for an analysis, not writing solution statements and paragraphs to excel.
         In your instructions, you do not need to include all the formulas to be edited, instead give instructions about which formulas to use where, what formatting properties to apply to be consistent with the surrounding cells, how to link cells as needed. Remember to clearly state which sheet the cells to edit belong to, to avoid erroneous formulas when cells need to be linked across tabs.
-        
+        Don't try to create charts or data tables unless requested by user.
     Returns:
         String containing the updated cell formulas in JSON format
     """
@@ -192,27 +197,47 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        sheet_name: [Name of the sheet]| A1, "=SUM(B1:B10)" | B1, "Text value", b=true, it=true, num_fmt="#,000.0", sz="12", st="calibri", font="#000000", fill="#0f0f0f" | C1, 123 
+        sheet_name: Name of the sheet| A1, [=SUM(B1:B10)] | B1, [Text value], b=true, it=true, sz="12", st="calibri", font="#000000", fill="#0f0f0f", ind="1", ha="center", va="center", bord_t="l=2c=#000000w=4", bord_b="l=2c=#000000w=4", bord_l="l=2c=#000000w=4", bord_r="l=2c=#000000w=4", num_fmt=[#,000.0] | C1, 123 | chart_name="chart1", type="line", height="200", left="50", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC. 
         Just return the pipe-delimited markdown containing cell formulas and formatting properties in the specified format.
 
         RULES:
-        1. Start each sheet with 'sheet_name: [exact sheet name]' followed by a pipe (|).
-        2. List each cell update as: [cell_reference], "[formula_or_value]", [formatting properties if any].
-        3. Formatting properties should be included ONLY if necessary to continue a pattern observed in neighboring cells.
-        4. Formatting properties must be in this exact order: bold (b), italic (it), number format (num_fmt), font size (sz), font style (st), font color (font), and cell fill color (fill).
-        5. Use keyword identifiers: b, it, num_fmt, sz, st, font, fill to denote properties.
-        6. Separate multiple cell updates with pipes (|).
-        7. Always enclose formulas, text values, and number formats in double quotes.
-        8. Numbers can be written without quotes.
-        9. Include ALL cells that need to be written.
-        10. NEVER modify or reference non-existent cells.
+        1. Start each sheet with 'sheet_name: exact sheet name' followed by a pipe (|).
+        2. List each cell update as: cell_reference, [formula_or_value], formatting properties if any. NOTE cell formula or value should be enclosed in square brackets for parsing reasons.
+        3. For formatting-only changes (no value/formula), use: cell_reference, [no_change], formatting properties. "no_change" will be understood by the system that the current cell value is not to be changed.
+        4. Formatting properties should be included to continue a formatting pattern observed in neighboring cells or in the excel file. If no pattern, then use your judgement to apply the formatting properties to prettify output.
+        5. Formatting properties must be in this exact order: bold (b), italic (it), font size (sz), font style (st), font color (font), cell fill color (fill), indent (ind), horizontal alignment (ha), vertical alignment (va), border top (bord_t), border bottom (bord_b), border left (bord_l), border right (bord_r), number format (num_fmt). Number format must ALWAYS be last. These are the only available properties so don't add any others.
+        6. Use keyword identifiers: b, it, sz, st, font, fill, ind, ha, va, bord_t, bord_b, bord_l, bord_r, num_fmt to denote properties.
+        7. Separate multiple cell updates with pipes (|).
+        8. Always enclose formatting properties except number formats in double quotes. Number formats should ALWAYS be enclosed ONLY in square brackets, for ex num_fmt = [#,##0.00]. Important for parsing.
+        9. Numbers can be written without quotes.
+        10. Include ALL cells that need to be written.
+        11. NEVER modify or reference non-existent cells.
+        12. Border properties (bord_t, bord_b, bord_l, bord_r) should be in the format: l=2c=#000000w=4, where l is the border line style, c is the border color, and w is the border weight.
+        Line style and weights are integers while color is hexcode. These are the integer values you should use for border line styles: continuous(default):1, dash:2, dot:3, dash_dot:4, dash_dot_dot:5, double:-4115, slant_dash_dot:-4118
+        Use these values for border weights: thinnest=1, thin(default)=2, thick=4
+        13. "ha" and "va" should be the horizontal and vertical alignment of the cell. Both are string properties. Possible values for ha are "center", "right", "left". Possible values for va are "center", "top", "bottom"
+        14. Instructions may require creation or editing of charts. Chart metadata should be created pipe delimited similar to cell metadata and positioned after the cell metadata of the sheet. KEY difference is that whereas cell metadata starts with the cell reference C1, A1, etc chart metadata item starts with chart_name="chart_name_here" to specify the chart name. Name is used to access the correct chart. The following chart types are available: 3d_area, 3d_area_stacked, 3d_area_stacked_100, 3d_bar_clustered, 3d_bar_stacked, 3d_bar_stacked_100, 3d_column, 3d_column_clustered, 3d_column_stacked, 3d_column_stacked_100, 3d_line, 3d_pie, 3d_pie_exploded, area, area_stacked, area_stacked_100, bar_clustered, bar_of_pie, bar_stacked, bar_stacked_100, bubble, bubble_3d_effect, column_clustered, column_stacked, column_stacked_100, combination, cone_bar_clustered, cone_bar_stacked, cone_bar_stacked_100, cone_col, cone_col_clustered, cone_col_stacked, cone_col_stacked_100, cylinder_bar_clustered, cylinder_bar_stacked, cylinder_bar_stacked_100, cylinder_col, cylinder_col_clustered, cylinder_col_stacked, cylinder_col_stacked_100, doughnut, doughnut_exploded, line, line_markers, line_markers_stacked, line_markers_stacked_100, line_stacked, line_stacked_100, pie, pie_exploded, pie_of_pie, pyramid_bar_clustered, pyramid_bar_stacked, pyramid_bar_stacked_100, pyramid_col, pyramid_col_clustered, pyramid_col_stacked, pyramid_col_stacked_100, radar, radar_filled, radar_markers, stock_hlc, stock_ohlc, stock_vhlc, stock_vohlc, surface, surface_top_view, surface_top_view_wireframe, surface_wireframe, xy_scatter, xy_scatter_lines, xy_scatter_lines_no_markers, xy_scatter_smooth, xy_scatter_smooth_no_markers. 
+        Specify the type of chart with type="chart_type". Specify height and position of the chart with height="height_value" and left="left_value". Width and size will be auto-set. Specify the source data range of the chart as: x_axis="x_axis_range", series_1="y_axis_range_1", series_2="y_axis_range_2", etc. Optionally specify series names with series_1_name="name_cell_1", series_2_name="name_cell_2", etc. For example, chart_name="my_chart", type="line", height="100", left="10", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1", series_3="D1:D10", series_3_name="D1".
+
+        
+        
         
         EXAMPLES:
-        
-        sheet_name: Income Statement| B5, "=SUM(B2:B4)" | B6, 1000, b=true | B7, "=B5-B6", it=true, font="#0000FF" | sheet_name: Assumptions| B2, 0.05 | B3, 1.2, sz="10" | C3, "=B3*1.1", num_fmt="#,##0.00"
+        1. Cell edits without charts
+        sheet_name: Income Statement| B5, [=SUM(B2:B4)] | B6, [1000], b=true | B7, [=B5-B6], it=true, font="#0000FF" | sheet_name: Assumptions| B2, [0.05] | B3, [1.2], sz="10" | C3, [=B3*1.1], num_fmt=[#,##0.00]
 
+        2. Cell edits with chart creation
+        sheet_name: Income Statement| sheet_name: Assumptions| B2, [0.05] | B3, [1.2], sz="10" | C3, [=B3*1.1], num_fmt=[#,##0.00] | chart_name="chart1", type="line", height="100", left="10", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1", series_3="D1:D10", series_3_name="D1" | sheet_name: Chart| chart_name="chart2", type="line", height="100", left="10", x_axis="Assumptions!A1:A10", series_1="Assumptions!B1:B10", series_1_name="Assumptions!B1", series_2="Assumptions!C1:C10", series_2_name="Assumptions!C1", series_3="Assumptions!D1:D10", series_3_name="Assumptions!D1"
+
+        3. Only chart edit
+        sheet_name: Chart| chart_name="chart2", type="line_markers", height="200", left="50"
+
+        4. Chart deletion
+        sheet_name: Chart| chart_name="chart2", delete=true
+
+        
         DATA HANDLING RULES:
         1. NEVER overwrite or modify any existing non-blank cells
         2. Only write to cells that are completely empty
@@ -223,7 +248,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         """
 
         prompt += f"\nHere are some guidelines for common Excel formulas:\n{EXCEL_FORMULAS}"
-        prompt += f"\nAs a best practice always generate a number format for a cell to be updated with formula, based on the kind of data the cell will display, even if not specified by the instruction. Here are some guidelines for common Excel number formats:\n{DEFAULT_NUMBER_FORMATS}"
+        prompt += f"\nAs a best practice always generate a number format for cells displaying numbers, based on number type, even if not specified by the instruction. Here are some guidelines for common Excel number formats:\n{DEFAULT_NUMBER_FORMATS}"
 
         writer = get_stream_writer()
         writer({"generating": f"Planning task steps"})
