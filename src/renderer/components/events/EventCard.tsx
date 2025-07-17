@@ -51,7 +51,7 @@ const typeStyles = {
     card: 'border-blue-500/20'
   },
   executing: {
-    badge: 'bg-green-600/40 text-green-300/90',
+    badge: 'bg-green-600/40 text-purple-300/90',
     card: 'border-green-500/20'
   },
   reviewing: {
