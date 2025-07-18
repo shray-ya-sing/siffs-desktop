@@ -9,8 +9,29 @@ import MentionDropdown from './MentionDropdown'
 import { useFileTree, FileItem } from '../../hooks/useFileTree'
 import { EventCard, EventType } from '../events/EventCard'
 import {MarkdownRenderer} from './MarkdownRenderer'
+import {
+  TechThumbsUpIcon,
+  TechThumbsDownIcon,
+  TechClockIcon,
+} from '../tech-icons/TechIcons'
 
 type MessageType = 'user' | 'assistant' | 'tool_call' | 'custom_event';
+
+// Utility function to format timestamps
+const formatTimestamp = (timestamp: Date): string => {
+  const now = new Date();
+  const diff = now.getTime() - timestamp.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  
+  return timestamp.toLocaleDateString();
+};
 
 interface BaseMessage {
   id: string;
@@ -59,10 +80,12 @@ const MODEL_OPTIONS: ModelOption[] = [
 
 
 // Memoized message component to prevent re-renders
-const MessageComponent = React.memo(({ message, isLastMessage, isLoading }: { 
+const MessageComponent = React.memo(({ message, isLastMessage, isLoading, messageFeedback, onFeedback }: { 
   message: Message; 
   isLastMessage: boolean; 
-  isLoading: boolean; 
+  isLoading: boolean;
+  messageFeedback: {[messageId: string]: 'up' | 'down' | null};
+  onFeedback: (messageId: string, feedback: 'up' | 'down') => void;
 }) => {
   if (message.role === "user") {
     const userMessage = message as UserMessage;
@@ -70,10 +93,9 @@ const MessageComponent = React.memo(({ message, isLastMessage, isLoading }: {
       <div className="flex justify-center">
         <div className="max-w-full w-full px-8">
           <div
-            className="rounded-3xl px-3 py-2 text-gray-300 text-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+            className="rounded-lg px-3 py-2 text-gray-300 text-sm transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
             style={{
               background: "linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)",
-              border: "1px solid #333333",
             }}
           >
             <div className="mb-2">{message.content}</div>
@@ -128,6 +150,34 @@ const MessageComponent = React.memo(({ message, isLastMessage, isLoading }: {
               <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
             )}
           </pre>
+          {message.role === 'assistant' && (
+            <div className="flex items-center justify-start mt-2 pt-2 border-t border-gray-700/30">
+              <div className="flex items-center gap-1 text-gray-500 text-xs">
+                <TechClockIcon className="w-3 h-3" aria-hidden="true" />
+                <span aria-label={`Message sent ${formatTimestamp(message.timestamp)}`}>{formatTimestamp(message.timestamp)}</span>
+                <button
+                  onClick={() => onFeedback(message.id, 'up')}
+                  className={`p-0.5 rounded hover:bg-gray-700/20 transition-colors ${
+                    messageFeedback[message.id] === 'up' ? 'text-green-400' : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                  title="Helpful"
+                  aria-label="Mark message as helpful"
+                >
+                  <TechThumbsUpIcon className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => onFeedback(message.id, 'down')}
+                  className={`p-0.5 rounded hover:bg-gray-700/20 transition-colors ${
+                    messageFeedback[message.id] === 'down' ? 'text-red-400' : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                  title="Not helpful"
+                  aria-label="Mark message as not helpful"
+                >
+                  <TechThumbsDownIcon className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -148,6 +198,15 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro")
   const [attachments, setAttachments] = useState<Array<{type: 'image', data: string, mimeType: string, filename?: string}>>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [messageFeedback, setMessageFeedback] = useState<{[messageId: string]: 'up' | 'down' | null}>({})
+
+  // Handle feedback buttons
+  const handleFeedback = useCallback((messageId: string, feedback: 'up' | 'down') => {
+    setMessageFeedback(prev => ({
+      ...prev,
+      [messageId]: prev[messageId] === feedback ? null : feedback
+    }));
+  }, []);
 
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [threadId, setThreadId] = useState<string>(() => localStorage.getItem('threadId') || uuidv4());
@@ -546,6 +605,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
       {/* Transparent background for assistant messages */}
       <div
         className="absolute inset-0 pointer-events-none"
+        aria-hidden="true"
         style={{
           backgroundColor: "transparent",
           zIndex: 1,
@@ -558,13 +618,21 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 relative z-10" style={{ paddingBottom: '200px' }}>
+      <div 
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-6 relative z-10" 
+        style={{ paddingBottom: '200px' }}
+        aria-label="Chat messages"
+        role="log"
+        aria-live="polite"
+      >
         {messages.map((message, index) => (
-          <div key={message.id} className="space-y-2">
-            <MessageComponent 
+          <div key={message.id} className="space-y-2" role="article" aria-label={`Message from ${message.role}`}>
+            <MessageComponent
               message={message} 
               isLastMessage={index === messages.length - 1}
               isLoading={isLoading}
+              messageFeedback={messageFeedback}
+              onFeedback={handleFeedback}
             />
           </div>
         ))}
@@ -634,11 +702,49 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
       </div>
 
       {/* Input - Fixed at bottom center */}
-      <div className={`fixed bottom-4 w-full max-w-2xl px-8 z-20 space-y-2 transition-all duration-300 ${
-        isSidebarOpen 
-          ? 'left-1/2 transform -translate-x-1/2 ml-36' 
-          : 'left-1/2 transform -translate-x-1/2'
-      }`} style={{ marginBottom: '10px' }}>
+      <div 
+        className={`fixed bottom-4 w-full max-w-2xl px-8 z-20 space-y-2 transition-all duration-300 ${
+          isSidebarOpen 
+            ? 'left-1/2 transform -translate-x-1/2 ml-36' 
+            : 'left-1/2 transform -translate-x-1/2'
+        }`} 
+        style={{ marginBottom: '10px' }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const files = Array.from(e.dataTransfer.files);
+          files.forEach((file) => {
+            if (file.type.startsWith('image/')) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const base64Data = event.target?.result as string;
+                setAttachments((prev) => [
+                  ...prev,
+                  {
+                    type: 'image',
+                    data: base64Data,
+                    mimeType: file.type,
+                    filename: file.name,
+                  },
+                ]);
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
       {/* ProviderDropdown positioned above the input */}
         <div className="relative w-full">
           <ProviderDropdown 
@@ -665,15 +771,16 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
           <div className="flex flex-wrap gap-2 mb-2">
             {attachments.map((attachment, index) => (
               <div key={index} className="relative group">
-                <div className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-800 rounded-lg border border-gray-600">
-                  <Image size={12} className="text-blue-400" />
-                  <span className="text-xs text-gray-300 truncate max-w-24">
+                <div className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-800 rounded-lg border border-gray-600" aria-label={`Attachment: ${attachment.filename || 'Image'}`}>
+                  <Image size={12} className="text-blue-400" aria-hidden="true" />
+                  <span className="text-xs text-gray-300 truncate max-w-24" aria-hidden="true">
                     {attachment.filename || 'Image'}
                   </span>
                   <button
                     onClick={() => removeAttachment(index)}
                     className="p-0.5 hover:bg-red-900/20 rounded transition-colors"
                     title="Remove attachment"
+                    aria-label={`Remove attachment: ${attachment.filename || 'Image'}`}
                   >
                     <X size={10} className="text-gray-400 hover:text-red-400" />
                   </button>
@@ -700,6 +807,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
             onKeyDown={handleKeyPress}
             placeholder="Ask anything... (Shift+Enter for new line)"
             className="w-full rounded-3xl px-3 py-2 pr-20 text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-gray-600 text-sm transition-all duration-200 hover:shadow-lg focus:shadow-xl"
+            aria-label="Message input"
             style={{
               background: "linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%)",
               border: "1px solid #333333",
@@ -714,6 +822,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
               disabled={isLoading}
               className="p-1.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 hover:bg-gray-700/20 rounded"
               title="Attach image"
+              aria-label="Attach image"
             >
               <Paperclip size={12} className="text-gray-400 hover:text-gray-300" />
             </button>
@@ -722,6 +831,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
                 onClick={handleCancel}
                 className="p-1.5 transition-all duration-200 hover:scale-110 hover:bg-red-900/20 rounded"
                 title="Cancel"
+                aria-label="Cancel message"
               >
                 <Square size={10} className="text-gray-400 hover:text-red-400" />
               </button>
@@ -731,6 +841,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
               disabled={!input.trim() || isLoading}
               className="p-1.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 hover:bg-blue-900/20 rounded"
               title="Send message"
+              aria-label="Send message"
             >
               <ArrowRight size={12} className="text-gray-300 hover:text-blue-300" />
             </button>

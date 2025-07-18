@@ -28,47 +28,56 @@ export interface EventCardProps {
 }
 
 const typeStyles = {
-  // Your custom types
+  // Modern AI/Tech color palette
   extracting: {
-    badge: 'bg-blue-600/40 text-blue-300/90',
-    card: 'border-blue-500/20'
+    badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    card: 'bg-gradient-to-br from-cyan-950/30 to-cyan-900/20',
+    glow: 'shadow-cyan-500/10'
   },
   checking: {
-    badge: 'bg-yellow-600/40 text-yellow-300/90',
-    card: 'border-yellow-500/20'
+    badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    card: 'bg-gradient-to-br from-amber-950/30 to-amber-900/20',
+    glow: 'shadow-amber-500/10'
   },
   completed: {
-    badge: 'bg-green-600/40 text-green-300/90',
-    card: 'border-green-500/20'
+    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    card: 'bg-gradient-to-br from-emerald-950/30 to-emerald-900/20',
+    glow: 'shadow-emerald-500/10'
   },
-  // Original types for reference
   analyzing: {
-    badge: 'bg-yellow-600/40 text-yellow-300/90',
-    card: 'border-yellow-500/20'
+    badge: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+    card: 'bg-gradient-to-br from-violet-950/30 to-violet-900/20',
+    glow: 'shadow-violet-500/10'
   },
   generating: {
-    badge: 'bg-blue-600/40 text-blue-300/90',
-    card: 'border-blue-500/20'
+    badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    card: 'bg-gradient-to-br from-blue-950/30 to-blue-900/20',
+    glow: 'shadow-blue-500/10'
   },
   executing: {
-    badge: 'bg-purple-600/40 text-purple-300/90',
-    card: 'border-purple-500/20'
+    badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    card: 'bg-gradient-to-br from-purple-950/30 to-purple-900/20',
+    glow: 'shadow-purple-500/10'
   },
   reviewing: {
-    badge: 'bg-purple-600/40 text-purple-300/90',
-    card: 'border-purple-500/20'
+    badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+    card: 'bg-gradient-to-br from-indigo-950/30 to-indigo-900/20',
+    glow: 'shadow-indigo-500/10'
   },
   retrying: {
-    badge: 'bg-gray-600/40 text-gray-300/90',
-    card: 'border-gray-500/20'
+    badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    card: 'bg-gradient-to-br from-orange-950/30 to-orange-900/20',
+    glow: 'shadow-orange-500/10'
   },
   info: {
-    badge: 'bg-gray-600/40 text-gray-300/90',
-    card: 'border-gray-500/20'
+    badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    card: 'bg-gradient-to-br from-slate-950/30 to-slate-900/20',
+    glow: 'shadow-slate-500/10'
   },
   error: {
-    badge: 'bg-red-600/40 text-red-300/90',
-    card: 'border-red-500/20'
+    badge: 'bg-red-500/20 text-red-300 border-red-500/30',
+    card: 'bg-gradient-to-br from-red-950/30 to-red-900/20',
+    glow: 'shadow-red-500/10'
   }
 };
 
@@ -109,21 +118,22 @@ export function EventCard({
       >
         <Card 
           className={cn(
-            "relative overflow-hidden py-0 border bg-[#2a2a2a]/80 backdrop-blur-sm",
+            "relative overflow-hidden py-0 backdrop-blur-sm border-none",
             styles.card,
+            styles.glow,
             className,
             isStreaming && "pr-2"
           )}
           style={{
-            background: 'rgba(42, 42, 42, 0.8)',
             backdropFilter: 'blur(8px)',
-            borderRadius: '1rem',
+            borderRadius: '0.5rem',
+            border: 'none',
           }}
           {...props}
         >
           {showShimmer && (
             <div className={cn(
-              "absolute inset-0 rounded-xl animate-shimmer",
+              "absolute inset-0 rounded-lg animate-shimmer",
               isStreaming ? "opacity-30" : "opacity-0"
             )} 
             style={{

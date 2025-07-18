@@ -72,7 +72,7 @@ return (
           </div>
   
           {/* Status bar */}
-          <div className="p-1.5 text-xs text-gray-400/80 border-t border-gray-700/50">  // More subtle text
+          <div className="p-1.5 text-xs text-gray-400/80 border-t border-gray-700/50">
             {fileTree.length} items
           </div>
         </div>

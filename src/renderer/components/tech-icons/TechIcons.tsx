@@ -523,5 +523,47 @@ export const TechHomeIcon = ({ className = '' }: IconProps) => (
       <text x="7.5" y="16.5" textAnchor="middle" fill="white" fontSize="3" fontWeight="bold" fontFamily="Arial, sans-serif">PDF</text>
     </svg>
   )
+
+  export const TechThumbsUpIcon = ({ className = '' }: IconProps) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path
+        d="M7 10V18H5C4.45 18 4 17.55 4 17V11C4 10.45 4.45 10 5 10H7ZM8 10H15L13.5 3.5C13.1 2.6 12.2 2 11.2 2C10.3 2 9.5 2.7 9.5 3.6V9.5L8 10ZM8 10V18H18.5C19.2 18 19.8 17.5 19.9 16.8L20.9 11.8C21 11.1 20.5 10.5 19.8 10.5H15L8 10Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="black"
+      />
+    </svg>
+  )
+
+  export const TechThumbsDownIcon = ({ className = '' }: IconProps) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path
+        d="M7 14V6H5C4.45 6 4 6.45 4 7V13C4 13.55 4.45 14 5 14H7ZM8 14H15L13.5 20.5C13.1 21.4 12.2 22 11.2 22C10.3 22 9.5 21.3 9.5 20.4V14.5L8 14ZM8 14V6H18.5C19.2 6 19.8 6.5 19.9 7.2L20.9 12.2C21 12.9 20.5 13.5 19.8 13.5H15L8 14Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="black"
+      />
+    </svg>
+  )
+
+  export const TechClockIcon = ({ className = '' }: IconProps) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="fill-transparent"
+      />
+      <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
   
   
