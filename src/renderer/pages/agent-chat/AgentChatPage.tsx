@@ -41,6 +41,12 @@ export function AgentChatPage() {
     // You can emit an event or update the chat context here
   }, []);
 
+  const handleFolderConnect = useCallback((files: FileItem[]) => {
+    console.log('New folder connected:', files);
+    // Add the new folder to the existing file tree
+    addFiles(files);
+  }, [addFiles]);
+
   const toggleSidebar = useCallback(() => {
     console.log('Toggling sidebar');
     setIsSidebarOpen(prev => !prev);
@@ -61,6 +67,7 @@ return (
           <WorkspaceHeader 
             onToggleSidebar={toggleSidebar}
             itemCount={fileTree.length}
+            onFolderConnect={handleFolderConnect}
           />
   
           {/* File explorer content */}

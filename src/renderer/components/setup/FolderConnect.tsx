@@ -302,7 +302,7 @@ import MainLogo from '../logo/MainLogo'
         }
 
         // Build file tree
-        const fileTree = buildFileTree(fileList);
+        const fileTree = buildFileTree(fileList, dirName);
         console.log("File tree:", fileTree);
         setFiles(fileTree);
         
@@ -347,17 +347,25 @@ import MainLogo from '../logo/MainLogo'
     };
     
 
-    // Helper function to build the file tree
-    const buildFileTree = (files: FileItem[]): FileItem[] => {
+    // Helper function to build the file tree with folder name as root
+    const buildFileTree = (files: FileItem[], folderName: string): FileItem[] => {
       const fileMap: Record<string, FileItem> = {};
-      const tree: FileItem[] = [];
-
+      
+      // Create the root folder node
+      const rootFolder: FileItem = {
+        name: folderName,
+        path: folderName,
+        isDirectory: true,
+        children: [],
+        expanded: true
+      };
+      
       // First pass: Create a map of all files/directories
       files.forEach(file => {
         fileMap[file.path] = { ...file, children: [] };
       });
-
-      // Second pass: Build the tree
+      
+      // Second pass: Build the tree under the root folder
       files.forEach(file => {
         const pathParts = file.path.split('/');
         if (pathParts.length > 1) {
@@ -367,11 +375,11 @@ import MainLogo from '../logo/MainLogo'
             fileMap[parentPath].children?.push(fileMap[file.path]);
           }
         } else {
-          tree.push(fileMap[file.path]);
+          rootFolder.children?.push(fileMap[file.path]);
         }
       });
-
-      return tree;
+      
+      return [rootFolder];
     };
 
   

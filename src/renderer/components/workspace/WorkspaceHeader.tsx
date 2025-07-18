@@ -1,12 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FolderPlus, FilePlus, ChevronDown } from 'lucide-react';
+import { TechFolderConnectIcon } from '../tech-icons/TechIcons';
 import { TechExcelIcon, TechWordIcon, TechPowerPointIcon } from '../tech-icons/TechIcons';
 import { fileProcessingService } from '../../services/fileProcessingService';
+import { webSocketService } from '../../services/websocket/websocket.service';
+import { v4 as uuidv4 } from 'uuid';
 import CreateFileDialog from '../ui/CreateFileDialog';
 
 interface WorkspaceHeaderProps {
   onToggleSidebar: () => void;
   itemCount: number;
+  onFolderConnect?: (files: any[]) => void;
+}
+
+interface FileItem {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children?: FileItem[];
+  expanded?: boolean;
 }
 
 interface FileTypeOption {
@@ -37,11 +49,13 @@ const fileTypeOptions: FileTypeOption[] = [
   }
 ];
 
-export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onToggleSidebar, itemCount }) => {
+export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onToggleSidebar, itemCount, onFolderConnect }) => {
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createDialogIsDirectory, setCreateDialogIsDirectory] = useState(false);
   const [selectedFileType, setSelectedFileType] = useState<FileTypeOption | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [clientId] = useState(uuidv4());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -59,6 +73,172 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onToggleSideba
   const getWorkspacePath = (): string | null => {
     const processingContext = (fileProcessingService as any).processingContext;
     return processingContext?.workspacePath || null;
+  };
+  const handleConnectFolder = async () => {
+    setIsConnecting(true);
+    
+    try {
+      const electron = (window as any).electron;
+      
+      if (!electron) {
+        throw new Error('Electron API not available');
+      }
+      
+      const result = await electron.ipcRenderer.invoke('dialog:show-directory-picker');
+      
+      if (!result.success) {
+        if (result.canceled) {
+          console.log('User cancelled folder selection');
+        } else {
+          console.error('Dialog error:', result.error);
+          alert('Error selecting folder: ' + result.error);
+        }
+        return;
+      }
+      
+      const fullPath = result.path;
+      const dirName = result.name;
+      
+      console.log('Selected folder:', fullPath);
+      
+      // Scan the directory
+      const scanResult = await electron.ipcRenderer.invoke('fs:scan-directory', fullPath);
+      
+      if (!scanResult.success) {
+        throw new Error(scanResult.error || 'Failed to scan directory');
+      }
+      
+      const fileList: FileItem[] = scanResult.files;
+      
+      // Filter supported files
+      const supportedFiles = fileList.filter(file => 
+        !file.isDirectory && (
+          file.name.endsWith('.xlsx') || 
+          file.name.endsWith('.xls') ||
+          file.name.endsWith('.pptx') || 
+          file.name.endsWith('.ppt') ||
+          file.name.endsWith('.pdf') ||
+          file.name.endsWith('.docx')
+        )
+      );
+      
+      console.log(`Found ${supportedFiles.length} supported files`);
+      
+      // Process supported files
+      for (const file of supportedFiles) {
+        try {
+          const fileResult = await electron.ipcRenderer.invoke('fs:read-file', 
+            `${fullPath}/${file.path}`
+          );
+          
+          if (!fileResult.success) {
+            console.error(`Failed to read file ${file.name}:`, fileResult.error);
+            continue;
+          }
+          
+          const base64Content = fileResult.content;
+          const requestId = uuidv4();
+          
+          // Send extraction request based on file type
+          const isExcelFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+          const isPowerPointFile = file.name.endsWith('.pptx') || file.name.endsWith('.ppt');
+          const isPdfFile = file.name.endsWith('.pdf');
+          const isWordFile = file.name.endsWith('.docx');
+          
+          if (isExcelFile) {
+            webSocketService.emit('EXTRACT_METADATA', {
+              client_id: clientId,
+              request_id: requestId,
+              file_path: `${dirName}/${file.path}`,
+              file_content: base64Content
+            });
+          } else if (isPowerPointFile) {
+            webSocketService.emit('EXTRACT_POWERPOINT_METADATA', {
+              client_id: clientId,
+              request_id: requestId,
+              file_path: `${dirName}/${file.path}`,
+              file_content: base64Content
+            });
+          } else if (isPdfFile) {
+            webSocketService.emit('EXTRACT_PDF_CONTENT', {
+              client_id: clientId,
+              request_id: requestId,
+              file_path: `${dirName}/${file.path}`,
+              file_content: base64Content,
+              include_images: true,
+              include_tables: true,
+              include_forms: true,
+              ocr_images: false
+            });
+          } else if (isWordFile) {
+            webSocketService.emit('EXTRACT_WORD_METADATA', {
+              client_id: clientId,
+              request_id: requestId,
+              file_path: `${dirName}/${file.path}`,
+              file_content: base64Content
+            });
+          }
+          
+          // Small delay between files
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (fileError) {
+          console.error(`Error processing file ${file.name}:`, fileError);
+        }
+      }
+      
+      // Build file tree and add to workspace
+      const fileTree = buildFileTree(fileList, dirName);
+      
+      // Notify parent component about new folder
+      if (onFolderConnect) {
+        onFolderConnect(fileTree);
+      }
+      
+      console.log(`Successfully connected folder: ${dirName}`);
+      alert(`Successfully connected folder "${dirName}" with ${supportedFiles.length} supported files.`);
+      
+    } catch (error) {
+      console.error('Error connecting folder:', error);
+      alert('Error connecting folder: ' + error);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+  
+  // Helper function to build file tree with folder name as root
+  const buildFileTree = (files: FileItem[], folderName: string): FileItem[] => {
+    const fileMap: Record<string, FileItem> = {};
+    const tree: FileItem[] = [];
+    
+    // Create the root folder node
+    const rootFolder: FileItem = {
+      name: folderName,
+      path: folderName,
+      isDirectory: true,
+      children: [],
+      expanded: true
+    };
+    
+    // First pass: Create a map of all files/directories
+    files.forEach(file => {
+      fileMap[file.path] = { ...file, children: [] };
+    });
+    
+    // Second pass: Build the tree under the root folder
+    files.forEach(file => {
+      const pathParts = file.path.split('/');
+      if (pathParts.length > 1) {
+        const parentPath = pathParts.slice(0, -1).join('/');
+        if (fileMap[parentPath]) {
+          fileMap[parentPath].children = fileMap[parentPath].children || [];
+          fileMap[parentPath].children?.push(fileMap[file.path]);
+        }
+      } else {
+        rootFolder.children?.push(fileMap[file.path]);
+      }
+    });
+    
+    return [rootFolder];
   };
 
   const handleCreateFolder = () => {
@@ -128,6 +308,22 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onToggleSideba
         <h2 className="text-base font-medium text-gray-200">Workspace</h2>
         
         <div className="flex items-center gap-2">
+          {/* Connect new folder button */}
+          <button
+            onClick={handleConnectFolder}
+            disabled={isConnecting}
+            className={`p-1.5 rounded-md hover:bg-gray-700/50 text-gray-400 hover:text-gray-200 transition-colors ${
+              isConnecting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            title={isConnecting ? 'Connecting folder...' : 'Connect new folder'}
+          >
+            {isConnecting ? (
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <TechFolderConnectIcon className="w-4 h-4" />
+            )}
+          </button>
+
           {/* Folder creation button */}
           <button
             onClick={handleCreateFolder}
