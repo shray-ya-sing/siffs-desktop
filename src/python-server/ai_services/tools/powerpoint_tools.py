@@ -143,97 +143,205 @@ def get_powerpoint_from_cache(workspace_path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-# POWERPOINT TOOLS _________________________________________________________________________________________________________________________________
-
-def get_powerpoint_text_content(workspace_path: str, slides: Optional[List[int]] = None) -> str:
+def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
     """
-    Retrieve text content from a PowerPoint presentation from the cache.
-    
+    Edit a PowerPoint presentation by generating and applying shape formatting metadata.
+
     Args:
-        workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
-        slides: Optional list of slide numbers to retrieve (1-based). If None, returns all slides.
-    
+        workspace_path: The path to the PowerPoint file to edit.
+        edit_instructions: Instructions for editing shapes in the presentation.
+
     Returns:
-        A JSON string containing the text content from the PowerPoint presentation
+        String containing the updated shape metadata in JSON format.
     """
-    logger.info(f"Getting PowerPoint text content for: {workspace_path}")
-    writer = get_writer()
-    writer({"analyzing": f"Extracting text content from PowerPoint file {workspace_path}"})
+    logger.info(f"Starting PowerPoint edit for workspace: {workspace_path}")    
+    logger.info(f"Edit instructions: {edit_instructions}")
     
+    # Get request_id for cancellation checks
+    request_id = get_request_id_from_cache()
+
+    # Check for cancellation at the start
+    if request_id and cancellation_manager.is_cancelled(request_id):
+        logger.info(f"Request {request_id} cancelled before starting edit_powerpoint")
+        return "Request was cancelled"
+
     try:
-        # Get the cache file
-        cache_path = python_server_dir / "metadata" / "_cache" / "powerpoint_metadata_hotcache.json"
+        prompt = f"""
+        Here are the instructions for this step, generate the shape metadata to fulfill these instructions: {edit_instructions}
         
-        if not cache_path.exists():
-            logger.error("PowerPoint cache file path not found")
-            return 'PowerPoint cache file not found'
+        FORMAT YOUR RESPONSE AS FOLLOWS:
+        
+        slide_number: slide1 | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle"
 
-        # Load the cache
-        with open(cache_path, 'r', encoding='utf-8') as f:
-            cache_data = json.load(f)
+        RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
-        # Find the document by matching the workspace_path
-        document_content = None
+        RULES:
+        1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
+        2. List each shape's metadata as: shape_name, fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
+        3. Provide all values using their precise properties writable by PyCOM to PowerPoint.
+        4. Separate multiple shape updates with pipes (|).
+        5. Always use concise keys for properties and ensure proper formatting for parsing.
+        """
+
+        # Stream to frontend
+        writer = get_stream_writer()
+        writer({"generating": f"Creating PowerPoint shape metadata"})
+
+        # Get the user id for the API key
+        user_id = get_user_id_from_cache()
+        if not user_id:
+            error_msg = "Error: No authenticated user found"
+            logger.error(error_msg)
+            return error_msg
         
-        for cache_key, data in cache_data.items():
-            if isinstance(data, dict) and data.get('workspace_path') == workspace_path:
-                document_content = data
-                break
-        
-        if not document_content:
-            logger.error("PowerPoint presentation not found in cache")
-            return 'PowerPoint presentation not found in cache'
-        
-        # Extract text content from slides
-        presentation_slides = document_content.get("slides", [])
-        slide_texts = []
-        
-        for slide in presentation_slides:
-            slide_number = slide.get("slideNumber", 0)
+        # Get Gemini model using the hardcoded gemini-2.5-pro model
+        logger.info("Initializing Gemini model for shape metadata generation")
+        try:
+            if LLMManager.get_llm() is None:
+                LLMManager.set_llm(GeminiProvider.get_gemini_model(
+                    user_id=user_id, 
+                    model="gemini-2.5-pro", 
+                    temperature=0.3,
+                    thinking_budget=0
+                ))
             
-            # Filter by specific slides if requested
-            if slides and slide_number not in slides:
-                continue
-            
-            slide_text_parts = []
-            slide_text_parts.append(f"Slide {slide_number}")
-            
-            # Extract text from shapes
-            shapes = slide.get("shapes", [])
-            for shape in shapes:
-                text_content = shape.get("textContent", {})
-                if text_content.get("hasText", False):
-                    shape_text = text_content.get("text", "")
-                    if shape_text.strip():
-                        slide_text_parts.append(shape_text)
-            
-            # Extract notes if available
-            notes = slide.get("notes", {})
-            if notes.get("hasNotes", False):
-                notes_text = notes.get("text", "")
-                if notes_text.strip():
-                    slide_text_parts.append(f"Notes: {notes_text}")
-            
-            if len(slide_text_parts) > 1:  # More than just the slide number
-                slide_texts.append("\n".join(slide_text_parts))
+            llm = LLMManager.get_llm()
+        except Exception as e:
+            error_message = f"Failed to get llm model: {e}"
+            logger.error(error_message)
+            return error_message
         
-        result = {
-            "presentation_name": document_content.get("presentationName", ""),
-            "total_slides": document_content.get("totalSlides", 0),
-            "slide_texts": slide_texts,
-            "full_text": "\n\n".join(slide_texts)
-        }
-        
-        return json.dumps(result, separators=(',', ':'))
-        
-    except json.JSONDecodeError:
-        logger.error("JSONDecode error: Failed to parse PowerPoint cache file", exc_info=True)
-        return 'Failed to parse PowerPoint cache file'
+        # Check for cancellation before LLM call
+        if request_id and cancellation_manager.is_cancelled(request_id):
+            logger.info(f"Request {request_id} cancelled before LLM call")
+            return "Request was cancelled"
+
+        # Call the LLM to generate shape metadata
+        logger.info("Calling LLM to generate shape metadata")
+        messages = [{"role": "user", "content": prompt}]
+        try:
+            import threading
+            import time
+
+            llm_response = None
+            llm_error = None
+
+            def llm_call_thread():
+                nonlocal llm_response, llm_error
+                try:
+                    llm_response = llm.invoke(messages)
+                except Exception as e:
+                    llm_error = e
+
+            # Start the thread
+            thread = threading.Thread(target=llm_call_thread)
+            thread.start()
+
+            # Wait for completion while checking for cancellation
+            while thread.is_alive():
+                if request_id and cancellation_manager.is_cancelled(request_id):
+                    logger.info(f"Request {request_id} cancelled during LLM call")
+                    return "Request was cancelled"
+                time.sleep(0.5)  # Check every 500ms
+
+            # Wait for thread to complete
+            thread.join()
+
+            # Check if there was an error
+            if llm_error:
+                raise llm_error
+
+        except Exception as e:
+            error_message = f"Failed to get llm response: {e}"
+            logger.error(error_message)
+            return error_message
+
+        if not llm_response or not llm_response.content:
+            error_msg = "Error: Failed to get response from LLM"
+            logger.error(error_msg)
+            return error_msg
+
+        markdown_response = llm_response.content
+        logger.info(f"LLM generated markdown for shapes: {markdown_response}")
+
+        # Check for cancellation after LLM call
+        if request_id and cancellation_manager.is_cancelled(request_id):
+            logger.info(f"Request {request_id} cancelled after LLM call")
+            return "Request was cancelled"
+
+        # Parse the markdown response using the PowerPoint edit tools
+        try:
+            from ai_services.tools.read_write_functions.powerpoint.powerpoint_edit_tools import parse_markdown_powerpoint_data
+            
+            # Parse the markdown response into structured data
+            parsed_data = parse_markdown_powerpoint_data(markdown_response)
+            
+            if not parsed_data:
+                logger.error("Failed to parse markdown PowerPoint data")
+                return "Error: Could not parse shape metadata"
+            
+            logger.info(f"Parsed shape data for {len(parsed_data)} slides")
+            
+            # Check for cancellation before writing
+            if request_id and cancellation_manager.is_cancelled(request_id):
+                logger.info(f"Request {request_id} cancelled before writing shapes")
+                return "Request was cancelled"
+            
+            # Write the parsed data to the PowerPoint file
+            from powerpoint.editing.powerpoint_writer import PowerPointWriter
+            
+            # Get the file path from mappings
+            MAPPINGS_FILE = python_server_dir / "metadata" / "__cache" / "files_mappings.json"
+            
+            try:
+                with open(MAPPINGS_FILE, 'r') as f:
+                    mappings = json.load(f)
+                temp_file_path = mappings.get(workspace_path) or next(
+                    (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+                    workspace_path
+                )
+                logger.debug(f"Using temp file path: {temp_file_path}")
+            except Exception as e:
+                logger.error(f"Error processing file mappings: {e}")
+                temp_file_path = workspace_path
+            
+            # Stream progress to frontend
+            writer.write({"generating": "Writing shape updates to PowerPoint"})
+            
+            # Write to PowerPoint using the writer
+            ppt_writer = PowerPointWriter()
+            success, updated_shapes = ppt_writer.write_to_existing(parsed_data, temp_file_path)
+            
+            if success:
+                logger.info(f"Successfully updated {len(updated_shapes)} shapes")
+                
+                # Return JSON summary of changes
+                result = {
+                    "status": "success",
+                    "slides_updated": len(parsed_data),
+                    "shapes_updated": len(updated_shapes),
+                    "updated_shapes": updated_shapes
+                }
+                
+                return json.dumps(result, cls=ExtendedJSONEncoder, indent=2)
+            else:
+                logger.error("Failed to write shapes to PowerPoint")
+                return "Error: Failed to write shape updates to PowerPoint"
+            
+        except Exception as e:
+            logger.error(f"Error parsing or writing PowerPoint data: {e}", exc_info=True)
+            return f"Error: {str(e)}"
+
+        # Return the markdown_response as fallback
+        return markdown_response
+
     except Exception as e:
-        logger.error(f"Error retrieving PowerPoint text content: {str(e)}", exc_info=True)
-        return f'Failed to get PowerPoint text content: {str(e)}'
+        error_msg = f"Error during PowerPoint edit: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return error_msg
 
 
+# POWERPOINT_TOOLS _________________________________________________________________________________________________________________________________
 @tool
 def get_full_powerpoint_summary(workspace_path: str) -> str:
     """
@@ -429,81 +537,33 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
         return f'Failed to get PowerPoint slide details: {str(e)}'
 
 
-def get_powerpoint_general_info(workspace_path: str) -> str:
+@tool
+def edit_powerpoint_shapes(workspace_path: str, edit_instructions: str) -> str:
     """
-    Retrieve general information about a PowerPoint presentation from the cache.
+    Edit PowerPoint shapes by applying formatting changes based on the provided instructions.
+    This tool modifies shape properties like fill color, outline color, outline style, and outline width.
     
     Args:
         workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
+        edit_instructions: Specific instructions for editing shapes in the presentation
     
     Returns:
-        A JSON string containing general PowerPoint presentation information
-    """
-    logger.info(f"Getting PowerPoint general info for: {workspace_path}")
-    writer = get_writer()
-    writer({"analyzing": f"Retrieving general info from PowerPoint file {workspace_path}"})
-    
-    try:
-        # Get the cache file
-        cache_path = python_server_dir / "metadata" / "_cache" / "powerpoint_metadata_hotcache.json"
-        
-        if not cache_path.exists():
-            logger.error("PowerPoint cache file path not found")
-            return 'PowerPoint cache file not found'
-
-        # Load the cache
-        with open(cache_path, 'r', encoding='utf-8') as f:
-            cache_data = json.load(f)
-
-        # Find the document by matching the workspace_path
-        document_content = None
-        
-        for cache_key, data in cache_data.items():
-            if isinstance(data, dict) and data.get('workspace_path') == workspace_path:
-                document_content = data
-                break
-        
-        if not document_content:
-            logger.error("PowerPoint presentation not found in cache")
-            return 'PowerPoint presentation not found in cache'
-        
-        # Extract general information
-        core_props = document_content.get("coreProperties", {})
-        slide_size = document_content.get("slideSize", {})
-        
-        result = {
-            "presentation_name": document_content.get("presentationName", ""),
-            "presentation_path": document_content.get("presentationPath", ""),
-            "title": core_props.get("title", ""),
-            "author": core_props.get("author", ""),
-            "subject": core_props.get("subject", ""),
-            "keywords": core_props.get("keywords", ""),
-            "comments": core_props.get("comments", ""),
-            "created": core_props.get("created", ""),
-            "modified": core_props.get("modified", ""),
-            "last_modified_by": core_props.get("lastModifiedBy", ""),
-            "total_slides": document_content.get("totalSlides", 0),
-            "slide_width": slide_size.get("width", 0),
-            "slide_height": slide_size.get("height", 0),
-            "aspect_ratio": slide_size.get("aspectRatio", 0),
-            "total_slide_masters": len(document_content.get("slideMasters", [])),
-            "total_slide_layouts": len(document_content.get("slideLayouts", [])),
-            "file_size": document_content.get("file_size", 0),
-            "cached_at": document_content.get("cached_at", "")
+        A JSON string containing the results of the shape editing operation:
+        {
+            "status": "success",
+            "slides_updated": 2,
+            "shapes_updated": 5,
+            "updated_shapes": [...]
         }
-        
-        return json.dumps(result, separators=(',', ':'))
-        
-    except json.JSONDecodeError:
-        logger.error("JSONDecode error: Failed to parse PowerPoint cache file", exc_info=True)
-        return 'Failed to parse PowerPoint cache file'
-    except Exception as e:
-        logger.error(f"Error retrieving PowerPoint general info: {str(e)}", exc_info=True)
-        return f'Failed to get PowerPoint general info: {str(e)}'
+    """
+    return edit_powerpoint(workspace_path, edit_instructions)
 
 
 # Export all PowerPoint tools in a list for easy importing
 POWERPOINT_TOOLS = [
     get_full_powerpoint_summary,
-    get_powerpoint_slide_details
+    get_powerpoint_slide_details,
+    edit_powerpoint_shapes
 ]
+
+
