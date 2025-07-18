@@ -243,6 +243,30 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         
         NOTE: Position values (top, height, left, width) are INTEGERS ONLY, not cell references. Use square brackets [...] for complex properties like fonts to avoid comma parsing issues.
 
+        15. DATA TABLES: Instructions may require creation of data tables for what-if analysis. Data table metadata should be created using the format: dta_tbl=[i=input_cell, r=row_input_cell, c=column_input_cell, rng=output_range, row_vals=[row_header_values], col_vals=[column_header_values]]
+        
+        DATA TABLE PARAMETERS:
+        - i: Input formula cell (must contain a formula that references both row and column input cells)
+        - r: Row input cell (cell that the formula uses for row variable)
+        - c: Column input cell (cell that the formula uses for column variable)
+        - rng: Output range where data table results will be placed (e.g., D10:F13)
+        - row_vals: Array of values for row headers (placed to the left of range)
+        - col_vals: Array of values for column headers (placed above the range)
+        
+        DATA TABLE REQUIREMENTS:
+        - The input formula MUST reference both row and column input cells
+        - Row values count must match the number of rows in the range
+        - Column values count must match the number of columns in the range
+        - The system will automatically populate header cells adjacent to the range
+        - Row headers go in the column immediately to the left of the range
+        - Column headers go in the row immediately above the range
+        
+        DATA TABLE EXAMPLES:
+        - Basic sensitivity analysis: dta_tbl=[i=C9, r=B10, c=A10, rng=D10:F13, row_vals=[100,120,130,140], col_vals=[0.05,0.06,0.07]]
+        - Revenue analysis: dta_tbl=[i=E5, r=D5, c=D4, rng=F6:J10, row_vals=[1000,1500,2000,2500,3000], col_vals=[0.10,0.15,0.20,0.25]]
+        
+        IMPORTANT: Data table metadata should be placed at the end of the sheet entries, after all cell formulas and formatting.
+
         
         
         
@@ -261,6 +285,9 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         
         5. Advanced chart with all styling
         sheet_name: Dashboard| chart_name="performance_chart", type="line", height="400", width="600", left="100", top="50", title="Performance Dashboard", title_pos="above", title_font=[Calibri,16,true,false,#2F4F4F], x_axis="A1:A12", series_1="B1:B12", series_2="C1:C12", series_1_name="B1", series_2_name="C1", s1_color="#FF6B6B", s2_color="#4ECDC4", x_title="Months", y_title="Performance %", x_title_font=[Arial,11,false,false,#666666], y_title_font=[Arial,11,false,false,#666666], x_grid="true", y_grid="true", x_grid_color="#E0E0E0", y_grid_color="#E0E0E0", legend="true", legend_pos="bottom", plot_fill="#FAFAFA", chart_fill="#FFFFFF", chart_border="true", chart_border_color="#CCCCCC"
+        
+        6. Data table creation with sensitivity analysis
+        sheet_name: Analysis| C9, [=B10*(1+A10)^5*0.6] | B10, [1000] | A10, [0.05] | dta_tbl=[i=C9, r=B10, c=A10, rng=D10:G13, row_vals=[1000,1500,2000,2500], col_vals=[0.05,0.06,0.07,0.08]]
 
         
         CHART PROPERTY PARSING RULES:

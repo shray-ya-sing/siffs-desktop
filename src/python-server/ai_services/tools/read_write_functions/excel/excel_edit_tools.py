@@ -156,6 +156,18 @@ def write_formulas_to_excel_complex_agent(
                 # Remove charts from cell_formulas to avoid processing them as cells
                 cell_formulas = {k: v for k, v in cell_formulas.items() if k != 'charts'}
             
+            # Handle data tables separately
+            if 'data_tables' in cell_formulas:
+                data_tables_data = cell_formulas['data_tables']
+                # Store data tables data in a special format that the writer can recognize
+                for data_table_name, data_table_data in data_tables_data.items():
+                    data_table_entry = {"data_table": data_table_name}
+                    data_table_entry.update(data_table_data)  # Add all data table properties
+                    parsed_data[sheet_name].append(data_table_entry)
+                
+                # Remove data_tables from cell_formulas to avoid processing them as cells
+                cell_formulas = {k: v for k, v in cell_formulas.items() if k != 'data_tables'}
+            
             for cell, cell_data in cell_formulas.items():
                 if isinstance(cell_data, dict):
                     # New format with formatting properties
@@ -461,13 +473,23 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                 # Extract all possible chart font properties
                 entry_chart_fonts_extracted = re.sub(r'(title_font|x_title_font|y_title_font)=\[(.*?)\]', extract_chart_font_brackets, entry_comment_extracted)
                 
+                # Extract dta_tbl=[...] brackets separately with proper nesting handling
+                data_table_content = None
+                def extract_data_table_brackets(match):
+                    nonlocal data_table_content
+                    data_table_content = match.group(1)  # Save the content
+                    return "dta_tbl=DATA_TABLE_PLACEHOLDER"
+                
+                # Use regex that handles nested brackets for data tables
+                entry_data_table_extracted = re.sub(r'dta_tbl=\[([^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]', extract_data_table_brackets, entry_chart_fonts_extracted)
+                
                 # Now extract formula brackets (any remaining brackets should be formula)
                 formula_content = None
                 def extract_formula_brackets(match):
                     nonlocal formula_content
                     formula_content = match.group(1)  # Save the content
                     return "FORMULA_PLACEHOLDER"  
-                entry_without_brackets = re.sub(r'\[(.*?)\]', extract_formula_brackets, entry_chart_fonts_extracted)
+                entry_without_brackets = re.sub(r'\[(.*?)\]', extract_formula_brackets, entry_data_table_extracted)
     
                     
                 # Split into cell reference, formula/value, and formatting properties
@@ -757,6 +779,28 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                                     cell_data['data_validation'] = clean_formula(validation_text)
                     
                 result[current_sheet][cell_ref.upper()] = cell_data
+            
+            # Process data table if extracted
+            if data_table_content:
+                try:
+                    parsed_data_table = parse_data_table_properties(data_table_content)
+                    
+                    # Validate and infer header cells
+                    if validate_and_infer_data_table_cells(parsed_data_table, current_sheet, result):
+                        # Initialize data_tables section if it doesn't exist
+                        if 'data_tables' not in result[current_sheet]:
+                            result[current_sheet]['data_tables'] = {}
+                        
+                        # Store data table with a unique identifier
+                        table_id = f"table_{len(result[current_sheet]['data_tables']) + 1}"
+                        result[current_sheet]['data_tables'][table_id] = parsed_data_table
+                        
+                        logger.info(f"Data table {table_id} parsed and validated successfully")
+                    else:
+                        logger.warning("Data table validation failed, skipping")
+                        
+                except Exception as e:
+                    logger.error(f"Error processing data table: {e}")
         
         if not result:
             logger.error("No valid sheets or cell entries found in markdown")
@@ -769,6 +813,134 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
     except Exception as e:
         logger.error(f"Error in parse_markdown_formulas: {str(e)}", exc_info=True)
         return None
+
+def parse_data_table_properties(data_table_string: str) -> Dict[str, Any]:
+    """Parse data table properties handling nested brackets"""
+    properties = {}
+    
+    # Split by commas, but handle nested brackets properly
+    parts = []
+    current_part = ""
+    bracket_level = 0
+    
+    for char in data_table_string:
+        if char == '[':
+            bracket_level += 1
+        elif char == ']':
+            bracket_level -= 1
+        elif char == ',' and bracket_level == 0:
+            parts.append(current_part.strip())
+            current_part = ""
+            continue
+        current_part += char
+    
+    if current_part:
+        parts.append(current_part.strip())
+    
+    # Parse each part
+    for part in parts:
+        if '=' in part:
+            key, value = part.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            
+            if key in ['row_vals', 'col_vals'] and value.startswith('[') and value.endswith(']'):
+                # Parse array values with validation
+                array_content = value[1:-1]
+                try:
+                    values = []
+                    for item in array_content.split(','):
+                        item = item.strip()
+                        if item:
+                            # Try to parse as number, fallback to string
+                            try:
+                                values.append(float(item))
+                            except ValueError:
+                                values.append(item)  # Keep as string for text headers
+                    properties[key] = values
+                except Exception as e:
+                    logger.warning(f"Error parsing {key} values: {e}")
+                    properties[key] = []
+            else:
+                properties[key] = value
+    
+    return properties
+
+def validate_and_infer_data_table_cells(data_table_data: Dict[str, Any], current_sheet: str, result: Dict) -> bool:
+    """Validate data table parameters and infer header cell positions"""
+    try:
+        # Extract required parameters
+        input_cell = data_table_data.get('i')
+        row_input = data_table_data.get('r')
+        col_input = data_table_data.get('c')
+        range_str = data_table_data.get('rng')
+        row_vals = data_table_data.get('row_vals', [])
+        col_vals = data_table_data.get('col_vals', [])
+        
+        # Validate required parameters
+        if not all([input_cell, row_input, col_input, range_str]):
+            logger.error("Missing required data table parameters")
+            return False
+        
+        # Parse range to determine dimensions
+        range_parts = range_str.split(':')
+        if len(range_parts) != 2:
+            logger.error(f"Invalid range format: {range_str}")
+            return False
+            
+        start_cell = range_parts[0]
+        end_cell = range_parts[1]
+        
+        # Extract row and column info
+        start_row = int(re.search(r'\d+', start_cell).group())
+        start_col = re.search(r'[A-Z]+', start_cell).group()
+        end_row = int(re.search(r'\d+', end_cell).group())
+        end_col = re.search(r'[A-Z]+', end_cell).group()
+        
+        # Calculate expected dimensions
+        expected_rows = end_row - start_row + 1
+        expected_cols = ord(end_col) - ord(start_col) + 1
+        
+        # Validate row_vals count
+        if len(row_vals) != expected_rows:
+            logger.error(f"Row values count ({len(row_vals)}) doesn't match range rows ({expected_rows})")
+            return False
+        
+        # Validate col_vals count
+        if len(col_vals) != expected_cols:
+            logger.error(f"Column values count ({len(col_vals)}) doesn't match range columns ({expected_cols})")
+            return False
+        
+        # Infer and populate row header cells (to the left of range)
+        left_col = chr(ord(start_col) - 1)
+        for i, val in enumerate(row_vals):
+            cell_ref = f"{left_col}{start_row + i}"
+            if cell_ref.upper() not in result[current_sheet]:
+                result[current_sheet][cell_ref.upper()] = {'formula': str(val)}
+                logger.debug(f"Inferred row header cell {cell_ref}: {val}")
+        
+        # Infer and populate column header cells (above the range)
+        header_row = start_row - 1
+        for i, val in enumerate(col_vals):
+            col_letter = chr(ord(start_col) + i)
+            cell_ref = f"{col_letter}{header_row}"
+            if cell_ref.upper() not in result[current_sheet]:
+                result[current_sheet][cell_ref.upper()] = {'formula': str(val)}
+                logger.debug(f"Inferred column header cell {cell_ref}: {val}")
+        
+        # Store validated data table info
+        data_table_data['validated'] = True
+        data_table_data['expected_rows'] = expected_rows
+        data_table_data['expected_cols'] = expected_cols
+        data_table_data['row_header_cells'] = [f"{left_col}{start_row + i}" for i in range(expected_rows)]
+        data_table_data['col_header_cells'] = [f"{chr(ord(start_col) + i)}{header_row}" for i in range(expected_cols)]
+        
+        logger.info(f"Data table validation successful for range {range_str}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error validating data table: {e}")
+        return False
 
 def parse_cell_formulas(formula_input: Union[str, dict]) -> Optional[Dict[str, Dict[str, str]]]:
     """

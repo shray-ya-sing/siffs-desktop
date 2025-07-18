@@ -274,6 +274,19 @@ class ExcelWorker:
                                 logger.error(f"Error processing chart {chart_name}: {e}")
                         continue
                     
+                    # Handle data table entries
+                    if 'data_table' in cell_data:
+                        data_table_name = cell_data.get('data_table')
+                        if data_table_name:
+                            try:
+                                data_table_info = self._handle_data_table(sheet, data_table_name, cell_data)
+                                logger.info(f"Processed data table {data_table_name} in sheet {sheet_name}")
+                                if data_table_info:
+                                    updated_cells.append(data_table_info)
+                            except Exception as e:
+                                logger.error(f"Error processing data table {data_table_name}: {e}")
+                        continue
+                    
                     # Handle cell entries
                     cell_ref = cell_data.get('cell')
                     if not cell_ref:
@@ -1474,6 +1487,109 @@ class ExcelWorker:
                         
         except Exception as e:
             logger.warning(f"Could not apply font styling to {object_name}: {e}")
+    
+    def _handle_data_table(self, sheet: xw.Sheet, data_table_name: str, data_table_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle data table creation in Excel.
+        
+        Args:
+            sheet: The Excel sheet where the data table will be created
+            data_table_name: Name/identifier for the data table
+            data_table_data: Dictionary containing data table parameters
+            
+        Returns:
+            Dictionary with data table information for cache updates
+        """
+        try:
+            logger.info(f"Creating data table {data_table_name} in sheet {sheet.name}")
+            
+            # Extract required parameters
+            input_cell = data_table_data.get('i')
+            row_input = data_table_data.get('r') 
+            col_input = data_table_data.get('c')
+            range_str = data_table_data.get('rng')
+            
+            # Validate required parameters
+            if not all([input_cell, row_input, col_input, range_str]):
+                logger.error(f"Missing required data table parameters for {data_table_name}")
+                return {}
+            
+            logger.debug(f"Data table parameters: input={input_cell}, row_input={row_input}, col_input={col_input}, range={range_str}")
+            
+            # Validate that input cell has a formula
+            try:
+                input_formula = sheet.range(input_cell).formula
+                if not input_formula or not input_formula.startswith('='):
+                    logger.error(f"Input cell {input_cell} must contain a formula for data table {data_table_name}")
+                    return {}
+                logger.debug(f"Input formula verified: {input_formula}")
+            except Exception as e:
+                logger.error(f"Error accessing input cell {input_cell}: {e}")
+                return {}
+            
+            # Parse the output range
+            try:
+                range_parts = range_str.split(':')
+                if len(range_parts) != 2:
+                    logger.error(f"Invalid range format {range_str} for data table {data_table_name}")
+                    return {}
+                
+                start_cell = range_parts[0].strip()
+                end_cell = range_parts[1].strip()
+                
+                # Calculate the full range including headers
+                start_row = int(re.search(r'\d+', start_cell).group())
+                start_col = re.search(r'[A-Z]+', start_cell).group()
+                
+                # The data table range should include the formula cell and headers
+                # Formula goes in the cell above and to the left of the range
+                header_row = start_row - 1
+                header_col = chr(ord(start_col) - 1)
+                
+                # Full range for data table includes headers
+                full_range = f"{header_col}{header_row}:{end_cell}"
+                
+                logger.debug(f"Full data table range: {full_range}")
+                
+                # Get the range object
+                data_table_range = sheet.range(full_range)
+                
+            except Exception as e:
+                logger.error(f"Error parsing range {range_str} for data table {data_table_name}: {e}")
+                return {}
+            
+            # Create the data table using Excel's API
+            try:
+                logger.debug(f"Creating data table with row_input={row_input}, col_input={col_input}")
+                
+                # Access the Range API to create the data table
+                data_table_range.api.Table(
+                    RowInput=sheet.range(row_input).api,
+                    ColumnInput=sheet.range(col_input).api
+                )
+                
+                logger.info(f"Successfully created data table {data_table_name} in range {full_range}")
+                
+                # Return data table information for cache updates
+                return {
+                    'data_table_name': data_table_name,
+                    'action': 'created',
+                    'sheet_name': sheet.name,
+                    'input_cell': input_cell,
+                    'row_input': row_input,
+                    'col_input': col_input,
+                    'range': range_str,
+                    'full_range': full_range,
+                    'formula': input_formula
+                }
+                
+            except Exception as e:
+                logger.error(f"Error creating data table {data_table_name}: {e}")
+                logger.debug(f"Data table creation failed with parameters: input={input_cell}, row_input={row_input}, col_input={col_input}, range={full_range}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Error handling data table {data_table_name}: {e}")
+            return {}
 
 
     
