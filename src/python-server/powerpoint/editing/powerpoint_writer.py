@@ -379,6 +379,7 @@ class PowerPointWorker:
                 'diamond': 4,        # msoShapeDiamond
                 'line': 20,          # msoShapeLine
                 'arrow': 13,         # msoShapeRightArrow
+                'textbox': 17,       # msoShapeTextBox
             }
             
             # Get the shape type constant
@@ -487,6 +488,122 @@ class PowerPointWorker:
                     updated_info['properties_applied'].append('geom_requested')
                 except Exception as e:
                     logger.warning(f"Could not apply geometry to shape {shape.Name}: {e}")
+            
+            # Apply text content
+            if 'text' in shape_props and shape_props['text']:
+                try:
+                    text_content = shape_props['text']
+                    # Check if shape has text frame
+                    if hasattr(shape, 'TextFrame') and shape.TextFrame:
+                        shape.TextFrame.TextRange.Text = text_content
+                        updated_info['properties_applied'].append('text')
+                        logger.debug(f"Applied text content to shape {shape.Name}: {text_content[:50]}...")
+                    else:
+                        logger.warning(f"Shape {shape.Name} does not support text content")
+                except Exception as e:
+                    logger.warning(f"Could not apply text content to shape {shape.Name}: {e}")
+            
+            # Apply text formatting properties
+            if hasattr(shape, 'TextFrame') and shape.TextFrame:
+                text_range = shape.TextFrame.TextRange
+                
+                # Apply font size
+                if 'font_size' in shape_props and shape_props['font_size']:
+                    try:
+                        font_size = float(shape_props['font_size'])
+                        text_range.Font.Size = font_size
+                        updated_info['properties_applied'].append('font_size')
+                        logger.debug(f"Applied font size {font_size} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply font size to shape {shape.Name}: {e}")
+                
+                # Apply font name
+                if 'font_name' in shape_props and shape_props['font_name']:
+                    try:
+                        font_name = shape_props['font_name']
+                        text_range.Font.Name = font_name
+                        updated_info['properties_applied'].append('font_name')
+                        logger.debug(f"Applied font name {font_name} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply font name to shape {shape.Name}: {e}")
+                
+                # Apply font color
+                if 'font_color' in shape_props and shape_props['font_color']:
+                    try:
+                        font_color = shape_props['font_color']
+                        if font_color.startswith('#'):
+                            # Convert hex to RGB
+                            rgb = tuple(int(font_color[j:j+2], 16) for j in (1, 3, 5))
+                            text_range.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                            updated_info['properties_applied'].append('font_color')
+                            logger.debug(f"Applied font color {font_color} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply font color to shape {shape.Name}: {e}")
+                
+                # Apply bold formatting
+                if 'bold' in shape_props and shape_props['bold'] is not None:
+                    try:
+                        bold = bool(shape_props['bold'])
+                        text_range.Font.Bold = bold
+                        updated_info['properties_applied'].append('bold')
+                        logger.debug(f"Applied bold {bold} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply bold formatting to shape {shape.Name}: {e}")
+                
+                # Apply italic formatting
+                if 'italic' in shape_props and shape_props['italic'] is not None:
+                    try:
+                        italic = bool(shape_props['italic'])
+                        text_range.Font.Italic = italic
+                        updated_info['properties_applied'].append('italic')
+                        logger.debug(f"Applied italic {italic} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply italic formatting to shape {shape.Name}: {e}")
+                
+                # Apply underline formatting
+                if 'underline' in shape_props and shape_props['underline'] is not None:
+                    try:
+                        underline = bool(shape_props['underline'])
+                        text_range.Font.Underline = underline
+                        updated_info['properties_applied'].append('underline')
+                        logger.debug(f"Applied underline {underline} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply underline formatting to shape {shape.Name}: {e}")
+                
+                # Apply text alignment
+                if 'text_align' in shape_props and shape_props['text_align']:
+                    try:
+                        text_align = shape_props['text_align'].lower()
+                        # Map text alignment values to PowerPoint constants
+                        align_map = {
+                            'left': 1,     # ppAlignLeft
+                            'center': 2,   # ppAlignCenter
+                            'right': 3,    # ppAlignRight
+                            'justify': 4   # ppAlignJustify
+                        }
+                        if text_align in align_map:
+                            text_range.ParagraphFormat.Alignment = align_map[text_align]
+                            updated_info['properties_applied'].append('text_align')
+                            logger.debug(f"Applied text alignment {text_align} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply text alignment to shape {shape.Name}: {e}")
+                
+                # Apply vertical alignment
+                if 'vertical_align' in shape_props and shape_props['vertical_align']:
+                    try:
+                        vertical_align = shape_props['vertical_align'].lower()
+                        # Map vertical alignment values to PowerPoint constants
+                        valign_map = {
+                            'top': 1,      # msoAnchorTop
+                            'middle': 2,   # msoAnchorMiddle
+                            'bottom': 3    # msoAnchorBottom
+                        }
+                        if vertical_align in valign_map:
+                            shape.TextFrame.VerticalAnchor = valign_map[vertical_align]
+                            updated_info['properties_applied'].append('vertical_align')
+                            logger.debug(f"Applied vertical alignment {vertical_align} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply vertical alignment to shape {shape.Name}: {e}")
             
             # Apply size properties (width and height)
             if 'width' in shape_props and shape_props['width']:

@@ -175,19 +175,40 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        slide_number: slide1 | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50
+        slide_number: slide1 | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
-        2. List each shape's metadata as: shape_name, fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom), width, height, left position, top position.
-        3. Size parameters: width and height should be in points (typical range: 50-500 points).
-        4. Position parameters: left (horizontal position from left edge) and top (vertical position from top edge) should be in points (typical range: 0-720 for left, 0-540 for top).
-        5. Provide all values using their precise properties writable by PyCOM to PowerPoint.
-        6. Separate multiple shape updates with pipes (|).
-        7. Always use concise keys for properties and ensure proper formatting for parsing.
-        8. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created as a blank slide. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide will remain blank.
+        2. List each shape's metadata as: shape_name, visual properties, size/position properties, text properties (if applicable).
+        3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
+        4. SIZE/POSITION PROPERTIES: width, height (in points, typical range: 50-500), left, top (in points, typical range: 0-720 for left, 0-540 for top).
+        5. TEXT PROPERTIES (for shapes with text content):
+           - text: The actual text content (enclose in quotes)
+           - font_size: Font size in points (typical range: 8-72)
+           - font_name: Font family name (e.g., "Arial", "Times New Roman", "Calibri")
+           - font_color: Font color in hex format (e.g., "#000000" for black)
+           - bold: true or false for bold formatting
+           - italic: true or false for italic formatting
+           - underline: true or false for underline formatting
+           - text_align: "left", "center", "right", or "justify" for horizontal alignment
+           - vertical_align: "top", "middle", or "bottom" for vertical alignment
+        6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
+           - paragraph_name, geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
+        7. TEXT FORMATTING EXAMPLES:
+           - Title text: font_size=24, font_name="Arial", bold=true, text_align="center"
+           - Body text: font_size=12, font_name="Calibri", text_align="left"
+           - Bullet points: text="• Point 1\n• Point 2\n• Point 3", text_align="left"
+        8. Provide all values using their precise properties writable by PyCOM to PowerPoint.
+        9. Separate multiple shape updates with pipes (|).
+        10. Always use concise keys for properties and ensure proper formatting for parsing.
+        11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created as a blank slide. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
+        12. TEXT CONTENT RULES:
+            - Use \n for line breaks within text
+            - Enclose text content in double quotes
+            - For existing shapes, include text property to add/update text content
+            - For new text boxes, always specify geom="textbox"
         """
 
         # Get the user id for the API key
