@@ -6,8 +6,9 @@ from dataclasses import dataclass
 @dataclass
 class Message:
     role: str  # 'user', 'assistant', 'system', 'tool'
-    content: str
+    content: Union[str, List[Dict[str, Union[str, Dict]]]]  # Support both text and multimodal content
     name: Optional[str] = None
+    attachments: Optional[List[Dict[str, str]]] = None
 
 @dataclass
 class ToolCall:
