@@ -60,20 +60,28 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                 if not entry:
                     continue
 
-                # Extract shape properties
+                # Parse shape entry: "shape_name, prop1=value1, prop2=value2, ..."
+                shape_parts = [p.strip() for p in entry.split(',')]
+                if not shape_parts:
+                    continue
+                
+                # First part is the shape name
+                shape_name = shape_parts[0].strip()
+                if not shape_name:
+                    continue
+                
+                # Rest are properties
                 shape_data = {}
-                shape_properties = entry.split(',')
-
-                for prop in shape_properties:
-                    key_value = prop.split('=', 1)
-                    if len(key_value) == 2:
-                        key, value = key_value
-                        shape_data[key.strip()] = value.strip().strip('"')
-
-                shape_name = shape_data.pop('shape_name', None)
+                for prop in shape_parts[1:]:
+                    if '=' in prop:
+                        key_value = prop.split('=', 1)
+                        if len(key_value) == 2:
+                            key, value = key_value
+                            shape_data[key.strip()] = value.strip().strip('"')
 
                 if shape_name:
                     result[slide_number][shape_name] = shape_data
+                    logger.debug(f"Parsed shape '{shape_name}' for slide {slide_number} with properties: {shape_data}")
 
         if not result:
             logger.error("No valid slides or shape entries found in markdown")

@@ -237,8 +237,12 @@ class PowerPointWorker:
                                         break
                                 
                                 if shape is None:
-                                    logger.warning(f"Shape '{shape_name}' not found in slide {slide_number}")
-                                    continue
+                                    # Create new shape if it doesn't exist
+                                    logger.info(f"Creating new shape '{shape_name}' in slide {slide_number}")
+                                    shape = self._create_new_shape(slide, shape_name, shape_props)
+                                    if shape is None:
+                                        logger.warning(f"Failed to create shape '{shape_name}' in slide {slide_number}")
+                                        continue
                                 
                                 # Apply shape properties
                                 updated_shape = self._apply_shape_properties(shape, shape_props, slide_number)
@@ -260,6 +264,100 @@ class PowerPointWorker:
                 return updated_shapes
         
         return self._execute(_write_shapes)
+    
+    def add_blank_slide(self, slide_number: int = None) -> bool:
+        """Add a new blank slide to the presentation.
+        
+        Args:
+            slide_number: Optional position to insert the slide (1-based). 
+                         If None, adds at the end.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        def _add_blank_slide() -> bool:
+            try:
+                if not self._presentation:
+                    logger.error("No presentation is open")
+                    return False
+                
+                # Get the slide layout (use the first layout, typically blank)
+                slide_layout = self._presentation.SlideMaster.CustomLayouts(1)
+                
+                if slide_number is None:
+                    # Add at the end
+                    new_slide = self._presentation.Slides.AddSlide(
+                        self._presentation.Slides.Count + 1, 
+                        slide_layout
+                    )
+                    logger.info(f"Added new blank slide at position {self._presentation.Slides.Count}")
+                else:
+                    # Add at specific position
+                    new_slide = self._presentation.Slides.AddSlide(slide_number, slide_layout)
+                    logger.info(f"Added new blank slide at position {slide_number}")
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error adding blank slide: {e}")
+                return False
+        
+        return self._execute(_add_blank_slide)
+    
+    def _create_new_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
+        """Create a new shape on the slide with the specified properties.
+        
+        Args:
+            slide: PowerPoint slide object
+            shape_name: Name for the new shape
+            shape_props: Dictionary of shape properties including size and position
+            
+        Returns:
+            The created shape object or None if creation failed
+        """
+        try:
+            # Get position and size from shape_props, with defaults
+            left = float(shape_props.get('left', 100))  # Default left position
+            top = float(shape_props.get('top', 100))    # Default top position
+            width = float(shape_props.get('width', 100))  # Default width
+            height = float(shape_props.get('height', 100))  # Default height
+            
+            # Get geometry type
+            geom = shape_props.get('geom', 'rectangle').lower()
+            
+            # Map geometry types to PowerPoint constants
+            geom_map = {
+                'rectangle': 1,      # msoShapeRectangle
+                'circle': 9,         # msoShapeOval
+                'oval': 9,           # msoShapeOval
+                'square': 1,         # msoShapeRectangle (we'll make it square by setting width=height)
+                'triangle': 10,      # msoShapeIsoscelesTriangle
+                'diamond': 4,        # msoShapeDiamond
+                'line': 20,          # msoShapeLine
+                'arrow': 13,         # msoShapeRightArrow
+            }
+            
+            # Get the shape type constant
+            shape_type = geom_map.get(geom, 1)  # Default to rectangle
+            
+            # For squares, ensure width equals height
+            if geom == 'square':
+                # Use the smaller dimension to ensure it fits
+                size = min(width, height)
+                width = height = size
+            
+            # Create the shape
+            shape = slide.Shapes.AddShape(shape_type, left, top, width, height)
+            
+            # Set the shape name
+            shape.Name = shape_name
+            
+            logger.info(f"Created new shape '{shape_name}' with geometry '{geom}' at ({left}, {top}) with size ({width}, {height})")
+            return shape
+            
+        except Exception as e:
+            logger.error(f"Error creating new shape '{shape_name}': {e}")
+            return None
     
     def _apply_shape_properties(self, shape, shape_props: Dict[str, Any], slide_number: int) -> Dict[str, Any]:
         """Apply properties to a PowerPoint shape.
@@ -346,6 +444,44 @@ class PowerPointWorker:
                 except Exception as e:
                     logger.warning(f"Could not apply geometry to shape {shape.Name}: {e}")
             
+            # Apply size properties (width and height)
+            if 'width' in shape_props and shape_props['width']:
+                try:
+                    width = float(shape_props['width'])
+                    shape.Width = width
+                    updated_info['properties_applied'].append('width')
+                    logger.debug(f"Applied width {width} to shape {shape.Name}")
+                except Exception as e:
+                    logger.warning(f"Could not apply width to shape {shape.Name}: {e}")
+            
+            if 'height' in shape_props and shape_props['height']:
+                try:
+                    height = float(shape_props['height'])
+                    shape.Height = height
+                    updated_info['properties_applied'].append('height')
+                    logger.debug(f"Applied height {height} to shape {shape.Name}")
+                except Exception as e:
+                    logger.warning(f"Could not apply height to shape {shape.Name}: {e}")
+            
+            # Apply position properties (left and top)
+            if 'left' in shape_props and shape_props['left']:
+                try:
+                    left = float(shape_props['left'])
+                    shape.Left = left
+                    updated_info['properties_applied'].append('left')
+                    logger.debug(f"Applied left position {left} to shape {shape.Name}")
+                except Exception as e:
+                    logger.warning(f"Could not apply left position to shape {shape.Name}: {e}")
+            
+            if 'top' in shape_props and shape_props['top']:
+                try:
+                    top = float(shape_props['top'])
+                    shape.Top = top
+                    updated_info['properties_applied'].append('top')
+                    logger.debug(f"Applied top position {top} to shape {shape.Name}")
+                except Exception as e:
+                    logger.warning(f"Could not apply top position to shape {shape.Name}: {e}")
+            
             return updated_info
             
         except Exception as e:
@@ -411,6 +547,36 @@ class PowerPointWriter:
                     self._worker = PowerPointWorker()
                     self._initialized = True
                     logger.info("PowerPointWriter initialized")
+    
+    def add_blank_slide(self, file_path: str, slide_number: int = None) -> bool:
+        """Add a new blank slide to the PowerPoint presentation.
+        
+        Args:
+            file_path: Path to the PowerPoint file
+            slide_number: Optional position to insert the slide (1-based). 
+                         If None, adds at the end.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Ensure the presentation is open in the worker thread
+            self._worker.ensure_presentation(file_path)
+            
+            # Add the blank slide
+            success = self._worker.add_blank_slide(slide_number)
+            
+            if success:
+                # Save changes
+                self._worker.save()
+                logger.info(f"Successfully added blank slide to {file_path}")
+            
+            return success
+            
+        except Exception as e:
+            error_msg = f"Error adding blank slide: {e}"
+            logger.error(error_msg, exc_info=True)
+            return False
     
     def write_to_existing(
         self, 

@@ -175,16 +175,18 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        slide_number: slide1 | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle"
+        slide_number: slide1 | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
-        2. List each shape's metadata as: shape_name, fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
-        3. Provide all values using their precise properties writable by PyCOM to PowerPoint.
-        4. Separate multiple shape updates with pipes (|).
-        5. Always use concise keys for properties and ensure proper formatting for parsing.
+        2. List each shape's metadata as: shape_name, fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom), width, height, left position, top position.
+        3. Size parameters: width and height should be in points (typical range: 50-500 points).
+        4. Position parameters: left (horizontal position from left edge) and top (vertical position from top edge) should be in points (typical range: 0-720 for left, 0-540 for top).
+        5. Provide all values using their precise properties writable by PyCOM to PowerPoint.
+        6. Separate multiple shape updates with pipes (|).
+        7. Always use concise keys for properties and ensure proper formatting for parsing.
         """
 
         # Get the user id for the API key
@@ -262,7 +264,7 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
             return error_msg
 
         # Stream progress to frontend
-        writer.write({"completed": f"Set up plan for editing PowerPoint file: {workspace_path}"})
+        writer({"completed": f"Set up plan for editing PowerPoint file: {workspace_path}"})
 
         markdown_response = llm_response.content
         logger.info(f"LLM generated markdown for shapes: {markdown_response}")
@@ -309,7 +311,7 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
                 temp_file_path = workspace_path
             
             # Stream progress to frontend
-            writer.write({"executing": f"Editing PowerPoint file: {workspace_path}"})
+            writer({"executing": f"Editing PowerPoint file: {workspace_path}"})
             
             # Write to PowerPoint using the writer
             ppt_writer = PowerPointWriter()
@@ -345,6 +347,71 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
 
 
 # POWERPOINT_TOOLS _________________________________________________________________________________________________________________________________
+@tool
+def add_blank_slide_to_powerpoint(workspace_path: str, slide_number: int = None) -> str:
+    """
+    Add a new blank slide to a PowerPoint presentation.
+    
+    Args:
+        workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
+        slide_number: Optional position to insert the slide (1-based). If None, adds at the end.
+    
+    Returns:
+        JSON string with the result of the operation
+    """
+    logger.info(f"Adding blank slide to PowerPoint: {workspace_path}")
+    writer = get_writer()
+    writer({"executing": f"Adding blank slide to PowerPoint file: {workspace_path}"})
+    
+    try:
+        # Get the file path from mappings
+        MAPPINGS_FILE = python_server_dir / "metadata" / "__cache" / "files_mappings.json"
+        
+        try:
+            with open(MAPPINGS_FILE, 'r') as f:
+                mappings = json.load(f)
+            temp_file_path = mappings.get(workspace_path) or next(
+                (v for k, v in mappings.items() if k.endswith(Path(workspace_path).name)), 
+                workspace_path
+            )
+            logger.debug(f"Using temp file path: {temp_file_path}")
+        except Exception as e:
+            logger.error(f"Error processing file mappings: {e}")
+            temp_file_path = workspace_path
+        
+        # Create PowerPoint writer and add blank slide
+        from powerpoint.editing.powerpoint_writer import PowerPointWriter
+        
+        ppt_writer = PowerPointWriter()
+        success = ppt_writer.add_blank_slide(temp_file_path, slide_number)
+        
+        if success:
+            position_text = f"at position {slide_number}" if slide_number else "at the end"
+            logger.info(f"Successfully added blank slide {position_text}")
+            
+            result = {
+                "status": "success",
+                "message": f"Blank slide added {position_text}",
+                "slide_position": slide_number or "end"
+            }
+            
+            return json.dumps(result, cls=ExtendedJSONEncoder, indent=2)
+        else:
+            logger.error("Failed to add blank slide")
+            return json.dumps({
+                "status": "error",
+                "message": "Failed to add blank slide"
+            }, indent=2)
+        
+    except Exception as e:
+        error_msg = f"Error adding blank slide: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return json.dumps({
+            "status": "error",
+            "message": error_msg
+        }, indent=2)
+
+
 @tool
 def get_full_powerpoint_summary(workspace_path: str) -> str:
     """
@@ -571,6 +638,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
 
 # Export all PowerPoint tools in a list for easy importing
 POWERPOINT_TOOLS = [
+    add_blank_slide_to_powerpoint,
     get_full_powerpoint_summary,
     get_powerpoint_slide_details,
     edit_powerpoint
