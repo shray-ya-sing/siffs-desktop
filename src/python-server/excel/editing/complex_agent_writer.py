@@ -208,6 +208,19 @@ class ExcelWorker:
         
         self._execute(_ensure_workbook)
     
+    def _apply_to_single_cell(self, sheet, cell, cell_data, apply_green_highlight, updated_cells) -> None:
+        """Apply formatting and data to a single cell."""
+        try:
+            updated_cell = self._apply_cell_formatting(cell, cell_data)
+            if updated_cell:
+                updated_cells.append(updated_cell)
+            # Add a green highlight for visual indication of edit
+            if apply_green_highlight:
+                self._apply_green_highlight(cell)
+        except Exception as e:
+            logger.error(f"Error updating cell {cell.address}: {e}")
+
+
     def write_cells(self, sheet_name: str, cells: List[Dict[str, Any]], apply_green_highlight: bool = False) -> List[Dict[str, Any]]:
         """Write data to cells in the specified sheet.
         
@@ -267,18 +280,16 @@ class ExcelWorker:
                         continue
                     
                     try:
-                        cell = sheet.range(cell_ref)
-                        updated_cell = self._apply_cell_formatting(cell, cell_data)
-                        #log the updated cell dict
-                        #json_str = json.dumps(updated_cell, indent=2)
-                        #logger.info(json_str)
-                        if updated_cell:
-                            updated_cells.append(updated_cell)
-                        # Add a green highlight for visual indication of edit
-                        if apply_green_highlight:
-                            self._apply_green_highlight(cell)
-
-
+                        # Check if cell_ref is a range
+                        if ':' in cell_ref:
+                            # Expand the range into individual cells
+                            cell_range = sheet.range(cell_ref)
+                            for cell in cell_range:
+                                self._apply_to_single_cell(sheet, cell, cell_data, apply_green_highlight, updated_cells)
+                        else:
+                            # Single cell
+                            cell = sheet.range(cell_ref)
+                            self._apply_to_single_cell(sheet, cell, cell_data, apply_green_highlight, updated_cells)
                     except Exception as e:
                         logger.error(f"Error updating cell {cell_ref}: {e}")
                         continue
@@ -1108,14 +1119,9 @@ class ExcelWorker:
                     logger.error(f"Failed to add series {series_key} to chart {chart_name}: {e}")
                     logger.debug(f"Series creation failed at step for {series_key}", exc_info=True)
             
-            # Set chart title if provided
-            if 'title' in chart_data and chart_obj:
-                try:
-                    chart_obj.HasTitle = True
-                    chart_obj.ChartTitle.Text = chart_data['title']
-                    logger.info(f"Chart title set to: {chart_data['title']}")
-                except Exception as e:
-                    logger.warning(f"Could not set chart title: {e}")
+            # Apply all chart styling properties
+            if chart_obj:
+                self._apply_chart_styling(chart_obj, chart_data, chart_name)
             
             logger.info(f"Created chart {chart_name} with type {chart_type}")
             
@@ -1179,6 +1185,295 @@ class ExcelWorker:
         except Exception as e:
             logger.error(f"Error deleting chart {chart_name}: {e}")
             raise
+    
+    def _apply_chart_styling(self, chart_obj, chart_data: Dict[str, Any], chart_name: str):
+        """Apply comprehensive styling to a chart object."""
+        logger.info(f"Applying styling to chart {chart_name}")
+        
+        # Title styling
+        if 'title' in chart_data:
+            try:
+                chart_obj.HasTitle = True
+                chart_obj.ChartTitle.Text = chart_data['title']
+                logger.info(f"Set chart title: {chart_data['title']}")
+                
+                # Title position
+                if 'title_pos' in chart_data:
+                    title_pos = chart_data['title_pos'].lower()
+                    if title_pos in ['above', 'below', 'left', 'right', 'overlay']:
+                        # Map position to Excel constants
+                        pos_map = {
+                            'above': -4107,  # xlTop
+                            'below': -4107,  # xlBottom
+                            'left': -4131,   # xlLeft
+                            'right': -4152,  # xlRight
+                            'overlay': -4117 # xlOverlay
+                        }
+                        chart_obj.ChartTitle.Position = pos_map.get(title_pos, -4107)
+                        logger.info(f"Set chart title position: {title_pos}")
+                
+                # Title font
+                if 'title_font' in chart_data:
+                    self._apply_font_to_object(chart_obj.ChartTitle.Font, chart_data['title_font'], f"title of chart {chart_name}")
+                    
+            except Exception as e:
+                logger.warning(f"Could not apply title styling to chart {chart_name}: {e}")
+        
+        # Legend styling
+        if 'legend' in chart_data:
+            try:
+                chart_obj.HasLegend = chart_data['legend']
+                logger.info(f"Set chart legend visibility: {chart_data['legend']}")
+                
+                if chart_data['legend'] and 'legend_pos' in chart_data:
+                    legend_pos = chart_data['legend_pos'].lower()
+                    pos_map = {
+                        'bottom': -4107,  # xlBottom
+                        'top': -4160,     # xlTop
+                        'left': -4131,    # xlLeft
+                        'right': -4152,   # xlRight
+                        'corner': -4142   # xlCorner
+                    }
+                    if legend_pos in pos_map:
+                        chart_obj.Legend.Position = pos_map[legend_pos]
+                        logger.info(f"Set legend position: {legend_pos}")
+                        
+            except Exception as e:
+                logger.warning(f"Could not apply legend styling to chart {chart_name}: {e}")
+        
+        # X-Axis styling
+        try:
+            x_axis = chart_obj.Axes(1)  # xlCategory = 1
+            self._apply_axis_styling(x_axis, chart_data, 'x', f"X-axis of chart {chart_name}")
+        except Exception as e:
+            logger.warning(f"Could not access X-axis for chart {chart_name}: {e}")
+        
+        # Y-Axis styling
+        try:
+            y_axis = chart_obj.Axes(2)  # xlValue = 2
+            self._apply_axis_styling(y_axis, chart_data, 'y', f"Y-axis of chart {chart_name}")
+        except Exception as e:
+            logger.warning(f"Could not access Y-axis for chart {chart_name}: {e}")
+        
+        # Series colors
+        try:
+            series_collection = chart_obj.SeriesCollection()
+            for i in range(1, series_collection.Count + 1):
+                series = series_collection.Item(i)
+                color_key = f's{i}_color'
+                if color_key in chart_data:
+                    try:
+                        color = chart_data[color_key]
+                        if color.startswith('#'):
+                            # Convert hex to RGB
+                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                            series.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                            logger.info(f"Set series {i} color: {color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set color for series {i} in chart {chart_name}: {e}")
+        except Exception as e:
+            logger.warning(f"Could not apply series colors to chart {chart_name}: {e}")
+        
+        # Plot area styling
+        try:
+            plot_area = chart_obj.PlotArea
+            
+            if 'plot_fill' in chart_data:
+                try:
+                    color = chart_data['plot_fill']
+                    if color.startswith('#'):
+                        rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                        plot_area.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.info(f"Set plot area fill color: {color}")
+                except Exception as e:
+                    logger.warning(f"Could not set plot area fill for chart {chart_name}: {e}")
+            
+            if 'plot_border' in chart_data:
+                try:
+                    has_border = chart_data['plot_border']
+                    if has_border:
+                        plot_area.Format.Line.Visible = True
+                        if 'plot_border_color' in chart_data:
+                            color = chart_data['plot_border_color']
+                            if color.startswith('#'):
+                                rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                                plot_area.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                    else:
+                        plot_area.Format.Line.Visible = False
+                    logger.info(f"Set plot area border: {has_border}")
+                except Exception as e:
+                    logger.warning(f"Could not set plot area border for chart {chart_name}: {e}")
+                    
+        except Exception as e:
+            logger.warning(f"Could not access plot area for chart {chart_name}: {e}")
+        
+        # Chart area styling
+        try:
+            chart_area = chart_obj.ChartArea
+            
+            if 'chart_fill' in chart_data:
+                try:
+                    color = chart_data['chart_fill']
+                    if color.startswith('#'):
+                        rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                        chart_area.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.info(f"Set chart area fill color: {color}")
+                except Exception as e:
+                    logger.warning(f"Could not set chart area fill for chart {chart_name}: {e}")
+            
+            if 'chart_border' in chart_data:
+                try:
+                    has_border = chart_data['chart_border']
+                    if has_border:
+                        chart_area.Format.Line.Visible = True
+                        if 'chart_border_color' in chart_data:
+                            color = chart_data['chart_border_color']
+                            if color.startswith('#'):
+                                rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                                chart_area.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                    else:
+                        chart_area.Format.Line.Visible = False
+                    logger.info(f"Set chart area border: {has_border}")
+                except Exception as e:
+                    logger.warning(f"Could not set chart area border for chart {chart_name}: {e}")
+                    
+        except Exception as e:
+            logger.warning(f"Could not access chart area for chart {chart_name}: {e}")
+        
+        # Width styling (if provided)
+        if 'width' in chart_data:
+            try:
+                chart_obj.ChartArea.Width = int(chart_data['width'])
+                logger.info(f"Set chart width: {chart_data['width']}")
+            except Exception as e:
+                logger.warning(f"Could not set chart width for chart {chart_name}: {e}")
+        
+        logger.info(f"Completed styling for chart {chart_name}")
+    
+    def _apply_axis_styling(self, axis, chart_data: Dict[str, Any], axis_prefix: str, axis_name: str):
+        """Apply styling to a chart axis."""
+        logger.debug(f"Applying styling to {axis_name}")
+        
+        # Axis title
+        title_key = f'{axis_prefix}_title'
+        if title_key in chart_data:
+            try:
+                axis.HasTitle = True
+                axis.AxisTitle.Text = chart_data[title_key]
+                logger.info(f"Set {axis_name} title: {chart_data[title_key]}")
+                
+                # Axis title font
+                font_key = f'{axis_prefix}_title_font'
+                if font_key in chart_data:
+                    self._apply_font_to_object(axis.AxisTitle.Font, chart_data[font_key], f"title of {axis_name}")
+                    
+            except Exception as e:
+                logger.warning(f"Could not set title for {axis_name}: {e}")
+        
+        # Axis labels visibility
+        labels_key = f'{axis_prefix}_labels'
+        if labels_key in chart_data:
+            try:
+                axis.HasMajorGridlines = chart_data[labels_key]
+                logger.info(f"Set {axis_name} labels visibility: {chart_data[labels_key]}")
+            except Exception as e:
+                logger.warning(f"Could not set labels visibility for {axis_name}: {e}")
+        
+        # Axis tick marks
+        ticks_key = f'{axis_prefix}_ticks'
+        if ticks_key in chart_data:
+            try:
+                tick_value = 2 if chart_data[ticks_key] else 1  # xlOutside = 2, xlNone = 1
+                axis.MajorTickMark = tick_value
+                logger.info(f"Set {axis_name} tick marks: {chart_data[ticks_key]}")
+            except Exception as e:
+                logger.warning(f"Could not set tick marks for {axis_name}: {e}")
+        
+        # Axis gridlines
+        grid_key = f'{axis_prefix}_grid'
+        if grid_key in chart_data:
+            try:
+                axis.HasMajorGridlines = chart_data[grid_key]
+                logger.info(f"Set {axis_name} gridlines: {chart_data[grid_key]}")
+                
+                # Gridline color
+                if chart_data[grid_key]:
+                    grid_color_key = f'{axis_prefix}_grid_color'
+                    if grid_color_key in chart_data:
+                        try:
+                            color = chart_data[grid_color_key]
+                            if color.startswith('#'):
+                                rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                                axis.MajorGridlines.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                logger.info(f"Set {axis_name} gridline color: {color}")
+                        except Exception as e:
+                            logger.warning(f"Could not set gridline color for {axis_name}: {e}")
+                            
+            except Exception as e:
+                logger.warning(f"Could not set gridlines for {axis_name}: {e}")
+        
+        # Axis line color
+        line_color_key = f'{axis_prefix}_line_color'
+        if line_color_key in chart_data:
+            try:
+                color = chart_data[line_color_key]
+                if color.startswith('#'):
+                    rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                    axis.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                    logger.info(f"Set {axis_name} line color: {color}")
+            except Exception as e:
+                logger.warning(f"Could not set line color for {axis_name}: {e}")
+        
+        # Axis line weight
+        line_weight_key = f'{axis_prefix}_line_weight'
+        if line_weight_key in chart_data:
+            try:
+                weight = chart_data[line_weight_key]
+                axis.Format.Line.Weight = weight
+                logger.info(f"Set {axis_name} line weight: {weight}")
+            except Exception as e:
+                logger.warning(f"Could not set line weight for {axis_name}: {e}")
+    
+    def _apply_font_to_object(self, font_obj, font_data, object_name: str):
+        """Apply font styling to a font object."""
+        try:
+            if isinstance(font_data, dict):
+                # Font data is already parsed
+                if 'name' in font_data:
+                    font_obj.Name = font_data['name']
+                    logger.debug(f"Set font name for {object_name}: {font_data['name']}")
+                if 'size' in font_data:
+                    font_obj.Size = font_data['size']
+                    logger.debug(f"Set font size for {object_name}: {font_data['size']}")
+                if 'bold' in font_data:
+                    font_obj.Bold = font_data['bold']
+                    logger.debug(f"Set font bold for {object_name}: {font_data['bold']}")
+                if 'italic' in font_data:
+                    font_obj.Italic = font_data['italic']
+                    logger.debug(f"Set font italic for {object_name}: {font_data['italic']}")
+                if 'color' in font_data:
+                    color = font_data['color']
+                    if color.startswith('#'):
+                        rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                        font_obj.Color = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.debug(f"Set font color for {object_name}: {color}")
+            else:
+                # Font data is a string, try to parse it
+                if isinstance(font_data, str) and font_data.startswith('[') and font_data.endswith(']'):
+                    font_parts = font_data[1:-1].split(',')
+                    if len(font_parts) >= 5:
+                        font_obj.Name = font_parts[0].strip()
+                        font_obj.Size = int(font_parts[1].strip())
+                        font_obj.Bold = font_parts[2].strip().lower() == 'true'
+                        font_obj.Italic = font_parts[3].strip().lower() == 'true'
+                        color = font_parts[4].strip()
+                        if color.startswith('#'):
+                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                            font_obj.Color = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.debug(f"Applied font styling to {object_name}")
+                        
+        except Exception as e:
+            logger.warning(f"Could not apply font styling to {object_name}: {e}")
 
 
     

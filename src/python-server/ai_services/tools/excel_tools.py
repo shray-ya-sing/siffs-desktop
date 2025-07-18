@@ -200,7 +200,7 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         sheet_name: Name of the sheet| A1, [=SUM(B1:B10)] | B1, [Text value], b=true, it=true, sz="12", st="calibri", font="#000000", fill="#0f0f0f", ind="1", ha="center", va="center", bord_t="l=2c=#000000w=4", bord_b="l=2c=#000000w=4", bord_l="l=2c=#000000w=4", bord_r="l=2c=#000000w=4", num_fmt=[#,000.0], cmt=[This is a comment], dv=[list:Option1,Option2,Option3] | C1, 123 | chart_name="chart1", type="line", height="200", top="50", left="50", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC. 
-        Just return the pipe-delimited markdown containing cell formulas and formatting properties in the specified format.
+        Just return the pipe-delimited markdown containing cell formulas, formatting properties, and chart properties in the specified format.
 
         RULES:
         1. Start each sheet with 'sheet_name: exact sheet name' followed by a pipe (|).
@@ -220,8 +220,28 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         13. "ha" and "va" should be the horizontal and vertical alignment of the cell. Both are string properties. Possible values for ha are "center", "right", "left". Possible values for va are "center", "top", "bottom"
         14. "dv" is for data validation. Format: dv=[type:values]. Available types: list (dropdown), number (whole numbers), decimal (decimal numbers), date, time, text_length, custom. Examples: dv=[list:Yes,No,Maybe], dv=[number:1,100] (between 1-100), dv=[decimal:0.0,1.0], dv=[date:2024-01-01,2024-12-31], dv=[text_length:1,50] (1-50 characters), dv=[custom:A1>0] (custom formula)
         14. Instructions may require creation or editing of charts. Chart metadata should be created pipe delimited similar to cell metadata and positioned after the cell metadata of the sheet. KEY difference is that whereas cell metadata starts with the cell reference C1, A1, etc chart metadata item starts with chart_name="chart_name_here" to specify the chart name. Name is used to access the correct chart. The following chart types are available: 3d_area, 3d_area_stacked, 3d_area_stacked_100, 3d_bar_clustered, 3d_bar_stacked, 3d_bar_stacked_100, 3d_column, 3d_column_clustered, 3d_column_stacked, 3d_column_stacked_100, 3d_line, 3d_pie, 3d_pie_exploded, area, area_stacked, area_stacked_100, bar_clustered, bar_of_pie, bar_stacked, bar_stacked_100, bubble, bubble_3d_effect, column_clustered, column_stacked, column_stacked_100, combination, cone_bar_clustered, cone_bar_stacked, cone_bar_stacked_100, cone_col, cone_col_clustered, cone_col_stacked, cone_col_stacked_100, cylinder_bar_clustered, cylinder_bar_stacked, cylinder_bar_stacked_100, cylinder_col, cylinder_col_clustered, cylinder_col_stacked, cylinder_col_stacked_100, doughnut, doughnut_exploded, line, line_markers, line_markers_stacked, line_markers_stacked_100, line_stacked, line_stacked_100, pie, pie_exploded, pie_of_pie, pyramid_bar_clustered, pyramid_bar_stacked, pyramid_bar_stacked_100, pyramid_col, pyramid_col_clustered, pyramid_col_stacked, pyramid_col_stacked_100, radar, radar_filled, radar_markers, stock_hlc, stock_ohlc, stock_vhlc, stock_vohlc, surface, surface_top_view, surface_top_view_wireframe, surface_wireframe, xy_scatter, xy_scatter_lines, xy_scatter_lines_no_markers, xy_scatter_smooth, xy_scatter_smooth_no_markers. 
-        Specify the type of chart with type="chart_type". Specify height and position of the chart with height="height_value", top="top_value", left="left_value". Width and size will be auto-set. Specify the source data range of the chart as: x_axis="x_axis_range", series_1="y_axis_range_1", series_2="y_axis_range_2", etc. Optionally specify series names with series_1_name="name_cell_1", series_2_name="name_cell_2", etc. For example, chart_name="my_chart", type="line", height="100", left="10", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1", series_3="D1:D10", series_3_name="D1".
-        top, height and left are INTEGERS ONLY, not cell references. something like left="B6" is invalid. 
+        
+        CHART PROPERTIES (use concise shorthand notation):
+        - Basic: type="chart_type", height="height_value", top="top_value", left="left_value", width="width_value"
+        - Data: x_axis="x_axis_range", series_1="y_axis_range_1", series_2="y_axis_range_2", series_1_name="name_cell_1", series_2_name="name_cell_2"
+        - Title: title="Chart Title", title_pos="above/below/left/right/overlay", title_font=[Arial,12,true,false,#000000] (font,size,bold,italic,color)
+        - Legend: legend="true/false", legend_pos="bottom/top/left/right/corner"
+        - X-Axis: x_title="X Axis Title", x_title_font=[Arial,10,false,false,#000000], x_labels="true/false", x_ticks="true/false", x_grid="true/false", x_grid_color="#CCCCCC", x_line_color="#000000", x_line_weight="1"
+        - Y-Axis: y_title="Y Axis Title", y_title_font=[Arial,10,false,false,#000000], y_labels="true/false", y_ticks="true/false", y_grid="true/false", y_grid_color="#CCCCCC", y_line_color="#000000", y_line_weight="1"
+        - Series Colors: s1_color="#FF0000", s2_color="#00FF00", s3_color="#0000FF" (for series_1, series_2, series_3)
+        - Plot Area: plot_fill="#FFFFFF", plot_border="true/false", plot_border_color="#000000"
+        - Chart Area: chart_fill="#FFFFFF", chart_border="true/false", chart_border_color="#000000"
+        
+        CHART SHORTHAND REFERENCE:
+        - title_pos: "above"(default), "below", "left", "right", "overlay"
+        - legend_pos: "bottom"(default), "top", "left", "right", "corner"
+        - Font format: [font_name,size,bold,italic,color] where bold/italic are true/false
+        - Grid/line colors: Use hex codes like #000000 for black, #CCCCCC for light gray
+        - Line weights: 1(thin), 2(medium), 3(thick), 4(very thick)
+        
+        EXAMPLE: chart_name="sales_chart", type="line", height="300", left="50", title="Sales Trend", title_font=[Arial,14,true,false,#000000], x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", s1_color="#FF0000", x_title="Month", y_title="Sales", x_grid="true", y_grid="true", legend="true", legend_pos="bottom"
+        
+        NOTE: Position values (top, height, left, width) are INTEGERS ONLY, not cell references. Use square brackets [...] for complex properties like fonts to avoid comma parsing issues.
 
         
         
@@ -231,14 +251,24 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         sheet_name: Income Statement| B5, [=SUM(B2:B4)] | B6, [1000], b=true | B7, [=B5-B6], it=true, font="#0000FF" | sheet_name: Assumptions| B2, [0.05] | B3, [1.2], sz="10" | C3, [=B3*1.1], num_fmt=[#,##0.00]
 
         2. Cell edits with chart creation
-        sheet_name: Income Statement| sheet_name: Assumptions| B2, [0.05] | B3, [1.2], sz="10" | C3, [=B3*1.1], num_fmt=[#,##0.00] | chart_name="chart1", type="line", height="100", left="10", x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", series_2="C1:C10", series_2_name="C1", series_3="D1:D10", series_3_name="D1" | sheet_name: Chart| chart_name="chart2", type="line", height="100", left="10", x_axis="Assumptions!A1:A10", series_1="Assumptions!B1:B10", series_1_name="Assumptions!B1", series_2="Assumptions!C1:C10", series_2_name="Assumptions!C1", series_3="Assumptions!D1:D10", series_3_name="Assumptions!D1"
+        sheet_name: Income Statement| sheet_name: Assumptions| B2, [0.05] | B3, [1.2], sz="10" | C3, [=B3*1.1], num_fmt=[#,##0.00] | chart_name="chart1", type="line", height="300", left="50", title="Revenue Trend", title_font=[Arial,14,true,false,#000000], x_axis="A1:A10", series_1="B1:B10", series_1_name="B1", s1_color="#FF0000", x_title="Month", y_title="Revenue", x_grid="true", legend="true" | sheet_name: Chart| chart_name="chart2", type="column_clustered", height="250", left="100", x_axis="Assumptions!A1:A10", series_1="Assumptions!B1:B10", series_1_name="Assumptions!B1", y_grid="false", plot_fill="#F5F5F5"
 
-        3. Only chart edit
-        sheet_name: Chart| chart_name="chart2", type="line_markers", height="200", left="50"
+        3. Only chart edit (styling update)
+        sheet_name: Chart| chart_name="chart2", type="line_markers", height="200", left="50", title="Updated Chart", s1_color="#00FF00", x_labels="false", y_grid="true", y_grid_color="#EEEEEE"
 
         4. Chart deletion
         sheet_name: Chart| chart_name="chart2", delete=true
+        
+        5. Advanced chart with all styling
+        sheet_name: Dashboard| chart_name="performance_chart", type="line", height="400", width="600", left="100", top="50", title="Performance Dashboard", title_pos="above", title_font=[Calibri,16,true,false,#2F4F4F], x_axis="A1:A12", series_1="B1:B12", series_2="C1:C12", series_1_name="B1", series_2_name="C1", s1_color="#FF6B6B", s2_color="#4ECDC4", x_title="Months", y_title="Performance %", x_title_font=[Arial,11,false,false,#666666], y_title_font=[Arial,11,false,false,#666666], x_grid="true", y_grid="true", x_grid_color="#E0E0E0", y_grid_color="#E0E0E0", legend="true", legend_pos="bottom", plot_fill="#FAFAFA", chart_fill="#FFFFFF", chart_border="true", chart_border_color="#CCCCCC"
 
+        
+        CHART PROPERTY PARSING RULES:
+        - Font properties must be in square brackets: title_font=[Arial,12,true,false,#000000]
+        - Color properties use hex codes: s1_color="#FF0000", x_grid_color="#CCCCCC"
+        - Boolean properties use strings: x_grid="true", legend="false"
+        - Position/size properties are integers: height="300", left="50"
+        - Complex properties in brackets are parsed before comma splitting
         
         DATA HANDLING RULES:
         1. NEVER overwrite or modify any existing non-blank cells

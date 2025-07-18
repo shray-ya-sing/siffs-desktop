@@ -268,8 +268,8 @@ def validate_cell_formats(formula_dict: Union[str, dict]) -> bool:
 
             #logger.debug(f"Validating cell {sheet_name}!{cell_ref}")
             
-            # Check cell reference format
-            if not re.match(r'^[A-Z]+[0-9]+$', str(cell_ref)):
+            # Check if cell reference format (single cell or range)
+            if not re.match(r'^[A-Z]+[0-9]+(:[A-Z]+[0-9]+)?$', str(cell_ref)):
                 logger.error(f"Invalid cell reference format: {cell_ref}")
                 return False
             
@@ -334,8 +334,8 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
 
     def is_valid_cell_reference(ref: str) -> bool:
         """Validate Excel cell reference format"""
-        # Handles: A1, AA1, A$1, $A1, $A$1, Sheet1!A1, 'Sheet 1'!A1
-        pattern = r'^(\'.?|(.*\'!))?(\$?[A-Za-z]+\$?[0-9]+|\$?[A-Za-z]+:\$?[A-Za-z]+\$?[0-9]+)$'
+        # Handles: A1, AA1, A$1, $A1, $A$1, Sheet1!A1, 'Sheet 1'!A1, A1:B10, A1:Z100
+        pattern = r'^(\'.?|(.*\'!))?(\$?[A-Za-z]+\$?[0-9]+(:\$?[A-Za-z]+\$?[0-9]+)?)$'
         return bool(re.match(pattern, ref))
 
     def parse_border_properties(border_string):
@@ -434,16 +434,40 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                 # Extract dv=[...] brackets separately
                 entry_dv_extracted = re.sub(r'dv=\[(.*?)\]', extract_dv_brackets, entry)
                 
-                # Now extract other brackets (formulas, number formats, comments)
-                bracket_contents = []
+                # Extract num_fmt=[...] brackets separately
+                num_fmt_content = None
+                def extract_num_fmt_brackets(match):
+                    nonlocal num_fmt_content
+                    num_fmt_content = match.group(1)  # Save the content
+                    return "num_fmt=NUM_FMT_PLACEHOLDER"
+                entry_num_fmt_extracted = re.sub(r'num_fmt=\[(.*?)\]', extract_num_fmt_brackets, entry_dv_extracted)
                 
-                # Find all content in square brackets and replace with placeholders
-                def replace_brackets(match):
-                    bracket_contents.append(match.group(1))  # Save the content
-                    return "" 
+                # Extract cmt=[...] brackets separately
+                comment_content = None
+                def extract_comment_brackets(match):
+                    nonlocal comment_content
+                    comment_content = match.group(1)  # Save the content
+                    return "cmt=COMMENT_PLACEHOLDER"
+                entry_comment_extracted = re.sub(r'cmt=\[(.*?)\]', extract_comment_brackets, entry_num_fmt_extracted)
                 
-                # Replace all [...] with placeholders
-                entry_without_brackets = re.sub(r'\[(.*?)\]', replace_brackets, entry_dv_extracted)
+                # Extract ALL chart font properties that use brackets
+                chart_font_properties = {}
+                def extract_chart_font_brackets(match):
+                    font_key = match.group(1)  # e.g., 'title_font', 'x_title_font', 'y_title_font'
+                    font_value = match.group(2)  # The font specification
+                    chart_font_properties[font_key] = font_value
+                    return f"{font_key}=FONT_PLACEHOLDER"
+                
+                # Extract all possible chart font properties
+                entry_chart_fonts_extracted = re.sub(r'(title_font|x_title_font|y_title_font)=\[(.*?)\]', extract_chart_font_brackets, entry_comment_extracted)
+                
+                # Now extract formula brackets (any remaining brackets should be formula)
+                formula_content = None
+                def extract_formula_brackets(match):
+                    nonlocal formula_content
+                    formula_content = match.group(1)  # Save the content
+                    return "FORMULA_PLACEHOLDER"  
+                entry_without_brackets = re.sub(r'\[(.*?)\]', extract_formula_brackets, entry_chart_fonts_extracted)
     
                     
                 # Split into cell reference, formula/value, and formatting properties
@@ -515,6 +539,8 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                                 chart_data['type'] = value
                             elif key == 'height':
                                 chart_data['height'] = value
+                            elif key == 'width':
+                                chart_data['width'] = value
                             elif key == 'left':
                                 chart_data['left'] = value
                             elif key == 'top':
@@ -533,8 +559,114 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                                 chart_data[key] = value
                             elif key == 'delete':
                                 chart_data['delete'] = value.lower() == 'true'
+                            # Title properties
+                            elif key == 'title':
+                                chart_data['title'] = value
+                            elif key == 'title_pos':
+                                chart_data['title_pos'] = value
+                            elif key == 'title_font':
+                                # Use extracted font content from chart_font_properties
+                                if 'title_font' in chart_font_properties:
+                                    font_value = chart_font_properties['title_font']
+                                    font_parts = font_value.split(',')
+                                    if len(font_parts) >= 5:
+                                        chart_data['title_font'] = {
+                                            'name': font_parts[0].strip(),
+                                            'size': int(font_parts[1].strip()),
+                                            'bold': font_parts[2].strip().lower() == 'true',
+                                            'italic': font_parts[3].strip().lower() == 'true',
+                                            'color': font_parts[4].strip()
+                                        }
+                                    else:
+                                        chart_data['title_font'] = font_value
+                                else:
+                                    # Fallback for backward compatibility
+                                    chart_data['title_font'] = value
+                            # Legend properties
+                            elif key == 'legend':
+                                chart_data['legend'] = value.lower() == 'true'
+                            elif key == 'legend_pos':
+                                chart_data['legend_pos'] = value
+                            # X-Axis properties
+                            elif key == 'x_title':
+                                chart_data['x_title'] = value
+                            elif key == 'x_title_font':
+                                # Parse font format: [Arial,10,false,false,#000000]
+                                if value.startswith('[') and value.endswith(']'):
+                                    font_parts = value[1:-1].split(',')
+                                    if len(font_parts) >= 5:
+                                        chart_data['x_title_font'] = {
+                                            'name': font_parts[0].strip(),
+                                            'size': int(font_parts[1].strip()),
+                                            'bold': font_parts[2].strip().lower() == 'true',
+                                            'italic': font_parts[3].strip().lower() == 'true',
+                                            'color': font_parts[4].strip()
+                                        }
+                                else:
+                                    chart_data['x_title_font'] = value
+                            elif key == 'x_labels':
+                                chart_data['x_labels'] = value.lower() == 'true'
+                            elif key == 'x_ticks':
+                                chart_data['x_ticks'] = value.lower() == 'true'
+                            elif key == 'x_grid':
+                                chart_data['x_grid'] = value.lower() == 'true'
+                            elif key == 'x_grid_color':
+                                chart_data['x_grid_color'] = value
+                            elif key == 'x_line_color':
+                                chart_data['x_line_color'] = value
+                            elif key == 'x_line_weight':
+                                chart_data['x_line_weight'] = int(value)
+                            # Y-Axis properties
+                            elif key == 'y_title':
+                                chart_data['y_title'] = value
+                            elif key == 'y_title_font':
+                                # Parse font format: [Arial,10,false,false,#000000]
+                                if value.startswith('[') and value.endswith(']'):
+                                    font_parts = value[1:-1].split(',')
+                                    if len(font_parts) >= 5:
+                                        chart_data['y_title_font'] = {
+                                            'name': font_parts[0].strip(),
+                                            'size': int(font_parts[1].strip()),
+                                            'bold': font_parts[2].strip().lower() == 'true',
+                                            'italic': font_parts[3].strip().lower() == 'true',
+                                            'color': font_parts[4].strip()
+                                        }
+                                else:
+                                    chart_data['y_title_font'] = value
+                            elif key == 'y_labels':
+                                chart_data['y_labels'] = value.lower() == 'true'
+                            elif key == 'y_ticks':
+                                chart_data['y_ticks'] = value.lower() == 'true'
+                            elif key == 'y_grid':
+                                chart_data['y_grid'] = value.lower() == 'true'
+                            elif key == 'y_grid_color':
+                                chart_data['y_grid_color'] = value
+                            elif key == 'y_line_color':
+                                chart_data['y_line_color'] = value
+                            elif key == 'y_line_weight':
+                                chart_data['y_line_weight'] = int(value)
+                            # Series colors (s1_color, s2_color, etc.)
+                            elif key.startswith('s') and key.endswith('_color') and len(key) > 3:
+                                # Extract series number from s1_color, s2_color, etc.
+                                series_num = key[1:-6]  # Remove 's' prefix and '_color' suffix
+                                if series_num.isdigit():
+                                    chart_data[f's{series_num}_color'] = value
+                            # Plot area properties
+                            elif key == 'plot_fill':
+                                chart_data['plot_fill'] = value
+                            elif key == 'plot_border':
+                                chart_data['plot_border'] = value.lower() == 'true'
+                            elif key == 'plot_border_color':
+                                chart_data['plot_border_color'] = value
+                            # Chart area properties
+                            elif key == 'chart_fill':
+                                chart_data['chart_fill'] = value
+                            elif key == 'chart_border':
+                                chart_data['chart_border'] = value.lower() == 'true'
+                            elif key == 'chart_border_color':
+                                chart_data['chart_border_color'] = value
                             else:
-                                # Store any other chart properties (title, legend_pos, from_cell, etc.)
+                                # Store any other chart properties
                                 chart_data[key] = value
                     
                     # Initialize charts section if it doesn't exist
@@ -544,18 +676,27 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     result[current_sheet]['charts'][chart_name] = chart_data
                     continue
                 
-                if bracket_contents and len(bracket_contents) > 0:
-                    formula = bracket_contents[0]
-                else:
-                    formula = 'no_change'
-                # Clean the formula and unescape chars
-                formula = clean_formula(formula)
-                
-                # Parse formatting properties if they exist
+                # Process extracted content
                 cell_data = {}
-                if formula:
-                    if not formula.lower() == 'no_change': #no_change is shorthand when we don't want to update a cell formula
+                
+                # Handle formula content
+                if formula_content:
+                    formula = clean_formula(formula_content)
+                    if formula and not formula.lower() == 'no_change': #no_change is shorthand when we don't want to update a cell formula
                         cell_data['formula'] = formula
+                
+                # Handle number format content
+                if num_fmt_content:
+                    cleaned_num_fmt = clean_number_format(num_fmt_content)
+                    if cleaned_num_fmt:
+                        cell_data['number_format'] = cleaned_num_fmt
+                        logger.debug(f"Set number format for {cell_ref}: {cleaned_num_fmt}")
+                
+                # Handle comment content
+                if comment_content:
+                    cleaned_comment = clean_formula(comment_content)
+                    if cleaned_comment:
+                        cell_data['comment'] = cleaned_comment
                 
                 # Process formatting properties from remaining parts
                 for i in range(2, len(cell_parts)):
@@ -601,14 +742,6 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                             cell_data['border_left'] = parse_border_properties(value)
                         elif key == 'bord_r':  
                             cell_data['border_right'] = parse_border_properties(value)
-                        elif key == 'num_fmt':  # number format
-                            if bracket_contents and len(bracket_contents) > 1:
-                                num_fmt = bracket_contents[1]
-                                cell_data['number_format'] = clean_number_format(num_fmt)
-                        elif key == 'cmt':  # comment
-                            if bracket_contents and len(bracket_contents) > 2:
-                                comment = bracket_contents[2]
-                                cell_data['comment'] = clean_formula(comment)  # Clean comment text
                         elif key == 'dv':  # data validation
                             # Use the extracted validation content from dv=[...] brackets
                             if dv_validation_content:
