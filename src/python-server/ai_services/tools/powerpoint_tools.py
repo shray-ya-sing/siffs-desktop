@@ -143,7 +143,7 @@ def get_powerpoint_from_cache(workspace_path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
+def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
     """
     Edit a PowerPoint presentation by generating and applying shape formatting metadata.
 
@@ -154,6 +154,10 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
     Returns:
         String containing the updated shape metadata in JSON format.
     """
+    # Stream to frontend
+    writer = get_stream_writer()
+    writer({"generating": f"Planning edit steps for PowerPoint file: {workspace_path}"})
+    
     logger.info(f"Starting PowerPoint edit for workspace: {workspace_path}")    
     logger.info(f"Edit instructions: {edit_instructions}")
     
@@ -167,7 +171,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
 
     try:
         prompt = f"""
-        Here are the instructions for this step, generate the shape metadata to fulfill these instructions: {edit_instructions}
+        Here are the instructions for this step, generate the powerpoint slide object metadata to fulfill these instructions: {edit_instructions}
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
@@ -182,10 +186,6 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
         4. Separate multiple shape updates with pipes (|).
         5. Always use concise keys for properties and ensure proper formatting for parsing.
         """
-
-        # Stream to frontend
-        writer = get_stream_writer()
-        writer({"generating": f"Creating PowerPoint shape metadata"})
 
         # Get the user id for the API key
         user_id = get_user_id_from_cache()
@@ -261,6 +261,9 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
             logger.error(error_msg)
             return error_msg
 
+        # Stream progress to frontend
+        writer.write({"completed": f"Set up plan for editing PowerPoint file: {workspace_path}"})
+
         markdown_response = llm_response.content
         logger.info(f"LLM generated markdown for shapes: {markdown_response}")
 
@@ -306,7 +309,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
                 temp_file_path = workspace_path
             
             # Stream progress to frontend
-            writer.write({"generating": "Writing shape updates to PowerPoint"})
+            writer.write({"executing": f"Editing PowerPoint file: {workspace_path}"})
             
             # Write to PowerPoint using the writer
             ppt_writer = PowerPointWriter()
@@ -425,6 +428,7 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
     Retrieve detailed metadata for specific slides including shapes, text content, images, 
     formatting, and positioning information. This is the detailed tool for getting comprehensive
     slide information including all shapes, their positions, text formatting, and content.
+    Unless the user specifically asks for information on formatting details, you should limit your response to the user to the text content and objects. DO not list out all the objects, keep your response a natural paragraph.
     
     Args:
         workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
@@ -538,14 +542,20 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
 
 
 @tool
-def edit_powerpoint_shapes(workspace_path: str, edit_instructions: str) -> str:
+def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
     """
-    Edit PowerPoint shapes by applying formatting changes based on the provided instructions.
-    This tool modifies shape properties like fill color, outline color, outline style, and outline width.
+    Edit PowerPoint files. You can generate and modify objects in pwoerpoint slides like shapes, paragraphs, text.
+    CRITICAL INSTRUCTION GENERATION RULES:
+        1. NEVER overwrite or modify any existing objects in the PowerPoint file UNLESS specified by the user
+        2. New objects can ONLY be added in completely blank parts of the slide
+        3. Do not insert new objects that would shift existing objects UNLESS compliant with user request
+        4. If you need to reference existing data, do so without modifying it
+        5. Clearly specify the positions on slide where new objects should be placed
     
     Args:
         workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
-        edit_instructions: Specific instructions for editing shapes in the presentation
+        edit_instructions: Specific instructions for editing shapes in the presentation.
+        Generate instructions in natural language based on the user's requirements.
     
     Returns:
         A JSON string containing the results of the shape editing operation:
@@ -556,14 +566,14 @@ def edit_powerpoint_shapes(workspace_path: str, edit_instructions: str) -> str:
             "updated_shapes": [...]
         }
     """
-    return edit_powerpoint(workspace_path, edit_instructions)
+    return _edit_powerpoint_helper(workspace_path, edit_instructions)
 
 
 # Export all PowerPoint tools in a list for easy importing
 POWERPOINT_TOOLS = [
     get_full_powerpoint_summary,
     get_powerpoint_slide_details,
-    edit_powerpoint_shapes
+    edit_powerpoint
 ]
 
 
