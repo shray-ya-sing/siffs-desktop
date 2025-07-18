@@ -462,6 +462,14 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     return "cmt=COMMENT_PLACEHOLDER"
                 entry_comment_extracted = re.sub(r'cmt=\[(.*?)\]', extract_comment_brackets, entry_num_fmt_extracted)
                 
+                # Extract cf=[...] brackets separately for conditional formatting
+                cf_content = None
+                def extract_cf_brackets(match):
+                    nonlocal cf_content
+                    cf_content = match.group(1)  # Save the content
+                    return "cf=CF_PLACEHOLDER"
+                entry_cf_extracted = re.sub(r'cf=\[(.*?)\]', extract_cf_brackets, entry_comment_extracted)
+                
                 # Extract ALL chart font properties that use brackets
                 chart_font_properties = {}
                 def extract_chart_font_brackets(match):
@@ -719,6 +727,12 @@ def parse_markdown_formulas(markdown_input: str) -> Optional[Dict[str, Dict[str,
                     cleaned_comment = clean_formula(comment_content)
                     if cleaned_comment:
                         cell_data['comment'] = cleaned_comment
+                
+                # Handle conditional formatting content
+                if cf_content:
+                    cf_data = parse_conditional_formatting(cf_content)
+                    if cf_data:
+                        cell_data['conditional_formatting'] = cf_data
                 
                 # Process formatting properties from remaining parts
                 for i in range(2, len(cell_parts)):

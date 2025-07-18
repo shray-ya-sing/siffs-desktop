@@ -408,6 +408,10 @@ class ExcelWorker:
         # Apply data validation
         if 'data_validation' in cell_data and cell_data['data_validation']:
             safe_apply('data validation', lambda: self._apply_data_validation(cell, cell_data['data_validation']))
+        
+        # Apply conditional formatting
+        if 'conditional_formatting' in cell_data and cell_data['conditional_formatting']:
+            safe_apply('conditional formatting', lambda: self._apply_conditional_formatting(cell, cell_data['conditional_formatting']))
             
         if updated_result:
             return updated_result

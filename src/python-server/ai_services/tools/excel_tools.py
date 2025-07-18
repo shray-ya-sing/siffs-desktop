@@ -247,6 +247,21 @@ def edit_excel(workspace_path: str, edit_instructions: str) -> str:
         
         DATA TABLE PARAMETERS:
         - i: Input formula cell (must contain a formula that references both row and column input cells)
+        
+        CONDITIONAL FORMATTING: Use the following format for specifying conditional formatting rules:
+        cf=[type:condition_type, operator:comparison_operator, value1:condition_value1, value2:condition_value2, background_color:hex_bg_color, font_color:hex_font_color]
+        - type: Type of conditional formatting ('cell_value', 'color_scale', 'data_bars', 'icon_set')
+        - operator: Operator for comparison ('greater', 'less', 'equal', 'between')
+        - value1: First value for condition
+        - value2: Second value if applicable (for 'between' operator)
+        - background_color: Background color in hex
+        - font_color: Font color in hex
+        
+        EXAMPLES:
+        - Simple value comparison: cf=[type:cell_value, operator:greater, value1:100, background_color:#FF0000, font_color:#FFFFFF]
+        - Between values: cf=[type:cell_value, operator:between, value1:10, value2:20, background_color:#00FF00]
+        - Color scale or other advanced types require specifying just the type: cf=[type:color_scale]
+        
         - r: Row input cell (cell that the formula uses for row variable)
         - c: Column input cell (cell that the formula uses for column variable)
         - rng: Output range where data table results will be placed (e.g., D10:F13)
