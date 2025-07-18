@@ -21,6 +21,22 @@ import { AgentChatPage } from './pages/agent-chat/AgentChatPage';
 import { FileItem } from './hooks/useFileTree';
 import { TitleBar } from './components/titlebar/TitleBar';
 
+// Google Analytics helper
+const gtag = (window as any).gtag;
+const trackPageView = (path: string) => {
+  if (process.env.NODE_ENV === 'production' && gtag) {
+    gtag('config', 'G-M7P8XZHLFX', {
+      page_path: path,
+    });
+  }
+};
+
+const trackEvent = (eventName: string, parameters?: any) => {
+  if (process.env.NODE_ENV === 'production' && gtag) {
+    gtag('event', eventName, parameters);
+  }
+};
+
 // Extend the Location interface to include state
 type LocationState = {
   from?: Location;
@@ -42,6 +58,13 @@ function AppRouter() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
+
+  // Track page views
+  useEffect(() => {
+    if (user && !isLoading) {
+      trackPageView(location.pathname);
+    }
+  }, [location.pathname, user, isLoading]);
 
   // Handle success message from signup
   useEffect(() => {
@@ -127,6 +150,26 @@ export function App() {
   const handleLoadingComplete = () => {
     setIsAppLoading(false);
   };
+
+  // Track app session start/end
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' && gtag) {
+      // Track session start
+      gtag('event', 'session_start', {
+        engagement_time_msec: 100
+      });
+
+      // Track when user leaves/closes app
+      const handleBeforeUnload = () => {
+        gtag('event', 'session_end');
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, []);
 
   if (isAppLoading) {
     return <AppLoading onComplete={handleLoadingComplete} />;
