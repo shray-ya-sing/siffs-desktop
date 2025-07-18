@@ -223,8 +223,12 @@ class PowerPointWorker:
                     slide_number = int(re.search(r'\d+', slide_key).group())
                     
                     try:
-                        # Get the slide
-                        slide = self._presentation.Slides(slide_number)
+                        # Get the slide, create it if it doesn't exist
+                        slide = self._get_or_create_slide(slide_number)
+                        if slide is None:
+                            logger.error(f"Failed to get or create slide {slide_number}")
+                            continue
+                        
                         logger.debug(f"Processing slide {slide_number}")
                         
                         for shape_name, shape_props in shapes_data.items():
@@ -303,6 +307,46 @@ class PowerPointWorker:
                 return False
         
         return self._execute(_add_blank_slide)
+    
+    def _get_or_create_slide(self, slide_number: int):
+        """Get an existing slide or create a new one if it doesn't exist.
+        
+        Args:
+            slide_number: The slide number (1-based)
+            
+        Returns:
+            The slide object or None if creation failed
+        """
+        try:
+            # Try to get existing slide
+            try:
+                slide = self._presentation.Slides(slide_number)
+                logger.debug(f"Found existing slide {slide_number}")
+                return slide
+            except Exception:
+                # Slide doesn't exist, create it
+                logger.info(f"Slide {slide_number} doesn't exist, creating new slide")
+                
+                # Get the current slide count
+                current_count = self._presentation.Slides.Count
+                
+                # Create missing slides up to the requested slide number
+                slide_layout = self._presentation.SlideMaster.CustomLayouts(1)  # Use first layout
+                
+                for i in range(current_count + 1, slide_number + 1):
+                    new_slide = self._presentation.Slides.AddSlide(i, slide_layout)
+                    logger.info(f"Created slide {i}")
+                    
+                    # If this is the slide we want, return it
+                    if i == slide_number:
+                        return new_slide
+                
+                # If we get here, try to get the slide again
+                return self._presentation.Slides(slide_number)
+                
+        except Exception as e:
+            logger.error(f"Error getting or creating slide {slide_number}: {e}")
+            return None
     
     def _create_new_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new shape on the slide with the specified properties.
