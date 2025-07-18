@@ -404,6 +404,156 @@ class PowerPointWorker:
             logger.error(f"Error creating new shape '{shape_name}': {e}")
             return None
     
+    def _is_table_creation_request(self, shape_props: Dict[str, Any]) -> bool:
+        """Check if the shape properties indicate a table creation request."""
+        table_props = ['table_rows', 'table_cols', 'table_data']
+        return any(prop in shape_props for prop in table_props)
+    
+    def _apply_table_properties(self, shape, shape_props: Dict[str, Any], updated_info: Dict[str, Any]) -> None:
+        """Apply table-specific properties to create or modify a table."""
+        try:
+            # Get table parameters
+            table_rows = int(shape_props.get('table_rows', 0))
+            table_cols = int(shape_props.get('table_cols', 0))
+            table_data = shape_props.get('table_data')
+            
+            if table_rows == 0 or table_cols == 0:
+                logger.warning("Invalid table dimensions")
+                return
+            
+            # Parse table data if it's a string
+            if isinstance(table_data, str):
+                try:
+                    import ast
+                    table_data = ast.literal_eval(table_data)
+                except (ValueError, SyntaxError) as e:
+                    logger.warning(f"Could not parse table_data: {e}")
+                    table_data = []
+            
+            # Delete the existing shape and create a table
+            slide = shape.Parent
+            left = shape.Left
+            top = shape.Top
+            width = shape.Width
+            height = shape.Height
+            
+            # Delete the placeholder shape
+            shape.Delete()
+            
+            # Create a new table
+            table_shape = slide.Shapes.AddTable(table_rows, table_cols, left, top, width, height)
+            table_shape.Name = shape.Name if hasattr(shape, 'Name') else 'Table'
+            
+            # Get the table object
+            table = table_shape.Table
+            
+            # Apply column widths if specified
+            if 'col_widths' in shape_props:
+                col_widths = shape_props['col_widths']
+                if isinstance(col_widths, str):
+                    try:
+                        import ast
+                        col_widths = ast.literal_eval(col_widths)
+                    except (ValueError, SyntaxError):
+                        col_widths = []
+                
+                for i, width in enumerate(col_widths, 1):
+                    if i <= table_cols:
+                        try:
+                            table.Columns(i).Width = float(width)
+                        except Exception as e:
+                            logger.warning(f"Could not set column {i} width: {e}")
+            
+            # Fill table with data
+            if table_data and isinstance(table_data, list):
+                for row_idx, row_data in enumerate(table_data, 1):
+                    if row_idx > table_rows:
+                        break
+                    
+                    if isinstance(row_data, list):
+                        for col_idx, cell_data in enumerate(row_data, 1):
+                            if col_idx > table_cols:
+                                break
+                            
+                            try:
+                                cell = table.Cell(row_idx, col_idx)
+                                cell.Shape.TextFrame.TextRange.Text = str(cell_data)
+                                
+                                # Apply font name to cell if specified
+                                if 'font_name' in shape_props:
+                                    cell.Shape.TextFrame.TextRange.Font.Name = shape_props['font_name']
+                                
+                            except Exception as e:
+                                logger.warning(f"Could not set cell ({row_idx}, {col_idx}): {e}")
+            
+            # Apply cell formatting if specified
+            self._apply_cell_formatting(table, shape_props, table_rows, table_cols)
+            
+            updated_info['properties_applied'].extend(['table_rows', 'table_cols', 'table_data'])
+            logger.info(f"Created table with {table_rows} rows and {table_cols} columns")
+            
+        except Exception as e:
+            logger.error(f"Error creating table: {e}", exc_info=True)
+    
+    def _apply_cell_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply cell-level formatting to a table."""
+        try:
+            # Apply cell background colors
+            if 'cell_fill_color' in shape_props:
+                cell_fill_color = shape_props['cell_fill_color']
+                if isinstance(cell_fill_color, str):
+                    try:
+                        import ast
+                        cell_fill_color = ast.literal_eval(cell_fill_color)
+                    except (ValueError, SyntaxError):
+                        cell_fill_color = []
+                
+                if isinstance(cell_fill_color, list):
+                    for row_idx, row_colors in enumerate(cell_fill_color, 1):
+                        if row_idx > rows:
+                            break
+                        
+                        if isinstance(row_colors, list):
+                            for col_idx, color in enumerate(row_colors, 1):
+                                if col_idx <= cols and color:
+                                    try:
+                                        cell = table.Cell(row_idx, col_idx)
+                                        if color.startswith('#'):
+                                            # Convert hex to RGB
+                                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                                            cell.Shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                    except Exception as e:
+                                        logger.warning(f"Could not set cell ({row_idx}, {col_idx}) fill color: {e}")
+            
+            # Apply cell font bold formatting
+            if 'cell_font_bold' in shape_props:
+                cell_font_bold = shape_props['cell_font_bold']
+                if isinstance(cell_font_bold, str):
+                    try:
+                        import ast
+                        cell_font_bold = ast.literal_eval(cell_font_bold)
+                    except (ValueError, SyntaxError):
+                        cell_font_bold = []
+                
+                if isinstance(cell_font_bold, list):
+                    for row_idx, row_bold in enumerate(cell_font_bold, 1):
+                        if row_idx > rows:
+                            break
+                        
+                        if isinstance(row_bold, list):
+                            for col_idx, bold in enumerate(row_bold, 1):
+                                if col_idx > cols:
+                                    break
+                                
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    cell.Shape.TextFrame.TextRange.Font.Bold = bool(bold)
+                                except Exception as e:
+                                    logger.warning(f"Could not set cell ({row_idx}, {col_idx}) bold: {e}")
+        
+        except Exception as e:
+            logger.error(f"Error applying cell formatting: {e}", exc_info=True)
+    
     def _apply_shape_properties(self, shape, shape_props: Dict[str, Any], slide_number: int) -> Dict[str, Any]:
         """Apply properties to a PowerPoint shape.
         
@@ -588,7 +738,7 @@ class PowerPointWorker:
                     except Exception as e:
                         logger.warning(f"Could not apply text alignment to shape {shape.Name}: {e}")
                 
-                # Apply vertical alignment
+            # Apply vertical alignment
                 if 'vertical_align' in shape_props and shape_props['vertical_align']:
                     try:
                         vertical_align = shape_props['vertical_align'].lower()
@@ -604,6 +754,13 @@ class PowerPointWorker:
                             logger.debug(f"Applied vertical alignment {vertical_align} to shape {shape.Name}")
                     except Exception as e:
                         logger.warning(f"Could not apply vertical alignment to shape {shape.Name}: {e}")
+            
+            # Apply table properties if this is a table creation request
+            if self._is_table_creation_request(shape_props):
+                try:
+                    self._apply_table_properties(shape, shape_props, updated_info)
+                except Exception as e:
+                    logger.warning(f"Could not apply table properties to shape {shape.Name}: {e}")
             
             # Apply size properties (width and height)
             if 'width' in shape_props and shape_props['width']:

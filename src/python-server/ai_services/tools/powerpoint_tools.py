@@ -342,6 +342,18 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
             if success:
                 logger.info(f"Successfully updated {len(updated_shapes)} shapes")
                 
+                # Update the PowerPoint metadata cache with the updated shapes
+                try:
+                    from ai_services.tools.read_write_functions.powerpoint.powerpoint_edit_tools import update_powerpoint_cache
+                    cache_updated = update_powerpoint_cache(workspace_path, updated_shapes)
+                    if cache_updated:
+                        logger.info("PowerPoint cache updated successfully")
+                    else:
+                        logger.warning("Failed to update PowerPoint cache")
+                except Exception as cache_error:
+                    logger.error(f"Error updating PowerPoint cache: {str(cache_error)}", exc_info=True)
+                    # Don't fail the entire operation if cache update fails
+                
                 # Return JSON summary of changes
                 result = {
                     "status": "success",
