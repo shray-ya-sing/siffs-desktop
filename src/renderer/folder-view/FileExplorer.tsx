@@ -228,6 +228,27 @@ export const FileExplorer = ({
     files.map(file => ({ ...file, expanded: false }))
   );
   const [watcherPath, setWatcherPath] = useState<string | null>(null);
+  
+  // Update fileTree when files prop changes
+  useEffect(() => {
+    console.log('FileExplorer: files prop changed:', files);
+    
+    // Preserve expansion state for existing items
+    setFileTree(prev => {
+      const preserveExpansion = (newFiles: FileItem[], existingFiles: FileItem[]): FileItem[] => {
+        return newFiles.map(newFile => {
+          const existingFile = existingFiles.find(existing => existing.path === newFile.path);
+          return {
+            ...newFile,
+            expanded: existingFile ? existingFile.expanded : (newFile.isDirectory ? true : false),
+            children: newFile.children ? preserveExpansion(newFile.children, existingFile?.children || []) : newFile.children
+          };
+        });
+      };
+      
+      return preserveExpansion(files, prev);
+    });
+  }, [files]);
 
   // Set up file watcher when files change
   useEffect(() => {
