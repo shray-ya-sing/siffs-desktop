@@ -51,7 +51,13 @@ export const useFileTree = (initialFiles: FileItem[] = []) => {
   }, []);
 
   const addFiles = useCallback((newFiles: FileItem[]) => {
-    setFileTree(prev => [...prev, ...newFiles.map(f => ({ ...f, expanded: false }))]);
+    console.log('addFiles called with:', newFiles);
+    setFileTree(prev => {
+      console.log('Previous fileTree:', prev);
+      const newTree = [...prev, ...newFiles.map(f => ({ ...f, expanded: false }))];
+      console.log('New fileTree:', newTree);
+      return newTree;
+    });
   }, []);
 
   return {

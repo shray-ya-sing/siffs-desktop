@@ -43,9 +43,11 @@ export function AgentChatPage() {
 
   const handleFolderConnect = useCallback((files: FileItem[]) => {
     console.log('New folder connected:', files);
+    console.log('Current file tree length:', fileTree.length);
     // Add the new folder to the existing file tree
     addFiles(files);
-  }, [addFiles]);
+    console.log('addFiles called with:', files);
+  }, [addFiles, fileTree.length]);
 
   const toggleSidebar = useCallback(() => {
     console.log('Toggling sidebar');

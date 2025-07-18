@@ -57,6 +57,9 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ onToggleSideba
   const [isConnecting, setIsConnecting] = useState(false);
   const [clientId] = useState(uuidv4());
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Debug: Log itemCount changes
+  console.log('WorkspaceHeader received itemCount:', itemCount);
 
   // Close dropdown when clicking outside
   useEffect(() => {
