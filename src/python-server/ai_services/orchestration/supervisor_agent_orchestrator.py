@@ -243,10 +243,19 @@ class SupervisorAgentOrchestrator:
             thread_id = message_data.get("threadId")
             request_id = message_data.get("requestId")
             model = message_data.get("model", "gemini-2.5-flash-lite-preview-06-17")  # Default to flash lite
+            attachments = message_data.get("attachments", [])
             
             if not message_content:
                 logger.warning(f"Empty message received from client {client_id}")
                 return
+            
+            # Log attachment info for debugging
+            if attachments:
+                logger.info(f"Received {len(attachments)} attachments from client {client_id}")
+                for i, attachment in enumerate(attachments):
+                    logger.info(f"Attachment {i+1}: type={attachment.get('type')}, mimeType={attachment.get('mimeType')}, filename={attachment.get('filename')}")
+                    #logger.debug(f"Attachment {i+1} full structure: {attachment}")
+                    logger.debug(f"Attachment {i+1} keys: {list(attachment.keys()) if isinstance(attachment, dict) else 'Not a dict'}")
 
             # Stream the supervisor's response
             async for chunk in self._stream_supervisor_response(
@@ -254,7 +263,8 @@ class SupervisorAgentOrchestrator:
                 client_id=client_id,
                 thread_id=thread_id,
                 request_id=request_id,
-                model=model
+                model=model,
+                attachments=attachments
             ):
                 chunk_type = chunk.get("type")
                 
@@ -406,7 +416,8 @@ class SupervisorAgentOrchestrator:
         client_id: str,
         thread_id: Optional[str] = None,
         request_id: Optional[str] = None,
-        model: str = "gemini-2.5-flash-lite-preview-06-17"
+        model: str = "gemini-2.5-flash-lite-preview-06-17",
+        attachments: List[Dict[str, Any]] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream the supervisor agent's response"""
         try:
@@ -519,8 +530,59 @@ class SupervisorAgentOrchestrator:
                         }
             
             # Prepare the input for the supervisor
+            user_message = {"role": "user", "content": message}
+            
+            # Add attachments if present
+            if attachments:
+                # Validate and log image data
+                logger.debug(f"Processing {len(attachments)} attachments")
+                for i, attachment in enumerate(attachments):
+                    #logger.debug(f"Attachment {i+1} raw data: {attachment}")
+                    attachment_type = attachment.get("type")
+                    logger.debug(f"Attachment {i+1} type: {attachment_type}")
+                    
+                    if attachment_type == "image":
+                        logger.debug(f"Received image attachment: type={attachment.get('mimeType')}, length={len(attachment.get('data', ''))} characters")
+                        if not attachment.get('data'):
+                            logger.warning("Image data is empty.")
+                        else:
+                            # Check if data is a proper base64 data URL
+                            data_url = attachment.get('data', '')
+                            if data_url.startswith('data:'):
+                                logger.debug(f"Image data starts with proper data URL prefix: {data_url[:50]}...")
+                            else:
+                                logger.warning(f"Image data does not start with data URL prefix: {data_url[:50]}...")
+                    else:
+                        logger.warning(f"Attachment {i+1} is not an image type: {attachment_type}")
+                
+                user_message["attachments"] = attachments
+            
+            # Convert message with attachments to proper format if needed
+            if attachments:
+                logger.debug(f"Converting message with attachments using internal conversion function")
+                logger.debug(f"Original message before conversion: {user_message}")
+                
+                original_message = user_message.copy()
+                user_message = self._convert_message_with_attachments(user_message)
+                logger.debug(f"Converted message after conversion: {user_message}")
+                
+                # Log the conversion result
+                if isinstance(user_message.get('content'), list):
+                    logger.debug(f"Message converted to multimodal format with {len(user_message['content'])} parts")
+                    for i, part in enumerate(user_message['content']):
+                        if part.get('type') == 'image_url':
+                            logger.debug(f"Part {i+1}: image_url with URL length {len(part.get('image_url', {}).get('url', ''))} characters")
+                            logger.debug(f"Part {i+1}: image_url starts with: {part.get('image_url', {}).get('url', '')[:50]}...")
+                        elif part.get('type') == 'text':
+                            logger.debug(f"Part {i+1}: text with {len(part.get('text', ''))} characters")
+                        else:
+                            logger.debug(f"Part {i+1}: unknown type {part.get('type')}")
+                else:
+                    logger.debug(f"Message conversion resulted in non-multimodal format: {type(user_message.get('content'))}")
+                    logger.debug(f"Final message content: {user_message.get('content')}")
+                
             inputs = {
-                "messages": [{"role": "user", "content": message}],
+                "messages": [user_message],
                 "thread_id": thread_id
             }
 
@@ -809,6 +871,43 @@ class SupervisorAgentOrchestrator:
             "done": True
         }
         await self._send_to_client(client_id, error_msg, request_id)
+
+    def _convert_message_with_attachments(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert message with attachments to LangChain format for ChatGoogleGenerativeAI"""
+        if not message.get('attachments'):
+            return message
+        
+        # Create multimodal content structure
+        content_parts = []
+        
+        # Add text content
+        if message.get('content'):
+            content_parts.append({
+                "type": "text",
+                "text": message['content']
+            })
+        
+        # Add image attachments
+        for attachment in message.get('attachments', []):
+            if attachment.get('type') == 'image':
+                data_url = attachment.get('data', '')
+                
+                if data_url.startswith('data:'):
+                    # Use LangChain's image_url format (not LangGraph format)
+                    content_parts.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": data_url
+                        }
+                    })
+        
+        # Create the converted message
+        converted_message = {
+            "role": message.get('role', 'user'),
+            "content": content_parts if len(content_parts) > 1 else message.get('content', '')
+        }
+        
+        return converted_message
 
     def extract_ai_message_content(self, message_chunk):
         """Extract text content from an AIMessage or AIMessageChunk."""

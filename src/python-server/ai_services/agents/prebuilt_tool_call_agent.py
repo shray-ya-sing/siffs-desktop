@@ -139,6 +139,43 @@ class PrebuiltAgent:
             if model_name in models:
                 return provider
         return None
+    
+    def _convert_message_with_attachments(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert message with attachments to LangChain format for ChatGoogleGenerativeAI"""
+        if not message.get('attachments'):
+            return message
+        
+        # Create multimodal content structure
+        content_parts = []
+        
+        # Add text content
+        if message.get('content'):
+            content_parts.append({
+                "type": "text",
+                "text": message['content']
+            })
+        
+        # Add image attachments
+        for attachment in message.get('attachments', []):
+            if attachment.get('type') == 'image':
+                data_url = attachment.get('data', '')
+                
+                if data_url.startswith('data:'):
+                    # Use LangChain's image_url format (not LangGraph format)
+                    content_parts.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": data_url
+                        }
+                    })
+        
+        # Create the converted message
+        converted_message = {
+            "role": message.get('role', 'user'),
+            "content": content_parts if len(content_parts) > 1 else message.get('content', '')
+        }
+        
+        return converted_message
 
     async def stream_agent_response(
         self, 
