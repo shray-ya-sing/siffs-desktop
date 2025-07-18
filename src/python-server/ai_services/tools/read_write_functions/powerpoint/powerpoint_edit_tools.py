@@ -18,22 +18,40 @@ logger = logging.getLogger(__name__)
 
 def _parse_shape_properties(entry: str) -> list:
     """
-    Parse shape properties from a comma-separated string, handling quoted values properly.
+    Parse shape properties from a comma-separated string, handling quoted values and brackets properly.
     
     Args:
-        entry: String like "shape_name, prop1=value1, prop2="quoted value", prop3=value3"
+        entry: String like "shape_name, prop1=value1, prop2="quoted value", table_data="[['A', 'B'], ['C', 'D']]"
         
     Returns:
         List of property strings
     """
+    # First, extract bracketed content to avoid comma splitting issues
+    import re
+    
+    # Dictionary to store extracted bracketed content
+    bracket_extractions = {}
+    
+    def extract_brackets(match):
+        """Extract bracketed content and replace with placeholder"""
+        content = match.group(1)
+        placeholder = f"BRACKET_PLACEHOLDER_{len(bracket_extractions)}"
+        bracket_extractions[placeholder] = content
+        return f"[{placeholder}]"
+    
+    # Extract nested brackets for table properties
+    # This regex handles nested brackets like [[...], [...]] 
+    entry_with_placeholders = re.sub(r'\[([^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]', extract_brackets, entry)
+    
+    # Now parse the entry with placeholders
     parts = []
     current_part = ""
     in_quotes = False
     quote_char = None
     
     i = 0
-    while i < len(entry):
-        char = entry[i]
+    while i < len(entry_with_placeholders):
+        char = entry_with_placeholders[i]
         
         if char in ['"', "'"] and not in_quotes:
             # Start of quoted string
@@ -58,6 +76,11 @@ def _parse_shape_properties(entry: str) -> list:
     # Add the last part
     if current_part.strip():
         parts.append(current_part.strip())
+    
+    # Restore bracketed content in the final parts
+    for i, part in enumerate(parts):
+        for placeholder, content in bracket_extractions.items():
+            parts[i] = parts[i].replace(placeholder, content)
     
     return parts
 
