@@ -88,7 +88,7 @@ class ExcelOrchestrator:
         missing = []
         if not client_id:
             missing.append('client_id')
-        if not file_content:
+        if file_content is None:
             missing.append('file_content')
         if not file_path:
             missing.append('file_path')
