@@ -244,8 +244,16 @@ class PowerPointWorker:
                                         break
                                 
                                 if shape is None:
-                                    # Check if this is a table creation request before creating any shape
-                                    if self._is_table_creation_request(shape_props):
+                                    # Check if this is a chart creation request
+                                    if self._is_chart_creation_request(shape_props):
+                                        # Create chart directly
+                                        logger.info(f"Creating new chart '{shape_name}' in slide {slide_number}")
+                                        shape = self._create_chart_shape(slide, shape_name, shape_props)
+                                        if shape is None:
+                                            logger.warning(f"Failed to create chart '{shape_name}' in slide {slide_number}")
+                                            continue
+                                    # Check if this is a table creation request
+                                    elif self._is_table_creation_request(shape_props):
                                         # Create table directly
                                         logger.info(f"Creating new table '{shape_name}' in slide {slide_number}")
                                         shape = self._create_table_shape(slide, shape_name, shape_props)
@@ -639,6 +647,10 @@ class PowerPointWorker:
         """Check if the shape properties indicate a table creation request."""
         table_props = ['table_rows', 'table_cols', 'table_data', 'rows', 'cols', 'shape_type']
         return any(prop in shape_props for prop in table_props) or shape_props.get('shape_type') == 'table'
+    
+    def _is_chart_creation_request(self, shape_props: Dict[str, Any]) -> bool:
+        """Check if the shape properties indicate a chart creation request."""
+        return shape_props.get('shape_type') == 'chart' or 'chart_type' in shape_props
     
     def _create_table_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new table shape on the slide with the specified properties.
@@ -1124,6 +1136,66 @@ class PowerPointWorker:
         
         except Exception as e:
             logger.warning(f"Error applying individual cell borders: {e}")
+    
+    def _create_chart_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
+        """Create a new chart shape on the slide with specified properties."""
+        try:
+            chart_type_map = {
+                "column": 51,  # msoChartTypeColumnClustered
+                "bar": 57,     # msoChartTypeBarClustered
+                "line": 65,    # msoChartTypeLineMarkers
+                "pie": 5,      # msoChartTypePie
+                "area": 1,     # msoChartTypeArea
+                "scatter": 72, # msoChartTypeXYScatter
+                "doughnut": 83, # msoChartTypeDoughnut
+                "combo": 92    # msoChartTypeCombo
+            }
+            
+            chart_type = shape_props.get('chart_type', 'column').lower()
+            chart_type_num = chart_type_map.get(chart_type, 51)
+            
+            left = float(shape_props.get('left', 100))
+            top = float(shape_props.get('top', 100))
+            width = float(shape_props.get('width', 400))
+            height = float(shape_props.get('height', 300))
+
+            chart_shape = slide.Shapes.AddChart2(
+                chart_type_num, left, top, width, height
+            )
+            chart_shape.Name = shape_name
+            chart = chart_shape.Chart
+
+            chart_data = shape_props.get('chart_data', {})
+            if isinstance(chart_data, str):
+                import ast
+                chart_data = ast.literal_eval(chart_data)
+
+            categories = chart_data.get('categories', [])
+            series_list = chart_data.get('series', [])
+
+            workbook = chart.ChartData.Workbook
+            worksheet = workbook.Worksheets(1)
+
+            category_start = 2
+            for idx, category in enumerate(categories):
+                worksheet.Cells(category_start + idx, 1).Value = category
+
+            for series_idx, series in enumerate(series_list, start=2):
+                worksheet.Cells(1, series_idx).Value = series.get('name', f'Series {series_idx - 1}')
+                for value_idx, value in enumerate(series.get('values', [])):
+                    worksheet.Cells(category_start + value_idx, series_idx).Value = value
+
+            chart.SetSourceData(worksheet.Range("A1:Z100"))
+
+            chart.HasTitle = True
+            chart.ChartTitle.Text = shape_props.get('chart_title', '')
+            chart.HasLegend = shape_props.get('show_legend', True)
+
+            logger.info(f"Created chart '{shape_name}' with type '{chart_type}'")
+            return chart_shape
+        except Exception as e:
+            logger.error(f"Error creating chart shape '{shape_name}': {e}")
+            return None
     
     def _apply_shape_properties(self, shape, shape_props: Dict[str, Any], slide_number: int) -> Dict[str, Any]:
         """Apply properties to a PowerPoint shape.

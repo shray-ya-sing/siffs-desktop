@@ -93,16 +93,32 @@ def _parse_property_value(value: str) -> Any:
         value: String value to parse
         
     Returns:
-        Parsed value (str, int, float, bool)
+        Parsed value (str, int, float, bool, dict, list)
     """
     if not value:
         return value
     
-    # Handle quoted strings
+    # Handle quoted strings that contain JSON-like structures
     if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-        # Remove quotes and handle escape sequences
+        # Remove quotes
         text_value = value[1:-1]
-        # Handle common escape sequences
+        
+        # Check if it's a JSON object or array (starts with { or [)
+        if (text_value.startswith('{') and text_value.endswith('}')) or (text_value.startswith('[') and text_value.endswith(']')):
+            try:
+                import json
+                # Try to parse as JSON
+                return json.loads(text_value)
+            except (json.JSONDecodeError, ValueError):
+                # If JSON parsing fails, try ast.literal_eval for Python literal structures
+                try:
+                    import ast
+                    return ast.literal_eval(text_value)
+                except (ValueError, SyntaxError):
+                    # If both fail, return as string
+                    pass
+        
+        # Handle escape sequences for regular text
         text_value = text_value.replace('\\n', '\n')
         text_value = text_value.replace('\\t', '\t')
         text_value = text_value.replace('\\r', '\r')
@@ -130,6 +146,18 @@ def _parse_property_value(value: str) -> Any:
     # Handle hex colors (keep as string)
     if value.startswith('#') and len(value) == 7:
         return value
+    
+    # Handle unquoted JSON-like structures (fallback)
+    if (value.startswith('{') and value.endswith('}')) or (value.startswith('[') and value.endswith(']')):
+        try:
+            import json
+            return json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            try:
+                import ast
+                return ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                pass
     
     # Default to string
     return value

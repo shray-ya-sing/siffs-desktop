@@ -264,6 +264,36 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - FONT: font_name="Calibri" (applies to entire table)
         15. TABLE EXAMPLE:
             Table Sales Data, shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '$41,107'], ['Frank', 'West', '268', '$72,707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]"
+
+        16. CHART CREATION RULES:
+            - Use shape_type="chart" to create charts
+            - REQUIRED properties: chart_type, chart_data
+            - CHART TYPES: "column", "bar", "line", "pie", "area", "scatter", "doughnut", "combo"
+            - CHART DATA FORMAT: Use structured data with categories and series
+              Example: chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Sales', 'values': [100, 150, 200, 180]}}, {{'name': 'Costs', 'values': [80, 120, 160, 140]}}]}}"
+            - CHART STYLING PROPERTIES:
+              chart_title="Chart Title" (main chart title)
+              show_legend=true/false (display legend)
+              legend_position="right"/"top"/"bottom"/"left" (legend placement)
+              x_axis_title="X Axis Label" (horizontal axis title)
+              y_axis_title="Y Axis Label" (vertical axis title)
+              show_gridlines=true/false (display gridlines)
+              chart_style=1-48 (PowerPoint chart style number)
+            - SERIES FORMATTING:
+              series_colors="['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']" (colors for each data series)
+              data_labels=true/false (show values on data points)
+              smooth_lines=true/false (for line charts - smooth or straight lines)
+            - PIE CHART SPECIFIC:
+              explosion="[0, 0.1, 0, 0]" (explode specific slices, 0=no explosion, 0.1=10% explosion)
+              show_percentages=true/false (display percentages on pie slices)
+            - COMBO CHART SPECIFIC:
+              combo_types="['column', 'line']" (chart types for each series in combo charts)
+              secondary_axis="[false, true]" (which series use secondary y-axis)
+
+        17. CHART EXAMPLES:
+            - Column Chart: Sales Chart, shape_type="chart", chart_type="column", left=50, top=100, width=400, height=300, chart_title="Quarterly Sales", chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Revenue', 'values': [100000, 150000, 200000, 180000]}}]}}", show_legend=true, x_axis_title="Quarter", y_axis_title="Revenue ($)"
+            - Pie Chart: Market Share, shape_type="chart", chart_type="pie", left=50, top=100, width=350, height=300, chart_title="Market Share 2024", chart_data="{{'categories': ['Product A', 'Product B', 'Product C', 'Product D'], 'series': [{{'name': 'Share', 'values': [35, 25, 20, 20]}}]}}", show_percentages=true, explosion="[0.1, 0, 0, 0]"
+            - Multi-Series Line: Trend Chart, shape_type="chart", chart_type="line", left=50, top=100, width=500, height=300, chart_title="Sales vs Costs Trend", chart_data="{{'categories': ['Jan', 'Feb', 'Mar', 'Apr', 'May'], 'series': [{{'name': 'Sales', 'values': [100, 120, 140, 130, 160]}}, {{'name': 'Costs', 'values': [80, 90, 110, 105, 125]}}]}}", smooth_lines=true, data_labels=false, series_colors="['#2E86AB', '#A23B72']"
         """
 
         # Get the user id for the API key
