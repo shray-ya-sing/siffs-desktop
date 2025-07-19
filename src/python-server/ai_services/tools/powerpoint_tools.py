@@ -640,6 +640,21 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_count: in
         workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
         edit_instructions: Specific instructions for editing shapes in the presentation.
         Generate instructions in natural language based on the user's requirements.
+        
+        IMPORTANT: Include detailed formatting consistency instructions in your edit_instructions:
+        - Analyze existing formatting patterns from the presentation (fonts, colors, sizes, styles)
+        - Specify font families used (e.g., "Calibri for body text, Arial for headers")
+        - Include color schemes observed (e.g., "#1f4e79 for headers, #333333 for body text")
+        - Document font size patterns (e.g., "24pt for main titles, 18pt for section headers, 14pt for body")
+        - Note styling trends (e.g., "keywords are bolded", "section headers use italic", "bullet points are indented")
+        - Describe shape formatting patterns (e.g., "section headers in blue rectangles with white text")
+        - Specify fill and outline color consistency (e.g., "shapes use #d4e6f1 fill with #1f4e79 border")
+        - Include layout conventions (e.g., "titles centered, content left-aligned", "headers at top with 2pt spacing")
+        
+        If you don't know the existing formatting patterns, first use get_powerpoint_slide_details tool 
+        to analyze 2-3 representative slides and identify the formatting conventions before generating edit instructions.
+        Then include these observed patterns in your edit_instructions to ensure new content matches existing style.
+        
         slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
     
     Returns:
