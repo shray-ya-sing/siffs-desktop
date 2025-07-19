@@ -559,12 +559,12 @@ class SupervisorAgentOrchestrator:
             
             # Convert message with attachments to proper format if needed
             if attachments:
-                logger.debug(f"Converting message with attachments using internal conversion function")
-                logger.debug(f"Original message before conversion: {user_message}")
+                #logger.debug(f"Converting message with attachments using internal conversion function")
+                #logger.debug(f"Original message before conversion: {user_message}")
                 
                 original_message = user_message.copy()
                 user_message = self._convert_message_with_attachments(user_message)
-                logger.debug(f"Converted message after conversion: {user_message}")
+                #logger.debug(f"Converted message after conversion: {user_message}")
                 
                 # Log the conversion result
                 if isinstance(user_message.get('content'), list):
