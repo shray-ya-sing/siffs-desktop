@@ -54,15 +54,17 @@ class GeminiProvider:
         logger.info(f"Creating Gemini model with model {model}")
         logger.info(f"============================")
 
+        # Initialize thinking_budget_for_model with default value
+        thinking_budget_for_model = thinking_budget
+        
         if not thinking_budget:
             thinking_budget_for_model = 512
-        if thinking_budget == 0:
+        elif thinking_budget == 0:
             if model == "gemini-2.5-pro":
                 thinking_budget_for_model = 128  # Cannot be 0 for this model
             elif model in ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash-lite-preview-06-17"]:
                 thinking_budget_for_model = 0
-        
-        if thinking_budget == -1:
+        elif thinking_budget == -1:
             if model in ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"]:
                 thinking_budget_for_model = -1
             else:

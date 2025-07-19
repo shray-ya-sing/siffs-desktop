@@ -253,19 +253,65 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - For new text boxes, always specify geom="textbox"
         14. TABLE CREATION RULES:
             - Use shape_type="table" to create tables
-            - REQUIRED properties: rows, cols, table_data
-            - OPTIONAL properties: cell_font_bold, cell_fill_color, font_name, col_widths
+            - REQUIRED BASIC properties: rows, cols, table_data
+            - REQUIRED SIZING properties: left, top, width, height, col_widths, row_heights
+            - REQUIRED FORMATTING properties: cell_font_bold, cell_fill_color, font_name
+            - REQUIRED ALIGNMENT properties: col_alignments
+            - REQUIRED for FINANCIAL/NUMERIC tables: col_number_formats, cell_font_sizes
+            
+            *** CRITICAL: FOR ALL TABLES, YOU MUST INCLUDE ***:
+            1. POSITIONING: left, top, width, height (table container dimensions)
+            2. COLUMN SIZING: col_widths="[width1, width2, ...]" (width for each column in points)
+            3. ROW SIZING: row_heights="[height1, height2, ...]" (height for each row in points)
+            4. CELL COLORS: cell_fill_color="[['color1', 'color2'], ['color3', '']]" (color per cell, '' for no color)
+            5. TEXT FORMATTING: cell_font_bold="[[true, false], [false, true]]" (bold per cell)
+            6. COLUMN ALIGNMENT: col_alignments="['left', 'right', 'center']" (alignment per column)
+            7. FONT CONTROL: font_name="Arial" (table-wide font), cell_font_sizes for cell-specific sizes
+            
             - TABLE DATA FORMAT: Use simple 2D array format
               Example: table_data="[['Header1', 'Header2'], ['Data1', 'Data2']]"
             - CELL FORMATTING: Use separate properties for styling
               cell_font_bold="[[true, true], [false, false]]" (row by row, col by col)
               cell_fill_color="[['#D0E0C0', '#D0E0C0'], ['', '']]" (empty string for no color)
-            - COLUMN WIDTHS: col_widths="[144, 144, 144]" (in points)
-            - FONT: font_name="Calibri" (applies to entire table)
-        15. TABLE EXAMPLE:
-            Table Sales Data, shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '$41,107'], ['Frank', 'West', '268', '$72,707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]"
+            - COLUMN WIDTHS: col_widths="[144, 144, 144]" (in points) - REQUIRED
+            - ROW HEIGHTS: row_heights="[30, 25, 25]" (in points) - REQUIRED
+            - FONT: font_name="Calibri" (applies to entire table) - REQUIRED
+        15. NUMBER FORMATTING RULES:
+            - Use cell_number_format for cell-specific number formatting
+            - Use col_number_formats for column-wide number formatting
+            - FORMAT TYPES: "currency", "currency_decimal", "percentage", "comma", "decimal", "integer"
+            - CELL FORMAT: cell_number_format="[['currency', 'currency'], ['', 'currency']]" (row by row, col by col)
+            - COLUMN FORMAT: col_number_formats="['', 'currency', 'currency', 'percentage']" (one format per column)
+            - Examples:
+              * Currency: "41107" becomes "$41,107"
+              * Currency with decimals: "41107.50" becomes "$41,107.50"
+              * Percentage: "0.15" becomes "15.0%" or "15" becomes "15.0%"
+              * Comma separated: "41107" becomes "41,107"
+        
+        16. COLUMN ALIGNMENT RULES:
+            - Use col_alignments for column-specific text alignment
+            - ALIGNMENT TYPES: "left", "center", "right", "justify"
+            - FORMAT: col_alignments="['left', 'right', 'right', 'center']" (one alignment per column)
+            - Typically use: left for text, right for numbers, center for headers
+        
+        17. ROW HEIGHT AND CELL FONT CONTROL:
+            - Use row_heights for row-specific height control
+            - Use cell_font_sizes for individual cell font sizes
+            - Use cell_font_colors for individual cell font colors
+            - Use cell_font_names for individual cell font families
+            - ROW HEIGHTS: row_heights="[30, 25, 25, 25]" (height in points for each row)
+            - CELL FONT SIZES: cell_font_sizes="[[14, 12, 12, 12], [10, 10, 10, 10]]" (font size per cell)
+            - CELL FONT COLORS: cell_font_colors="[['#000000', '#FF0000'], ['#0000FF', '#000000']]" (color per cell)
+            - CELL FONT NAMES: cell_font_names="[['Arial', 'Arial'], ['Calibri', 'Times']]" (font family per cell)
+            - Examples:
+              * Header row taller: row_heights="[35, 20, 20, 20]"
+              * Header fonts larger: cell_font_sizes="[[16, 16, 16], [12, 12, 12]]"
+              * Color-coded cells: cell_font_colors="[['#1e3a8a', '#1e3a8a'], ['#000000', '#000000']]"
+        
+        18. TABLE EXAMPLE:
+            Table Sales Data, shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '41107'], ['Frank', 'West', '268', '72707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]", row_heights="[30, 25, 25]", cell_font_sizes="[[14, 14, 14, 14], [12, 12, 12, 12], [12, 12, 12, 12]]", col_number_formats="['', '', 'integer', 'currency']", col_alignments="['left', 'left', 'right', 'right']"
 
-        16. CHART CREATION RULES:
+        19. CHART CREATION RULES:
             - Use shape_type="chart" to create charts
             - REQUIRED properties: chart_type, chart_data
             - CHART TYPES: "column", "bar", "line", "pie", "area", "scatter", "doughnut", "combo"
@@ -290,7 +336,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
               combo_types="['column', 'line']" (chart types for each series in combo charts)
               secondary_axis="[false, true]" (which series use secondary y-axis)
 
-        17. CHART EXAMPLES:
+        20. CHART EXAMPLES:
             - Column Chart: Sales Chart, shape_type="chart", chart_type="column", left=50, top=100, width=400, height=300, chart_title="Quarterly Sales", chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Revenue', 'values': [100000, 150000, 200000, 180000]}}]}}", show_legend=true, x_axis_title="Quarter", y_axis_title="Revenue ($)"
             - Pie Chart: Market Share, shape_type="chart", chart_type="pie", left=50, top=100, width=350, height=300, chart_title="Market Share 2024", chart_data="{{'categories': ['Product A', 'Product B', 'Product C', 'Product D'], 'series': [{{'name': 'Share', 'values': [35, 25, 20, 20]}}]}}", show_percentages=true, explosion="[0.1, 0, 0, 0]"
             - Multi-Series Line: Trend Chart, shape_type="chart", chart_type="line", left=50, top=100, width=500, height=300, chart_title="Sales vs Costs Trend", chart_data="{{'categories': ['Jan', 'Feb', 'Mar', 'Apr', 'May'], 'series': [{{'name': 'Sales', 'values': [100, 120, 140, 130, 160]}}, {{'name': 'Costs', 'values': [80, 90, 110, 105, 125]}}]}}", smooth_lines=true, data_labels=false, series_colors="['#2E86AB', '#A23B72']"

@@ -933,7 +933,7 @@ class SupervisorAgentOrchestrator:
                 "o3-mini-2025-01-31",
                 "o4-mini-2025-04-16"
             ],
-            "google": [
+            "gemini": [
                 "gemini-2.5-pro",
                 "gemini-2.5-flash-lite-preview-06-17"
             ]
@@ -941,7 +941,7 @@ class SupervisorAgentOrchestrator:
         for provider, models in provider_models.items():
             if model_name in models:
                 return provider
-        return "google"  # Fallback to google if no match found
+        return "gemini"  # Fallback to gemini if no match found
 
     def _sanitize_messages_for_provider(self, messages: List[Dict[str, Any]], provider_name: str) -> List[Dict[str, Any]]:
         """Sanitize message history to remove provider-specific content that other providers don't understand"""

@@ -816,6 +816,18 @@ class PowerPointWorker:
             # Apply cell formatting if specified
             self._apply_cell_formatting(table, shape_props, table_rows, table_cols)
             
+            # Apply number formatting if specified
+            self._apply_number_formatting(table, shape_props, table_rows, table_cols)
+            
+            # Apply column alignments if specified
+            self._apply_column_alignments(table, shape_props, table_rows, table_cols)
+            
+            # Apply row heights if specified
+            self._apply_row_heights(table, shape_props, table_rows, table_cols)
+            
+            # Apply cell-specific font formatting if specified
+            self._apply_cell_font_formatting(table, shape_props, table_rows, table_cols)
+            
             updated_info['properties_applied'].extend(['table_rows', 'table_cols', 'table_data'])
             logger.info(f"Created table with {table_rows} rows and {table_cols} columns")
             
@@ -1136,6 +1148,336 @@ class PowerPointWorker:
         
         except Exception as e:
             logger.warning(f"Error applying individual cell borders: {e}")
+    
+    def _apply_number_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply number formatting to table cells (currency, percentage, etc.)."""
+        try:
+            # Apply cell-specific number formatting
+            if 'cell_number_format' in shape_props:
+                cell_number_format = shape_props['cell_number_format']
+                if isinstance(cell_number_format, str):
+                    try:
+                        import ast
+                        cell_number_format = ast.literal_eval(cell_number_format)
+                    except (ValueError, SyntaxError):
+                        cell_number_format = []
+                
+                if isinstance(cell_number_format, list):
+                    for row_idx, row_formats in enumerate(cell_number_format, 1):
+                        if row_idx > rows:
+                            break
+                        
+                        if isinstance(row_formats, list):
+                            for col_idx, number_format in enumerate(row_formats, 1):
+                                if col_idx > cols or not number_format:
+                                    continue
+                                
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    cell_text = cell.Shape.TextFrame.TextRange.Text.strip()
+                                    
+                                    if cell_text and self._is_numeric(cell_text):
+                                        formatted_text = self._format_number(cell_text, number_format)
+                                        cell.Shape.TextFrame.TextRange.Text = formatted_text
+                                        logger.debug(f"Applied {number_format} formatting to cell ({row_idx}, {col_idx}): '{cell_text}' -> '{formatted_text}'")
+                                        
+                                except Exception as e:
+                                    logger.warning(f"Could not apply number formatting to cell ({row_idx}, {col_idx}): {e}")
+            
+            # Apply column-wide number formatting
+            if 'col_number_formats' in shape_props:
+                col_formats = shape_props['col_number_formats']
+                if isinstance(col_formats, str):
+                    try:
+                        import ast
+                        col_formats = ast.literal_eval(col_formats)
+                    except (ValueError, SyntaxError):
+                        col_formats = []
+                
+                if isinstance(col_formats, list):
+                    for col_idx, number_format in enumerate(col_formats, 1):
+                        if col_idx > cols or not number_format:
+                            continue
+                            
+                        for row_idx in range(1, rows + 1):
+                            try:
+                                cell = table.Cell(row_idx, col_idx)
+                                cell_text = cell.Shape.TextFrame.TextRange.Text.strip()
+                                
+                                if cell_text and self._is_numeric(cell_text):
+                                    formatted_text = self._format_number(cell_text, number_format)
+                                    cell.Shape.TextFrame.TextRange.Text = formatted_text
+                                    
+                            except Exception as e:
+                                logger.warning(f"Could not apply column number formatting to cell ({row_idx}, {col_idx}): {e}")
+        
+        except Exception as e:
+            logger.error(f"Error applying number formatting: {e}", exc_info=True)
+    
+    def _apply_column_alignments(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply column-specific text alignments to table cells."""
+        try:
+            if 'col_alignments' in shape_props:
+                col_alignments = shape_props['col_alignments']
+                if isinstance(col_alignments, str):
+                    try:
+                        import ast
+                        col_alignments = ast.literal_eval(col_alignments)
+                    except (ValueError, SyntaxError):
+                        col_alignments = []
+                
+                if isinstance(col_alignments, list):
+                    # Map alignment values to PowerPoint constants
+                    align_map = {
+                        'left': 1,    # ppAlignLeft
+                        'center': 2,  # ppAlignCenter
+                        'right': 3,   # ppAlignRight
+                        'justify': 4  # ppAlignJustify
+                    }
+                    
+                    for col_idx, alignment in enumerate(col_alignments, 1):
+                        if col_idx > cols or not alignment:
+                            continue
+                        
+                        alignment_lower = alignment.lower()
+                        if alignment_lower in align_map:
+                            alignment_constant = align_map[alignment_lower]
+                            
+                            # Apply alignment to all cells in this column
+                            for row_idx in range(1, rows + 1):
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    cell.Shape.TextFrame.TextRange.ParagraphFormat.Alignment = alignment_constant
+                                    logger.debug(f"Applied {alignment} alignment to cell ({row_idx}, {col_idx})")
+                                    
+                                except Exception as e:
+                                    logger.warning(f"Could not apply column alignment to cell ({row_idx}, {col_idx}): {e}")
+                    
+                    logger.info(f"Applied column alignments: {col_alignments}")
+        
+        except Exception as e:
+            logger.error(f"Error applying column alignments: {e}", exc_info=True)
+    
+    def _is_numeric(self, text: str) -> bool:
+        """Check if text represents a numeric value."""
+        try:
+            # Remove common non-numeric characters for testing
+            clean_text = text.replace(',', '').replace('$', '').replace('%', '').replace('(', '').replace(')', '').strip()
+            if not clean_text:
+                return False
+            
+            # Handle negative numbers in parentheses
+            if text.strip().startswith('(') and text.strip().endswith(')'):
+                clean_text = clean_text.replace('(', '').replace(')', '')
+            
+            float(clean_text)
+            return True
+        except ValueError:
+            return False
+    
+    def _format_number(self, text: str, format_type: str) -> str:
+        """Format a numeric text value according to the specified format type."""
+        try:
+            # Clean the input text
+            clean_text = text.replace(',', '').replace('$', '').replace('%', '').strip()
+            
+            # Handle negative numbers in parentheses
+            is_negative = False
+            if text.strip().startswith('(') and text.strip().endswith(')'):
+                clean_text = clean_text.replace('(', '').replace(')', '')
+                is_negative = True
+            elif clean_text.startswith('-'):
+                is_negative = True
+                clean_text = clean_text[1:]
+            
+            if not clean_text:
+                return text
+            
+            try:
+                # Parse the number
+                if '.' in clean_text:
+                    num_value = float(clean_text)
+                else:
+                    num_value = int(clean_text)
+                
+                # Apply negative sign
+                if is_negative:
+                    num_value = -num_value
+                
+                # Format according to type
+                format_type_lower = format_type.lower()
+                
+                if format_type_lower == 'currency':
+                    if num_value < 0:
+                        return f"(${{:,.0f}})".format(abs(num_value))
+                    else:
+                        return f"${{:,.0f}}".format(num_value)
+                
+                elif format_type_lower == 'currency_decimal':
+                    if num_value < 0:
+                        return f"(${{:,.2f}})".format(abs(num_value))
+                    else:
+                        return f"${{:,.2f}}".format(num_value)
+                
+                elif format_type_lower == 'percentage':
+                    if isinstance(num_value, float) and num_value <= 1.0:
+                        # Assume it's already a decimal (0.05 = 5%)
+                        percentage = num_value * 100
+                    else:
+                        # Assume it's already a percentage (5 = 5%)
+                        percentage = num_value
+                    return f"{percentage:.1f}%"
+                
+                elif format_type_lower == 'comma':
+                    if isinstance(num_value, float):
+                        return f"{num_value:,.2f}"
+                    else:
+                        return f"{num_value:,}"
+                
+                elif format_type_lower == 'decimal':
+                    return f"{num_value:.2f}"
+                
+                elif format_type_lower == 'integer':
+                    return f"{int(num_value)}"
+                
+                else:
+                    # Unknown format, return with commas as default
+                    if isinstance(num_value, float):
+                        return f"{num_value:,.2f}"
+                    else:
+                        return f"{num_value:,}"
+                        
+            except ValueError:
+                logger.warning(f"Could not parse numeric value: '{clean_text}'")
+                return text
+                
+        except Exception as e:
+            logger.warning(f"Error formatting number '{text}' with format '{format_type}': {e}")
+            return text
+    
+    def _apply_row_heights(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply row-specific heights to table rows."""
+        try:
+            if 'row_heights' in shape_props:
+                row_heights = shape_props['row_heights']
+                if isinstance(row_heights, str):
+                    try:
+                        import ast
+                        row_heights = ast.literal_eval(row_heights)
+                    except (ValueError, SyntaxError):
+                        row_heights = []
+                
+                if isinstance(row_heights, list):
+                    for row_idx, height in enumerate(row_heights, 1):
+                        if row_idx > rows or not height:
+                            continue
+                        
+                        try:
+                            # Convert height to float and apply to row
+                            row_height = float(height)
+                            table.Rows(row_idx).Height = row_height
+                            logger.debug(f"Applied height {row_height} to row {row_idx}")
+                            
+                        except Exception as e:
+                            logger.warning(f"Could not set row {row_idx} height: {e}")
+                    
+                    logger.info(f"Applied row heights: {row_heights}")
+        
+        except Exception as e:
+            logger.error(f"Error applying row heights: {e}", exc_info=True)
+    
+    def _apply_cell_font_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply cell-specific font formatting (sizes, colors, names) to table cells."""
+        try:
+            # Apply cell-specific font sizes
+            if 'cell_font_sizes' in shape_props:
+                cell_font_sizes = shape_props['cell_font_sizes']
+                if isinstance(cell_font_sizes, str):
+                    try:
+                        import ast
+                        cell_font_sizes = ast.literal_eval(cell_font_sizes)
+                    except (ValueError, SyntaxError):
+                        cell_font_sizes = []
+                
+                if isinstance(cell_font_sizes, list):
+                    for row_idx, row_sizes in enumerate(cell_font_sizes, 1):
+                        if row_idx > rows:
+                            break
+                        
+                        if isinstance(row_sizes, list):
+                            for col_idx, font_size in enumerate(row_sizes, 1):
+                                if col_idx > cols or not font_size:
+                                    continue
+                                
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    cell.Shape.TextFrame.TextRange.Font.Size = float(font_size)
+                                    logger.debug(f"Applied font size {font_size} to cell ({row_idx}, {col_idx})")
+                                    
+                                except Exception as e:
+                                    logger.warning(f"Could not set font size for cell ({row_idx}, {col_idx}): {e}")
+            
+            # Apply cell-specific font colors
+            if 'cell_font_colors' in shape_props:
+                cell_font_colors = shape_props['cell_font_colors']
+                if isinstance(cell_font_colors, str):
+                    try:
+                        import ast
+                        cell_font_colors = ast.literal_eval(cell_font_colors)
+                    except (ValueError, SyntaxError):
+                        cell_font_colors = []
+                
+                if isinstance(cell_font_colors, list):
+                    for row_idx, row_colors in enumerate(cell_font_colors, 1):
+                        if row_idx > rows:
+                            break
+                        
+                        if isinstance(row_colors, list):
+                            for col_idx, font_color in enumerate(row_colors, 1):
+                                if col_idx > cols or not font_color:
+                                    continue
+                                
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    if font_color.startswith('#'):
+                                        # Convert hex to RGB
+                                        rgb = tuple(int(font_color[j:j+2], 16) for j in (1, 3, 5))
+                                        cell.Shape.TextFrame.TextRange.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                        logger.debug(f"Applied font color {font_color} to cell ({row_idx}, {col_idx})")
+                                    
+                                except Exception as e:
+                                    logger.warning(f"Could not set font color for cell ({row_idx}, {col_idx}): {e}")
+            
+            # Apply cell-specific font names
+            if 'cell_font_names' in shape_props:
+                cell_font_names = shape_props['cell_font_names']
+                if isinstance(cell_font_names, str):
+                    try:
+                        import ast
+                        cell_font_names = ast.literal_eval(cell_font_names)
+                    except (ValueError, SyntaxError):
+                        cell_font_names = []
+                
+                if isinstance(cell_font_names, list):
+                    for row_idx, row_fonts in enumerate(cell_font_names, 1):
+                        if row_idx > rows:
+                            break
+                        
+                        if isinstance(row_fonts, list):
+                            for col_idx, font_name in enumerate(row_fonts, 1):
+                                if col_idx > cols or not font_name:
+                                    continue
+                                
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    cell.Shape.TextFrame.TextRange.Font.Name = str(font_name)
+                                    logger.debug(f"Applied font name '{font_name}' to cell ({row_idx}, {col_idx})")
+                                    
+                                except Exception as e:
+                                    logger.warning(f"Could not set font name for cell ({row_idx}, {col_idx}): {e}")
+        
+        except Exception as e:
+            logger.error(f"Error applying cell font formatting: {e}", exc_info=True)
     
     def _create_chart_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new chart shape on the slide with specified properties."""

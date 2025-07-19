@@ -98,6 +98,10 @@ def _parse_property_value(value: str) -> Any:
     if not value:
         return value
     
+    # Handle backtick-wrapped values (remove backticks)
+    if value.startswith('`') and value.endswith('`'):
+        value = value[1:-1]
+    
     # Handle quoted strings that contain JSON-like structures
     if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
         # Remove quotes
@@ -255,9 +259,9 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                             key = key.strip()
                             value = value.strip()
                             
-                    # Parse the value based on its type
-                    parsed_value = _parse_property_value(value)
-                    shape_data[key] = parsed_value
+                            # Parse the value based on its type
+                            parsed_value = _parse_property_value(value)
+                            shape_data[key] = parsed_value
                     
                     # Log advanced text formatting properties for debugging
                     if key in ['bullet_style', 'bullet_char', 'indent_level', 'left_indent', 'right_indent', 
