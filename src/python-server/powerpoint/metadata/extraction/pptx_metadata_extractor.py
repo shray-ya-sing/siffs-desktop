@@ -366,22 +366,50 @@ class PowerPointMetadataExtractor:
     def _extract_font_format(self, font) -> Dict[str, Any]:
         """Extract font formatting information."""
         try:
-            return {
-                "name": font.name,
-                "size": font.size.pt if font.size else None,
-                "bold": font.bold,
-                "italic": font.italic,
-                "underline": font.underline,
-                "color": self._extract_color(font.color),
+            font_data = {
                 "languageId": getattr(font, 'language_id', None)
             }
+            
+            # Safely extract each property
+            try:
+                font_data["name"] = font.name
+            except:
+                font_data["name"] = None
+                
+            try:
+                font_data["size"] = font.size.pt if font.size else None
+            except:
+                font_data["size"] = None
+                
+            try:
+                font_data["bold"] = font.bold
+            except:
+                font_data["bold"] = None
+                
+            try:
+                font_data["italic"] = font.italic
+            except:
+                font_data["italic"] = None
+                
+            try:
+                font_data["underline"] = font.underline
+            except:
+                font_data["underline"] = None
+                
+            try:
+                font_data["color"] = self._extract_color(font.color)
+            except Exception as color_error:
+                font_data["color"] = {"error": str(color_error)}
+                
+            return font_data
+            
         except Exception as e:
             return {"error": str(e)}
     
     def _extract_color(self, color_format) -> Dict[str, Any]:
         """Extract color information."""
         try:
-            if not color_format:
+            if not color_format or not hasattr(color_format, 'type'):
                 return {"type": "none"}
                 
             color_data = {
@@ -389,11 +417,26 @@ class PowerPointMetadataExtractor:
                 "typeValue": int(color_format.type)
             }
             
-            if color_format.type == MSO_COLOR_TYPE.RGB:
-                color_data["rgb"] = str(color_format.rgb)
-                
-            elif color_format.type == MSO_COLOR_TYPE.THEME:
-                color_data["themeColor"] = str(color_format.theme_color)
+            # Handle RGB colors
+            if hasattr(color_format, 'rgb') and color_format.type == MSO_COLOR_TYPE.RGB:
+                try:
+                    color_data["rgb"] = str(color_format.rgb)
+                except:
+                    color_data["rgb"] = "unknown"
+            
+            # Handle theme colors - check if THEME constant exists
+            elif hasattr(MSO_COLOR_TYPE, 'THEME') and color_format.type == MSO_COLOR_TYPE.THEME:
+                try:
+                    color_data["themeColor"] = str(color_format.theme_color)
+                except:
+                    color_data["themeColor"] = "unknown"
+            
+            # Handle scheme colors
+            elif hasattr(color_format, 'theme_color'):
+                try:
+                    color_data["themeColor"] = str(color_format.theme_color)
+                except:
+                    color_data["themeColor"] = "unknown"
                 
             return color_data
             
@@ -495,11 +538,18 @@ class PowerPointMetadataExtractor:
                 "type": str(fill.type) if hasattr(fill, 'type') else "unknown"
             }
             
-            # Add type-specific data
-            if hasattr(fill, 'fore_color'):
-                fill_data["foreColor"] = self._extract_color(fill.fore_color)
-            if hasattr(fill, 'back_color'):
-                fill_data["backColor"] = self._extract_color(fill.back_color)
+            # Add type-specific data with error handling
+            try:
+                if hasattr(fill, 'fore_color'):
+                    fill_data["foreColor"] = self._extract_color(fill.fore_color)
+            except Exception as color_error:
+                fill_data["foreColor"] = {"error": str(color_error)}
+                
+            try:
+                if hasattr(fill, 'back_color'):
+                    fill_data["backColor"] = self._extract_color(fill.back_color)
+            except Exception as color_error:
+                fill_data["backColor"] = {"error": str(color_error)}
                 
             return fill_data
             
