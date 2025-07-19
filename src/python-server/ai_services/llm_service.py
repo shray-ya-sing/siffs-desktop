@@ -1,5 +1,6 @@
-from typing import Dict, List, Optional, Union, AsyncGenerator
+from typing import Dict, List, Optional, Union, AsyncGenerator, Any
 import sys
+import json
 from pathlib import Path
 ai_services_path = Path(__file__).parent
 sys.path.append(str(ai_services_path))
@@ -8,7 +9,8 @@ from factory import ProviderFactory
 from tools.semantic_search_tool import SemanticSearchTool
 
 class LLMService:
-    def __init__(self, retriever=None):
+    def __init__(self, user_id: str = None, retriever=None):
+        self.user_id = user_id
         self._providers: Dict[str, LLMProvider] = {}
         self._model_to_provider: Dict[str, str] = {}
         self._tools: Dict[str, Any] = {}
@@ -29,7 +31,7 @@ class LLMService:
         
         for provider_name in supported_models:
             # Initialize provider with any required config
-            provider = ProviderFactory.get_provider(provider_name)
+            provider = ProviderFactory.get_provider(provider_name, user_id=self.user_id)
             if provider:
                 self._providers[provider_name] = provider
                 # Map each model to its provider

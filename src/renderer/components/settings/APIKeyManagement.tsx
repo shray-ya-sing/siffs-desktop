@@ -290,7 +290,7 @@ export function APIKeyManagement() {
       </div>
 
       <div className="space-y-4">
-        {(['gemini'] as Provider[]).map((provider) => (
+        {(['gemini', 'openai', 'anthropic'] as Provider[]).map((provider) => (
           <APIKeyCard
             key={provider}
             provider={provider}

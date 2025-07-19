@@ -1,15 +1,41 @@
 import sys
+import json
+import logging
 from pathlib import Path
 from typing import List, Dict, Optional, AsyncGenerator, Union
 ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
 from base_provider import LLMProvider, ChatResponse, Message, ToolCall
 import anthropic
-import json
+
+logger = logging.getLogger(__name__)
 
 class AnthropicProvider(LLMProvider):
-    def __init__(self, api_key: Optional[str] = None):
-        self.client = anthropic.AsyncAnthropic(api_key=api_key)
+    def __init__(self, user_id: str):
+        from api_key_management.service import api_key_manager
+        api_key = api_key_manager.get_effective_api_key(user_id, "anthropic")
+        
+        # Log API key status for debugging
+        if api_key:
+            logger.info(f"Using user-provided Anthropic API key for user {user_id}")
+        else:
+            logger.info(f"No user API key found for Anthropic, checking environment variables")
+            import os
+            env_key = os.getenv('ANTHROPIC_API_KEY')
+            if env_key:
+                logger.info("Found ANTHROPIC_API_KEY environment variable")
+            else:
+                logger.warning("No ANTHROPIC_API_KEY environment variable found. User must provide API key through the UI.")
+        
+        # Initialize Anthropic client - if api_key is None, it will use environment variables
+        try:
+            self.client = anthropic.AsyncAnthropic(api_key=api_key)
+        except Exception as e:
+            error_msg = f"Failed to initialize Anthropic client for user {user_id}: {str(e)}"
+            if "Could not resolve authentication method" in str(e):
+                error_msg += "\nPlease set your Anthropic API key in the Settings page or set the ANTHROPIC_API_KEY environment variable."
+            logger.error(error_msg)
+            raise Exception(error_msg)
     
     async def chat_completion(
         self,

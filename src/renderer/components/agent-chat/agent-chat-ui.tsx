@@ -68,14 +68,16 @@ interface CustomEventMessage extends BaseMessage {
 type Message = UserMessage | AssistantMessage | ToolCallMessage | CustomEventMessage;
 
 const MODEL_OPTIONS: ModelOption[] = [
-//  { id: "openai-o1", name: "OpenAI o-1", provider: "OpenAI" },
-//  { id: "openai-o3", name: "OpenAI o-3", provider: "OpenAI" },
-//  { id: "claude-sonnet-4-20250514", name: "Claude sonnet 4", provider: "Anthropic" },
-//  { id: "claude-3-7-sonnet-latest", name: "Claude sonnet 3.7", provider: "Anthropic" },
-//  { id: "xai-grok-3", name: "Grok-3", provider: "xAI" },
-//  { id: "deepseek-v3", name: "DeepSeek v3", provider: "DeepSeek" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 pro", provider: "Google" },
-  { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 flash lite", provider: "Google" },
+  // OpenAI Models
+  { id: "o3-mini-2025-01-31", name: "o3-mini", provider: "OpenAI" },
+  { id: "o4-mini-2025-04-16", name: "o4-mini", provider: "OpenAI" },
+  
+  // Anthropic Models
+  { id: "claude-3-7-sonnet-latest", name: "Claude 3.7 Sonnet", provider: "Anthropic" },
+  
+  // Google Models
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "Google" },
+  { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 Flash Lite", provider: "Google" },
 ]
 
 
@@ -195,7 +197,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro")
+  const [selectedModel, setSelectedModel] = useState("o3-mini-2025-01-31")
   const [attachments, setAttachments] = useState<Array<{type: 'image', data: string, mimeType: string, filename?: string}>>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [messageFeedback, setMessageFeedback] = useState<{[messageId: string]: 'up' | 'down' | null}>({})

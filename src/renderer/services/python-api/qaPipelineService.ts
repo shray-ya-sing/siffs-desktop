@@ -199,7 +199,7 @@ import axios, {
      * Ask a question based on search results
      * @param searchResponse Search results from searchEmbeddings
      * @param question The question to ask
-     * @param model Model to use for QA (default: 'claude-sonnet-4-20250514')
+     * @param model Model to use for QA (default: 'claude-3-5-sonnet-20241022')
      * @param includeSources Whether to include sources in the response (default: true)
      * @param cancelToken Optional cancel token for the request
      * @returns Promise with the answer
@@ -207,7 +207,7 @@ import axios, {
     askQuestion(
       searchResponse: SearchResponse,
       question: string,
-      model: string = 'claude-sonnet-4-20250514',
+      model: string = 'claude-3-5-sonnet-20241022',
       includeSources: boolean = true,
       cancelToken?: CancelTokenSource
     ): Promise<AxiosResponse<QAResponse>> {
@@ -231,7 +231,7 @@ import axios, {
      * @param question The question to ask
      * @param onChunk Callback for receiving chunks of the answer
      * @param onError Callback for errors
-     * @param model Model to use for QA (default: 'claude-sonnet-4-20250514')
+     * @param model Model to use for QA (default: 'claude-3-5-sonnet-20241022')
      * @param includeSources Whether to include sources in the response (default: true)
      * @returns Object with cancel function to abort the request
      */
@@ -240,7 +240,7 @@ import axios, {
       question: string,
       onChunk: (chunk: string, isDone: boolean) => void,
       onError: (error: string) => void,
-      model: string = 'claude-sonnet-4-20250514',
+      model: string = 'claude-3-5-sonnet-20241022',
       includeSources: boolean = true
     ): { cancel: () => void } {
       const controller = new AbortController();

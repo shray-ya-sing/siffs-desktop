@@ -9,6 +9,9 @@ sys.path.append(str(current_dir))
 from core.events import event_bus
 from api.websocket_manager import manager
 from api_key_management.service import api_key_manager
+from api_key_management.providers.gemini_provider import GeminiProvider
+from api_key_management.providers.anthropic_provider import AnthropicProvider
+from api_key_management.providers.openai_provider import OpenAIProvider
 
 logger = logging.getLogger(__name__)
 
@@ -94,25 +97,27 @@ class APIKeyHandler:
             manager.set_user_id(client_id, user_id)
             logger.info("Associated client with user during API key setup.")
             
-            # Trigger agent initialization if this is a Gemini API key
-            if provider == "gemini":
+            # Trigger agent initialization for any provider
+            # For now, we still use Gemini-based supervisor agent, but in the future
+            # we could have provider-specific agents
+            if provider in ["gemini", "openai", "anthropic"]:
                 from ai_services.agents.supervisor.supervisor_agent import supervisor_agent
                 try:
                     supervisor_agent.initialize_with_user_api_key(user_id)
-                    logger.info("Successfully initialized supervisor agent after setting API key.")
+                    logger.info(f"Successfully initialized supervisor agent after setting {provider} API key.")
                     
                     # Send agent initialization success message
                     await manager.send_message(client_id, {
                         "type": "AGENT_INITIALIZATION_SUCCESS",
-                        "message": "Agent successfully initialized with API key"
+                        "message": f"Agent successfully initialized with {provider} API key"
                     })
                 except Exception as e:
-                    logger.error(f"Failed to initialize agent after setting API key: {str(e)}")
+                    logger.error(f"Failed to initialize agent after setting {provider} API key: {str(e)}")
                     
                     # Send agent initialization failure message
                     await manager.send_message(client_id, {
                         "type": "AGENT_INITIALIZATION_FAILED",
-                        "message": f"Failed to initialize agent: {str(e)}"
+                        "message": f"Failed to initialize agent with {provider}: {str(e)}"
                     })
             
             # Send success response

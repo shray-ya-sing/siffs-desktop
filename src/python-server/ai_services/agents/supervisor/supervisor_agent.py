@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 python_server_path = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(python_server_path))
 from api_key_management.providers.gemini_provider import GeminiProvider
+from api_key_management.providers.openai_provider import OpenAIProvider
+from api_key_management.providers.anthropic_provider import AnthropicProvider
 
 # Import local modules
 from ai_services.agents.supervisor.prompts.supervisor_prompts import SUPERVISOR_SYSTEM_PROMPT, SUPERVISOR_EXCEL_AGENT_PROMPT, SILENT_SUPERVISOR_SYSTEM_PROMPT
@@ -47,37 +49,61 @@ class SupervisorAgent:
         #self.enhanced_system_prompt = SUPERVISOR_SYSTEM_PROMPT
         self.enhanced_system_prompt = SILENT_SUPERVISOR_SYSTEM_PROMPT
 
-    def initialize_with_user_api_key(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17") -> bool:
-        """Initialize the agent for a specific user with their API key.
-        
-        Args:
-            user_id: The ID of the user to initialize for
-            model: The model to use for initialization
-            
-        Returns:
-            bool: True if initialization was successful, False otherwise
-        """
-        # Always reinitialize if model changes, even for same user
+    def initialize_with_user_api_key(self, user_id: str, model: str) -> bool:
+        """Initialize the agent for a specific user with their API key and selected model."""
         if self.current_user_id == user_id and hasattr(self, '_current_model') and self._current_model == model:
             logger.info(f"Agent already initialized for user {user_id} with model {model}")
             return True
-            
+
         try:
-            # Clear any existing agents
-            #self._cleanup()
-            
-            # Initialize with user's API key and specified model
             self.current_user_id = user_id
             self._current_model = model
-            self._initialize_agents(user_id, model)
-            self._setup_supervisor()
-            
+
+            # Determine the provider from the model name
+            provider_name = self._get_provider_name(model)
+
+            # Initialize model based on the provider
+            if provider_name == 'google':
+                self.supervisor_model = GeminiProvider.get_gemini_model(user_id=user_id, model=model)
+            elif provider_name == 'openai':
+                self.supervisor_model = OpenAIProvider.get_openai_model(user_id=user_id, model=model)
+            elif provider_name == 'anthropic':
+                self.supervisor_model = AnthropicProvider.get_anthropic_model(user_id=user_id, model=model)
+            else:
+                logger.error(f"Unknown provider for model: {model}")
+                return False
+
+            logger.info(f"Successfully initialized {provider_name} model: {model} for user {user_id}")
+
+            self.simple_agent = PrebuiltAgent().with_model(model, user_id).get_agent()
+            self.supervisor = self.simple_agent
+            self.agent_system = self.simple_agent
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize agent for user {user_id} with model {model}: {str(e)}")
-            #self._cleanup()
             return False
+
+    def _get_provider_name(self, model_name: str) -> str:
+        self.provider_models = {
+            "anthropic": [
+                "claude-3-7-sonnet-latest"
+            ],
+            "openai": [
+                "o3-mini-2025-01-31",
+                "o4-mini-2025-04-16"
+            ],
+            "google": [
+                "gemini-2.5-pro",
+                "gemini-2.5-flash-lite-preview-06-17"
+            ]
+        }
+        for provider, models in self.provider_models.items():
+            if model_name in models:
+                return provider
+        return "google"  # Fallback to google if no match found
+
 
     def _initialize_agents(self, user_id: str, model: str = "gemini-2.5-flash-lite-preview-06-17"):
         """Initialize the underlying agents with the specified model"""

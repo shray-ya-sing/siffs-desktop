@@ -163,8 +163,8 @@ export class APIKeyService {
    * Trigger agent initialization after API key is set
    */
   private async triggerAgentInitialization(provider: Provider, userId?: string): Promise<void> {
-    // Only trigger initialization for Gemini provider since that's what the supervisor agent uses
-    if (provider !== 'gemini') {
+    // Trigger initialization for all providers since the supervisor agent can use any of them
+    if (!['gemini', 'openai', 'anthropic'].includes(provider)) {
       return;
     }
 

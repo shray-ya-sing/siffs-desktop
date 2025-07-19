@@ -199,7 +199,7 @@ const apiService = {
    * @param chunks Array of markdown chunks to analyze.
    * @param onChunk A callback function to receive chunks of the analysis result.
    * @param onError A callback function to receive error messages.
-   * @param model The LLM model to use (default: 'claude-sonnet-4-20250514').
+   * @param model The LLM model to use (default: 'claude-3-5-sonnet-20241022').
    * @param temperature The sampling temperature (default: 0.3).
    * @returns An object with a cancel function to abort the analysis.
    */
@@ -207,7 +207,7 @@ const apiService = {
     chunks: string[],
     onChunk: (chunk: string, isDone: boolean) => void,
     onError: (error: string) => void,
-    model: string = 'claude-sonnet-4-20250514', // claude-sonnet-4-20250514 or claude-3-5-haiku-20241022
+    model: string = 'claude-3-5-sonnet-20241022', // claude-3-5-sonnet-20241022 or claude-3-5-haiku-20241022
     temperature: number = 0.3
   ): { cancel: () => void } {
     const controller = new AbortController();
@@ -354,7 +354,7 @@ const apiService = {
    * @param metadata The metadata to analyze.
    * @param onChunk A callback function to receive chunks of the analysis result.
    * @param onError A callback function to receive error messages.
-   * @param model The LLM model to use (default: 'claude-sonnet-4-20250514').
+   * @param model The LLM model to use (default: 'claude-3-5-sonnet-20241022').
    * @param temperature The sampling temperature (default: 0.3).
    * @returns An object with a cancel function to abort the analysis.
    * @deprecated Use analyzeExcelChunks instead for better performance
@@ -363,7 +363,7 @@ const apiService = {
     metadata: any,  // or a more specific type if available
     onChunk: (chunk: string, isDone: boolean) => void,
     onError: (error: string) => void,
-    model: string = 'claude-sonnet-4-20250514',
+    model: string = 'claude-3-5-sonnet-20241022',
     temperature: number = 0.3
   ): { cancel: () => void } {
     const controller = new AbortController();

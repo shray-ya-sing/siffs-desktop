@@ -280,7 +280,7 @@ const modelEditPipelineService = {
       user_request: params.user_request,
       chunks: params.chunks || [],
       chunk_limit: params.chunk_limit || 10,
-      model: params.model || 'claude-sonnet-4-20250514',
+      model: params.model || 'claude-3-5-sonnet-20241022',
       max_tokens: params.max_tokens || 2000,
       temperature: params.temperature || 0.3,
       stream: params.stream || false,

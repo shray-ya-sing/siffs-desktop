@@ -436,15 +436,18 @@ class SupervisorAgentOrchestrator:
             
             # Initialize the agent with the user's API key and selected model
             if not supervisor_agent.current_user_id or supervisor_agent.current_user_id != user_id or not hasattr(supervisor_agent, '_current_model') or supervisor_agent._current_model != model:
-                if api_key_manager.has_user_api_key(user_id, "gemini"):
+                # Determine the provider based on the model
+                provider_name = self._get_provider_name(model)
+                
+                if api_key_manager.has_user_api_key(user_id, provider_name):
                     supervisor_agent.initialize_with_user_api_key(user_id, model)
                     # Update token counter for the selected model
                     self.update_token_counter_model(model)
                 else:
-                    logger.error("No Gemini API key found for user")
+                    logger.error(f"No {provider_name} API key found for user")
                     yield {
                         "type": "error",
-                        "error": "No Gemini API key found. Please set up your API key first.",
+                        "error": f"No {provider_name} API key found. Please set up your {provider_name} API key first.",
                         "requestId": request_id,
                         "done": True
                     }
@@ -581,8 +584,19 @@ class SupervisorAgentOrchestrator:
                     logger.debug(f"Message conversion resulted in non-multimodal format: {type(user_message.get('content'))}")
                     logger.debug(f"Final message content: {user_message.get('content')}")
                 
+            # Sanitize conversation history for the target provider
+            provider_name = self._get_provider_name(model)
+            sanitized_history = self._sanitize_messages_for_provider(history, provider_name)
+            
+            # Combine sanitized history with current user message
+            all_messages = sanitized_history + [user_message]
+            
+            # Also sanitize the final message list that will be sent to LangGraph
+            # This ensures any complex content structures are cleaned up
+            final_sanitized_messages = self._sanitize_messages_for_provider(all_messages, provider_name)
+            
             inputs = {
-                "messages": [user_message],
+                "messages": final_sanitized_messages,
                 "thread_id": thread_id
             }
 
@@ -908,6 +922,117 @@ class SupervisorAgentOrchestrator:
         }
         
         return converted_message
+    
+    def _get_provider_name(self, model_name: str) -> str:
+        """Determine the provider name based on the model name"""
+        provider_models = {
+            "anthropic": [
+                "claude-3-7-sonnet-latest"
+            ],
+            "openai": [
+                "o3-mini-2025-01-31",
+                "o4-mini-2025-04-16"
+            ],
+            "google": [
+                "gemini-2.5-pro",
+                "gemini-2.5-flash-lite-preview-06-17"
+            ]
+        }
+        for provider, models in provider_models.items():
+            if model_name in models:
+                return provider
+        return "google"  # Fallback to google if no match found
+
+    def _sanitize_messages_for_provider(self, messages: List[Dict[str, Any]], provider_name: str) -> List[Dict[str, Any]]:
+        """Sanitize message history to remove provider-specific content that other providers don't understand"""
+        sanitized_messages = []
+        
+        # Define provider-specific content types to remove
+        openai_specific_types = {'reasoning', 'reflection'}
+        anthropic_specific_types = {'thinking', 'redacted_thinking'}
+        google_specific_types = {'system'}  # Add other Google-specific types if needed
+        
+        # Define what to remove based on target provider
+        types_to_remove = set()
+        if provider_name == 'anthropic':
+            types_to_remove.update(openai_specific_types)
+            types_to_remove.update(google_specific_types)
+        elif provider_name == 'openai':
+            types_to_remove.update(anthropic_specific_types)
+            types_to_remove.update(google_specific_types)
+        elif provider_name == 'google':
+            types_to_remove.update(openai_specific_types)
+            types_to_remove.update(anthropic_specific_types)
+        
+        for msg in messages:
+            sanitized_msg = msg.copy()
+            content = msg.get('content', '')
+            
+            # Handle different content types
+            if isinstance(content, list):
+                # Filter out provider-specific content blocks
+                sanitized_content = []
+                for content_block in content:
+                    if isinstance(content_block, dict):
+                        content_type = content_block.get('type', 'text')
+                        
+                        # Skip provider-specific content types
+                        if content_type in types_to_remove:
+                            logger.debug(f"Removing {content_type} content block for {provider_name} provider")
+                            continue
+                            
+                        # Keep standard content types (text, image_url, image, tool_use, tool_result)
+                        if content_type in ['text', 'image_url', 'image', 'tool_use', 'tool_result']:
+                            sanitized_content.append(content_block)
+                        else:
+                            # For unknown content types, try to extract text if possible
+                            if content_block.get('text'):
+                                sanitized_content.append({
+                                    'type': 'text',
+                                    'text': content_block.get('text')
+                                })
+                            logger.debug(f"Converted unknown content type {content_type} to text for {provider_name} provider")
+                    elif isinstance(content_block, str):
+                        # Keep string content as text block
+                        sanitized_content.append({
+                            'type': 'text',
+                            'text': content_block
+                        })
+                
+                # If we have filtered content, use it; otherwise fall back to text extraction
+                if sanitized_content:
+                    sanitized_msg['content'] = sanitized_content
+                else:
+                    # Extract just text content from the original list as fallback
+                    text_parts = []
+                    for content_block in content:
+                        if isinstance(content_block, str):
+                            text_parts.append(content_block)
+                        elif isinstance(content_block, dict):
+                            # Try multiple ways to extract text
+                            text = content_block.get('text') or content_block.get('content') or str(content_block.get('value', ''))
+                            if text:
+                                text_parts.append(text)
+                    
+                    # If we found text, use it; otherwise use empty string
+                    final_text = ' '.join(text_parts).strip()
+                    sanitized_msg['content'] = final_text if final_text else ''
+                    
+                    if not final_text:
+                        logger.warning(f"No text content could be extracted from message, using empty string")
+                        
+            else:
+                # Content is already a string, keep as is
+                sanitized_msg['content'] = content
+                
+            # Only add messages that have content
+            if sanitized_msg.get('content'):
+                sanitized_messages.append(sanitized_msg)
+            else:
+                logger.debug(f"Skipping message with empty content after sanitization")
+        
+        logger.info(f"Sanitized {len(messages)} messages for provider {provider_name}, kept {len(sanitized_messages)} messages")
+        return sanitized_messages
 
     def extract_ai_message_content(self, message_chunk):
         """Extract text content from an AIMessage or AIMessageChunk."""
