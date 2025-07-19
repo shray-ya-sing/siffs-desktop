@@ -241,14 +241,23 @@ class PowerPointWorker:
                                         break
                                 
                                 if shape is None:
-                                    # Create new shape if it doesn't exist
-                                    logger.info(f"Creating new shape '{shape_name}' in slide {slide_number}")
-                                    shape = self._create_new_shape(slide, shape_name, shape_props)
-                                    if shape is None:
-                                        logger.warning(f"Failed to create shape '{shape_name}' in slide {slide_number}")
-                                        continue
+                                    # Check if this is a table creation request before creating any shape
+                                    if self._is_table_creation_request(shape_props):
+                                        # Create table directly
+                                        logger.info(f"Creating new table '{shape_name}' in slide {slide_number}")
+                                        shape = self._create_table_shape(slide, shape_name, shape_props)
+                                        if shape is None:
+                                            logger.warning(f"Failed to create table '{shape_name}' in slide {slide_number}")
+                                            continue
+                                    else:
+                                        # Create regular shape
+                                        logger.info(f"Creating new shape '{shape_name}' in slide {slide_number}")
+                                        shape = self._create_new_shape(slide, shape_name, shape_props)
+                                        if shape is None:
+                                            logger.warning(f"Failed to create shape '{shape_name}' in slide {slide_number}")
+                                            continue
                                 
-                                # Apply shape properties
+                                # Apply shape properties (but skip table creation since it's already done)
                                 updated_shape = self._apply_shape_properties(shape, shape_props, slide_number)
                                 if updated_shape:
                                     updated_shapes.append(updated_shape)
@@ -369,6 +378,14 @@ class PowerPointWorker:
             # Get geometry type
             geom = shape_props.get('geom', 'rectangle').lower()
             
+            # Special handling for textbox - use AddTextbox instead of AddShape
+            if geom == 'textbox':
+                # Create a textbox using AddTextbox method
+                shape = slide.Shapes.AddTextbox(1, left, top, width, height)  # 1 = msoTextOrientationHorizontal
+                shape.Name = shape_name
+                logger.info(f"Created new textbox '{shape_name}' at ({left}, {top}) with size ({width}, {height})")
+                return shape
+            
             # Map geometry types to PowerPoint constants
             geom_map = {
                 'rectangle': 1,      # msoShapeRectangle
@@ -379,7 +396,6 @@ class PowerPointWorker:
                 'diamond': 4,        # msoShapeDiamond
                 'line': 20,          # msoShapeLine
                 'arrow': 13,         # msoShapeRightArrow
-                'textbox': 17,       # msoShapeTextBox
             }
             
             # Get the shape type constant
@@ -406,16 +422,97 @@ class PowerPointWorker:
     
     def _is_table_creation_request(self, shape_props: Dict[str, Any]) -> bool:
         """Check if the shape properties indicate a table creation request."""
-        table_props = ['table_rows', 'table_cols', 'table_data']
-        return any(prop in shape_props for prop in table_props)
+        table_props = ['table_rows', 'table_cols', 'table_data', 'rows', 'cols', 'shape_type']
+        return any(prop in shape_props for prop in table_props) or shape_props.get('shape_type') == 'table'
+    
+    def _create_table_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
+        """Create a new table shape on the slide with the specified properties.
+        
+        Args:
+            slide: PowerPoint slide object
+            shape_name: Name for the new table shape
+            shape_props: Dictionary of shape properties including table data
+            
+        Returns:
+            The created table shape object or None if creation failed
+        """
+        try:
+            # Get table parameters - support both old and new property names
+            table_rows = int(shape_props.get('table_rows', shape_props.get('rows', 0)))
+            table_cols = int(shape_props.get('table_cols', shape_props.get('cols', 0)))
+            table_data = shape_props.get('table_data')
+            
+            if table_rows == 0 or table_cols == 0:
+                logger.warning(f"Invalid table dimensions: rows={table_rows}, cols={table_cols}")
+                return None
+            
+            # Get position and size from shape_props, with defaults
+            left = float(shape_props.get('left', 100))  # Default left position
+            top = float(shape_props.get('top', 100))    # Default top position
+            width = float(shape_props.get('width', 400))  # Default width
+            height = float(shape_props.get('height', 200))  # Default height
+            
+            # Create the table directly
+            table_shape = slide.Shapes.AddTable(table_rows, table_cols, left, top, width, height)
+            table_shape.Name = shape_name
+            
+            # Get the table object
+            table = table_shape.Table
+            
+            # Parse table data if it's a string
+            if isinstance(table_data, str):
+                try:
+                    import ast
+                    table_data = ast.literal_eval(table_data)
+                except (ValueError, SyntaxError) as e:
+                    logger.warning(f"Could not parse table_data: {e}")
+                    table_data = []
+            
+            # Fill table with data
+            if table_data and isinstance(table_data, list):
+                for row_idx, row_data in enumerate(table_data, 1):
+                    if row_idx > table_rows:
+                        break
+                    
+                    if isinstance(row_data, list):
+                        for col_idx, cell_data in enumerate(row_data, 1):
+                            if col_idx > table_cols:
+                                break
+                            
+                            try:
+                                cell = table.Cell(row_idx, col_idx)
+                                cell.Shape.TextFrame.TextRange.Text = str(cell_data)
+                                
+                                # Apply font name to cell if specified
+                                if 'font_name' in shape_props:
+                                    cell.Shape.TextFrame.TextRange.Font.Name = shape_props['font_name']
+                                
+                            except Exception as e:
+                                logger.warning(f"Could not set cell ({row_idx}, {col_idx}): {e}")
+            
+            # Apply cell formatting if specified
+            self._apply_cell_formatting(table, shape_props, table_rows, table_cols)
+            
+            logger.info(f"Created table '{shape_name}' with {table_rows} rows and {table_cols} columns")
+            return table_shape
+            
+        except Exception as e:
+            logger.error(f"Error creating table shape '{shape_name}': {e}")
+            return None
     
     def _apply_table_properties(self, shape, shape_props: Dict[str, Any], updated_info: Dict[str, Any]) -> None:
         """Apply table-specific properties to create or modify a table."""
         try:
-            # Get table parameters
-            table_rows = int(shape_props.get('table_rows', 0))
-            table_cols = int(shape_props.get('table_cols', 0))
+            # Get table parameters - support both old and new property names
+            table_rows = int(shape_props.get('table_rows', shape_props.get('rows', 0)))
+            table_cols = int(shape_props.get('table_cols', shape_props.get('cols', 0)))
             table_data = shape_props.get('table_data')
+            
+            # If no table_data, try to parse from text property with cell format
+            if not table_data and 'text' in shape_props:
+                text_data = shape_props['text']
+                if 'cell(' in text_data:
+                    table_data = self._parse_cell_format_data(text_data, table_rows, table_cols)
             
             if table_rows == 0 or table_cols == 0:
                 logger.warning("Invalid table dimensions")
@@ -437,12 +534,15 @@ class PowerPointWorker:
             width = shape.Width
             height = shape.Height
             
+            # Capture the shape name before deletion
+            shape_name = shape.Name if hasattr(shape, 'Name') else 'Table'
+            
             # Delete the placeholder shape
             shape.Delete()
             
             # Create a new table
             table_shape = slide.Shapes.AddTable(table_rows, table_cols, left, top, width, height)
-            table_shape.Name = shape.Name if hasattr(shape, 'Name') else 'Table'
+            table_shape.Name = shape_name
             
             # Get the table object
             table = table_shape.Table
@@ -494,6 +594,32 @@ class PowerPointWorker:
             
         except Exception as e:
             logger.error(f"Error creating table: {e}", exc_info=True)
+    
+    def _parse_cell_format_data(self, text_data: str, rows: int, cols: int) -> List[List[str]]:
+        """Parse cell format data from text like 'cell(1,1): SalesRep\ncell(1,2): Region'."""
+        try:
+            # Initialize empty table data
+            table_data = [["" for _ in range(cols)] for _ in range(rows)]
+            
+            # Parse cell format: cell(row,col): value
+            import re
+            cell_pattern = r'cell\((\d+),(\d+)\):\s*(.+?)(?=\n|$)'
+            matches = re.findall(cell_pattern, text_data)
+            
+            for match in matches:
+                row_idx = int(match[0]) - 1  # Convert to 0-based index
+                col_idx = int(match[1]) - 1  # Convert to 0-based index
+                value = match[2].strip()
+                
+                # Validate indices
+                if 0 <= row_idx < rows and 0 <= col_idx < cols:
+                    table_data[row_idx][col_idx] = value
+            
+            return table_data
+            
+        except Exception as e:
+            logger.error(f"Error parsing cell format data: {e}")
+            return []
     
     def _apply_cell_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
         """Apply cell-level formatting to a table."""
