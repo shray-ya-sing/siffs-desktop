@@ -696,9 +696,15 @@ class PowerPointWorker:
             return []
     
     def _apply_cell_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
-        """Apply cell-level formatting to a table."""
+        """Apply comprehensive cell-level formatting to a table."""
         try:
-            # Apply cell background colors
+            # Apply alternating row colors first (if specified)
+            self._apply_alternating_colors(table, shape_props, rows, cols)
+            
+            # Apply header colors (overrides alternating colors for headers)
+            self._apply_header_colors(table, shape_props, rows, cols)
+            
+            # Apply specific cell background colors (overrides previous colors)
             if 'cell_fill_color' in shape_props:
                 cell_fill_color = shape_props['cell_fill_color']
                 if isinstance(cell_fill_color, str):
@@ -718,10 +724,7 @@ class PowerPointWorker:
                                 if col_idx <= cols and color:
                                     try:
                                         cell = table.Cell(row_idx, col_idx)
-                                        if color.startswith('#'):
-                                            # Convert hex to RGB
-                                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
-                                            cell.Shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                        self._apply_cell_fill_color(cell, color)
                                     except Exception as e:
                                         logger.warning(f"Could not set cell ({row_idx}, {col_idx}) fill color: {e}")
             
@@ -751,8 +754,231 @@ class PowerPointWorker:
                                 except Exception as e:
                                     logger.warning(f"Could not set cell ({row_idx}, {col_idx}) bold: {e}")
         
+            # Apply cell borders formatting
+            self._apply_cell_borders(table, shape_props, rows, cols)
+        
         except Exception as e:
             logger.error(f"Error applying cell formatting: {e}", exc_info=True)
+    
+    def _apply_alternating_colors(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply alternating row or column colors to the table."""
+        try:
+            # Apply alternating row colors
+            if 'alternating_row_colors' in shape_props:
+                alternating_row_colors = shape_props['alternating_row_colors']
+                if isinstance(alternating_row_colors, str):
+                    try:
+                        import ast
+                        alternating_row_colors = ast.literal_eval(alternating_row_colors)
+                    except (ValueError, SyntaxError):
+                        alternating_row_colors = []
+                
+                if isinstance(alternating_row_colors, list) and len(alternating_row_colors) >= 2:
+                    color1, color2 = alternating_row_colors[0], alternating_row_colors[1]
+                    for row_idx in range(1, rows + 1):
+                        color = color1 if (row_idx - 1) % 2 == 0 else color2
+                        if color:  # Only apply if color is not empty
+                            for col_idx in range(1, cols + 1):
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    self._apply_cell_fill_color(cell, color)
+                                except Exception as e:
+                                    logger.warning(f"Could not set alternating row color for cell ({row_idx}, {col_idx}): {e}")
+            
+            # Apply alternating column colors
+            if 'alternating_col_colors' in shape_props:
+                alternating_col_colors = shape_props['alternating_col_colors']
+                if isinstance(alternating_col_colors, str):
+                    try:
+                        import ast
+                        alternating_col_colors = ast.literal_eval(alternating_col_colors)
+                    except (ValueError, SyntaxError):
+                        alternating_col_colors = []
+                
+                if isinstance(alternating_col_colors, list) and len(alternating_col_colors) >= 2:
+                    color1, color2 = alternating_col_colors[0], alternating_col_colors[1]
+                    for col_idx in range(1, cols + 1):
+                        color = color1 if (col_idx - 1) % 2 == 0 else color2
+                        if color:  # Only apply if color is not empty
+                            for row_idx in range(1, rows + 1):
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    self._apply_cell_fill_color(cell, color)
+                                except Exception as e:
+                                    logger.warning(f"Could not set alternating col color for cell ({row_idx}, {col_idx}): {e}")
+        
+        except Exception as e:
+            logger.error(f"Error applying alternating colors: {e}", exc_info=True)
+    
+    def _apply_header_colors(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply header row and column colors to the table."""
+        try:
+            # Apply header row color
+            if 'header_row_color' in shape_props and shape_props['header_row_color']:
+                header_row_color = shape_props['header_row_color']
+                for col_idx in range(1, cols + 1):
+                    try:
+                        cell = table.Cell(1, col_idx)  # First row
+                        self._apply_cell_fill_color(cell, header_row_color)
+                    except Exception as e:
+                        logger.warning(f"Could not set header row color for cell (1, {col_idx}): {e}")
+            
+            # Apply header column color
+            if 'header_col_color' in shape_props and shape_props['header_col_color']:
+                header_col_color = shape_props['header_col_color']
+                for row_idx in range(1, rows + 1):
+                    try:
+                        cell = table.Cell(row_idx, 1)  # First column
+                        self._apply_cell_fill_color(cell, header_col_color)
+                    except Exception as e:
+                        logger.warning(f"Could not set header col color for cell ({row_idx}, 1): {e}")
+        
+        except Exception as e:
+            logger.error(f"Error applying header colors: {e}", exc_info=True)
+    
+    def _apply_cell_fill_color(self, cell, color: str) -> None:
+        """Apply fill color to a single table cell."""
+        try:
+            if color and color.startswith('#'):
+                # Convert hex to RGB
+                rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                cell.Shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+        except Exception as e:
+            logger.warning(f"Could not apply cell fill color {color}: {e}")
+    
+    def _apply_cell_borders(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
+        """Apply border formatting to table cells."""
+        try:
+            # Apply table-wide border settings
+            if 'table_border_color' in shape_props or 'table_border_width' in shape_props or 'table_border_style' in shape_props:
+                border_color = shape_props.get('table_border_color', '#000000')
+                border_width = float(shape_props.get('table_border_width', 1.0))
+                border_style = shape_props.get('table_border_style', 'solid')
+                
+                # Map border styles to PowerPoint constants
+                style_map = {
+                    'solid': 1,     # msoLineSolid
+                    'dash': 2,      # msoLineDash
+                    'dot': 3,       # msoLineDot
+                    'dashdot': 4,   # msoLineDashDot
+                    'dashdotdot': 5, # msoLineDashDotDot
+                    'none': 0       # msoLineStyleMixed
+                }
+                
+                border_style_constant = style_map.get(border_style.lower(), 1)
+                
+                # Convert hex color to RGB
+                if border_color.startswith('#'):
+                    rgb = tuple(int(border_color[j:j+2], 16) for j in (1, 3, 5))
+                    border_rgb = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                else:
+                    border_rgb = 0  # Black default
+                
+                # Apply borders to all cells
+                for row_idx in range(1, rows + 1):
+                    for col_idx in range(1, cols + 1):
+                        try:
+                            cell = table.Cell(row_idx, col_idx)
+                            
+                            # Apply to all borders: top, bottom, left, right
+                            for border_position in [1, 2, 3, 4]:  # ppBorderTop, ppBorderLeft, ppBorderBottom, ppBorderRight
+                                try:
+                                    border = cell.Borders(border_position)
+                                    border.ForeColor.RGB = border_rgb
+                                    border.Weight = border_width
+                                    border.LineStyle = border_style_constant
+                                except Exception as e:
+                                    logger.warning(f"Could not set border {border_position} for cell ({row_idx}, {col_idx}): {e}")
+                        except Exception as e:
+                            logger.warning(f"Could not access cell ({row_idx}, {col_idx}) for border formatting: {e}")
+            
+            # Apply specific cell border formatting (if specified)
+            if 'cell_borders' in shape_props:
+                cell_borders = shape_props['cell_borders']
+                if isinstance(cell_borders, str):
+                    try:
+                        import ast
+                        cell_borders = ast.literal_eval(cell_borders)
+                    except (ValueError, SyntaxError):
+                        cell_borders = []
+                
+                if isinstance(cell_borders, list):
+                    for row_idx, row_borders in enumerate(cell_borders, 1):
+                        if row_idx > rows:
+                            break
+                        
+                        if isinstance(row_borders, list):
+                            for col_idx, border_config in enumerate(row_borders, 1):
+                                if col_idx > cols or not border_config:
+                                    continue
+                                
+                                try:
+                                    cell = table.Cell(row_idx, col_idx)
+                                    self._apply_individual_cell_borders(cell, border_config)
+                                except Exception as e:
+                                    logger.warning(f"Could not apply individual borders for cell ({row_idx}, {col_idx}): {e}")
+        
+        except Exception as e:
+            logger.error(f"Error applying cell borders: {e}", exc_info=True)
+    
+    def _apply_individual_cell_borders(self, cell, border_config: Dict[str, Any]) -> None:
+        """Apply individual border settings to a single cell.
+        
+        border_config format:
+        {
+            'top': {'color': '#000000', 'width': 1.0, 'style': 'solid'},
+            'bottom': {'color': '#FF0000', 'width': 2.0, 'style': 'dash'},
+            'left': {'color': '#00FF00', 'width': 1.5, 'style': 'dot'},
+            'right': {'color': '#0000FF', 'width': 1.0, 'style': 'solid'}
+        }
+        """
+        try:
+            # Map border positions to PowerPoint constants
+            border_positions = {
+                'top': 1,     # ppBorderTop
+                'left': 2,    # ppBorderLeft  
+                'bottom': 3,  # ppBorderBottom
+                'right': 4    # ppBorderRight
+            }
+            
+            # Map border styles to PowerPoint constants
+            style_map = {
+                'solid': 1,     # msoLineSolid
+                'dash': 2,      # msoLineDash
+                'dot': 3,       # msoLineDot
+                'dashdot': 4,   # msoLineDashDot
+                'dashdotdot': 5, # msoLineDashDotDot
+                'none': 0       # msoLineStyleMixed
+            }
+            
+            for position_name, border_settings in border_config.items():
+                if position_name in border_positions and isinstance(border_settings, dict):
+                    position_constant = border_positions[position_name]
+                    
+                    # Get border settings with defaults
+                    color = border_settings.get('color', '#000000')
+                    width = float(border_settings.get('width', 1.0))
+                    style = border_settings.get('style', 'solid').lower()
+                    
+                    try:
+                        border = cell.Borders(position_constant)
+                        
+                        # Apply color
+                        if color.startswith('#'):
+                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                            border.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        
+                        # Apply width
+                        border.Weight = width
+                        
+                        # Apply style
+                        border.LineStyle = style_map.get(style, 1)
+                        
+                    except Exception as e:
+                        logger.warning(f"Could not apply {position_name} border: {e}")
+        
+        except Exception as e:
+            logger.warning(f"Error applying individual cell borders: {e}")
     
     def _apply_shape_properties(self, shape, shape_props: Dict[str, Any], slide_number: int) -> Dict[str, Any]:
         """Apply properties to a PowerPoint shape.
