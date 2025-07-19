@@ -641,19 +641,43 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_count: in
         edit_instructions: Specific instructions for editing shapes in the presentation.
         Generate instructions in natural language based on the user's requirements.
         
-        IMPORTANT: Include detailed formatting consistency instructions in your edit_instructions:
-        - Analyze existing formatting patterns from the presentation (fonts, colors, sizes, styles)
-        - Specify font families used (e.g., "Calibri for body text, Arial for headers")
-        - Include color schemes observed (e.g., "#1f4e79 for headers, #333333 for body text")
-        - Document font size patterns (e.g., "24pt for main titles, 18pt for section headers, 14pt for body")
-        - Note styling trends (e.g., "keywords are bolded", "section headers use italic", "bullet points are indented")
-        - Describe shape formatting patterns (e.g., "section headers in blue rectangles with white text")
-        - Specify fill and outline color consistency (e.g., "shapes use #d4e6f1 fill with #1f4e79 border")
-        - Include layout conventions (e.g., "titles centered, content left-aligned", "headers at top with 2pt spacing")
+        CRITICAL FORMATTING ANALYSIS REQUIRED:
         
-        If you don't know the existing formatting patterns, first use get_powerpoint_slide_details tool 
-        to analyze 2-3 representative slides and identify the formatting conventions before generating edit instructions.
-        Then include these observed patterns in your edit_instructions to ensure new content matches existing style.
+        STEP 1 - MANDATORY FORMATTING ANALYSIS:
+        Before calling this tool, you MUST first call get_powerpoint_slide_details to analyze the presentation's 
+        existing formatting patterns. Use these specific steps:
+        
+        1. Call get_powerpoint_slide_details(workspace_path, [1, 2, 3]) to analyze the first 3 slides
+           Example: get_powerpoint_slide_details("reports/quarterly_report.pptx", [1, 2, 3])
+        2. From the returned data, extract and document these formatting patterns:
+           - Font families used in text_content (e.g., "Calibri", "Arial", "Times New Roman")
+           - Font sizes from text_content.runs (e.g., title=24pt, headers=18pt, body=12pt)
+           - Font colors from text_content.runs (e.g., headers=#1f4e79, body=#333333)
+           - Bold/italic patterns from text_content.runs (e.g., "all headers are bold")
+           - Shape fill colors from fill.color (e.g., "#d4e6f1 for content boxes")
+           - Shape line colors from line.color (e.g., "#1f4e79 for borders")
+           - Text alignment patterns from text_content.alignment
+           - Position patterns from position data (e.g., "titles at top=50, content at top=120")
+        
+        STEP 2 - INCLUDE PATTERNS IN EDIT INSTRUCTIONS:
+        Your edit_instructions MUST include a formatting section like:
+        
+        "FORMATTING CONSISTENCY REQUIREMENTS:
+        - Use font family: [observed font]
+        - Title font size: [observed size]pt
+        - Header font size: [observed size]pt  
+        - Body font size: [observed size]pt
+        - Title color: [observed hex color]
+        - Header color: [observed hex color]
+        - Body text color: [observed hex color]
+        - Shape fill color: [observed hex color]
+        - Shape border color: [observed hex color]
+        - Text alignment: [observed pattern]
+        - [Any other observed formatting patterns]
+        
+        Apply these exact formatting patterns to maintain visual consistency with existing slides."
+        
+        FAILURE TO ANALYZE FORMATTING FIRST WILL RESULT IN INCONSISTENT PRESENTATION DESIGN.
         
         slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
     
