@@ -1047,7 +1047,7 @@ class PowerPointWorker:
                                 text_range.ParagraphFormat.LineSpacingRule = 3  # ppLineSpaceExactly
                             except ValueError:
                                 logger.warning(f"Invalid line spacing value: {line_spacing}")
-                                continue
+                                pass  # Skip setting line spacing for invalid values
                         
                         updated_info['properties_applied'].append('line_spacing')
                         logger.debug(f"Applied line spacing {line_spacing} to shape {shape.Name}")
