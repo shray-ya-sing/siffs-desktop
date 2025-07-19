@@ -83,9 +83,9 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Main Content */}
-      <div className="max-w-6xl w-full mx-auto px-4 space-y-6 pt-20">
+      <div className="max-w-6xl w-full mx-auto px-4 space-y-6 pt-20 pb-8">
         {/* Header */}
         <div className="text-center space-y-4 mb-8">
           <h1 className="text-4xl font-thin text-white">Settings</h1>
@@ -132,7 +132,7 @@ export function SettingsPage() {
             
         {/* Content Area */}
         <div className="flex justify-center">
-          <div className="w-full max-w-3xl">
+          <div className="w-full max-w-3xl max-h-[calc(100vh-12rem)] overflow-y-auto scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500 pr-2">
             {/* Profile Tab - Commented Out Temporarily */}
             {activeTab === 'profile' && (
               <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">

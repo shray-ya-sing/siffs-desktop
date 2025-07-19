@@ -2,11 +2,12 @@
 from typing import Dict, Type, Optional, List, Union, AsyncGenerator
 import sys
 from pathlib import Path
-ai_services_path = Path(__file__).parent.parent
+ai_services_path = Path(__file__).parent
 sys.path.append(str(ai_services_path))
 from base_provider import LLMProvider
 from providers.openai_provider import OpenAIProvider
-from providers.anthropic_provider import AnthropicProvider  # You'd implement this similarly
+from providers.anthropic_provider import AnthropicProvider
+from providers.gemini_provider import GeminiProvider
 #from providers.xai_provider import XAIProvider  # Implement as needed
 #from providers.deepseek_provider import DeepSeekProvider  # Implement as needed
 
@@ -14,6 +15,7 @@ class ProviderFactory:
     _providers: Dict[str, Type[LLMProvider]] = {
         'openai': OpenAIProvider,
         'anthropic': AnthropicProvider,
+        'gemini': GeminiProvider,
         # Add other providers
     }
     
@@ -26,13 +28,14 @@ class ProviderFactory:
     def get_provider(
         cls, 
         provider_name: str, 
+        user_id: str = None,
         **kwargs
     ) -> Optional[LLMProvider]:
         """Get an instance of the specified provider"""
         provider_class = cls._providers.get(provider_name.lower())
         if not provider_class:
             return None
-        return provider_class(**kwargs)
+        return provider_class(user_id=user_id, **kwargs)
     
     @classmethod
     def get_supported_models(cls) -> Dict[str, List[str]]:

@@ -85,7 +85,7 @@ const modelCreatePipelineService = {
   async generateMetadata(params: GenerateMetadataParams): Promise<string> {
     const response = await apiClient.post('/excel/generate-metadata', {
       user_request: params.user_request,
-      model: params.model || 'claude-sonnet-4-20250514',
+      model: params.model || 'claude-3-5-sonnet-20241022',
       max_tokens: params.max_tokens || 2000,
       temperature: params.temperature || 0.3,
       stream: params.stream || false,

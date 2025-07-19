@@ -85,8 +85,8 @@ class APIKeyManager:
             self._save_api_keys()
             logger.info("API key removed successfully.")
     
-    def get_effective_api_key(self, user_id: str, provider: str) -> str:
-        """Get user API key if available, otherwise fall back to environment variable"""
+    def get_effective_api_key(self, user_id: str, provider: str) -> Optional[str]:
+        """Get user API key if available, otherwise return None to allow fallback to environment variables"""
         logger.info(f"=== API_KEY_MANAGER DEBUG ===")
         logger.info("Retrieving effective API key for user..")
         logger.info("Current cache keys available.")
@@ -102,7 +102,7 @@ class APIKeyManager:
         
         logger.info(f"No API key found for provider {provider}")
         logger.info(f"=============================")
-        return ""
+        return None
     
     def has_user_api_key(self, user_id: str, provider: str) -> bool:
         """Check if user has provided their own API key for the provider"""

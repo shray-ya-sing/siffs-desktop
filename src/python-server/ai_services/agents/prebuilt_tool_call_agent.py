@@ -20,6 +20,8 @@ python_server_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(python_server_dir))
 
 from api_key_management.providers.gemini_provider import GeminiProvider
+from api_key_management.providers.openai_provider import OpenAIProvider
+from api_key_management.providers.anthropic_provider import AnthropicProvider
 from ai_services.prompts.system_prompts import VOLUTE_SYSTEM_PROMPT, EXCEL_AGENT_SYSTEM_PROMPT
 from ai_services.agents.everything_agent.prompts.system_prompt import EVERYTHING_AGENT_SYSTEM_PROMPT
 from ai_services.tools.excel_tools import EXCEL_TOOLS
@@ -62,8 +64,8 @@ class PrebuiltAgent:
                 "claude-3-7-sonnet-latest"
             },
             "openai": {
-                "gpt-4o",
-                "gpt-4o-mini"
+                "o3-mini-2025-01-31",
+                "o4-mini-2025-04-16"
             },
             "google": {
                 "gemini-2.5-pro",
@@ -75,18 +77,38 @@ class PrebuiltAgent:
     def with_model(self, model_name: str, user_id: str) -> 'PrebuiltAgent':
         """
         Return an agent instance with the specified model.
-        If the model is already initialized, returns the existing instance.
-        Otherwise, initializes a new instance with the specified model.
+        Creates a new instance with fresh checkpointer to avoid cross-provider contamination.
         
         Args:
             model_name: The name of the model to initialize
+            user_id: The user ID for authentication
             
         Returns:
             PrebuiltAgent: An instance configured with the specified model
         """
-        # If we already have an instance with this model, return it
+        # Get current provider for the new model
+        new_provider = self._get_provider_name(model_name)
+        
+        # Check if we have an existing instance for this model
         if model_name in PrebuiltAgent._initialized_models:
-            return PrebuiltAgent._initialized_models[model_name]
+            existing_instance = PrebuiltAgent._initialized_models[model_name]
+            
+            # Check if there are any previous instances from different providers
+            # that might have contaminated the conversation state
+            has_cross_provider_instances = False
+            for existing_model, instance in PrebuiltAgent._initialized_models.items():
+                if existing_model != model_name:
+                    existing_provider = self._get_provider_name(existing_model)
+                    if existing_provider != new_provider:
+                        has_cross_provider_instances = True
+                        break
+            
+            # If there's potential cross-contamination, create fresh checkpointer
+            if has_cross_provider_instances:
+                logger.info(f"Reinitializing {model_name} agent with fresh checkpointer to avoid cross-provider contamination")
+                existing_instance._reinitialize_checkpointer()
+            
+            return existing_instance
             
         # Otherwise, create a new instance and initialize it with the model
         new_instance = PrebuiltAgent()
@@ -107,8 +129,8 @@ class PrebuiltAgent:
             provider_name = "google"
             model_name = "gemini-2.5-flash-lite-preview-06-17"
             
-        # Initialize the LLM with the specified model
-        if model_name in ["gemini-2.5-flash-lite-preview-06-17", "gemini-2.5-pro"]:
+        # Initialize the LLM with the specified model using appropriate provider
+        if provider_name == 'google':
             self.llm = GeminiProvider.get_gemini_model(
                 user_id=user_id,
                 model=model_name,
@@ -116,7 +138,36 @@ class PrebuiltAgent:
                 max_retries=3,
                 thinking_budget=-1 # TODO: experiment with this
             )
+        elif provider_name == 'openai':
+            # Check if this is an o-series model that doesn't support temperature
+            o_series_models = [
+                "o3-mini-2025-01-31", 
+                "o4-mini-2025-04-16"
+            ]
+            
+            if model_name in o_series_models:
+                # o-series models don't support temperature parameter
+                self.llm = OpenAIProvider.get_openai_model(
+                    user_id=user_id,
+                    model=model_name,
+                    max_retries=3
+                )
+            else:
+                self.llm = OpenAIProvider.get_openai_model(
+                    user_id=user_id,
+                    model=model_name,
+                    temperature=0.2,
+                    max_retries=3
+                )
+        elif provider_name == 'anthropic':
+            self.llm = AnthropicProvider.get_anthropic_model(
+                user_id=user_id,
+                model=model_name,
+                temperature=0.2,
+                max_retries=3
+            )
         else:
+            # Fallback to init_chat_model for unsupported providers
             self.llm = init_chat_model(
                 model=f"{provider_name}:{model_name}", 
                 model_provider=provider_name
@@ -140,6 +191,114 @@ class PrebuiltAgent:
             if model_name in models:
                 return provider
         return None
+    
+    def _sanitize_messages_for_provider(self, messages: List[Dict[str, Any]], provider_name: str) -> List[Dict[str, Any]]:
+        """Sanitize message history to remove provider-specific content that other providers don't understand"""
+        sanitized_messages = []
+        
+        # Define provider-specific content types to remove
+        openai_specific_types = {'reasoning', 'reflection'}
+        anthropic_specific_types = {'thinking', 'redacted_thinking'}
+        google_specific_types = {'system'}  # Add other Google-specific types if needed
+        
+        # Define what to remove based on target provider
+        types_to_remove = set()
+        if provider_name == 'anthropic':
+            types_to_remove.update(openai_specific_types)
+            types_to_remove.update(google_specific_types)
+        elif provider_name == 'openai':
+            types_to_remove.update(anthropic_specific_types)
+            types_to_remove.update(google_specific_types)
+        elif provider_name == 'google':
+            types_to_remove.update(openai_specific_types)
+            types_to_remove.update(anthropic_specific_types)
+        
+        for msg in messages:
+            sanitized_msg = msg.copy()
+            content = msg.get('content', '')
+            
+            # Handle different content types
+            if isinstance(content, list):
+                # Filter out provider-specific content blocks
+                sanitized_content = []
+                for content_block in content:
+                    if isinstance(content_block, dict):
+                        content_type = content_block.get('type', 'text')
+                        
+                        # Skip provider-specific content types
+                        if content_type in types_to_remove:
+                            logger.debug(f"Removing {content_type} content block for {provider_name} provider")
+                            continue
+                            
+                        # Keep standard content types (text, image_url, image, tool_use, tool_result)
+                        if content_type in ['text', 'image_url', 'image', 'tool_use', 'tool_result']:
+                            sanitized_content.append(content_block)
+                        else:
+                            # For unknown content types, try to extract text if possible
+                            if content_block.get('text'):
+                                sanitized_content.append({
+                                    'type': 'text',
+                                    'text': content_block.get('text')
+                                })
+                            logger.debug(f"Converted unknown content type {content_type} to text for {provider_name} provider")
+                    elif isinstance(content_block, str):
+                        # Keep string content as text block
+                        sanitized_content.append({
+                            'type': 'text',
+                            'text': content_block
+                        })
+                
+                # If we have filtered content, use it; otherwise fall back to text extraction
+                if sanitized_content:
+                    sanitized_msg['content'] = sanitized_content
+                else:
+                    # Extract just text content from the original list as fallback
+                    text_parts = []
+                    for content_block in content:
+                        if isinstance(content_block, str):
+                            text_parts.append(content_block)
+                        elif isinstance(content_block, dict):
+                            # Try multiple ways to extract text
+                            text = content_block.get('text') or content_block.get('content') or str(content_block.get('value', ''))
+                            if text:
+                                text_parts.append(text)
+                    
+                    # If we found text, use it; otherwise use empty string
+                    final_text = ' '.join(text_parts).strip()
+                    sanitized_msg['content'] = final_text if final_text else ''
+                    
+                    if not final_text:
+                        logger.warning(f"No text content could be extracted from message, using empty string")
+                        
+            else:
+                # Content is already a string, keep as is
+                sanitized_msg['content'] = content
+                
+            # Only add messages that have content
+            if sanitized_msg.get('content'):
+                sanitized_messages.append(sanitized_msg)
+            else:
+                logger.debug(f"Skipping message with empty content after sanitization")
+        
+        logger.info(f"Sanitized {len(messages)} messages for provider {provider_name}, kept {len(sanitized_messages)} messages")
+        return sanitized_messages
+    
+    def _reinitialize_checkpointer(self):
+        """Reinitialize the checkpointer to clear any existing conversation state"""
+        logger.info("Reinitializing checkpointer to clear cross-provider conversation state")
+        self.checkpointer = InMemorySaver()
+        
+        # Recreate the agent with the fresh checkpointer
+        if self.llm and self.current_model:
+            logger.info(f"Recreating agent {self.current_model} with fresh checkpointer")
+            self.agent = create_react_agent(
+                model=self.llm,
+                tools=self.tools,
+                prompt=self.system_prompt,
+                store=self.in_memory_store,
+                checkpointer=self.checkpointer,
+                name="simple_excel_agent"
+            )
     
     def _convert_message_with_attachments(self, message: Dict[str, Any]) -> Dict[str, Any]:
         """Convert message with attachments to LangChain format for ChatGoogleGenerativeAI"""
@@ -195,6 +354,12 @@ class PrebuiltAgent:
             Dict containing chunk data with 'content', 'tool_calls', or 'error' keys
         """
         try:
+            # Sanitize messages for the current model's provider before passing to agent
+            provider_name = self._get_provider_name(self.current_model)
+            if provider_name:
+                messages = self._sanitize_messages_for_provider(messages, provider_name)
+                logger.info(f"Sanitized {len(messages)} messages for {provider_name} provider in PrebuiltAgent")
+            
             # Create a callback handler
             callback = UsageMetadataCallbackHandler()
         except Exception as e:

@@ -1,4 +1,6 @@
 import os
+import json
+import logging
 from typing import List, Dict, Optional, AsyncGenerator, Union
 from openai import AsyncOpenAI
 import sys
@@ -7,9 +9,13 @@ ai_services_path = Path(__file__).parent.parent
 sys.path.append(str(ai_services_path))
 from base_provider import LLMProvider, ChatResponse, Message, ToolCall
 
+logger = logging.getLogger(__name__)
+
 class OpenAIProvider(LLMProvider):
-    def __init__(self, api_key: Optional[str] = None):
-        self.client = AsyncOpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+    def __init__(self, user_id: str):
+        from api_key_management.service import api_key_manager
+        api_key = api_key_manager.get_effective_api_key(user_id, "openai")
+        self.client = AsyncOpenAI(api_key=api_key)
     
     async def chat_completion(
         self,
@@ -118,5 +124,7 @@ class OpenAIProvider(LLMProvider):
             "gpt-4-turbo",
             "gpt-4",
             "gpt-3.5-turbo",
+            "gpt-4o",
+            "gpt-4o-mini",
             # Add other OpenAI models as needed
         ]
