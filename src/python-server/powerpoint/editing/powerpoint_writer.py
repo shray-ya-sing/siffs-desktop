@@ -456,16 +456,161 @@ class PowerPointWorker:
                 logger.info(f"Created new textbox '{shape_name}' at ({left}, {top}) with size ({width}, {height})")
                 return shape
             
-            # Map geometry types to PowerPoint constants
+            # Comprehensive map of geometry types to PowerPoint constants
+            # Based on MsoAutoShapeType enumeration in win32com
             geom_map = {
-                'rectangle': 1,      # msoShapeRectangle
-                'circle': 9,         # msoShapeOval
-                'oval': 9,           # msoShapeOval
-                'square': 1,         # msoShapeRectangle (we'll make it square by setting width=height)
-                'triangle': 10,      # msoShapeIsoscelesTriangle
-                'diamond': 4,        # msoShapeDiamond
-                'line': 20,          # msoShapeLine
-                'arrow': 13,         # msoShapeRightArrow
+                # Basic Shapes
+                'rectangle': 1,                    # msoShapeRectangle
+                'parallelogram': 2,                # msoShapeParallelogram
+                'trapezoid': 3,                    # msoShapeTrapezoid
+                'diamond': 4,                      # msoShapeDiamond
+                'roundedrectangle': 5,             # msoShapeRoundedRectangle
+                'octagon': 6,                      # msoShapeOctagon
+                'triangle': 10,                    # msoShapeIsoscelesTriangle
+                'righttriangle': 7,                # msoShapeRightTriangle
+                'oval': 9,                         # msoShapeOval
+                'circle': 9,                       # msoShapeOval (alias)
+                'hexagon': 8,                      # msoShapeHexagon
+                'cross': 11,                       # msoShapeCross
+                'regularpentagon': 12,            # msoShapeRegularPentagon
+                'square': 1,                       # msoShapeRectangle (special handling)
+                
+                # Lines and Connectors
+                'line': 20,                        # msoShapeLine
+                'connector': 21,                   # msoShapeConnector
+                'elbow': 22,                       # msoShapeElbow
+                'curve': 23,                       # msoShapeCurve
+                'scribble': 24,                    # msoShapeScribble
+                'freeform': 25,                    # msoShapeFreeform
+                
+                # Arrows
+                'leftarrow': 34,                   # msoShapeLeftArrow
+                'downarrow': 36,                   # msoShapeDownArrow
+                'uparrow': 35,                     # msoShapeUpArrow
+                'rightarrow': 13,                  # msoShapeRightArrow
+                'arrow': 13,                       # msoShapeRightArrow (alias)
+                'leftrighttarrow': 37,             # msoShapeLeftRightArrow
+                'updownarrow': 38,                 # msoShapeUpDownArrow
+                'quadarrow': 76,                   # msoShapeQuadArrow
+                'leftcurvedarrow': 103,            # msoShapeLeftCurvedArrow
+                'rightcurvedarrow': 102,           # msoShapeRightCurvedArrow
+                'upcurvedarrow': 104,              # msoShapeUpCurvedArrow
+                'downcurvedarrow': 105,            # msoShapeDownCurvedArrow
+                'stripedrighttarrow': 93,          # msoShapeStripedRightArrow
+                'notchedrightarrow': 94,           # msoShapeNotchedRightArrow
+                'bentuparrow': 90,                 # msoShapeBentUpArrow
+                'bentuarrow': 91,                  # msoShapeBentUpArrow (alias)
+                'circulararrow': 99,               # msoShapeCircularArrow
+                'uturnleftarrow': 101,             # msoShapeUTurnArrow
+                'chevron': 52,                     # msoShapeChevron
+                'rightarrowcallout': 78,           # msoShapeRightArrowCallout
+                'leftarrowcallout': 77,            # msoShapeLeftArrowCallout
+                'uparrowcallout': 79,              # msoShapeUpArrowCallout
+                'downarrowcallout': 80,            # msoShapeDownArrowCallout
+                'leftrighttarrowcallout': 81,      # msoShapeLeftRightArrowCallout
+                'updownarrowcallout': 82,          # msoShapeUpDownArrowCallout
+                'quadarrowcallout': 83,            # msoShapeQuadArrowCallout
+                
+                # Flowchart Shapes
+                'flowchartprocess': 109,           # msoShapeFlowchartProcess
+                'flowchartdecision': 110,          # msoShapeFlowchartDecision
+                'flowchartinputoutput': 111,       # msoShapeFlowchartInputOutput
+                'flowchartpredefinedprocess': 112, # msoShapeFlowchartPredefinedProcess
+                'flowchartinternalstorage': 113,   # msoShapeFlowchartInternalStorage
+                'flowchartdocument': 114,          # msoShapeFlowchartDocument
+                'flowchartmultidocument': 115,     # msoShapeFlowchartMultidocument
+                'flowchartterminator': 116,        # msoShapeFlowchartTerminator
+                'flowchartpreparation': 117,       # msoShapeFlowchartPreparation
+                'flowchartmanualinput': 118,       # msoShapeFlowchartManualInput
+                'flowchartmanualoperation': 119,   # msoShapeFlowchartManualOperation
+                'flowchartconnector': 120,         # msoShapeFlowchartConnector
+                'flowchartoffpageconnector': 121,  # msoShapeFlowchartOffpageConnector
+                'flowchartcard': 122,              # msoShapeFlowchartCard
+                'flowchartpunchedtape': 123,       # msoShapeFlowchartPunchedTape
+                'flowchartsummingjunction': 124,   # msoShapeFlowchartSummingJunction
+                'flowchartor': 125,                # msoShapeFlowchartOr
+                'flowchartcollate': 126,           # msoShapeFlowchartCollate
+                'flowchartsort': 127,              # msoShapeFlowchartSort
+                'flowchartextract': 128,           # msoShapeFlowchartExtract
+                'flowchartmerge': 129,             # msoShapeFlowchartMerge
+                'flowchartofflinestorage': 130,    # msoShapeFlowchartOfflineStorage
+                'flowchartonlinestorage': 131,     # msoShapeFlowchartOnlineStorage
+                'flowchartmagnetictape': 132,      # msoShapeFlowchartMagneticTape
+                'flowchartmagneticdisk': 133,      # msoShapeFlowchartMagneticDisk
+                'flowchartmagneticdrum': 134,      # msoShapeFlowchartMagneticDrum
+                'flowchartdisplay': 135,           # msoShapeFlowchartDisplay
+                'flowchartdelay': 136,             # msoShapeFlowchartDelay
+                'flowchartalternateprocess': 176,  # msoShapeFlowchartAlternateProcess
+                'flowchartdata': 177,              # msoShapeFlowchartData
+                
+                # Callouts
+                'rectangularcallout': 61,          # msoShapeRectangularCallout
+                'roundedrectangularcallout': 62,   # msoShapeRoundedRectangularCallout
+                'ovalcallout': 63,                 # msoShapeOvalCallout
+                'cloudcallout': 64,                # msoShapeCloudCallout
+                'linecallout1': 65,                # msoShapeLineCallout1
+                'linecallout2': 66,                # msoShapeLineCallout2
+                'linecallout3': 67,                # msoShapeLineCallout3
+                'linecallout4': 68,                # msoShapeLineCallout4
+                'linecallout1accentbar': 69,       # msoShapeLineCallout1AccentBar
+                'linecallout2accentbar': 70,       # msoShapeLineCallout2AccentBar
+                'linecallout3accentbar': 71,       # msoShapeLineCallout3AccentBar
+                'linecallout4accentbar': 72,       # msoShapeLineCallout4AccentBar
+                'linecallout1noborder': 73,        # msoShapeLineCallout1NoBorder
+                'linecallout2noborder': 74,        # msoShapeLineCallout2NoBorder
+                'linecallout3noborder': 75,        # msoShapeLineCallout3NoBorder
+                'linecallout4noborder': 76,        # msoShapeLineCallout4NoBorder
+                
+                # Stars and Banners
+                'star4': 187,                      # msoShape4pointStar
+                'star5': 92,                       # msoShape5pointStar
+                'star6': 188,                      # msoShape6pointStar
+                'star8': 58,                       # msoShape8pointStar
+                'star16': 59,                      # msoShape16pointStar
+                'star24': 60,                      # msoShape24pointStar
+                'star32': 189,                     # msoShape32pointStar
+                'horizontalscroll': 84,            # msoShapeHorizontalScroll
+                'verticalscroll': 85,              # msoShapeVerticalScroll
+                'wave': 103,                       # msoShapeWave
+                'doublewave': 104,                 # msoShapeDoubleWave
+                
+                # Block Arrows
+                'blockarc': 95,                    # msoShapeBlockArc
+                
+                # Mathematical
+                'plus': 57,                        # msoShapePlus
+                'minus': 164,                      # msoShapeMinus (if available)
+                'multiply': 165,                   # msoShapeMultiply (if available)
+                'divide': 166,                     # msoShapeDivide (if available)
+                'equal': 167,                      # msoShapeEqual (if available)
+                'notequal': 168,                   # msoShapeNotEqual (if available)
+                
+                # 3D Shapes
+                'cube': 169,                       # msoShapeCube (if available)
+                'bevel': 84,                       # msoShapeBevel
+                
+                # Special Symbols
+                'heart': 21,                       # msoShapeHeart
+                'lightningbolt': 22,               # msoShapeLightningBolt
+                'sun': 183,                        # msoShapeSun
+                'moon': 184,                       # msoShapeMoon
+                'smileyface': 96,                  # msoShapeSmileyFace
+                'donut': 18,                       # msoShapeDonut
+                'nosmoking': 19,                   # msoShapeNoSmoking
+                'explosion1': 89,                  # msoShapeExplosion1
+                'explosion2': 90,                  # msoShapeExplosion2
+                
+                # Brackets and Braces
+                'leftbracket': 85,                 # msoShapeLeftBracket
+                'rightbracket': 86,                # msoShapeRightBracket
+                'leftbrace': 87,                   # msoShapeLeftBrace
+                'rightbrace': 88,                  # msoShapeRightBrace
+                
+                # Arc Shapes
+                'arc': 25,                         # msoShapeArc
+                'plaque': 84,                      # msoShapePlaque
+                'can': 13,                         # msoShapeCan
+                'cube': 14,                        # msoShapeCube
             }
             
             # Get the shape type constant
