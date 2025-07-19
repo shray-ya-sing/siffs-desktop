@@ -934,7 +934,128 @@ class PowerPointWorker:
                     except Exception as e:
                         logger.warning(f"Could not apply text alignment to shape {shape.Name}: {e}")
                 
-            # Apply vertical alignment
+                # Apply bullet formatting
+                if 'bullet_style' in shape_props and shape_props['bullet_style']:
+                    try:
+                        bullet_style = shape_props['bullet_style'].lower()
+                        if bullet_style == 'bullet':
+                            text_range.ParagraphFormat.Bullet.Visible = True
+                            text_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
+                            
+                            # Apply custom bullet character if specified
+                            if 'bullet_char' in shape_props and shape_props['bullet_char']:
+                                text_range.ParagraphFormat.Bullet.Character = shape_props['bullet_char']
+                                updated_info['properties_applied'].append('bullet_char')
+                            
+                            updated_info['properties_applied'].append('bullet_style')
+                            logger.debug(f"Applied bullet formatting to shape {shape.Name}")
+                            
+                        elif bullet_style == 'number':
+                            text_range.ParagraphFormat.Bullet.Visible = True
+                            text_range.ParagraphFormat.Bullet.Type = 2  # ppBulletNumbered
+                            text_range.ParagraphFormat.Bullet.Style = 1  # ppBulletArabicPeriod
+                            updated_info['properties_applied'].append('bullet_style')
+                            logger.debug(f"Applied number formatting to shape {shape.Name}")
+                            
+                        elif bullet_style == 'none':
+                            text_range.ParagraphFormat.Bullet.Visible = False
+                            updated_info['properties_applied'].append('bullet_style')
+                            logger.debug(f"Disabled bullet formatting for shape {shape.Name}")
+                            
+                    except Exception as e:
+                        logger.warning(f"Could not apply bullet formatting to shape {shape.Name}: {e}")
+                
+                # Apply indent level (for bullets)
+                if 'indent_level' in shape_props and shape_props['indent_level'] is not None:
+                    try:
+                        indent_level = int(shape_props['indent_level'])
+                        if 0 <= indent_level <= 8:
+                            text_range.IndentLevel = indent_level
+                            updated_info['properties_applied'].append('indent_level')
+                            logger.debug(f"Applied indent level {indent_level} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply indent level to shape {shape.Name}: {e}")
+                
+                # Apply paragraph indentation
+                if 'left_indent' in shape_props and shape_props['left_indent'] is not None:
+                    try:
+                        left_indent = float(shape_props['left_indent'])
+                        text_range.ParagraphFormat.LeftIndent = left_indent
+                        updated_info['properties_applied'].append('left_indent')
+                        logger.debug(f"Applied left indent {left_indent}pt to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply left indent to shape {shape.Name}: {e}")
+                
+                if 'right_indent' in shape_props and shape_props['right_indent'] is not None:
+                    try:
+                        right_indent = float(shape_props['right_indent'])
+                        text_range.ParagraphFormat.RightIndent = right_indent
+                        updated_info['properties_applied'].append('right_indent')
+                        logger.debug(f"Applied right indent {right_indent}pt to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply right indent to shape {shape.Name}: {e}")
+                
+                if 'first_line_indent' in shape_props and shape_props['first_line_indent'] is not None:
+                    try:
+                        first_line_indent = float(shape_props['first_line_indent'])
+                        text_range.ParagraphFormat.FirstLineIndent = first_line_indent
+                        updated_info['properties_applied'].append('first_line_indent')
+                        logger.debug(f"Applied first line indent {first_line_indent}pt to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply first line indent to shape {shape.Name}: {e}")
+                
+                # Apply paragraph spacing
+                if 'space_before' in shape_props and shape_props['space_before'] is not None:
+                    try:
+                        space_before = float(shape_props['space_before'])
+                        text_range.ParagraphFormat.SpaceBefore = space_before
+                        updated_info['properties_applied'].append('space_before')
+                        logger.debug(f"Applied space before {space_before}pt to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply space before to shape {shape.Name}: {e}")
+                
+                if 'space_after' in shape_props and shape_props['space_after'] is not None:
+                    try:
+                        space_after = float(shape_props['space_after'])
+                        text_range.ParagraphFormat.SpaceAfter = space_after
+                        updated_info['properties_applied'].append('space_after')
+                        logger.debug(f"Applied space after {space_after}pt to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply space after to shape {shape.Name}: {e}")
+                
+                # Apply line spacing
+                if 'line_spacing' in shape_props and shape_props['line_spacing']:
+                    try:
+                        line_spacing = shape_props['line_spacing']
+                        if isinstance(line_spacing, str):
+                            line_spacing = line_spacing.lower()
+                            
+                        if line_spacing == 'single' or line_spacing == '1':
+                            text_range.ParagraphFormat.LineSpacing = 1.0
+                            text_range.ParagraphFormat.LineSpacingRule = 1  # ppLineSpaceSingle
+                        elif line_spacing == 'double' or line_spacing == '2':
+                            text_range.ParagraphFormat.LineSpacing = 2.0
+                            text_range.ParagraphFormat.LineSpacingRule = 2  # ppLineSpaceDouble
+                        elif line_spacing == '1.5':
+                            text_range.ParagraphFormat.LineSpacing = 1.5
+                            text_range.ParagraphFormat.LineSpacingRule = 3  # ppLineSpaceExactly
+                        else:
+                            # Try to parse as custom numeric value
+                            try:
+                                custom_spacing = float(line_spacing)
+                                text_range.ParagraphFormat.LineSpacing = custom_spacing
+                                text_range.ParagraphFormat.LineSpacingRule = 3  # ppLineSpaceExactly
+                            except ValueError:
+                                logger.warning(f"Invalid line spacing value: {line_spacing}")
+                                continue
+                        
+                        updated_info['properties_applied'].append('line_spacing')
+                        logger.debug(f"Applied line spacing {line_spacing} to shape {shape.Name}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Could not apply line spacing to shape {shape.Name}: {e}")
+                
+                # Apply vertical alignment
                 if 'vertical_align' in shape_props and shape_props['vertical_align']:
                     try:
                         vertical_align = shape_props['vertical_align'].lower()

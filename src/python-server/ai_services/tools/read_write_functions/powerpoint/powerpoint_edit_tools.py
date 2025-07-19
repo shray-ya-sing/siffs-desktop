@@ -227,9 +227,14 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                             key = key.strip()
                             value = value.strip()
                             
-                            # Parse the value based on its type
-                            parsed_value = _parse_property_value(value)
-                            shape_data[key] = parsed_value
+                    # Parse the value based on its type
+                    parsed_value = _parse_property_value(value)
+                    shape_data[key] = parsed_value
+                    
+                    # Log advanced text formatting properties for debugging
+                    if key in ['bullet_style', 'bullet_char', 'indent_level', 'left_indent', 'right_indent', 
+                             'first_line_indent', 'space_before', 'space_after', 'line_spacing']:
+                        logger.debug(f"Parsed advanced text formatting property '{key}' = '{parsed_value}' for shape '{shape_name}'");
 
                 if shape_name:
                     result[slide_number][shape_name] = shape_data
