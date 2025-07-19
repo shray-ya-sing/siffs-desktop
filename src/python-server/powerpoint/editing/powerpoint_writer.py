@@ -570,7 +570,7 @@ class PowerPointWorker:
             logger.error(f"Error creating table shape '{shape_name}': {e}")
             return None
     
-    def _apply_table_properties(self, shape, shape_props: Dict[str, Any], updated_info: Dict[str, Any]) -> None:
+    def _apply_table_properties(self, shape, shape_props: Dict[str, Any], updated_info: Dict[str, Any]):
         """Apply table-specific properties to create or modify a table."""
         try:
             # Get table parameters - support both old and new property names
@@ -662,8 +662,12 @@ class PowerPointWorker:
             updated_info['properties_applied'].extend(['table_rows', 'table_cols', 'table_data'])
             logger.info(f"Created table with {table_rows} rows and {table_cols} columns")
             
+            # Return the newly created table shape
+            return table_shape
+            
         except Exception as e:
             logger.error(f"Error creating table: {e}", exc_info=True)
+            return None
     
     def _parse_cell_format_data(self, text_data: str, rows: int, cols: int) -> List[List[str]]:
         """Parse cell format data from text like 'cell(1,1): SalesRep\ncell(1,2): Region'."""
@@ -1075,9 +1079,17 @@ class PowerPointWorker:
             # Apply table properties if this is a table creation request
             if self._is_table_creation_request(shape_props):
                 try:
-                    self._apply_table_properties(shape, shape_props, updated_info)
+                    # Reassign shape to new table shape
+                    new_shape = self._apply_table_properties(shape, shape_props, updated_info)
+                    if new_shape is not None:
+                        shape = new_shape
+                    else:
+                        # Table creation failed, stop further processing
+                        logger.warning(f"Table creation failed for shape {shape.Name}")
+                        return updated_info
                 except Exception as e:
                     logger.warning(f"Could not apply table properties to shape {shape.Name}: {e}")
+                    return updated_info  # Stop further processing as original shape is deleted
             
             # Apply size properties (width and height)
             if 'width' in shape_props and shape_props['width']:
