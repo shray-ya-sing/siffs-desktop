@@ -143,13 +143,14 @@ def get_powerpoint_from_cache(workspace_path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
+def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_count: int = 0) -> str:
     """
     Edit a PowerPoint presentation by generating and applying shape formatting metadata.
 
     Args:
         workspace_path: The path to the PowerPoint file to edit.
         edit_instructions: Instructions for editing shapes in the presentation.
+        slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
 
     Returns:
         String containing the updated shape metadata in JSON format.
@@ -170,7 +171,12 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
         return "Request was cancelled"
 
     try:
+        # Include slide count information in the prompt
+        slide_context = f"The presentation currently has {slide_count} slides." if slide_count > 0 else "The presentation slide count is unknown."
+        
         prompt = f"""
+        {slide_context}
+        
         Here are the instructions for this step, generate the powerpoint slide object metadata to fulfill these instructions: {edit_instructions}
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
@@ -204,11 +210,25 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str) -> str:
         9. Separate multiple shape updates with pipes (|).
         10. Always use concise keys for properties and ensure proper formatting for parsing.
         11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created as a blank slide. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
-        12. TEXT CONTENT RULES:
+        12. SLIDE NUMBERING: If you need to add a new slide, use slide number {slide_count + 1} or higher. Existing slides are numbered 1 through {slide_count}.
+        13. TEXT CONTENT RULES:
             - Use \n for line breaks within text
             - Enclose text content in double quotes
             - For existing shapes, include text property to add/update text content
             - For new text boxes, always specify geom="textbox"
+        14. TABLE CREATION RULES:
+            - Use shape_type="table" to create tables
+            - REQUIRED properties: rows, cols, table_data
+            - OPTIONAL properties: cell_font_bold, cell_fill_color, font_name, col_widths
+            - TABLE DATA FORMAT: Use simple 2D array format
+              Example: table_data="[['Header1', 'Header2'], ['Data1', 'Data2']]"
+            - CELL FORMATTING: Use separate properties for styling
+              cell_font_bold="[[true, true], [false, false]]" (row by row, col by col)
+              cell_fill_color="[['#D0E0C0', '#D0E0C0'], ['', '']]" (empty string for no color)
+            - COLUMN WIDTHS: col_widths="[144, 144, 144]" (in points)
+            - FONT: font_name="Calibri" (applies to entire table)
+        15. TABLE EXAMPLE:
+            Table Sales Data, shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '$41,107'], ['Frank', 'West', '268', '$72,707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]"
         """
 
         # Get the user id for the API key
@@ -580,7 +600,7 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
 
 
 @tool
-def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
+def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_count: int = 0) -> str:
     """
     Edit PowerPoint files. You can generate and modify objects in pwoerpoint slides like shapes, paragraphs, text.
     CRITICAL INSTRUCTION GENERATION RULES:
@@ -594,6 +614,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
         workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
         edit_instructions: Specific instructions for editing shapes in the presentation.
         Generate instructions in natural language based on the user's requirements.
+        slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
     
     Returns:
         A JSON string containing the results of the shape editing operation:
@@ -604,7 +625,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str) -> str:
             "updated_shapes": [...]
         }
     """
-    return _edit_powerpoint_helper(workspace_path, edit_instructions)
+    return _edit_powerpoint_helper(workspace_path, edit_instructions, slide_count)
 
 
 # Export all PowerPoint tools in a list for easy importing
