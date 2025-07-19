@@ -222,9 +222,12 @@ class PowerPointWorker:
                     # Extract slide number from slide key (e.g., "slide1" -> 1)
                     slide_number = int(re.search(r'\d+', slide_key).group())
                     
+                    # Extract slide layout if specified
+                    slide_layout = shapes_data.pop('_slide_layout', None) if isinstance(shapes_data, dict) else None
+                    
                     try:
-                        # Get the slide, create it if it doesn't exist
-                        slide = self._get_or_create_slide(slide_number)
+                        # Get the slide, create it with the specified layout if it doesn't exist
+                        slide = self._get_or_create_slide(slide_number, slide_layout)
                         if slide is None:
                             logger.error(f"Failed to get or create slide {slide_number}")
                             continue
@@ -317,11 +320,74 @@ class PowerPointWorker:
         
         return self._execute(_add_blank_slide)
     
-    def _get_or_create_slide(self, slide_number: int):
+    def _get_slide_layout(self, layout_name: str = None):
+        """Get a slide layout by name or index, or return default layout.
+        
+        Args:
+            layout_name: Layout name (e.g., "Title Slide") or index (e.g., "0" or 0)
+            
+        Returns:
+            PowerPoint slide layout object
+        """
+        try:
+            if not self._presentation:
+                raise ValueError("No presentation is open")
+            
+            # Get all slide layouts from the first slide master
+            slide_master = self._presentation.SlideMaster
+            custom_layouts = slide_master.CustomLayouts
+            
+            if not layout_name:
+                # Return first layout as default
+                return custom_layouts(1)
+            
+            # Try to parse as index first
+            try:
+                layout_index = int(layout_name)
+                if 1 <= layout_index <= custom_layouts.Count:
+                    return custom_layouts(layout_index)
+                else:
+                    logger.warning(f"Layout index {layout_index} out of range (1-{custom_layouts.Count}), using default")
+                    return custom_layouts(1)
+            except ValueError:
+                # Not an index, try to find by name
+                for i in range(1, custom_layouts.Count + 1):
+                    try:
+                        layout = custom_layouts(i)
+                        if hasattr(layout, 'Name') and layout.Name == layout_name:
+                            logger.debug(f"Found layout '{layout_name}' at index {i}")
+                            return layout
+                    except Exception as e:
+                        logger.warning(f"Error checking layout {i}: {e}")
+                        continue
+                
+                # Layout name not found, log available layouts and use default
+                available_layouts = []
+                for i in range(1, custom_layouts.Count + 1):
+                    try:
+                        layout = custom_layouts(i)
+                        layout_name_str = getattr(layout, 'Name', f'Layout_{i}')
+                        available_layouts.append(f"{i}: {layout_name_str}")
+                    except Exception:
+                        available_layouts.append(f"{i}: Unknown")
+                
+                logger.warning(f"Layout '{layout_name}' not found. Available layouts: {', '.join(available_layouts)}. Using default.")
+                return custom_layouts(1)
+            
+        except Exception as e:
+            logger.error(f"Error getting slide layout: {e}")
+            # Return first layout as fallback
+            try:
+                return self._presentation.SlideMaster.CustomLayouts(1)
+            except Exception:
+                raise RuntimeError(f"Could not get any slide layout: {e}")
+    
+    def _get_or_create_slide(self, slide_number: int, layout_name: str = None):
         """Get an existing slide or create a new one if it doesn't exist.
         
         Args:
             slide_number: The slide number (1-based)
+            layout_name: Optional layout name or index for new slides
             
         Returns:
             The slide object or None if creation failed
@@ -339,12 +405,16 @@ class PowerPointWorker:
                 # Get the current slide count
                 current_count = self._presentation.Slides.Count
                 
-                # Create missing slides up to the requested slide number
-                slide_layout = self._presentation.SlideMaster.CustomLayouts(1)  # Use first layout
+                # Determine the layout to use
+                slide_layout = self._get_slide_layout(layout_name)
                 
+                # Create missing slides up to the requested slide number
                 for i in range(current_count + 1, slide_number + 1):
                     new_slide = self._presentation.Slides.AddSlide(i, slide_layout)
-                    logger.info(f"Created slide {i}")
+                    if layout_name:
+                        logger.info(f"Created slide {i} with layout '{layout_name}'")
+                    else:
+                        logger.info(f"Created slide {i}")
                     
                     # If this is the slide we want, return it
                     if i == slide_number:

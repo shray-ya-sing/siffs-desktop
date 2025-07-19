@@ -165,12 +165,38 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
             if not parts:
                 continue
 
-            slide_number = parts[0].strip()
-            if not slide_number:
-                logger.warning("Empty slide number found, skipping section")
+            slide_info = parts[0].strip()
+            if not slide_info:
+                logger.warning("Empty slide info found, skipping section")
                 continue
 
+            # Parse slide number and optional layout
+            slide_number = slide_info
+            slide_layout = None
+            
+            # Check if slide layout is specified in the slide info
+            if ',' in slide_info:
+                slide_parts = [p.strip() for p in slide_info.split(',')]
+                slide_number = slide_parts[0]
+                
+                # Look for slide_layout specification in remaining parts
+                for part in slide_parts[1:]:
+                    if part.startswith('slide_layout='):
+                        layout_value = part.replace('slide_layout=', '').strip()
+                        # Remove quotes if present
+                        if layout_value.startswith('"') and layout_value.endswith('"'):
+                            layout_value = layout_value[1:-1]
+                        elif layout_value.startswith("'") and layout_value.endswith("'"):
+                            layout_value = layout_value[1:-1]
+                        slide_layout = layout_value
+                        logger.debug(f"Parsed slide layout '{slide_layout}' for slide {slide_number}")
+                        break
+
             result[slide_number] = {}
+            
+            # Add slide layout if specified
+            if slide_layout:
+                result[slide_number]['_slide_layout'] = slide_layout
 
             if len(parts) == 1:  # No shape entries for this slide
                 continue

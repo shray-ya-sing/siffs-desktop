@@ -171,17 +171,38 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_c
         return "Request was cancelled"
 
     try:
+        # Extract available layouts from cache
+        layout_context = ""
+        available_layouts = []
+        ppt_metadata = get_powerpoint_from_cache(workspace_path)
+        if ppt_metadata and isinstance(ppt_metadata, dict):
+            slide_layouts = ppt_metadata.get('slideLayouts', [])
+            if slide_layouts:
+                available_layouts = []
+                for i, layout in enumerate(slide_layouts):
+                    layout_name = layout.get('name', f'Layout_{i}')
+                    available_layouts.append(f"{i}: {layout_name}")
+                
+                layout_context = f"""
+AVAILABLE SLIDE LAYOUTS:
+{chr(10).join(available_layouts)}
+
+When creating new slides, specify the layout using: slide_layout="layout_name" or slide_layout=layout_index
+Example: slide_layout="Title Slide" or slide_layout=0
+"""
+        
         # Include slide count information in the prompt
         slide_context = f"The presentation currently has {slide_count} slides." if slide_count > 0 else "The presentation slide count is unknown."
         
         prompt = f"""
         {slide_context}
+        {layout_context}
         
         Here are the instructions for this step, generate the powerpoint slide object metadata to fulfill these instructions: {edit_instructions}
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        slide_number: slide1 | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
+        slide_number: slide1, slide_layout="Title Slide" | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
@@ -209,9 +230,14 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_c
         8. Provide all values using their precise properties writable by PyCOM to PowerPoint.
         9. Separate multiple shape updates with pipes (|).
         10. Always use concise keys for properties and ensure proper formatting for parsing.
-        11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created as a blank slide. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
+        11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
         12. SLIDE NUMBERING: If you need to add a new slide, use slide number {slide_count + 1} or higher. Existing slides are numbered 1 through {slide_count}.
-        13. TEXT CONTENT RULES:
+        13. SLIDE LAYOUT RULES:
+            - For new slides, specify layout using: slide_layout="layout_name" or slide_layout=index
+            - Choose appropriate layouts based on slide content (e.g., "Title Slide", "Title and Content", "Section Header")
+            - If no layout is specified, the default layout will be used
+            - Examples: slide_number: 5, slide_layout="Title Slide" | ... or slide_number: 6, slide_layout=0 | ...
+        14. TEXT CONTENT RULES:
             - Use \n for line breaks within text
             - Enclose text content in double quotes
             - For existing shapes, include text property to add/update text content
