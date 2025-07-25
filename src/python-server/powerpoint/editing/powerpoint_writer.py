@@ -1879,38 +1879,76 @@ class PowerPointWorker:
             # Apply size properties (width and height)
             if 'width' in shape_props and shape_props['width']:
                 try:
-                    width = float(shape_props['width'])
-                    shape.Width = width
+                    width_points = float(shape_props['width'])
+                    
+                    # Validate width range (based on testing, PowerPoint COM accepts much larger values with direct points)
+                    if width_points <= 0:
+                        logger.warning(f"Invalid width {width_points} for shape {shape.Name}: must be > 0")
+                    elif width_points > 720:
+                        logger.warning(f"Width {width_points} for shape {shape.Name} exceeds slide width (720), clamping to 720")
+                        width_points = 720
+                    
+                    # Use direct points - PowerPoint COM interface expects point values, not EMUs
+                    shape.Width = width_points
                     updated_info['properties_applied'].append('width')
-                    logger.debug(f"Applied width {width} to shape {shape.Name}")
+                    logger.debug(f"Applied width {width_points} points to shape {shape.Name}")
                 except Exception as e:
                     logger.warning(f"Could not apply width to shape {shape.Name}: {e}")
             
             if 'height' in shape_props and shape_props['height']:
                 try:
-                    height = float(shape_props['height'])
-                    shape.Height = height
+                    height_points = float(shape_props['height'])
+                    
+                    # Validate height range (based on testing, PowerPoint COM accepts much larger values with direct points)
+                    if height_points <= 0:
+                        logger.warning(f"Invalid height {height_points} for shape {shape.Name}: must be > 0")
+                    elif height_points > 540:
+                        logger.warning(f"Height {height_points} for shape {shape.Name} exceeds slide height (540), clamping to 540")
+                        height_points = 540
+                    
+                    # Use direct points - PowerPoint COM interface expects point values, not EMUs
+                    shape.Height = height_points
                     updated_info['properties_applied'].append('height')
-                    logger.debug(f"Applied height {height} to shape {shape.Name}")
+                    logger.debug(f"Applied height {height_points} points to shape {shape.Name}")
                 except Exception as e:
                     logger.warning(f"Could not apply height to shape {shape.Name}: {e}")
             
             # Apply position properties (left and top)
             if 'left' in shape_props and shape_props['left']:
                 try:
-                    left = float(shape_props['left'])
-                    shape.Left = left
+                    left_points = float(shape_props['left'])
+                    
+                    # Validate left position range (0 to slide width)
+                    if left_points < 0:
+                        logger.warning(f"Invalid left position {left_points} for shape {shape.Name}: must be >= 0, clamping to 0")
+                        left_points = 0
+                    elif left_points > 720:
+                        logger.warning(f"Left position {left_points} for shape {shape.Name} exceeds slide width (720), clamping to 720")
+                        left_points = 720
+                    
+                    # Use direct points - PowerPoint COM interface expects point values, not EMUs
+                    shape.Left = left_points
                     updated_info['properties_applied'].append('left')
-                    logger.debug(f"Applied left position {left} to shape {shape.Name}")
+                    logger.debug(f"Applied left position {left_points} points to shape {shape.Name}")
                 except Exception as e:
                     logger.warning(f"Could not apply left position to shape {shape.Name}: {e}")
             
             if 'top' in shape_props and shape_props['top']:
                 try:
-                    top = float(shape_props['top'])
-                    shape.Top = top
+                    top_points = float(shape_props['top'])
+                    
+                    # Validate top position range (0 to slide height)
+                    if top_points < 0:
+                        logger.warning(f"Invalid top position {top_points} for shape {shape.Name}: must be >= 0, clamping to 0")
+                        top_points = 0
+                    elif top_points > 540:
+                        logger.warning(f"Top position {top_points} for shape {shape.Name} exceeds slide height (540), clamping to 540")
+                        top_points = 540
+                    
+                    # Use direct points - PowerPoint COM interface expects point values, not EMUs
+                    shape.Top = top_points
                     updated_info['properties_applied'].append('top')
-                    logger.debug(f"Applied top position {top} to shape {shape.Name}")
+                    logger.debug(f"Applied top position {top_points} points to shape {shape.Name}")
                 except Exception as e:
                     logger.warning(f"Could not apply top position to shape {shape.Name}: {e}")
             
