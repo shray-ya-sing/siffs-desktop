@@ -7,6 +7,7 @@ import logging
 from typing import List, Dict, Optional, Any
 from decimal import Decimal
 import datetime
+import base64
 from langgraph.config import get_stream_writer
 
 # Add the current directory to Python path
@@ -143,13 +144,207 @@ def get_powerpoint_from_cache(workspace_path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_count: int = 0) -> str:
+def _capture_slide_images(temp_file_path: str, slide_numbers: List[int]) -> Dict[int, str]:
+    """Capture images of specific slides using win32com and save to cache.
+    
+    Args:
+        temp_file_path: Path to the temporary PowerPoint file
+        slide_numbers: List of slide numbers to capture
+        
+    Returns:
+        Dictionary mapping slide numbers to data URL formatted image strings
+    """
+    slide_images = {}
+    ppt_app = None
+    presentation = None
+    app_was_running = False
+    presentation_was_open = False
+    
+    try:
+        import win32com.client
+        import pythoncom
+        import os
+        
+        # Initialize COM
+        pythoncom.CoInitialize()
+        
+        # Try to get existing PowerPoint application first
+        try:
+            ppt_app = win32com.client.GetActiveObject("PowerPoint.Application")
+            app_was_running = True
+            logger.info("Found existing PowerPoint application instance")
+        except:
+            # No existing PowerPoint application, create a new one
+            ppt_app = win32com.client.Dispatch("PowerPoint.Application")
+            app_was_running = False
+            logger.info("Created new PowerPoint application instance")
+        
+        # Note: Cannot set Visible = False for image export, PowerPoint requires visibility
+        # But if app was already running, don't change visibility
+        if not app_was_running:
+            ppt_app.Visible = True
+        
+        # Check if the presentation is already open
+        presentation = None
+        temp_file_path_normalized = os.path.normpath(temp_file_path).lower()
+        
+        for open_presentation in ppt_app.Presentations:
+            open_path_normalized = os.path.normpath(open_presentation.FullName).lower()
+            if open_path_normalized == temp_file_path_normalized:
+                presentation = open_presentation
+                presentation_was_open = True
+                logger.info(f"Found already open presentation: {temp_file_path}")
+                break
+        
+        # If presentation wasn't already open, open it now
+        if presentation is None:
+            presentation = ppt_app.Presentations.Open(temp_file_path, ReadOnly=True)
+            presentation_was_open = False
+            logger.info(f"Opened presentation: {temp_file_path}")
+        
+        # Create cache directory for slide images
+        images_cache_dir = python_server_dir / "metadata" / "_cache" / "slide_images"
+        images_cache_dir.mkdir(exist_ok=True)
+        
+        logger.info(f"Capturing images for slides: {slide_numbers}")
+        
+        for slide_num in slide_numbers:
+            try:
+                if slide_num <= presentation.Slides.Count:
+                    slide = presentation.Slides(slide_num)
+                    
+                    # Generate unique filename for the slide image
+                    import hashlib
+                    file_hash = hashlib.md5(temp_file_path.encode()).hexdigest()[:8]
+                    image_filename = f"slide_{slide_num}_{file_hash}.png"
+                    image_path = images_cache_dir / image_filename
+                    
+                    # Export slide as image (PNG format)
+                    slide.Export(str(image_path), "PNG", 1024, 768)  # Width, Height
+                    
+                    # Read the image and convert to data URL format (required by LangChain)
+                    if image_path.exists():
+                        with open(image_path, 'rb') as img_file:
+                            img_data = img_file.read()
+                            img_base64 = base64.b64encode(img_data).decode('utf-8')
+                            # Format as data URL for LangChain compatibility
+                            data_url = f"data:image/png;base64,{img_base64}"
+                            slide_images[slide_num] = data_url
+                            
+                        logger.info(f"Successfully captured image for slide {slide_num}")
+                    else:
+                        logger.warning(f"Failed to create image file for slide {slide_num}")
+                else:
+                    logger.warning(f"Slide {slide_num} does not exist in presentation")
+                    
+            except Exception as e:
+                logger.error(f"Error capturing image for slide {slide_num}: {str(e)}")
+        
+        # Only close presentation and app if we opened them ourselves
+        if presentation and not presentation_was_open:
+            presentation.Close()
+            logger.info("Closed presentation (was opened by image capture)")
+        
+        if ppt_app and not app_was_running:
+            ppt_app.Quit()
+            logger.info("Quit PowerPoint application (was started by image capture)")
+        
+    except Exception as e:
+        logger.error(f"Error in slide image capture: {str(e)}")
+        # Emergency cleanup - only if we created the instances ourselves
+        try:
+            if presentation and not presentation_was_open:
+                presentation.Close()
+            if ppt_app and not app_was_running:
+                ppt_app.Quit()
+        except:
+            pass
+    finally:
+        try:
+            pythoncom.CoUninitialize()
+        except:
+            pass
+    
+    return slide_images
+
+
+def _get_slide_metadata(workspace_path: str, slide_numbers: List[int]) -> Dict[int, Dict[str, Any]]:
+    """Get metadata for specific slides from cache.
+    
+    Args:
+        workspace_path: Path to the PowerPoint file
+        slide_numbers: List of slide numbers to get metadata for
+        
+    Returns:
+        Dictionary mapping slide numbers to their metadata
+    """
+    slide_metadata = {}
+    
+    try:
+        document_content = get_powerpoint_from_cache(workspace_path)
+        if not document_content:
+            logger.error("PowerPoint presentation not found in cache for metadata extraction")
+            return slide_metadata
+        
+        presentation_slides = document_content.get("slides", [])
+        
+        for slide in presentation_slides:
+            slide_number = slide.get("slideNumber", 0)
+            
+            if slide_number in slide_numbers:
+                # Extract key slide information
+                slide_info = {
+                    "slide_number": slide_number,
+                    "layout_name": slide.get("layoutName", ""),
+                    "shapes": []
+                }
+                
+                # Extract shape information
+                shapes = slide.get("shapes", [])
+                for shape in shapes:
+                    shape_info = {
+                        "name": shape.get("name", ""),
+                        "shape_type": shape.get("shapeType", ""),
+                        "position": shape.get("position", {}),
+                        "visible": shape.get("visible", True)
+                    }
+                    
+                    # Add text content if available
+                    if shape.get("textContent", {}).get("hasText", False):
+                        text_content = shape.get("textContent", {})
+                        shape_info["text"] = text_content.get("text", "")
+                        
+                        # Add formatting information
+                        paragraphs = text_content.get("paragraphs", [])
+                        if paragraphs:
+                            runs = paragraphs[0].get("runs", [])
+                            if runs:
+                                font_info = runs[0].get("font", {})
+                                shape_info["font_name"] = font_info.get("name")
+                                shape_info["font_size"] = font_info.get("size")
+                                shape_info["bold"] = font_info.get("bold")
+                                shape_info["italic"] = font_info.get("italic")
+                    
+                    slide_info["shapes"].append(shape_info)
+                
+                slide_metadata[slide_number] = slide_info
+        
+        logger.info(f"Retrieved metadata for {len(slide_metadata)} slides")
+        
+    except Exception as e:
+        logger.error(f"Error retrieving slide metadata: {str(e)}")
+    
+    return slide_metadata
+
+
+def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0) -> str:
     """
     Edit a PowerPoint presentation by generating and applying shape formatting metadata.
 
     Args:
         workspace_path: The path to the PowerPoint file to edit.
         edit_instructions: Instructions for editing shapes in the presentation.
+        slide_numbers: List of slide numbers to be edited.
         slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
 
     Returns:
@@ -366,14 +561,127 @@ Example: slide_layout="Title Slide" or slide_layout=0
             logger.error(error_message)
             return error_message
         
+        # Get temp file path for image capture
+        temp_file_path = get_temp_filepath(workspace_path)
+        logger.info(f"Using temp file path for image capture: {temp_file_path}")
+        
+        # Capture slide images for visual context
+        logger.info(f"Capturing slide images for slides: {slide_numbers}")
+        slide_images = _capture_slide_images(temp_file_path, slide_numbers)
+        logger.info(f"Successfully captured {len(slide_images)} slide images")
+        
+        # Get detailed slide metadata
+        logger.info(f"Retrieving slide metadata for slides: {slide_numbers}")
+        slide_metadata = _get_slide_metadata(workspace_path, slide_numbers)
+        logger.info(f"Successfully retrieved metadata for {len(slide_metadata)} slides")
+        
+        # Enhance prompt with slide metadata and visual context
+        metadata_context = ""
+        if slide_metadata:
+            metadata_context = "\n\nEXISTING SLIDE METADATA FOR CONTEXT:\n"
+            for slide_num, metadata in slide_metadata.items():
+                metadata_context += f"\nSlide {slide_num} (Layout: {metadata.get('layout_name', 'Unknown')}):\n"
+                for shape in metadata.get('shapes', []):
+                    shape_name = shape.get('name', 'Unnamed')
+                    shape_type = shape.get('shape_type', 'Unknown')
+                    position = shape.get('position', {})
+                    metadata_context += f"  - Shape: '{shape_name}' (Type: {shape_type})"
+                    if position:
+                        metadata_context += f" at ({position.get('left', 0)}, {position.get('top', 0)})"
+                    if shape.get('text'):
+                        text_preview = shape['text'][:50] + '...' if len(shape['text']) > 50 else shape['text']
+                        metadata_context += f" with text: '{text_preview}'"
+                    metadata_context += "\n"
+            logger.info(f"Generated metadata context for LLM: {metadata_context}")
+        else:
+            logger.warning("No slide metadata available for LLM context")
+        
+        # Enhanced prompt with metadata context
+        enhanced_prompt = f"""
+        {slide_context}
+        {layout_context}
+        {metadata_context}
+        
+        IMPORTANT: Use the EXACT shape names from the metadata above when modifying existing shapes. Do not create new shapes with similar names.
+        
+        Here are the instructions for this step, generate the powerpoint slide object metadata to fulfill these instructions: {edit_instructions}
+        
+        FORMAT YOUR RESPONSE AS FOLLOWS:
+        
+        slide_number: slide1, slide_layout="Title Slide" | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
+
+        RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
+
+        RULES:
+        1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
+        2. List each shape's metadata as: shape_name, visual properties, size/position properties, text properties (if applicable).
+        3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
+        4. SIZE/POSITION PROPERTIES: width, height (in points, typical range: 50-500), left, top (in points, typical range: 0-720 for left, 0-540 for top).
+        5. TEXT PROPERTIES (for shapes with text content):
+           - text: The actual text content (enclose in quotes)
+           - font_size: Font size in points (typical range: 8-72)
+           - font_name: Font family name (e.g., "Arial", "Times New Roman", "Calibri")
+           - font_color: Font color in hex format (e.g., "#000000" for black)
+           - bold: true or false for bold formatting
+           - italic: true or false for italic formatting
+           - underline: true or false for underline formatting
+           - text_align: "left", "center", "right", or "justify" for horizontal alignment
+           - vertical_align: "top", "middle", or "bottom" for vertical alignment
+           - bullet_style: "bullet", "number", "none" for bullet formatting
+           - bullet_char: Custom bullet character (e.g., "•", "→", "★")
+           - indent_level: Indentation level for bullets (0-8, default 0)
+           - left_indent: Left paragraph indent in points (e.g., 36 for 0.5 inch)
+           - right_indent: Right paragraph indent in points
+           - first_line_indent: First line indent in points (positive for indent, negative for hanging)
+           - space_before: Space before paragraph in points (e.g., 12)
+           - space_after: Space after paragraph in points (e.g., 6)
+           - line_spacing: Line spacing - "single", "double", "1.5", or custom value (e.g., "1.2")
+        6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
+           - paragraph_name, geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
+        7. TEXT FORMATTING EXAMPLES:
+           - Title text: font_size=24, font_name="Arial", bold=true, text_align="center"
+           - Body text: font_size=12, font_name="Calibri", text_align="left"
+           - Bullet points: text="• Point 1\n• Point 2\n• Point 3", text_align="left"
+        8. Provide all values using their precise properties writable by PyCOM to PowerPoint.
+        9. Separate multiple shape updates with pipes (|).
+        10. Always use concise keys for properties and ensure proper formatting for parsing.
+        11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
+        12. SLIDE NUMBERING: If you need to add a new slide, use slide number {slide_count + 1} or higher. Existing slides are numbered 1 through {slide_count}.
+        13. SLIDE LAYOUT RULES:
+            - For new slides, specify layout using: slide_layout="layout_name" or slide_layout=index
+            - Choose appropriate layouts based on slide content (e.g., "Title Slide", "Title and Content", "Section Header")
+            - If no layout is specified, the default layout will be used
+            - Examples: slide_number: 5, slide_layout="Title Slide" | ... or slide_number: 6, slide_layout=0 | ...
+        14. TEXT CONTENT RULES:
+            - Use \n for line breaks within text
+            - Enclose text content in double quotes
+            - For existing shapes, include text property to add/update text content
+            - For new text boxes, always specify geom="textbox"
+        15. FOR EXISTING SHAPES: Use the EXACT shape name from the metadata context above. Do not create duplicates.
+        """
+        
         # Check for cancellation before LLM call
         if request_id and cancellation_manager.is_cancelled(request_id):
             logger.info(f"Request {request_id} cancelled before LLM call")
             return "Request was cancelled"
 
-        # Call the LLM to generate shape metadata
-        logger.info("Calling LLM to generate shape metadata")
-        messages = [{"role": "user", "content": prompt}]
+        # Prepare multimodal message with text and images
+        content_parts = [{"type": "text", "text": enhanced_prompt}]
+        
+        # Add slide images to the message content
+        for slide_num in slide_numbers:
+            if slide_num in slide_images:
+                logger.info(f"Adding slide {slide_num} image to LLM context")
+                content_parts.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": slide_images[slide_num]
+                    }
+                })
+        
+        # Call the LLM to generate shape metadata with multimodal input
+        logger.info(f"Calling LLM with multimodal input: {len(content_parts)} parts (text + {len(slide_images)} images)")
+        messages = [{"role": "user", "content": content_parts}]
         try:
             import threading
             import time
@@ -711,7 +1019,7 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
 
 
 @tool
-def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_count: int = 0) -> str:
+def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0) -> str:
     """
     Edit PowerPoint files. You can generate and modify objects in pwoerpoint slides like shapes, paragraphs, text.
     CRITICAL INSTRUCTION GENERATION RULES:
@@ -726,25 +1034,34 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_count: in
         edit_instructions: Specific instructions for editing shapes in the presentation.
         Generate instructions in natural language based on the user's requirements.
         
-        CRITICAL FORMATTING ANALYSIS REQUIRED:
+        CRITICAL SHAPE ANALYSIS AND FORMATTING REQUIREMENTS:
         
-        STEP 1 - MANDATORY FORMATTING ANALYSIS:
+        STEP 1 - MANDATORY SHAPE AND FORMATTING ANALYSIS:
         Before calling this tool, you MUST first call get_powerpoint_slide_details to analyze the presentation's 
-        existing formatting patterns. Use these specific steps:
+        existing shapes and formatting patterns. Use these specific steps:
         
-        1. Call get_powerpoint_slide_details(workspace_path, [1, 2, 3]) to analyze the first 3 slides
+        1. Call get_powerpoint_slide_details(workspace_path, [slide_numbers]) to analyze the relevant slides
            Example: get_powerpoint_slide_details("reports/quarterly_report.pptx", [1, 2, 3])
-        2. From the returned data, extract and document these formatting patterns:
-           - Font families used in text_content (e.g., "Calibri", "Arial", "Times New Roman")
-           - Font sizes from text_content.runs (e.g., title=24pt, headers=18pt, body=12pt)
-           - Font colors from text_content.runs (e.g., headers=#1f4e79, body=#333333)
-           - Bold/italic patterns from text_content.runs (e.g., "all headers are bold")
-           - Shape fill colors from fill.color (e.g., "#d4e6f1 for content boxes")
-           - Shape line colors from line.color (e.g., "#1f4e79 for borders")
-           - Text alignment patterns from text_content.alignment
-           - Position patterns from position data (e.g., "titles at top=50, content at top=120")
+        2. From the returned data, extract and document:
+           a) EXISTING SHAPE NAMES: Identify the exact "name" field for each shape that needs to be modified
+              - Example: "Title 1", "Content Placeholder 2", "TextBox 3", "Rectangle 4"
+           b) FORMATTING PATTERNS:
+              - Font families used in text_content (e.g., "Calibri", "Arial", "Times New Roman")
+              - Font sizes from text_content.runs (e.g., title=24pt, headers=18pt, body=12pt)
+              - Font colors from text_content.runs (e.g., headers=#1f4e79, body=#333333)
+              - Bold/italic patterns from text_content.runs (e.g., "all headers are bold")
+              - Shape fill colors from fill.color (e.g., "#d4e6f1 for content boxes")
+              - Shape line colors from line.color (e.g., "#1f4e79 for borders")
+              - Text alignment patterns from text_content.alignment
+              - Position patterns from position data (e.g., "titles at top=50, content at top=120")
         
-        STEP 2 - INCLUDE PATTERNS IN EDIT INSTRUCTIONS:
+        STEP 2 - SHAPE NAME USAGE IN EDIT INSTRUCTIONS:
+        When generating edit_instructions, you MUST:
+        - For EXISTING shapes: Use the exact shape name from the analysis (e.g., "On slide 1, modify the shape named 'Title 1' to change its text to 'New Title'")
+        - For NEW shapes: Specify clear positioning and properties for shapes that don't exist yet
+        - NEVER reference shapes by text content alone - always use the shape name when the shape exists
+        
+        STEP 3 - INCLUDE PATTERNS IN EDIT INSTRUCTIONS:
         Your edit_instructions MUST include a formatting section like:
         
         "FORMATTING CONSISTENCY REQUIREMENTS:
@@ -762,7 +1079,10 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_count: in
         
         Apply these exact formatting patterns to maintain visual consistency with existing slides."
         
-        FAILURE TO ANALYZE FORMATTING FIRST WILL RESULT IN INCONSISTENT PRESENTATION DESIGN.
+        FAILURE TO ANALYZE SHAPES AND FORMATTING FIRST WILL RESULT IN:
+        - Creation of duplicate shapes instead of editing existing ones
+        - Inconsistent presentation design
+        - Shape identification failures
         
         slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
     
@@ -775,7 +1095,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_count: in
             "updated_shapes": [...]
         }
     """
-    return _edit_powerpoint_helper(workspace_path, edit_instructions, slide_count)
+    return _edit_powerpoint_helper(workspace_path, edit_instructions, slide_numbers, slide_count)
 
 
 # Export all PowerPoint tools in a list for easy importing

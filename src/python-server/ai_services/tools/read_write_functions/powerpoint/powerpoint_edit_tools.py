@@ -246,6 +246,20 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                 
                 # First part is the shape name
                 shape_name = shape_parts[0].strip()
+                
+                # Handle cases where LLM includes shape_name prefix with colon or equals
+                if shape_name.startswith('shape_name:'):
+                    shape_name = shape_name.replace('shape_name:', '').strip()
+                elif shape_name.startswith('shape_name='):
+                    shape_name = shape_name.replace('shape_name=', '').strip()
+                
+                # Remove quotes if present
+                if shape_name.startswith('"') and shape_name.endswith('"'):
+                    shape_name = shape_name[1:-1]
+                elif shape_name.startswith("'") and shape_name.endswith("'"):
+                    shape_name = shape_name[1:-1]
+                
+                shape_name = shape_name.strip()
                 if not shape_name:
                     continue
                 
