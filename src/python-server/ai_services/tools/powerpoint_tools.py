@@ -405,7 +405,8 @@ Example: slide_layout="Title Slide" or slide_layout=0
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
         2. List each shape's metadata as: shape_name, visual properties, size/position properties, text properties (if applicable).
         3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
-        4. SIZE/POSITION PROPERTIES: width, height (in points, typical range: 50-500), left, top (in points, typical range: 0-720 for left, 0-540 for top).
+        4. SIZE/POSITION PROPERTIES: width, height (in points, VALID RANGE: 1-720 for width, 1-540 for height), left, top (in points, VALID RANGE: 0-720 for left, 0-540 for top).
+           *** CRITICAL: DO NOT EXCEED THESE RANGES - PowerPoint will reject values outside these bounds! ***
         5. TEXT PROPERTIES (for shapes with text content):
            - text: The actual text content (enclose in quotes)
            - font_size: Font size in points (typical range: 8-72)
@@ -587,7 +588,18 @@ Example: slide_layout="Title Slide" or slide_layout=0
                     position = shape.get('position', {})
                     metadata_context += f"  - Shape: '{shape_name}' (Type: {shape_type})"
                     if position:
-                        metadata_context += f" at ({position.get('left', 0)}, {position.get('top', 0)})"
+                        # Convert EMUs to points for LLM context (1 point = 12700 EMUs)
+                        left_emus = position.get('left', 0)
+                        top_emus = position.get('top', 0)
+                        width_emus = position.get('width', 0)
+                        height_emus = position.get('height', 0)
+                        
+                        left_points = round(left_emus / 12700, 1) if left_emus else 0
+                        top_points = round(top_emus / 12700, 1) if top_emus else 0
+                        width_points = round(width_emus / 12700, 1) if width_emus else 0
+                        height_points = round(height_emus / 12700, 1) if height_emus else 0
+                        
+                        metadata_context += f" at ({left_points}, {top_points}) size ({width_points}x{height_points}) points"
                     if shape.get('text'):
                         text_preview = shape['text'][:50] + '...' if len(shape['text']) > 50 else shape['text']
                         metadata_context += f" with text: '{text_preview}'"
@@ -1021,18 +1033,52 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
 @tool
 def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0) -> str:
     """
-    Edit PowerPoint files. You can generate and modify objects in pwoerpoint slides like shapes, paragraphs, text.
+    Edit PowerPoint files. You can generate and modify objects in PowerPoint slides like shapes, paragraphs, text.
+    
+    CRITICAL COORDINATE SYSTEM AND SIZE CONSTRAINTS:
+        ALL POSITION AND SIZE VALUES MUST BE SPECIFIED IN POINTS (NOT EMUs):
+        
+        STANDARD SLIDE SIZE CONSTRAINTS (in points):
+        - 16:9 Widescreen (720 x 405 points): 
+          * Width range: 1-720 points
+          * Height range: 1-405 points
+          * Left position: 0-720 points
+          * Top position: 0-405 points
+        
+        - 4:3 Standard (720 x 540 points):
+          * Width range: 1-720 points  
+          * Height range: 1-540 points
+          * Left position: 0-720 points
+          * Top position: 0-540 points
+        
+        SAFE SHAPE SIZE LIMITS (recommended to avoid PowerPoint errors):
+        - Maximum width: 400 points
+        - Maximum height: 300 points
+        - Minimum width/height: 10 points
+        
+        EXAMPLES OF VALID INSTRUCTIONS:
+        - "Set the width to 200 points" ✓
+        - "Move the shape to left=50, top=100" ✓
+        - "Create a rectangle with width=150, height=75" ✓
+        
+        INVALID EXAMPLES (DO NOT USE):
+        - "Set width to 9144000" ✗ (EMU value, too large)
+        - "Move to left=143838" ✗ (EMU value)
+        - "Width=800" ✗ (exceeds slide width)
+    
     CRITICAL INSTRUCTION GENERATION RULES:
         1. NEVER overwrite or modify any existing objects in the PowerPoint file UNLESS specified by the user
         2. New objects can ONLY be added in completely blank parts of the slide
         3. Do not insert new objects that would shift existing objects UNLESS compliant with user request
         4. If you need to reference existing data, do so without modifying it
         5. Clearly specify the positions on slide where new objects should be placed
+        6. ALL coordinates and sizes MUST be in points within the valid ranges above
     
     Args:
         workspace_path: Full path to the PowerPoint file in the format 'folder/presentation.pptx'
         edit_instructions: Specific instructions for editing shapes in the presentation.
         Generate instructions in natural language based on the user's requirements.
+        IMPORTANT: Use only point values within the valid ranges specified above.
         
         CRITICAL SHAPE ANALYSIS AND FORMATTING REQUIREMENTS:
         
