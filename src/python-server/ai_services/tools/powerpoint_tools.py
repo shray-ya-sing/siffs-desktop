@@ -340,6 +340,7 @@ def _get_slide_metadata(workspace_path: str, slide_numbers: List[int]) -> Dict[i
 def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0) -> str:
     """
     Edit a PowerPoint presentation by generating and applying shape formatting metadata.
+    Supports images from URLs, attachments, and logo databases.
 
     Args:
         workspace_path: The path to the PowerPoint file to edit.
@@ -366,6 +367,55 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_n
         return "Request was cancelled"
 
     try:
+        # Initialize image handler for processing logos and images
+        from powerpoint.utilities.image_handler import PowerPointImageHandler
+        image_handler = PowerPointImageHandler()
+        
+        # Process images if mentioned in edit instructions
+        image_processing_context = ""
+        
+        # Check if edit instructions mention company names or image requests
+        import re
+        
+        # Extract company names that might need logos
+        company_pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+(?:Inc|Corp|LLC|Ltd|Co|Company|Corporation))?)'
+        potential_companies = re.findall(company_pattern, edit_instructions)
+        
+        # Check for URL patterns
+        url_pattern = r'https?://[^\s]+'
+        urls = re.findall(url_pattern, edit_instructions)
+        
+        # Process logos if companies are mentioned
+        downloaded_images = {}
+        if potential_companies:
+            # Try to load logo database (this would be configured by the user)
+            logo_db_path = python_server_dir / "metadata" / "logos" / "company_logos.json"
+            if logo_db_path.exists():
+                logo_database = image_handler.load_logo_database(str(logo_db_path))
+                if logo_database:
+                    # Find logos for mentioned companies
+                    company_logos = image_handler.find_company_logos(potential_companies, logo_database)
+                    if company_logos:
+                        # Download the logos
+                        downloaded_images.update(image_handler.download_company_logos(company_logos))
+                        logger.info(f"Downloaded {len(downloaded_images)} company logos")
+                        
+                        # Add context for the LLM
+                        image_processing_context += f"\n\nAVAILABLE COMPANY LOGOS:\n"
+                        for company, file_path in downloaded_images.items():
+                            image_processing_context += f"- {company}: {file_path}\n"
+        
+        # Process URLs if mentioned
+        if urls:
+            for url in urls:
+                try:
+                    downloaded_path = image_handler.download_image_from_url(url)
+                    if downloaded_path:
+                        downloaded_images[f"Image from {url}"] = downloaded_path
+                        logger.info(f"Downloaded image from URL: {url}")
+                except Exception as e:
+                    logger.warning(f"Failed to download image from {url}: {e}")
+        
         # Extract available layouts from cache
         layout_context = ""
         available_layouts = []
@@ -397,16 +447,43 @@ Example: slide_layout="Title Slide" or slide_layout=0
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        slide_number: slide1, slide_layout="Title Slide" | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
+        slide_number: slide1, slide_layout="Title Slide" | Microsoft Logo, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
+        *** CRITICAL POSITIONING AND NAMING RULES ***
+        
+        SHAPE NAMING REQUIREMENTS:
+        - NEVER use generic names like "shape_name", "Picture 1", "Shape 1"
+        - ALWAYS use descriptive, unique names like "Microsoft Logo", "Sales Chart", "Header Text", "Contact Info"
+        - Each shape MUST have a different name to avoid conflicts
+        - Use the actual purpose/content as the name (e.g., "Google Logo", not "Logo 2")
+        
+        POSITION AND SIZE CONSTRAINTS - STRICTLY ENFORCE:
+        - SLIDE DIMENSIONS: Standard slide is 720 points wide × 540 points tall
+        - LEFT position: MUST be 0-720 points (anything > 720 will cause errors)
+        - TOP position: MUST be 0-540 points (anything > 540 will cause errors) 
+        - WIDTH: MUST be 1-720 points (shape cannot be wider than slide)
+        - HEIGHT: MUST be 1-540 points (shape cannot be taller than slide)
+        - POSITIONING LOGIC: left + width ≤ 720, top + height ≤ 540
+        
+        POSITIONING EXAMPLES:
+        - Left side logo: left=50, top=50, width=100, height=60
+        - Right side logo: left=570, top=50, width=100, height=60 (570+100=670 < 720 ✓)
+        - Center element: left=310, top=220, width=100, height=100 (centered)
+        - Bottom element: left=50, top=450, width=200, height=50 (450+50=500 < 540 ✓)
+        
+        INVALID EXAMPLES THAT WILL FAIL:
+        ❌ left=847.2 (exceeds 720 limit)
+        ❌ left=650, width=200 (650+200=850 > 720)
+        ❌ top=500, height=100 (500+100=600 > 540)
+        ❌ width=800 (exceeds slide width)
+
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
-        2. List each shape's metadata as: shape_name, visual properties, size/position properties, text properties (if applicable).
+        2. List each shape's metadata as: DESCRIPTIVE_SHAPE_NAME, visual properties, size/position properties, text properties (if applicable).
         3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
-        4. SIZE/POSITION PROPERTIES: width, height (in points, VALID RANGE: 1-720 for width, 1-540 for height), left, top (in points, VALID RANGE: 0-720 for left, 0-540 for top).
-           *** CRITICAL: DO NOT EXCEED THESE RANGES - PowerPoint will reject values outside these bounds! ***
+        4. SIZE/POSITION PROPERTIES: width, height, left, top (ALL IN POINTS, WITHIN RANGES SPECIFIED ABOVE).
         5. TEXT PROPERTIES (for shapes with text content):
            - text: The actual text content (enclose in quotes)
            - font_size: Font size in points (typical range: 8-72)
@@ -536,6 +613,38 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - Column Chart: Sales Chart, shape_type="chart", chart_type="column", left=50, top=100, width=400, height=300, chart_title="Quarterly Sales", chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Revenue', 'values': [100000, 150000, 200000, 180000]}}]}}", show_legend=true, x_axis_title="Quarter", y_axis_title="Revenue ($)"
             - Pie Chart: Market Share, shape_type="chart", chart_type="pie", left=50, top=100, width=350, height=300, chart_title="Market Share 2024", chart_data="{{'categories': ['Product A', 'Product B', 'Product C', 'Product D'], 'series': [{{'name': 'Share', 'values': [35, 25, 20, 20]}}]}}", show_percentages=true, explosion="[0.1, 0, 0, 0]"
             - Multi-Series Line: Trend Chart, shape_type="chart", chart_type="line", left=50, top=100, width=500, height=300, chart_title="Sales vs Costs Trend", chart_data="{{'categories': ['Jan', 'Feb', 'Mar', 'Apr', 'May'], 'series': [{{'name': 'Sales', 'values': [100, 120, 140, 130, 160]}}, {{'name': 'Costs', 'values': [80, 90, 110, 105, 125]}}]}}", smooth_lines=true, data_labels=false, series_colors="['#2E86AB', '#A23B72']"
+        
+        21. IMAGE CREATION RULES:
+            - Use shape_type="picture" to insert images from URLs or attachments
+            - REQUIRED properties: image_path (local file path to downloaded image)
+            - POSITIONING properties: left, top, width, height (all in points)
+            - IMAGE SIZING RULES:
+              * If width and height are both specified, image will be resized to exact dimensions
+              * If only width OR height is specified, aspect ratio will be maintained
+              * If neither is specified, original image dimensions will be used
+              * Recommended sizes: width=100-300 points, height=100-300 points
+            
+        22. IMAGE EXAMPLES:
+            - Company Logo: Microsoft Logo, shape_type="picture", image_path="/path/to/microsoft_logo.png", left=50, top=50, width=120, height=60
+            - Product Image: Product Photo, shape_type="picture", image_path="/path/to/product.jpg", left=200, top=150, width=200, height=150
+            - Background Image: Background, shape_type="picture", image_path="/path/to/background.png", left=0, top=0, width=720, height=540
+        
+        23. SPECIAL IMAGE HANDLING INSTRUCTIONS:
+            When the user mentions company names for logos or requests images:
+            1. For LOGO REQUESTS: The system will automatically download logos for mentioned companies
+            2. For URL IMAGES: The system will download images from provided URLs  
+            3. For ATTACHMENT IMAGES: The system will process uploaded image files
+            4. Use the downloaded image path in the image_path property
+            5. Position logos and images appropriately based on slide layout and existing content
+            
+        24. LOGO LAYOUT GUIDELINES:
+            - For logo splash slides: Use a grid layout (2x3, 3x3, etc.) with consistent spacing
+            - Logo sizes: typically 80-120 points wide, 40-80 points tall
+            - Spacing: Leave 20-40 points between logos
+            - Center logos on slide or align to existing content blocks
+            - Example grid positions for 3x2 logo layout on 720px slide:
+              * Row 1: left=120, left=300, left=480 (top=150)
+              * Row 2: left=120, left=300, left=480 (top=250)
         """
 
         # Get the user id for the API key
@@ -831,6 +940,250 @@ Example: slide_layout="Title Slide" or slide_layout=0
         return error_msg
 
 
+@tool
+def get_images(company_logos: Dict[str, str], logo_type: str = "32", background_type: str = "for_bright_background") -> str:
+    """
+    Download company logo images from the CompaniesLogo.com database to local cache for use in PowerPoint slides.
+    
+    This tool searches for company logos in the database, downloads them from the correct URLs,
+    and returns local file paths that can be used with PowerPoint's image insertion functionality.
+    
+    Args:
+        company_logos: Dictionary where keys are company names to search for, values are ignored.
+                      Example: {"Microsoft": "", "Apple": "", "Amazon": ""}
+        logo_type: Size of logo to download. Available options: "32", "64" (default: "32")
+        background_type: Background type for logo. Available options: 
+                        "for_bright_background", "for_dark_background" (default: "for_bright_background")
+    
+    Returns:
+        A JSON string containing the download results:
+        {
+            "status": "success",
+            "downloaded_logos": {
+                "Microsoft": "/path/to/microsoft_logo.png",
+                "Apple": "/path/to/apple_logo.png"
+            },
+            "failed_downloads": ["Company Not Found"],
+            "total_downloaded": 2,
+            "total_failed": 1
+        }
+    """
+    import requests
+    import json
+    import os
+    from pathlib import Path
+    import hashlib
+    from urllib.parse import urlparse
+    
+    logger.info(f"Starting logo download for companies: {list(company_logos.keys())}")
+    writer = get_writer()
+    writer({"processing": f"Downloading logos for {len(company_logos)} companies"})
+    
+    # Base URL for CompaniesLogo.com
+    BASE_URL = "https://companieslogo.com"
+    
+    # Create cache directory for downloaded logos
+    cache_dir = python_server_dir / "metadata" / "_cache" / "company_logos"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Load the company logos database from the JSON file
+    company_database = []
+    try:
+        logo_db_path = python_server_dir / "metadata" / "logos" / "company_logos.json"
+        if logo_db_path.exists():
+            with open(logo_db_path, 'r', encoding='utf-8') as f:
+                company_database = json.load(f)
+            logger.info(f"Loaded {len(company_database)} companies from logo database")
+        else:
+            logger.error(f"Company logos database not found at: {logo_db_path}")
+            return json.dumps({
+                "status": "error",
+                "error": "Company logos database file not found",
+                "downloaded_logos": {},
+                "failed_downloads": list(company_logos.keys()),
+                "total_downloaded": 0,
+                "total_failed": len(company_logos)
+            }, indent=2)
+    except Exception as e:
+        logger.error(f"Error loading company logos database: {str(e)}")
+        return json.dumps({
+            "status": "error",
+            "error": f"Failed to load company logos database: {str(e)}",
+            "downloaded_logos": {},
+            "failed_downloads": list(company_logos.keys()),
+            "total_downloaded": 0,
+            "total_failed": len(company_logos)
+        }, indent=2)
+    
+    downloaded_logos = {}
+    failed_downloads = []
+    
+    def find_best_company_match(search_name, company_database, threshold=0.6):
+        """Find the best matching company using fuzzy string similarity"""
+        from difflib import SequenceMatcher
+        
+        search_lower = search_name.lower().strip()
+        best_match = None
+        best_score = 0
+        
+        # Try exact match first (fastest)
+        for company in company_database:
+            if company["name"].lower() == search_lower:
+                return company, 1.0
+        
+        # Try symbol exact match
+        for company in company_database:
+            symbol = company.get("symbol", "")
+            if symbol and isinstance(symbol, str):
+                symbol = symbol.lower()
+                if symbol == search_lower:
+                    return company, 1.0
+        
+        # Fuzzy matching on company names
+        for company in company_database:
+            company_name = company["name"].lower()
+            
+            # Calculate similarity ratio
+            similarity = SequenceMatcher(None, search_lower, company_name).ratio()
+            
+            # Also check if search term is contained in company name (high weight)
+            if search_lower in company_name or company_name in search_lower:
+                similarity = max(similarity, 0.8)  # Boost containment matches
+            
+            # Check individual words for partial matches
+            search_words = search_lower.split()
+            company_words = company_name.split()
+            
+            # If any significant word matches exactly, boost score
+            for search_word in search_words:
+                if len(search_word) > 2:  # Ignore short words like "co", "inc"
+                    for company_word in company_words:
+                        if search_word == company_word or search_word in company_word:
+                            similarity = max(similarity, 0.7)
+            
+            # Handle common variations (e.g., "Meta" should match "Meta Platforms (Facebook)")
+            if any(word in company_name for word in search_words if len(word) > 2):
+                similarity = max(similarity, 0.75)
+            
+            if similarity > best_score:
+                best_score = similarity
+                best_match = company
+        
+        # Return match only if above threshold
+        if best_score >= threshold:
+            return best_match, best_score
+        
+        return None, 0
+    
+    try:
+        for company_name in company_logos.keys():
+            logger.info(f"Processing logo for: {company_name}")
+            
+            # Find best matching company using fuzzy matching
+            company_data, match_score = find_best_company_match(company_name, company_database)
+            
+            if not company_data:
+                logger.warning(f"Company '{company_name}' not found in logo database")
+                failed_downloads.append(company_name)
+                continue
+            
+            logger.info(f"Found company match: '{company_data['name']}' for search '{company_name}'")
+            
+            # Get the logo URL path
+            try:
+                logo_url_path = (company_data
+                               .get("png", {})
+                               .get("icon", {})
+                               .get(background_type, {})
+                               .get(logo_type))
+                
+                if not logo_url_path:
+                    # Try alternative background type if requested type not available
+                    alt_background = "for_bright_background" if background_type == "for_dark_background" else "for_dark_background"
+                    logo_url_path = (company_data
+                                   .get("png", {})
+                                   .get("icon", {})
+                                   .get(alt_background, {})
+                                   .get(logo_type))
+                    
+                    if logo_url_path:
+                        logger.info(f"Using alternative background type '{alt_background}' for {company_name}")
+                
+                # Try alternative size if current size not available
+                if not logo_url_path:
+                    alt_size = "64" if logo_type == "32" else "32"
+                    logo_url_path = (company_data
+                                   .get("png", {})
+                                   .get("icon", {})
+                                   .get(background_type, {})
+                                   .get(alt_size))
+                    
+                    if logo_url_path:
+                        logger.info(f"Using alternative size '{alt_size}' for {company_name}")
+                
+                if not logo_url_path:
+                    logger.warning(f"Logo URL not found for {company_name} with type {logo_type} and background {background_type}")
+                    failed_downloads.append(company_name)
+                    continue
+                
+                # Construct full URL
+                full_url = BASE_URL + logo_url_path
+                logger.info(f"Downloading logo from: {full_url}")
+                
+                # Generate cache filename
+                url_hash = hashlib.md5(full_url.encode()).hexdigest()[:8]
+                safe_company_name = "".join(c for c in company_name if c.isalnum() or c in " -_").replace(" ", "_")
+                filename = f"{safe_company_name}_{logo_type}_{background_type}_{url_hash}.png"
+                cache_path = cache_dir / filename
+                
+                # Check if already cached
+                if cache_path.exists():
+                    logger.info(f"Using cached logo for {company_name}: {cache_path}")
+                    downloaded_logos[company_name] = str(cache_path)
+                    continue
+                
+                # Download the logo
+                response = requests.get(full_url, timeout=30, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                })
+                response.raise_for_status()
+                
+                # Save to cache
+                with open(cache_path, 'wb') as f:
+                    f.write(response.content)
+                
+                logger.info(f"Successfully downloaded logo for {company_name}: {cache_path}")
+                downloaded_logos[company_name] = str(cache_path)
+                
+            except Exception as e:
+                logger.error(f"Error downloading logo for {company_name}: {str(e)}")
+                failed_downloads.append(company_name)
+                continue
+    
+    except Exception as e:
+        logger.error(f"Error in get_images tool: {str(e)}", exc_info=True)
+        return json.dumps({
+            "status": "error",
+            "error": str(e),
+            "downloaded_logos": downloaded_logos,
+            "failed_downloads": failed_downloads
+        }, indent=2)
+    
+    # Prepare result
+    result = {
+        "status": "success",
+        "downloaded_logos": downloaded_logos,
+        "failed_downloads": failed_downloads,
+        "total_downloaded": len(downloaded_logos),
+        "total_failed": len(failed_downloads)
+    }
+    
+    logger.info(f"Logo download completed. Downloaded: {len(downloaded_logos)}, Failed: {len(failed_downloads)}")
+    writer({"completed": f"Downloaded {len(downloaded_logos)} logos, {len(failed_downloads)} failed"})
+    
+    return json.dumps(result, indent=2, cls=ExtendedJSONEncoder)
+
+
 # POWERPOINT_TOOLS _________________________________________________________________________________________________________________________________
 
 
@@ -1080,6 +1433,19 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: 
         Generate instructions in natural language based on the user's requirements.
         IMPORTANT: Use only point values within the valid ranges specified above.
         
+        CRITICAL IMAGE HANDLING REQUIREMENTS:
+        If the user requests adding images, logos, or pictures to slides, you MUST:
+        1. FIRST call the get_images tool to download and obtain local file paths for the images
+        2. THEN include the returned file paths in the edit_instructions using shape_type="picture"
+        3. File paths are MANDATORY - the PowerPoint writer cannot access images without local file paths
+        
+        Example workflow for adding company logos:
+        Step 1: Call get_images({"Microsoft": "", "Apple": ""}) 
+        Step 2: Use returned paths in edit_instructions:
+        "Add Microsoft logo using shape_type='picture', image_path='/path/to/microsoft_logo.png', left=100, top=50, width=120, height=60"
+        
+        WITHOUT proper file paths from get_images, image insertion will FAIL.
+        
         CRITICAL SHAPE ANALYSIS AND FORMATTING REQUIREMENTS:
         
         STEP 1 - MANDATORY SHAPE AND FORMATTING ANALYSIS:
@@ -1148,7 +1514,8 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: 
 POWERPOINT_TOOLS = [
     get_full_powerpoint_summary,
     get_powerpoint_slide_details,
-    edit_powerpoint
+    edit_powerpoint,
+    get_images
 ]
 
 

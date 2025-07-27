@@ -260,6 +260,14 @@ class PowerPointWorker:
                                         if shape is None:
                                             logger.warning(f"Failed to create table '{shape_name}' in slide {slide_number}")
                                             continue
+                                    # Check if this is an image creation request
+                                    elif self._is_image_creation_request(shape_props):
+                                        # Create image directly
+                                        logger.info(f"Creating new image '{shape_name}' in slide {slide_number}")
+                                        shape = self._create_image_shape(slide, shape_name, shape_props)
+                                        if shape is None:
+                                            logger.warning(f"Failed to create image '{shape_name}' in slide {slide_number}")
+                                            continue
                                     else:
                                         # Create regular shape
                                         logger.info(f"Creating new shape '{shape_name}' in slide {slide_number}")
@@ -645,12 +653,16 @@ class PowerPointWorker:
     
     def _is_table_creation_request(self, shape_props: Dict[str, Any]) -> bool:
         """Check if the shape properties indicate a table creation request."""
-        table_props = ['table_rows', 'table_cols', 'table_data', 'rows', 'cols', 'shape_type']
+        table_props = ['table_rows', 'table_cols', 'table_data', 'rows', 'cols']
         return any(prop in shape_props for prop in table_props) or shape_props.get('shape_type') == 'table'
     
     def _is_chart_creation_request(self, shape_props: Dict[str, Any]) -> bool:
         """Check if the shape properties indicate a chart creation request."""
         return shape_props.get('shape_type') == 'chart' or 'chart_type' in shape_props
+    
+    def _is_image_creation_request(self, shape_props: Dict[str, Any]) -> bool:
+        """Check if the shape properties indicate an image creation request."""
+        return shape_props.get('shape_type') == 'picture' or 'image_path' in shape_props
     
     def _create_table_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new table shape on the slide with the specified properties.
@@ -1537,6 +1549,74 @@ class PowerPointWorker:
             return chart_shape
         except Exception as e:
             logger.error(f"Error creating chart shape '{shape_name}': {e}")
+            return None
+    
+    def _create_image_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
+        """Create a new image shape on the slide with the specified properties.
+        
+        Args:
+            slide: PowerPoint slide object
+            shape_name: Name for the new image shape
+            shape_props: Dictionary of shape properties including image_path and positioning
+            
+        Returns:
+            The created image shape object or None if creation failed
+        """
+        try:
+            # Get the image file path
+            image_path = shape_props.get('image_path')
+            if not image_path:
+                logger.error(f"No image_path specified for image shape '{shape_name}'")
+                return None
+            
+            # Verify the image file exists
+            if not os.path.exists(image_path):
+                logger.error(f"Image file not found: {image_path}")
+                return None
+            
+            # Get position and size from shape_props, with defaults
+            left = float(shape_props.get('left', 100))  # Default left position
+            top = float(shape_props.get('top', 100))    # Default top position
+            width = float(shape_props.get('width', -1))  # -1 means use original width
+            height = float(shape_props.get('height', -1))  # -1 means use original height
+            
+            # Create the image shape using AddPicture
+            # Parameters: FileName, LinkToFile, SaveWithDocument, Left, Top, Width, Height
+            if width > 0 and height > 0:
+                # Specific dimensions provided
+                image_shape = slide.Shapes.AddPicture(
+                    FileName=image_path,
+                    LinkToFile=False,  # Embed the image
+                    SaveWithDocument=True,
+                    Left=left,
+                    Top=top,
+                    Width=width,
+                    Height=height
+                )
+            else:
+                # Use original image dimensions
+                image_shape = slide.Shapes.AddPicture(
+                    FileName=image_path,
+                    LinkToFile=False,  # Embed the image
+                    SaveWithDocument=True,
+                    Left=left,
+                    Top=top
+                )
+                
+                # Apply width and height if specified (after creation to maintain aspect ratio)
+                if width > 0:
+                    image_shape.Width = width
+                if height > 0:
+                    image_shape.Height = height
+            
+            # Set the shape name
+            image_shape.Name = shape_name
+            
+            logger.info(f"Created image shape '{shape_name}' from {image_path} at ({left}, {top}) with size ({image_shape.Width}, {image_shape.Height})")
+            return image_shape
+            
+        except Exception as e:
+            logger.error(f"Error creating image shape '{shape_name}': {e}")
             return None
     
     def _apply_shape_properties(self, shape, shape_props: Dict[str, Any], slide_number: int) -> Dict[str, Any]:
