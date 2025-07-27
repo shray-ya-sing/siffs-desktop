@@ -481,6 +481,7 @@ class PowerPointWorker:
                 'trapezoid': 3,                    # msoShapeTrapezoid
                 'diamond': 4,                      # msoShapeDiamond
                 'roundedrectangle': 5,             # msoShapeRoundedRectangle
+                'roundrectangle': 5,               # msoShapeRoundedRectangle (alias)
                 'octagon': 6,                      # msoShapeOctagon
                 'triangle': 10,                    # msoShapeIsoscelesTriangle
                 'righttriangle': 7,                # msoShapeRightTriangle
@@ -1703,6 +1704,16 @@ class PowerPointWorker:
                     updated_info['properties_applied'].append('geom_requested')
                 except Exception as e:
                     logger.warning(f"Could not apply geometry to shape {shape.Name}: {e}")
+            
+            # Apply rotation
+            if 'rotation' in shape_props and shape_props['rotation']:
+                try:
+                    rotation_angle = float(shape_props['rotation'])
+                    shape.Rotation = rotation_angle
+                    updated_info['properties_applied'].append('rotation')
+                    logger.debug(f"Applied rotation {rotation_angle} degrees to shape {shape.Name}")
+                except Exception as e:
+                    logger.warning(f"Could not apply rotation to shape {shape.Name}: {e}")
             
             # Apply text content
             if 'text' in shape_props and shape_props['text']:

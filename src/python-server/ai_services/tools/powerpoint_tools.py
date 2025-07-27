@@ -483,6 +483,16 @@ Example: slide_layout="Title Slide" or slide_layout=0
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
         2. List each shape's metadata as: DESCRIPTIVE_SHAPE_NAME, visual properties, size/position properties, text properties (if applicable).
         3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
+        
+        SHAPE GEOMETRY (geom) TYPES - CASE SENSITIVE:
+        - Basic shapes: "rectangle", "square", "oval", "circle", "diamond", "triangle", "hexagon", "octagon"
+        - Rounded shapes: "roundedrectangle" (NOT "roundRectangle" - use lowercase!)
+        - Lines: "line" (for straight lines)
+        - Text containers: "textbox" (for text-only shapes)
+        - Arrows: "rightarrow", "leftarrow", "uparrow", "downarrow" (NOT "rightArrow" - use lowercase!)
+        - Bidirectional arrows: "leftrighttarrow", "updownarrow"
+        - Flowchart: "flowchartprocess", "flowchartdecision", "flowchartterminator"
+        - CRITICAL: All geometry names must be lowercase. "rightarrow" NOT "rightArrow"!
         4. SIZE/POSITION PROPERTIES: width, height, left, top (ALL IN POINTS, WITHIN RANGES SPECIFIED ABOVE).
         5. TEXT PROPERTIES (for shapes with text content):
            - text: The actual text content (enclose in quotes)
