@@ -453,11 +453,15 @@ Example: slide_layout="Title Slide" or slide_layout=0
 
         *** CRITICAL POSITIONING AND NAMING RULES ***
         
-        SHAPE NAMING REQUIREMENTS:
-        - NEVER use generic names like "shape_name", "Picture 1", "Shape 1"
+        SHAPE NAMING REQUIREMENTS - CRITICAL FOR SLIDE CREATION:
+        - NEVER use generic names like "shape_name", "Picture 1", "Shape 1", "Rectangle 1"
         - ALWAYS use descriptive, unique names like "Microsoft Logo", "Sales Chart", "Header Text", "Contact Info"
-        - Each shape MUST have a different name to avoid conflicts
+        - Each shape MUST have a COMPLETELY DIFFERENT name to avoid conflicts and overwrites
         - Use the actual purpose/content as the name (e.g., "Google Logo", not "Logo 2")
+        - NEVER repeat shape names within the same slide or across slides
+        - Examples of GOOD naming: "Company Title", "Mission Arrow", "Values Arrow", "Strategy Label", "Vision Label", "Finance Box", "Customer Box", "Process Box", "Growth Box"
+        - Examples of BAD naming: "Rectangle 1", "Rectangle 2", "Arrow 1", "Arrow 2" (these cause overwrites!)
+        - If creating similar shapes, use descriptive differences: "Top Navigation Arrow", "Bottom Navigation Arrow"
         
         POSITION AND SIZE CONSTRAINTS - STRICTLY ENFORCE:
         - SLIDE DIMENSIONS: Standard slide is 720 points wide × 540 points tall
@@ -486,7 +490,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
         
         SHAPE GEOMETRY (geom) TYPES - CASE SENSITIVE:
         - Basic shapes: "rectangle", "square", "oval", "circle", "diamond", "triangle", "hexagon", "octagon"
-        - Rounded shapes: "roundedrectangle" (NOT "roundRectangle" - use lowercase!)
+        - Rounded shapes: "roundedrectangle" (NOT "roundRectangle" or "roundrect" - use full name lowercase!)
         - Lines: "line" (for straight lines)
         - Text containers: "textbox" (for text-only shapes)
         - Arrows: "rightarrow", "leftarrow", "uparrow", "downarrow" (NOT "rightArrow" - use lowercase!)
@@ -495,7 +499,13 @@ Example: slide_layout="Title Slide" or slide_layout=0
         - CRITICAL: All geometry names must be lowercase. "rightarrow" NOT "rightArrow"!
         4. SIZE/POSITION PROPERTIES: width, height, left, top (ALL IN POINTS, WITHIN RANGES SPECIFIED ABOVE).
         5. TEXT PROPERTIES (for shapes with text content):
-           - text: The actual text content (enclose in quotes)
+           *** CRITICAL TEXT FORMATTING RULES ***:
+           - text: The actual text content (enclose in quotes) - MUST BE PLAIN TEXT ONLY
+           - NEVER use HTML tags like <p>, <b>, <i>, <font>, or style attributes in text content
+           - For multi-line text, use \\n (double backslash n) for line breaks
+           - Apply formatting using separate properties, NOT embedded in text
+           
+           FORMATTING PROPERTIES (applied separately from text):
            - font_size: Font size in points (typical range: 8-72)
            - font_name: Font family name (e.g., "Arial", "Times New Roman", "Calibri")
            - font_color: Font color in hex format (e.g., "#000000" for black)
@@ -513,6 +523,15 @@ Example: slide_layout="Title Slide" or slide_layout=0
            - space_before: Space before paragraph in points (e.g., 12)
            - space_after: Space after paragraph in points (e.g., 6)
            - line_spacing: Line spacing - "single", "double", "1.5", or custom value (e.g., "1.2")
+           
+           TEXT EXAMPLES (CORRECT):
+           ✓ text="Finance\\nLorem ipsum dolor sit amet" (plain text with line break)
+           ✓ text="Finance", font_size=18, bold=true (separate formatting)
+           
+           TEXT EXAMPLES (INCORRECT - NEVER DO THIS):
+           ✗ text="<p style='font-size:18pt;'>Finance</p>" (HTML formatting)
+           ✗ text="<b>Finance</b>" (HTML tags)
+           ✗ text="Finance<br>Lorem ipsum" (HTML line breaks)
         6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
            - paragraph_name, geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
         7. TEXT FORMATTING EXAMPLES:

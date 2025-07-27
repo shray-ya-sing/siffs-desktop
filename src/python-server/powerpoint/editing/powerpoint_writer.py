@@ -482,6 +482,7 @@ class PowerPointWorker:
                 'diamond': 4,                      # msoShapeDiamond
                 'roundedrectangle': 5,             # msoShapeRoundedRectangle
                 'roundrectangle': 5,               # msoShapeRoundedRectangle (alias)
+                'roundrect': 5,                    # msoShapeRoundedRectangle (alias)
                 'octagon': 6,                      # msoShapeOctagon
                 'triangle': 10,                    # msoShapeIsoscelesTriangle
                 'righttriangle': 7,                # msoShapeRightTriangle
@@ -504,8 +505,8 @@ class PowerPointWorker:
                 'leftarrow': 34,                   # msoShapeLeftArrow
                 'downarrow': 36,                   # msoShapeDownArrow
                 'uparrow': 35,                     # msoShapeUpArrow
-                'rightarrow': 13,                  # msoShapeRightArrow
-                'arrow': 13,                       # msoShapeRightArrow (alias)
+                'rightarrow': 33,                  # msoShapeRightArrow
+                'arrow': 33,                       # msoShapeRightArrow (alias)
                 'leftrighttarrow': 37,             # msoShapeLeftRightArrow
                 'updownarrow': 38,                 # msoShapeUpDownArrow
                 'quadarrow': 76,                   # msoShapeQuadArrow
@@ -654,7 +655,7 @@ class PowerPointWorker:
     
     def _is_table_creation_request(self, shape_props: Dict[str, Any]) -> bool:
         """Check if the shape properties indicate a table creation request."""
-        table_props = ['table_rows', 'table_cols', 'table_data', 'rows', 'cols']
+        table_props = ['table_rows', 'table_cols', 'table_data', 'rows', 'cols', 'table', 'table_cells']
         return any(prop in shape_props for prop in table_props) or shape_props.get('shape_type') == 'table'
     
     def _is_chart_creation_request(self, shape_props: Dict[str, Any]) -> bool:
@@ -677,10 +678,50 @@ class PowerPointWorker:
             The created table shape object or None if creation failed
         """
         try:
-            # Get table parameters - support both old and new property names
-            table_rows = int(shape_props.get('table_rows', shape_props.get('rows', 0)))
-            table_cols = int(shape_props.get('table_cols', shape_props.get('cols', 0)))
-            table_data = shape_props.get('table_data')
+            # Handle different table property formats
+            if 'table' in shape_props:
+                # Handle nested JSON format: table={"rows": 4, "cols": 3, "data": [[...]]}
+                table_config = shape_props['table']
+                
+                # Parse table config if it's a string (JSON)
+                if isinstance(table_config, str):
+                    try:
+                        import json
+                        table_config = json.loads(table_config)
+                    except (json.JSONDecodeError, ValueError) as e:
+                        logger.warning(f"Could not parse table JSON: {e}. Trying ast.literal_eval...")
+                        try:
+                            import ast
+                            table_config = ast.literal_eval(table_config)
+                        except (ValueError, SyntaxError) as e2:
+                            logger.warning(f"Could not parse table with ast.literal_eval: {e2}")
+                            table_config = {}
+                
+                if isinstance(table_config, dict):
+                    # Extract table parameters from nested config
+                    table_rows = int(table_config.get('rows', 0))
+                    table_cols = int(table_config.get('cols', 0))
+                    table_data = table_config.get('data', [])
+                else:
+                    logger.warning(f"Table config is not a dict: {type(table_config)}")
+                    table_rows = table_cols = 0
+                    table_data = []
+            elif 'table_cells' in shape_props:
+                # Handle table_cells format: table_cells=[["Header1", "Header2"], ["Row1Col1", "Row1Col2"]]
+                table_data = shape_props['table_cells']
+                if isinstance(table_data, list) and len(table_data) > 0:
+                    table_rows = len(table_data)
+                    table_cols = len(table_data[0]) if isinstance(table_data[0], list) else 0
+                    logger.info(f"Detected table_cells format: {table_rows} rows x {table_cols} cols")
+                else:
+                    logger.warning(f"Invalid table_cells format: {type(table_data)}")
+                    table_rows = table_cols = 0
+                    table_data = []
+            else:
+                # Get table parameters - support both old and new property names
+                table_rows = int(shape_props.get('table_rows', shape_props.get('rows', 0)))
+                table_cols = int(shape_props.get('table_cols', shape_props.get('cols', 0)))
+                table_data = shape_props.get('table_data')
             
             if table_rows == 0 or table_cols == 0:
                 logger.warning(f"Invalid table dimensions: rows={table_rows}, cols={table_cols}")
