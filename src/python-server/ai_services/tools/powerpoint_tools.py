@@ -512,14 +512,20 @@ Example: slide_layout="Title Slide" or slide_layout=0
            - bold: true or false for bold formatting
            - italic: true or false for italic formatting
            - underline: true or false for underline formatting
+           - superscript: true or false for superscript formatting (e.g., H₂O → H2O)
+           - subscript: true or false for subscript formatting (e.g., H₂O → H₂O)
+           - text_case: "upper", "lower", "title", "sentence", "toggle" for text case transformation
            - text_align: "left", "center", "right", or "justify" for horizontal alignment
            - vertical_align: "top", "middle", or "bottom" for vertical alignment
            - bullet_style: "bullet", "number", "none" for bullet formatting
            - bullet_char: Custom bullet character (e.g., "•", "→", "★")
+           - bullet_color: Bullet point color in hex format (e.g., "#FF0000" for red bullets)
+           - bullet_size: Bullet size as percentage of text size (e.g., 100 for same size, 80 for smaller)
            - indent_level: Indentation level for bullets (0-8, default 0)
            - left_indent: Left paragraph indent in points (e.g., 36 for 0.5 inch)
            - right_indent: Right paragraph indent in points
            - first_line_indent: First line indent in points (positive for indent, negative for hanging)
+           - hanging_indent: Hanging indent in points (negative value creates hanging indent)
            - space_before: Space before paragraph in points (e.g., 12)
            - space_after: Space after paragraph in points (e.g., 6)
            - line_spacing: Line spacing - "single", "double", "1.5", or custom value (e.g., "1.2")
@@ -786,6 +792,12 @@ Example: slide_layout="Title Slide" or slide_layout=0
            - space_before: Space before paragraph in points (e.g., 12)
            - space_after: Space after paragraph in points (e.g., 6)
            - line_spacing: Line spacing - "single", "double", "1.5", or custom value (e.g., "1.2")
+           
+           ADVANCED CHARACTER-LEVEL FORMATTING:
+           - paragraph_runs: Array of character-level formatting instructions for specific text substrings
+             Format: [{{"text": "substring", "bold": true, "italic": false, "font_color": "#FF0000"}}]
+             Example: paragraph_runs="[{{"text": "$1.75M", "bold": true}}, {{"text": "3%", "bold": true}}]"
+             Use this to apply different formatting to specific text substrings within the same text content
         6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
            - paragraph_name, geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
         7. TEXT FORMATTING EXAMPLES:

@@ -10,6 +10,7 @@ import json
 import pythoncom
 import logging
 from win32com.client import Dispatch
+from .paragraph_runs_formatter import _apply_paragraph_runs_formatting, convert_substring_runs_to_indices
 
 logger = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -1992,6 +1993,98 @@ class PowerPointWorker:
                             logger.debug(f"Applied vertical alignment {vertical_align} to shape {shape.Name}")
                     except Exception as e:
                         logger.warning(f"Could not apply vertical alignment to shape {shape.Name}: {e}")
+                
+                # Apply text case transformation
+                if 'text_case' in shape_props and shape_props['text_case']:
+                    try:
+                        text_case = shape_props['text_case'].lower()
+                        # Map text case values to PowerPoint constants
+                        case_map = {
+                            'upper': 1,      # msoTextEffectShapeCircle (uppercase)
+                            'lower': 2,      # msoTextEffectShapePlainText (lowercase) 
+                            'title': 3,      # msoTextEffectShapeWave1 (title case)
+                            'sentence': 4,   # msoTextEffectShapeWave2 (sentence case)
+                            'toggle': 5      # msoTextEffectShapeRingInside (toggle case)
+                        }
+                        if text_case in case_map:
+                            text_range.Font.Case = case_map[text_case]
+                            updated_info['properties_applied'].append('text_case')
+                            logger.debug(f"Applied text case {text_case} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply text case to shape {shape.Name}: {e}")
+                
+                # Apply superscript formatting
+                if 'superscript' in shape_props and shape_props['superscript'] is not None:
+                    try:
+                        superscript = bool(shape_props['superscript'])
+                        text_range.Font.Superscript = superscript
+                        updated_info['properties_applied'].append('superscript')
+                        logger.debug(f"Applied superscript {superscript} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply superscript formatting to shape {shape.Name}: {e}")
+                
+                # Apply subscript formatting
+                if 'subscript' in shape_props and shape_props['subscript'] is not None:
+                    try:
+                        subscript = bool(shape_props['subscript'])
+                        text_range.Font.Subscript = subscript
+                        updated_info['properties_applied'].append('subscript')
+                        logger.debug(f"Applied subscript {subscript} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply subscript formatting to shape {shape.Name}: {e}")
+                
+                # Apply hanging indent
+                if 'hanging_indent' in shape_props and shape_props['hanging_indent'] is not None:
+                    try:
+                        hanging_indent = float(shape_props['hanging_indent'])
+                        text_range.ParagraphFormat.HangingIndent = hanging_indent
+                        updated_info['properties_applied'].append('hanging_indent')
+                        logger.debug(f"Applied hanging indent {hanging_indent}pt to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply hanging indent to shape {shape.Name}: {e}")
+                
+                # Apply bullet color
+                if 'bullet_color' in shape_props and shape_props['bullet_color']:
+                    try:
+                        bullet_color = shape_props['bullet_color']
+                        if bullet_color.startswith('#'):
+                            # Convert hex to RGB
+                            rgb = tuple(int(bullet_color[j:j+2], 16) for j in (1, 3, 5))
+                            text_range.ParagraphFormat.Bullet.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                            updated_info['properties_applied'].append('bullet_color')
+                            logger.debug(f"Applied bullet color {bullet_color} to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply bullet color to shape {shape.Name}: {e}")
+                
+                # Apply bullet size
+                if 'bullet_size' in shape_props and shape_props['bullet_size'] is not None:
+                    try:
+                        bullet_size = float(shape_props['bullet_size'])
+                        # Bullet size is typically specified as a percentage of text size
+                        text_range.ParagraphFormat.Bullet.RelativeSize = bullet_size
+                        updated_info['properties_applied'].append('bullet_size')
+                        logger.debug(f"Applied bullet size {bullet_size}% to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply bullet size to shape {shape.Name}: {e}")
+                
+                # Apply paragraph runs formatting (character-level formatting)
+                if 'paragraph_runs' in shape_props and shape_props['paragraph_runs']:
+                    try:
+                        paragraph_runs = shape_props['paragraph_runs']
+                        if isinstance(paragraph_runs, str):
+                            import ast
+                            paragraph_runs = ast.literal_eval(paragraph_runs.replace('true', 'True').replace('false', 'False'))
+        
+                        if isinstance(paragraph_runs, list):
+                            # Convert substring-based runs to index-based runs if needed
+                            if 'text' in paragraph_runs[0]:
+                                text_content = shape.TextFrame.TextRange.Text
+                                paragraph_runs = convert_substring_runs_to_indices(text_content, paragraph_runs)
+                            _apply_paragraph_runs_formatting(text_range, paragraph_runs, shape.Name)
+                            updated_info['properties_applied'].append('paragraph_runs')
+                            logger.debug(f"Applied paragraph runs formatting to shape {shape.Name}")
+                    except Exception as e:
+                        logger.warning(f"Could not apply paragraph runs formatting to shape {shape.Name}: {e}")
             
             # Apply table properties if this is a table creation request
             if self._is_table_creation_request(shape_props):
