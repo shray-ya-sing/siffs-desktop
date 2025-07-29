@@ -972,12 +972,94 @@ Example: slide_layout="Title Slide" or slide_layout=0
                     logger.error(f"Error updating PowerPoint cache: {str(cache_error)}", exc_info=True)
                     # Don't fail the entire operation if cache update fails
                 
-                # Return JSON summary of changes
+                # Perform post-edit review by capturing slide images and getting LLM feedback
+                post_edit_feedback = ""
+                try:
+                    logger.info("Starting post-edit review process")
+                    
+                    # Capture slide images after the edit
+                    post_edit_images = _capture_slide_images(temp_file_path, slide_numbers)
+                    
+                    if post_edit_images:
+                        # Prepare review prompt
+                        review_prompt = f"""
+                        POWERPOINT EDIT REVIEW TASK:
+                        
+                        You just completed a PowerPoint editing task. Please review the slide images below to determine if the edit was performed correctly.
+                        
+                        ORIGINAL EDIT INSTRUCTIONS:
+                        {edit_instructions}
+                        
+                        SLIDES AFFECTED: {slide_numbers}
+                        SHAPES UPDATED: {len(updated_shapes)}
+                        
+                        Please examine the slide images and provide feedback on:
+                        1. Were the original edit instructions fulfilled correctly?
+                        2. Are there any visual issues, formatting problems, or errors introduced?
+                        3. Does the result match what was requested in the original instructions?
+                        4. Are there any improvements or corrections needed?
+                        
+                        Provide your feedback in this format:
+                        
+                        EDIT REVIEW FEEDBACK:
+                        Status: [SUCCESS/PARTIAL_SUCCESS/ISSUES_FOUND]
+                        
+                        Analysis:
+                        - [Your detailed analysis of whether the edit was completed correctly]
+                        
+                        Issues Found (if any):
+                        - [List any problems, errors, or deviations from the original instructions]
+                        
+                        Recommendations:
+                        - [Any suggestions for improvements or corrections needed]
+                        
+                        Overall Assessment:
+                        [Summary of whether the edit was successful and meets the original requirements]
+                        """
+                        
+                        # Prepare multimodal review message
+                        review_content_parts = [{"type": "text", "text": review_prompt}]
+                        
+                        # Add post-edit slide images
+                        for slide_num in slide_numbers:
+                            if slide_num in post_edit_images:
+                                review_content_parts.append({
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": post_edit_images[slide_num]
+                                    }
+                                })
+                        
+                        # Get LLM review feedback
+                        review_messages = [{"role": "user", "content": review_content_parts}]
+                        
+                        try:
+                            review_response = llm.invoke(review_messages)
+                            if review_response and review_response.content:
+                                post_edit_feedback = review_response.content
+                                logger.info("Successfully obtained post-edit review feedback")
+                                logger.info(f"POST-EDIT REVIEW FEEDBACK:\n{post_edit_feedback}")
+                            else:
+                                post_edit_feedback = "Post-edit review completed, but no feedback received from LLM."
+                                logger.warning("No feedback content received from LLM review")
+                        except Exception as review_error:
+                            post_edit_feedback = f"Post-edit review failed: {str(review_error)}"
+                            logger.error(f"Error during post-edit review: {review_error}")
+                    else:
+                        post_edit_feedback = "Post-edit review skipped: Could not capture slide images for review."
+                        logger.warning("Failed to capture post-edit slide images for review")
+                        
+                except Exception as review_exception:
+                    post_edit_feedback = f"Post-edit review process failed: {str(review_exception)}"
+                    logger.error(f"Error in post-edit review process: {review_exception}")
+                
+                # Return JSON summary of changes with review feedback
                 result = {
                     "status": "success",
                     "slides_updated": len(parsed_data),
                     "shapes_updated": len(updated_shapes),
-                    "updated_shapes": updated_shapes
+                    "updated_shapes": updated_shapes,
+                    "post_edit_feedback": post_edit_feedback
                 }
                 
                 return json.dumps(result, cls=ExtendedJSONEncoder, indent=2)
