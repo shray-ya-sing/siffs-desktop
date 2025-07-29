@@ -486,7 +486,19 @@ Example: slide_layout="Title Slide" or slide_layout=0
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
         2. List each shape's metadata as: DESCRIPTIVE_SHAPE_NAME, visual properties, size/position properties, text properties (if applicable).
-        3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
+        3. SLIDE DELETION: To delete an entire slide from the presentation, use: slide_number: slide3, delete_slide=true
+           - This will completely remove the slide and all its contents from the presentation
+           - All subsequent slides will be automatically renumbered by PowerPoint
+           - No shape metadata should be provided when deleting a slide
+           - Example: "slide_number: slide2, delete_slide=true" removes slide 2 entirely
+           - CRITICAL: Only use delete_slide=true when the user explicitly requests to remove, delete, or eliminate entire slides
+        4. SHAPE DELETION: To delete an existing shape from a slide, use: SHAPE_NAME, delete_shape=true
+           - This will completely remove the shape from the slide
+           - No other properties are needed when deleting a shape
+           - Use the EXACT shape name from the existing slide metadata
+           - Example: "Old Logo, delete_shape=true" or "Outdated Chart, delete_shape=true"
+           - CRITICAL: Only use delete_shape=true when the user explicitly requests to remove, delete, or clear existing content
+        5. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
         
         SHAPE GEOMETRY (geom) TYPES - CASE SENSITIVE:
         - Basic shapes: "rectangle", "square", "oval", "circle", "diamond", "triangle", "hexagon", "octagon"
@@ -616,15 +628,63 @@ Example: slide_layout="Title Slide" or slide_layout=0
               * Header fonts larger: cell_font_sizes="[[16, 16, 16], [12, 12, 12]]"
               * Color-coded cells: cell_font_colors="[['#1e3a8a', '#1e3a8a'], ['#000000', '#000000']]"
         
-        18. TABLE EXAMPLE:
-            Table Sales Data, shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '41107'], ['Frank', 'West', '268', '72707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]", row_heights="[30, 25, 25]", cell_font_sizes="[[14, 14, 14, 14], [12, 12, 12, 12], [12, 12, 12, 12]]", col_number_formats="['', '', 'integer', 'currency']", col_alignments="['left', 'left', 'right', 'right']"
+        18. TABLE BORDER FORMATTING RULES:
+            - Use table_border_color, table_border_width, table_border_style for table-wide border formatting
+            - Use cell_borders for individual cell border control (advanced formatting)
+            
+            TABLE-WIDE BORDER PROPERTIES:
+            - table_border_color: Hex color for all table borders (e.g., "#000000" for black)
+            - table_border_width: Border width in points (e.g., 1.0, 2.0, 1.5)
+            - table_border_style: Border style - "solid", "dash", "dot", "dashdot", "dashdotdot", "none"
+            
+            INDIVIDUAL CELL BORDER CONTROL:
+            - cell_borders: 2D array matching table structure for per-cell border control
+            - Format: cell_borders="[[cell1_borders, cell2_borders], [cell3_borders, cell4_borders]]"
+            - Each cell border object can specify: 'top', 'bottom', 'left', 'right' borders
+            - Border properties for each side: {{"color": "#hex", "width": points, "style": "style"}}
+            - Use empty object {{}} for cells with no special borders (inherits table-wide borders)
+            
+            BORDER STYLE OPTIONS:
+            - "solid": Solid line border
+            - "dash": Dashed line border
+            - "dot": Dotted line border
+            - "dashdot": Dash-dot pattern border
+            - "dashdotdot": Dash-dot-dot pattern border
+            - "none": No border (transparent)
+            
+            BORDER EXAMPLES:
+            - Simple table borders: table_border_color="#000000", table_border_width=1.0, table_border_style="solid"
+            - Header with thick bottom border: cell_borders="[[{{'bottom': {{'color': '#1f4e79', 'width': 3.0, 'style': 'solid'}}}}, {{'bottom': {{'color': '#1f4e79', 'width': 3.0, 'style': 'solid'}}}}], [{{}}, {{}}]]"
+            - Mixed border styles: cell_borders="[[{{'top': {{'color': '#FF0000', 'width': 2.0, 'style': 'dash'}}, 'left': {{'color': '#00FF00', 'width': 1.5, 'style': 'dot'}}}}, {{}}], [{{'right': {{'color': '#0000FF', 'width': 1.0, 'style': 'solid'}}}}, {{}}]]"
+            
+        19. TABLE EXAMPLE:
+            Table Sales Data, shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '41107'], ['Frank', 'West', '268', '72707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]", row_heights="[30, 25, 25]", cell_font_sizes="[[14, 14, 14, 14], [12, 12, 12, 12], [12, 12, 12, 12]]", col_number_formats="['', '', 'integer', 'currency']", col_alignments="['left', 'left', 'right', 'right']", table_border_color="#1f4e79", table_border_width=1.0, table_border_style="solid"
 
         19. CHART CREATION RULES:
             - Use shape_type="chart" to create charts
             - REQUIRED properties: chart_type, chart_data
             - CHART TYPES: "column", "bar", "line", "pie", "area", "scatter", "doughnut", "combo"
-            - CHART DATA FORMAT: Use structured data with categories and series
-              Example: chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Sales', 'values': [100, 150, 200, 180]}}, {{'name': 'Costs', 'values': [80, 120, 160, 140]}}]}}"
+            
+            *** CRITICAL CHART DATA FORMAT - MUST USE EXACT STRUCTURE ***:
+            ⚠️  CRITICAL: CHARTS WILL FAIL IF YOU USE WRONG KEY NAMES! ⚠️
+            
+            - chart_data MUST use this EXACT format with 'categories' and 'series' keys
+            - Each series MUST use 'name' and 'values' keys (NOT 'data' or any other key)
+            - MANDATORY FORMAT: chart_data="{{'categories': ['Category1', 'Category2'], 'series': [{{'name': 'SeriesName', 'values': [value1, value2]}}]}}"
+            
+            ✅ CORRECT Examples (ALWAYS use 'values'):
+            - chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Sales', 'values': [100, 150, 200, 180]}}]}}"
+            - chart_data="{{'categories': ['Toronto', 'Calgary'], 'series': [{{'name': 'Revenue', 'values': [500, 300]}}]}}"
+            - chart_data="{{'categories': ['Jan', 'Feb'], 'series': [{{'name': 'Profit', 'values': [50, 75]}}, {{'name': 'Loss', 'values': [20, 10]}}]}}"
+            
+            ❌ WRONG Examples (WILL CAUSE CHART CREATION TO FAIL):
+            - 'data': [100, 150] → USE 'values': [100, 150] INSTEAD
+            - 'series_data': [100, 150] → USE 'values': [100, 150] INSTEAD  
+            - 'numbers': [100, 150] → USE 'values': [100, 150] INSTEAD
+            - 'chartData': [100, 150] → USE 'values': [100, 150] INSTEAD
+            
+            🔥 REMEMBER: The key MUST be exactly 'values' - no other variation will work! 🔥
+            
             - CHART STYLING PROPERTIES:
               chart_title="Chart Title" (main chart title)
               show_legend=true/false (display legend)
@@ -771,7 +831,19 @@ Example: slide_layout="Title Slide" or slide_layout=0
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
         2. List each shape's metadata as: shape_name, visual properties, size/position properties, text properties (if applicable).
-        3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
+        3. SLIDE DELETION: To delete an entire slide from the presentation, use: slide_number: slide3, delete_slide=true
+           - This will completely remove the slide and all its contents from the presentation
+           - All subsequent slides will be automatically renumbered by PowerPoint
+           - No shape metadata should be provided when deleting a slide
+           - Example: "slide_number: slide2, delete_slide=true" removes slide 2 entirely
+           - CRITICAL: Only use delete_slide=true when the user explicitly requests to remove, delete, or eliminate entire slides
+        4. SHAPE DELETION: To delete an existing shape from a slide, use: SHAPE_NAME, delete_shape=true
+           - This will completely remove the shape from the slide
+           - No other properties are needed when deleting a shape
+           - Use the EXACT shape name from the existing slide metadata
+           - Example: "Old Logo, delete_shape=true" or "Outdated Chart, delete_shape=true"
+           - CRITICAL: Only use delete_shape=true when the user explicitly requests to remove, delete, or clear existing content
+        5. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
            
            FILL PROPERTY FORMATS:
            - Solid fill: fill="#798798" (hex color code)
@@ -836,7 +908,11 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - Enclose text content in double quotes
             - For existing shapes, include text property to add/update text content
             - For new text boxes, always specify geom="textbox"
-        15. FOR EXISTING SHAPES: Use the EXACT shape name from the metadata context above. Do not create duplicates.
+        15. SHAPE REPLACEMENT WORKFLOW:
+            - To replace content: First delete the old shape, then create the new one
+            - Example for logo replacement: "Old Logo, delete_shape=true | New Company Logo, shape_type="picture", image_path="/path/to/new_logo.png", left=50, top=50, width=120, height=60"
+            - Example for chart replacement: "Sales Data Chart, delete_shape=true | Updated Sales Chart, shape_type="chart", chart_type="column", left=100, top=150, width=400, height=300, chart_data="..."
+        16. FOR EXISTING SHAPES: Use the EXACT shape name from the metadata context above. Do not create duplicates.
         """
         
         # Check for cancellation before LLM call

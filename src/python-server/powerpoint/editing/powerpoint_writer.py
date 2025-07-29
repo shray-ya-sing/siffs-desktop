@@ -219,12 +219,34 @@ class PowerPointWorker:
         def _write_shapes() -> List[Dict[str, Any]]:
             updated_shapes = []
             try:
+                # Close any open chart data grids before starting operations
+                self._close_chart_data_grid()
+                
                 for slide_key, shapes_data in slide_data.items():
                     # Extract slide number from slide key (e.g., "slide1" -> 1)
                     slide_number = int(re.search(r'\d+', slide_key).group())
                     
                     # Extract slide layout if specified
                     slide_layout = shapes_data.pop('_slide_layout', None) if isinstance(shapes_data, dict) else None
+                    
+                    # Check for slide deletion flag
+                    delete_slide = shapes_data.pop('_delete_slide', False) if isinstance(shapes_data, dict) else False
+                    
+                    if delete_slide:
+                        # Delete the slide if it exists
+                        try:
+                            existing_slide = self._presentation.Slides(slide_number)
+                            existing_slide.Delete()
+                            logger.info(f"Deleted slide {slide_number}")
+                            # Add to updated_shapes to track the deletion
+                            updated_shapes.append({
+                                'slide_number': slide_number,
+                                'action': 'deleted_slide',
+                                'properties_applied': ['_delete_slide']
+                            })
+                        except Exception as e:
+                            logger.warning(f"Could not delete slide {slide_number}: slide may not exist. Error: {e}")
+                        continue  # Skip processing shapes for deleted slides
                     
                     try:
                         # Get the slide, create it with the specified layout if it doesn't exist
@@ -244,38 +266,51 @@ class PowerPointWorker:
                                         shape = shape_obj
                                         break
                                 
-                                if shape is None:
-                                    # Check if this is a chart creation request
-                                    if self._is_chart_creation_request(shape_props):
-                                        # Create chart directly
-                                        logger.info(f"Creating new chart '{shape_name}' in slide {slide_number}")
-                                        shape = self._create_chart_shape(slide, shape_name, shape_props)
-                                        if shape is None:
-                                            logger.warning(f"Failed to create chart '{shape_name}' in slide {slide_number}")
-                                            continue
-                                    # Check if this is a table creation request
-                                    elif self._is_table_creation_request(shape_props):
-                                        # Create table directly
-                                        logger.info(f"Creating new table '{shape_name}' in slide {slide_number}")
-                                        shape = self._create_table_shape(slide, shape_name, shape_props)
-                                        if shape is None:
-                                            logger.warning(f"Failed to create table '{shape_name}' in slide {slide_number}")
-                                            continue
-                                    # Check if this is an image creation request
-                                    elif self._is_image_creation_request(shape_props):
-                                        # Create image directly
-                                        logger.info(f"Creating new image '{shape_name}' in slide {slide_number}")
-                                        shape = self._create_image_shape(slide, shape_name, shape_props)
-                                        if shape is None:
-                                            logger.warning(f"Failed to create image '{shape_name}' in slide {slide_number}")
-                                            continue
-                                    else:
-                                        # Create regular shape
-                                        logger.info(f"Creating new shape '{shape_name}' in slide {slide_number}")
-                                        shape = self._create_new_shape(slide, shape_name, shape_props)
-                                        if shape is None:
-                                            logger.warning(f"Failed to create shape '{shape_name}' in slide {slide_number}")
-                                            continue
+                                # Handle deletion if specified in shape properties
+                                if shape_props.get('delete_shape', False):
+                                    if shape:
+                                        shape.Delete()
+                                        logger.info(f"Deleted shape '{shape_name}' from slide {slide_number}")
+                                    continue
+                                
+                                # Check if we need to create a chart, table, or image (for both new and existing shapes)
+                                if self._is_chart_creation_request(shape_props):
+                                    # Delete existing shape if present and create chart
+                                    if shape is not None:
+                                        logger.info(f"Replacing existing shape '{shape_name}' with chart in slide {slide_number}")
+                                        shape.Delete()
+                                    logger.info(f"Creating new chart '{shape_name}' in slide {slide_number}")
+                                    shape = self._create_chart_shape(slide, shape_name, shape_props)
+                                    if shape is None:
+                                        logger.warning(f"Failed to create chart '{shape_name}' in slide {slide_number}")
+                                        continue
+                                elif self._is_table_creation_request(shape_props):
+                                    # Delete existing shape if present and create table
+                                    if shape is not None:
+                                        logger.info(f"Replacing existing shape '{shape_name}' with table in slide {slide_number}")
+                                        shape.Delete()
+                                    logger.info(f"Creating new table '{shape_name}' in slide {slide_number}")
+                                    shape = self._create_table_shape(slide, shape_name, shape_props)
+                                    if shape is None:
+                                        logger.warning(f"Failed to create table '{shape_name}' in slide {slide_number}")
+                                        continue
+                                elif self._is_image_creation_request(shape_props):
+                                    # Delete existing shape if present and create image
+                                    if shape is not None:
+                                        logger.info(f"Replacing existing shape '{shape_name}' with image in slide {slide_number}")
+                                        shape.Delete()
+                                    logger.info(f"Creating new image '{shape_name}' in slide {slide_number}")
+                                    shape = self._create_image_shape(slide, shape_name, shape_props)
+                                    if shape is None:
+                                        logger.warning(f"Failed to create image '{shape_name}' in slide {slide_number}")
+                                        continue
+                                elif shape is None:
+                                    # Create regular shape only if it doesn't exist
+                                    logger.info(f"Creating new shape '{shape_name}' in slide {slide_number}")
+                                    shape = self._create_new_shape(slide, shape_name, shape_props)
+                                    if shape is None:
+                                        logger.warning(f"Failed to create shape '{shape_name}' in slide {slide_number}")
+                                        continue
                                 
                                 # Apply shape properties (but skip table creation since it's already done)
                                 updated_shape = self._apply_shape_properties(shape, shape_props, slide_number)
@@ -1204,6 +1239,34 @@ class PowerPointWorker:
         except Exception as e:
             logger.warning(f"Error applying individual cell borders: {e}")
     
+    def _close_chart_data_grid(self):
+        """Closes any open chart data grids for the presentation."""
+        try:
+            if self._presentation:
+                closed_count = 0
+                for slide in self._presentation.Slides:
+                    for shape in slide.Shapes:
+                        try:
+                            if hasattr(shape, 'HasChart') and shape.HasChart:
+                                chart = shape.Chart
+                                if hasattr(chart, 'ChartData') and chart.ChartData and hasattr(chart.ChartData, 'Workbook'):
+                                    if chart.ChartData.Workbook:
+                                        chart.ChartData.Workbook.Close()
+                                        closed_count += 1
+                                        logger.debug(f"Closed chart data grid for shape: {shape.Name}")
+                        except Exception as shape_error:
+                            # Continue processing other shapes even if one fails
+                            logger.debug(f"Could not close chart data grid for shape: {shape_error}")
+                            continue
+                            
+                if closed_count > 0:
+                    logger.info(f"Closed {closed_count} chart data grids")
+                else:
+                    logger.debug("No chart data grids found to close")
+                    
+        except Exception as e:
+            logger.warning(f"Error closing chart data grids: {e}")
+    
     def _apply_number_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
         """Apply number formatting to table cells (currency, percentage, etc.)."""
         try:
@@ -1664,6 +1727,7 @@ class PowerPointWorker:
     
     def _create_chart_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new chart shape on the slide with specified properties."""
+        chart_shape = None
         try:
             chart_type_map = {
                 "column": 51,  # msoChartTypeColumnClustered
@@ -1672,7 +1736,8 @@ class PowerPointWorker:
                 "pie": 5,      # msoChartTypePie
                 "area": 1,     # msoChartTypeArea
                 "scatter": 72, # msoChartTypeXYScatter
-                "doughnut": 83, # msoChartTypeDoughnut
+                "doughnut": -4120, # xlDoughnut (correct constant for doughnut charts)
+                "doughnut_exploded": 80, # xlDoughnutExploded
                 "combo": 92    # msoChartTypeCombo
             }
             
@@ -1684,43 +1749,414 @@ class PowerPointWorker:
             width = float(shape_props.get('width', 400))
             height = float(shape_props.get('height', 300))
 
-            chart_shape = slide.Shapes.AddChart2(
-                chart_type_num, left, top, width, height
-            )
+            # Close any existing chart data grids before creating new chart
+            self._close_chart_data_grid()
+
+            # Try AddChart first (more reliable than AddChart2 for our use case)
+            try:
+                chart_shape = slide.Shapes.AddChart(
+                    chart_type_num, left, top, width, height
+                )
+                logger.debug(f"Successfully created chart using AddChart for '{shape_name}'")
+            except Exception as e:
+                logger.error(f"AddChart failed for '{shape_name}': {e}")
+                raise e
+            
+            if not chart_shape:
+                logger.error(f"Failed to create chart shape '{shape_name}' on slide. Chart shape is None.")
+                return None
+
             chart_shape.Name = shape_name
-            chart = chart_shape.Chart
+            chart = getattr(chart_shape, 'Chart', None)
+            
+            if not chart:
+                logger.error(f"Chart creation failed for shape '{shape_name}'. Chart object is None.")
+                # Clean up the failed chart shape
+                try:
+                    chart_shape.Delete()
+                except:
+                    pass
+                return None
+            
+            logger.debug(f"Chart created successfully for shape '{shape_name}'. Proceeding with setup.")
 
             chart_data = shape_props.get('chart_data', {})
             if isinstance(chart_data, str):
                 import ast
                 chart_data = ast.literal_eval(chart_data)
 
-            categories = chart_data.get('categories', [])
-            series_list = chart_data.get('series', [])
+            # Handle different chart data formats
+            if isinstance(chart_data, list) and len(chart_data) > 0:
+                # Handle 2D array format: [['', 'Value'], ['Toronto', 51], ['Calgary', 39], ['Ottawa', 10]]
+                # or [['Category', 'Series1', 'Series2'], ['Toronto', 10, 20], ['Calgary', 15, 25]]
+                logger.debug(f"Converting 2D array chart data format for chart '{shape_name}'")
+                categories = []
+                series_data = {}
+                
+                # Extract headers from first row (skip empty first cell)
+                headers = chart_data[0][1:] if len(chart_data[0]) > 1 else ['Value']
+                
+                # Initialize series data
+                for header in headers:
+                    series_data[header] = []
+                
+                # Extract data from remaining rows
+                for row in chart_data[1:]:
+                    if len(row) > 0:
+                        # First column is category
+                        categories.append(row[0])
+                        # Remaining columns are series values
+                        for i, header in enumerate(headers):
+                            value = row[i + 1] if i + 1 < len(row) else 0
+                            series_data[header].append(value)
+                
+                # Convert to expected series format
+                series_list = []
+                for series_name, values in series_data.items():
+                    series_list.append({
+                        'name': series_name if series_name else 'Series 1',
+                        'values': values
+                    })
+                
+                logger.debug(f"Converted chart data - Categories: {categories}, Series: {len(series_list)}")
+            else:
+                # Handle standard format: {'categories': [...], 'series': [...]}
+                categories = chart_data.get('categories', [])
+                series_list = chart_data.get('series', [])
 
-            workbook = chart.ChartData.Workbook
-            worksheet = workbook.Worksheets(1)
+            try:
+                workbook = chart.ChartData.Workbook
+                logger.debug(f"Got workbook for chart '{shape_name}'")
+                worksheet = workbook.Worksheets(1)
+                logger.debug(f"Got worksheet 1 for chart '{shape_name}'")
+            except Exception as wb_error:
+                logger.error(f"Failed to get workbook/worksheet for chart '{shape_name}': {wb_error}")
+                raise
 
-            category_start = 2
-            for idx, category in enumerate(categories):
-                worksheet.Cells(category_start + idx, 1).Value = category
+            try:
+                category_start = 2
+                logger.debug(f"Populating {len(categories)} categories starting at row {category_start}")
+                for idx, category in enumerate(categories):
+                    try:
+                        worksheet.Cells(category_start + idx, 1).Value = str(category) if category is not None else ""
+                        logger.debug(f"Set category [{idx}]: '{category}' at row {category_start + idx}")
+                    except Exception as cat_error:
+                        logger.error(f"Failed to set category [{idx}] '{category}': {cat_error}")
+                        raise
+            except Exception as categories_error:
+                logger.error(f"Failed to populate categories: {categories_error}")
+                raise
 
-            for series_idx, series in enumerate(series_list, start=2):
-                worksheet.Cells(1, series_idx).Value = series.get('name', f'Series {series_idx - 1}')
-                for value_idx, value in enumerate(series.get('values', [])):
-                    worksheet.Cells(category_start + value_idx, series_idx).Value = value
+            try:
+                logger.debug(f"Populating {len(series_list)} series")
+                for series_idx, series in enumerate(series_list, start=2):
+                    try:
+                        series_name = series.get('name', f'Series {series_idx - 1}')
+                        worksheet.Cells(1, series_idx).Value = str(series_name) if series_name is not None else ""
+                        logger.debug(f"Set series name '{series_name}' at column {series_idx}")
+                        
+                        # Handle both 'values' and 'data' keys for compatibility
+                        series_values = series.get('values', series.get('data', []))
+                        logger.debug(f"Series '{series_name}' has {len(series_values)} values")
+                        
+                        for value_idx, value in enumerate(series_values):
+                            try:
+                                # Convert value to appropriate type
+                                if value is None:
+                                    cell_value = 0
+                                elif isinstance(value, str):
+                                    try:
+                                        cell_value = float(value) if '.' in value else int(value)
+                                    except ValueError:
+                                        cell_value = 0
+                                else:
+                                    cell_value = float(value)
+                                
+                                worksheet.Cells(category_start + value_idx, series_idx).Value = cell_value
+                                logger.debug(f"Set value [{value_idx}]: {value} -> {cell_value} at ({category_start + value_idx}, {series_idx})")
+                            except Exception as val_error:
+                                logger.error(f"Failed to set value [{value_idx}] '{value}' for series '{series_name}': {val_error}")
+                                raise
+                    except Exception as series_error:
+                        logger.error(f"Failed to populate series [{series_idx-1}]: {series_error}")
+                        raise
+            except Exception as series_populate_error:
+                logger.error(f"Failed to populate series data: {series_populate_error}")
+                raise
 
-            chart.SetSourceData(worksheet.Range("A1:Z100"))
+            # CRITICAL: Activate the chart data first for proper data assignment
+            try:
+                logger.debug("Activating chart data for proper data assignment")
+                chart.ChartData.Activate()
+                logger.debug("Chart data activated successfully")
+            except Exception as activate_error:
+                logger.warning(f"Could not activate chart data: {activate_error}")
+
+            # Use direct value assignment instead of SetSourceData for reliable chart data
+            try:
+                logger.debug("Setting chart data using direct value assignment")
+                
+                # Get the existing series (don't create new ones)
+                if chart.SeriesCollection().Count > 0:
+                    series = chart.SeriesCollection(1)
+                    logger.debug("Using existing series for data assignment")
+                    
+                    # For single series charts (like doughnut), use the first series data
+                    if len(series_list) > 0:
+                        first_series = series_list[0]
+                        series_name = first_series.get('name', 'Series 1')
+                        series_values = first_series.get('values', first_series.get('data', []))
+                        
+                        # Convert values to tuple for direct assignment
+                        values_tuple = tuple(float(v) if v is not None else 0.0 for v in series_values)
+                        categories_tuple = tuple(str(c) if c is not None else "" for c in categories)
+                        
+                        logger.debug(f"Assigning values: {values_tuple}")
+                        logger.debug(f"Assigning categories: {categories_tuple}")
+                        
+                        # Direct tuple assignment - this is the key that works!
+                        series.Name = str(series_name)
+                        series.Values = values_tuple
+                        series.XValues = categories_tuple
+                        
+                        logger.debug("Successfully set chart data using direct value assignment")
+                    else:
+                        logger.warning("No series data provided for chart")
+                else:
+                    logger.error("No existing series found in chart")
+                    
+                # CRITICAL: Verify and correct chart type AFTER data assignment
+                try:
+                    current_chart_type = chart.ChartType
+                    logger.debug(f"Chart type after data assignment: {current_chart_type} (expected: {chart_type_num})")
+                    if current_chart_type != chart_type_num:
+                        logger.warning(f"Chart type mismatch after data assignment, correcting from {current_chart_type} to {chart_type_num}")
+                        chart.ChartType = chart_type_num
+                        logger.debug(f"Corrected chart type to {chart_type_num} ({chart_type}) after data assignment")
+                    else:
+                        logger.debug(f"Chart type {chart_type_num} ({chart_type}) verified correct after data assignment")
+                except Exception as chart_type_error:
+                    logger.warning(f"Could not verify/correct chart type after data assignment: {chart_type_error}")
+                    
+            except Exception as direct_error:
+                logger.error(f"Failed to set chart data using direct assignment: {direct_error}")
+                # Fallback to SetSourceData only if direct assignment fails
+                try:
+                    logger.debug("Falling back to SetSourceData method")
+                    # Calculate the range based on actual data size
+                    max_row = max(len(categories) + 1, 2)  # +1 for header row, minimum 2
+                    max_col = len(series_list) + 1  # +1 for category column
+                    
+                    # Convert to Excel column letters
+                    def get_column_letter(col_num):
+                        result = ""
+                        while col_num > 0:
+                            col_num -= 1
+                            result = chr(65 + col_num % 26) + result
+                            col_num //= 26
+                        return result
+                    
+                    end_col = get_column_letter(max_col)
+                    data_range = f"A1:{end_col}{max_row}"
+                    
+                    logger.debug(f"Trying SetSourceData with range: {data_range}")
+                    chart.SetSourceData(worksheet.Range(data_range))
+                    logger.debug("SetSourceData fallback successful")
+                except Exception as fallback_error:
+                    logger.error(f"SetSourceData fallback also failed: {fallback_error}")
+                    # Continue anyway - the chart may still work with worksheet data
 
             chart.HasTitle = True
             chart.ChartTitle.Text = shape_props.get('chart_title', '')
             chart.HasLegend = shape_props.get('show_legend', True)
 
+            # Apply advanced chart formatting
+            self._apply_chart_formatting(chart, shape_props)
+
+            # DO NOT close the chart data grid - this preserves chart data and prevents reset
+            logger.debug(f"Keeping chart data grid open for chart '{shape_name}' to preserve chart data and prevent reset")
+
             logger.info(f"Created chart '{shape_name}' with type '{chart_type}'")
             return chart_shape
+            
         except Exception as e:
             logger.error(f"Error creating chart shape '{shape_name}': {e}")
+            # Clean up failed chart and close any open data grids
+            if chart_shape:
+                try:
+                    # Try to get the chart and close its data grid
+                    chart = getattr(chart_shape, 'Chart', None)
+                    if chart and hasattr(chart, 'ChartData') and chart.ChartData:
+                        if hasattr(chart.ChartData, 'Workbook') and chart.ChartData.Workbook:
+                            chart.ChartData.Workbook.Close()
+                            logger.debug(f"Closed chart data grid for failed chart '{shape_name}'")
+                except Exception as cleanup_error:
+                    logger.debug(f"Could not close chart data grid during cleanup: {cleanup_error}")
+                
+                try:
+                    chart_shape.Delete()
+                    logger.debug(f"Deleted failed chart shape '{shape_name}'")
+                except Exception as delete_error:
+                    logger.debug(f"Could not delete failed chart shape: {delete_error}")
+            
+            # Also try to close any remaining open chart data grids
+            try:
+                self._close_chart_data_grid()
+            except Exception as grid_close_error:
+                logger.debug(f"Could not close chart data grids during cleanup: {grid_close_error}")
+            
             return None
+    
+    def _apply_chart_formatting(self, chart, shape_props: Dict[str, Any]) -> None:
+        """Apply advanced chart formatting to the chart shape."""
+        try:
+            # Gridlines
+            if 'show_major_gridlines' in shape_props:
+                show_major_gridlines = shape_props.get('show_major_gridlines', True)
+                try:
+                    chart.Axes(2).HasMajorGridlines = show_major_gridlines
+                    logger.debug(f"Applied major gridlines: {show_major_gridlines}")
+                except Exception as e:
+                    logger.warning(f"Could not set major gridlines: {e}")
+            
+            # Series colors
+            if 'series_colors' in shape_props:
+                series_colors = shape_props.get('series_colors', [])
+                if series_colors:
+                    try:
+                        # For doughnut charts, apply colors to individual points rather than series
+                        chart_type = shape_props.get('chart_type', 'column').lower()
+                        is_doughnut = chart_type in ['doughnut', 'doughnut_exploded']
+                        
+                        if is_doughnut:
+                            # Apply colors to individual points for doughnut charts
+                            for series_idx in range(1, chart.SeriesCollection().Count + 1):
+                                series = chart.SeriesCollection(series_idx)
+                                for point_idx, color in enumerate(series_colors, 1):
+                                    if point_idx > series.Points().Count:
+                                        break
+                                    if color and color.startswith('#'):
+                                        try:
+                                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                                            point = series.Points(point_idx)
+                                            point.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                            logger.debug(f"Applied point {point_idx} color: {color} for doughnut chart")
+                                        except Exception as point_error:
+                                            logger.warning(f"Could not set color for point {point_idx} in series {series_idx}: {point_error}")
+                        else:
+                            # Apply colors to series for non-doughnut charts
+                            for i, color in enumerate(series_colors, 1):
+                                if i > chart.SeriesCollection().Count:
+                                    break
+                                if color and color.startswith('#'):
+                                    rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                                    chart.SeriesCollection(i).Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                    logger.debug(f"Applied series {i} color: {color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set series colors: {e}")
+
+            # Data labels
+            if 'show_data_labels' in shape_props:
+                show_data_labels = shape_props.get('show_data_labels', False)
+                if show_data_labels:
+                    try:
+                        for i in range(1, chart.SeriesCollection().Count + 1):
+                            series = chart.SeriesCollection(i)
+                            series.HasDataLabels = True
+                            
+                            # Apply data label formatting if specified
+                            if 'data_label_font_size' in shape_props:
+                                series.DataLabels.Font.Size = float(shape_props['data_label_font_size'])
+                            if 'data_label_font_color' in shape_props and shape_props['data_label_font_color'].startswith('#'):
+                                color = shape_props['data_label_font_color']
+                                rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                                series.DataLabels.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                
+                        logger.debug("Applied data labels to all series")
+                    except Exception as e:
+                        logger.warning(f"Could not set data labels: {e}")
+
+            # Axis formatting
+            if 'x_axis_color' in shape_props:
+                x_axis_color = shape_props.get('x_axis_color')
+                if x_axis_color and x_axis_color.startswith('#'):
+                    try:
+                        rgb = tuple(int(x_axis_color[j:j+2], 16) for j in (1, 3, 5))
+                        chart.Axes(1).Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.debug(f"Applied X-axis color: {x_axis_color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set X-axis color: {e}")
+
+            if 'y_axis_color' in shape_props:
+                y_axis_color = shape_props.get('y_axis_color')
+                if y_axis_color and y_axis_color.startswith('#'):
+                    try:
+                        rgb = tuple(int(y_axis_color[j:j+2], 16) for j in (1, 3, 5))
+                        chart.Axes(2).Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.debug(f"Applied Y-axis color: {y_axis_color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set Y-axis color: {e}")
+
+            # Chart outline
+            if 'chart_outline_color' in shape_props:
+                chart_outline_color = shape_props.get('chart_outline_color')
+                if chart_outline_color and chart_outline_color.startswith('#'):
+                    try:
+                        rgb = tuple(int(chart_outline_color[j:j+2], 16) for j in (1, 3, 5))
+                        chart.ChartArea.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.debug(f"Applied chart outline color: {chart_outline_color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set chart outline color: {e}")
+                        
+            # Chart background color
+            if 'chart_background_color' in shape_props:
+                chart_background_color = shape_props.get('chart_background_color')
+                if chart_background_color and chart_background_color.startswith('#'):
+                    try:
+                        rgb = tuple(int(chart_background_color[j:j+2], 16) for j in (1, 3, 5))
+                        chart.ChartArea.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.debug(f"Applied chart background color: {chart_background_color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set chart background color: {e}")
+                        
+            # Legend formatting
+            if 'legend_position' in shape_props:
+                legend_position = shape_props.get('legend_position', 'right').lower()
+                position_map = {
+                    'bottom': -4107,  # xlLegendPositionBottom
+                    'corner': -4161,  # xlLegendPositionCorner  
+                    'left': -4131,    # xlLegendPositionLeft
+                    'right': -4152,   # xlLegendPositionRight
+                    'top': -4160      # xlLegendPositionTop
+                }
+                if legend_position in position_map:
+                    try:
+                        chart.Legend.Position = position_map[legend_position]
+                        logger.debug(f"Applied legend position: {legend_position}")
+                    except Exception as e:
+                        logger.warning(f"Could not set legend position: {e}")
+                        
+            # Legend font formatting
+            if 'legend_font_size' in shape_props:
+                try:
+                    chart.Legend.Font.Size = float(shape_props['legend_font_size'])
+                    logger.debug(f"Applied legend font size: {shape_props['legend_font_size']}")
+                except Exception as e:
+                    logger.warning(f"Could not set legend font size: {e}")
+                    
+            if 'legend_font_color' in shape_props:
+                legend_font_color = shape_props.get('legend_font_color')
+                if legend_font_color and legend_font_color.startswith('#'):
+                    try:
+                        rgb = tuple(int(legend_font_color[j:j+2], 16) for j in (1, 3, 5))
+                        chart.Legend.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        logger.debug(f"Applied legend font color: {legend_font_color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set legend font color: {e}")
+
+            logger.debug("Applied advanced chart formatting")
+        except Exception as e:
+            logger.error(f"Error applying chart formatting: {e}")
     
     def _create_image_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new image shape on the slide with the specified properties.

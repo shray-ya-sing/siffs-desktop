@@ -266,6 +266,12 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
             # Add slide layout if specified
             if slide_layout:
                 result[slide_number]['_slide_layout'] = slide_layout
+            
+            # Check for slide deletion flag in slide info
+            if 'delete_slide=true' in slide_info.lower() or 'delete_slide="true"' in slide_info.lower():
+                result[slide_number]['_delete_slide'] = True
+                logger.info(f"Parsed slide deletion request for slide {slide_number}")
+                continue  # Skip shape processing for deleted slides
 
             if len(parts) == 1:  # No shape entries for this slide
                 continue
@@ -324,6 +330,26 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                             if key == 'text' and isinstance(parsed_value, str):
                                 parsed_value = _sanitize_text_content(parsed_value)
                                 logger.debug(f"Sanitized text content for shape '{shape_name}': '{parsed_value[:50]}...'")
+                            
+                            # Normalize chart data to ensure consistent 'values' key usage
+                            if key == 'chart_data' and isinstance(parsed_value, dict):
+                                series_list = parsed_value.get('series', [])
+                                for series in series_list:
+                                    if isinstance(series, dict):
+                                        # If series has 'data' key but not 'values', normalize it
+                                        if 'data' in series and 'values' not in series:
+                                            series['values'] = series['data']
+                                            del series['data']
+                                            logger.debug(f"Normalized chart series 'data' key to 'values' for shape '{shape_name}'")
+                                        # Also handle other possible keys that should be 'values'
+                                        elif 'series_data' in series and 'values' not in series:
+                                            series['values'] = series['series_data']
+                                            del series['series_data']
+                                            logger.debug(f"Normalized chart series 'series_data' key to 'values' for shape '{shape_name}'")
+                                        elif 'numbers' in series and 'values' not in series:
+                                            series['values'] = series['numbers']
+                                            del series['numbers']
+                                            logger.debug(f"Normalized chart series 'numbers' key to 'values' for shape '{shape_name}'")
                             
                             shape_data[key] = parsed_value
                             

@@ -63,7 +63,7 @@ class TokenCounter:
         self.conversation_tokens[thread_id]["output_tokens"] += output_tokens
         self.conversation_tokens[thread_id]["total_tokens"] += total_tokens
         
-        logger.debug(f"Updated token usage for thread {thread_id}: +{input_tokens} input, +{output_tokens} output, +{total_tokens} total")
+        # logger.debug(f"Updated token usage for thread {thread_id}: +{input_tokens} input, +{output_tokens} output, +{total_tokens} total")
     
     def get_thread_token_usage(self, thread_id: str) -> Dict[str, int]:
         """Get current token usage for a conversation thread"""

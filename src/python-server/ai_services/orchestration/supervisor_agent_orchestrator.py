@@ -660,16 +660,16 @@ class SupervisorAgentOrchestrator:
                             # Extract and track token usage from message chunk
                             if hasattr(message_chunk, 'usage_metadata') and message_chunk.usage_metadata:
                                 usage_metadata = message_chunk.usage_metadata
-                                logger.debug(f"Token usage metadata: {usage_metadata}")
+                                # logger.debug(f"Token usage metadata: {usage_metadata}")
                                 
                                 # Update token counter with real usage data
                                 self.token_counter.update_token_usage(thread_id, usage_metadata)
                                 
                                 # Log token usage update
-                                input_tokens = usage_metadata.get('input_tokens', 0)
-                                output_tokens = usage_metadata.get('output_tokens', 0)
-                                total_tokens = usage_metadata.get('total_tokens', 0)
-                                logger.info(f"Token usage updated for thread {thread_id}: input={input_tokens}, output={output_tokens}, total={total_tokens}")
+                                # input_tokens = usage_metadata.get('input_tokens', 0)
+                                # output_tokens = usage_metadata.get('output_tokens', 0)
+                                # total_tokens = usage_metadata.get('total_tokens', 0)
+                                # logger.info(f"Token usage updated for thread {thread_id}: input={input_tokens}, output={output_tokens}, total={total_tokens}")
                             
                             #logger.info(f"METADATA: {metadata}")
                             # Check if this is a tool message, don't want to send these to client
