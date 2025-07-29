@@ -772,6 +772,15 @@ Example: slide_layout="Title Slide" or slide_layout=0
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
         2. List each shape's metadata as: shape_name, visual properties, size/position properties, text properties (if applicable).
         3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
+           
+           FILL PROPERTY FORMATS:
+           - Solid fill: fill="#798798" (hex color code)
+           - Gradient fill: fill="gradient:linear:0:#FF0000:1:#0000FF" (gradient:type:position1:color1:position2:color2)
+             * Gradient types: "linear" or "radial"
+             * Positions: float values between 0 and 1 (0=start, 1=end)
+             * Colors: hex color codes (e.g., #FF0000 for red)
+             * Example linear gradient from red to blue: fill="gradient:linear:0:#FF0000:1:#0000FF"
+             * Example multi-stop gradient: fill="gradient:linear:0:#FF0000:0.5:#00FF00:1:#0000FF"
         4. SIZE/POSITION PROPERTIES: width, height (in points, typical range: 50-500), left, top (in points, typical range: 0-720 for left, 0-540 for top).
         5. TEXT PROPERTIES (for shapes with text content):
            - text: The actual text content (enclose in quotes)
@@ -785,6 +794,8 @@ Example: slide_layout="Title Slide" or slide_layout=0
            - vertical_align: "top", "middle", or "bottom" for vertical alignment
            - bullet_style: "bullet", "number", "none" for bullet formatting
            - bullet_char: Custom bullet character (e.g., "•", "→", "★")
+           - bullet_size: Bullet size as percentage (e.g., 120 for 120% of text size)
+           - bullet_font_color: Bullet color in hex format (e.g., "#0066CC")
            - indent_level: Indentation level for bullets (0-8, default 0)
            - left_indent: Left paragraph indent in points (e.g., 36 for 0.5 inch)
            - right_indent: Right paragraph indent in points
@@ -792,6 +803,12 @@ Example: slide_layout="Title Slide" or slide_layout=0
            - space_before: Space before paragraph in points (e.g., 12)
            - space_after: Space after paragraph in points (e.g., 6)
            - line_spacing: Line spacing - "single", "double", "1.5", or custom value (e.g., "1.2")
+           
+           PARAGRAPH-LEVEL FORMATTING (for complex multi-paragraph text):
+           - paragraphs: Array of paragraph objects with individual formatting per paragraph
+             Format: paragraphs="[{{'text': 'First paragraph text', 'bullet_style': 'bullet', 'bullet_char': '•', 'bullet_font_color': '#0066CC', 'bullet_size': 120}}, {{'text': 'Second paragraph text', 'bullet_style': 'bullet', 'bullet_char': '•', 'bullet_font_color': '#0066CC', 'bullet_size': 120}}]"
+             Use this when you need different formatting for individual paragraphs within the same text box
+             Each paragraph object supports: text, bullet_style, bullet_char, bullet_size, bullet_font_color, indent_level
            
            ADVANCED CHARACTER-LEVEL FORMATTING:
            - paragraph_runs: Array of character-level formatting instructions for specific text substrings

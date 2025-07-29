@@ -1441,6 +1441,165 @@ class PowerPointWorker:
         except Exception as e:
             logger.error(f"Error applying row heights: {e}", exc_info=True)
     
+    def _apply_gradient_fill(self, shape, gradient_spec: str, updated_info: Dict[str, Any]) -> None:
+        """Apply gradient fill to a PowerPoint shape.
+        
+        Args:
+            shape: PowerPoint shape object
+            gradient_spec: Gradient specification string (e.g., 'gradient:linear:0:#0066CC:1:#003399')
+            updated_info: Dictionary to track applied properties
+        """
+        try:
+            # Parse gradient specification: gradient:linear:0:#0066CC:1:#003399
+            parts = gradient_spec.split(':')
+            if len(parts) < 6:
+                logger.warning(f"Invalid gradient specification: {gradient_spec}")
+                return
+            
+            gradient_type = parts[1].lower()  # linear, radial, etc.
+            
+            # Extract color stops: 0:#0066CC:1:#003399
+            color_stops = []
+            i = 2
+            while i < len(parts) - 1:
+                try:
+                    position = float(parts[i])
+                    color = parts[i + 1]
+                    if color.startswith('#'):
+                        color_stops.append((position, color))
+                    i += 2
+                except (ValueError, IndexError):
+                    logger.warning(f"Invalid color stop in gradient: {parts[i:i+2]}")
+                    break
+            
+            if len(color_stops) < 2:
+                logger.warning(f"Gradient needs at least 2 color stops, got {len(color_stops)}")
+                return
+            
+            # Apply gradient fill to shape
+            if gradient_type == 'linear':
+                # Set gradient fill type
+                shape.Fill.TwoColorGradient(1, 1)  # msoGradientHorizontal, variant 1
+                
+                # Set the two main colors (PowerPoint's TwoColorGradient only supports 2 colors)
+                start_color = color_stops[0][1]
+                end_color = color_stops[-1][1]
+                
+                # Apply start color
+                if start_color.startswith('#'):
+                    rgb = tuple(int(start_color[j:j+2], 16) for j in (1, 3, 5))
+                    shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                
+                # Apply end color
+                if end_color.startswith('#'):
+                    rgb = tuple(int(end_color[j:j+2], 16) for j in (1, 3, 5))
+                    shape.Fill.BackColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                
+                updated_info['properties_applied'].append('gradient_fill')
+                logger.debug(f"Applied linear gradient fill from {start_color} to {end_color} to shape {shape.Name}")
+            
+            else:
+                logger.warning(f"Unsupported gradient type: {gradient_type}. Only 'linear' is currently supported.")
+                # Fallback to solid color using first color
+                first_color = color_stops[0][1]
+                if first_color.startswith('#'):
+                    rgb = tuple(int(first_color[j:j+2], 16) for j in (1, 3, 5))
+                    shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                    updated_info['properties_applied'].append('fill')
+                    logger.debug(f"Applied fallback solid fill color {first_color} to shape {shape.Name}")
+            
+        except Exception as e:
+            logger.warning(f"Could not apply gradient fill to shape {shape.Name}: {e}")
+            # Fallback to solid color using first available color
+            try:
+                parts = gradient_spec.split(':')
+                for part in parts:
+                    if part.startswith('#'):
+                        rgb = tuple(int(part[j:j+2], 16) for j in (1, 3, 5))
+                        shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        updated_info['properties_applied'].append('fill')
+                        logger.debug(f"Applied fallback solid fill color {part} to shape {shape.Name}")
+                        break
+            except Exception as fallback_error:
+                logger.warning(f"Could not apply fallback fill color: {fallback_error}")
+    
+    def _apply_paragraph_formatting(self, shape, paragraph_data: List[Dict[str, Any]], updated_info: Dict[str, Any]) -> None:
+        """Apply paragraph-level formatting to a shape's text content.
+        
+        Args:
+            shape: PowerPoint shape object
+            paragraph_data: List of paragraph objects with individual formatting
+            updated_info: Dictionary to track applied properties
+        """
+        try:
+            if not hasattr(shape, 'TextFrame') or not shape.TextFrame:
+                logger.warning(f"Shape {shape.Name} does not have a valid text frame for paragraph formatting")
+                return
+            
+            # Build the complete text from all paragraphs
+            text_parts = []
+            for para in paragraph_data:
+                if 'text' in para and para['text']:
+                    text_parts.append(para['text'])
+            
+            if not text_parts:
+                logger.warning(f"No text content found in paragraph data for shape {shape.Name}")
+                return
+            
+            # Set the complete text content first
+            full_text = '\n'.join(text_parts)
+            shape.TextFrame.TextRange.Text = full_text
+            logger.debug(f"Set text content for shape {shape.Name}: {len(text_parts)} paragraphs")
+            
+            # Now apply formatting to each paragraph using PowerPoint's paragraph collection
+            text_range = shape.TextFrame.TextRange
+            
+            # Get the actual PowerPoint paragraphs collection
+            try:
+                paragraphs = text_range.Paragraphs()
+                total_paragraphs = paragraphs.Count
+                logger.debug(f"Shape {shape.Name} has {total_paragraphs} PowerPoint paragraphs")
+            except Exception as e:
+                logger.warning(f"Could not access paragraphs collection for shape {shape.Name}: {e}")
+                # Fallback to applying formatting to entire text range
+                for para_idx, para in enumerate(paragraph_data):
+                    self._apply_paragraph_properties_to_range(text_range, para, para_idx + 1, shape.Name)
+                return
+            
+            # Apply formatting to each paragraph using PowerPoint's paragraph indexing
+            for para_idx, para in enumerate(paragraph_data):
+                ppt_para_index = para_idx + 1  # PowerPoint uses 1-based indexing
+                
+                # Skip if paragraph index exceeds PowerPoint's paragraph count
+                if ppt_para_index > total_paragraphs:
+                    logger.warning(f"Paragraph {ppt_para_index} exceeds PowerPoint paragraph count ({total_paragraphs}) for shape {shape.Name}")
+                    continue
+                
+                try:
+                    # Get the specific PowerPoint paragraph
+                    ppt_paragraph = paragraphs(ppt_para_index)
+                    para_range = ppt_paragraph.Range
+                    
+                    # Apply paragraph-level formatting
+                    self._apply_paragraph_properties_to_range(para_range, para, ppt_para_index, shape.Name)
+                    
+                    # Apply character-level formatting if specified
+                    if 'paragraph_runs' in para and para['paragraph_runs']:
+                        try:
+                            self._apply_paragraph_runs_to_range(para_range, para['paragraph_runs'], ppt_para_index, shape.Name)
+                        except Exception as e:
+                            logger.warning(f"Could not apply paragraph runs to paragraph {ppt_para_index} in shape {shape.Name}: {e}")
+                    
+                except Exception as e:
+                    logger.warning(f"Could not apply formatting to paragraph {ppt_para_index} in shape {shape.Name}: {e}")
+                    continue
+            
+            updated_info['properties_applied'].append('paragraph_formatting')
+            logger.info(f"Successfully applied paragraph-level formatting to {len(paragraph_data)} paragraphs in shape {shape.Name}")
+            
+        except Exception as e:
+            logger.error(f"Error in _apply_paragraph_formatting for shape {shape.Name}: {e}", exc_info=True)
+    
     def _apply_cell_font_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
         """Apply cell-specific font formatting (sizes, colors, names) to table cells."""
         try:
@@ -1683,15 +1842,20 @@ class PowerPointWorker:
             # Apply fill color
             if 'fill' in shape_props and shape_props['fill']:
                 try:
-                    fill_color = shape_props['fill']
-                    if fill_color.startswith('#'):
-                        # Convert hex to RGB
-                        rgb = tuple(int(fill_color[j:j+2], 16) for j in (1, 3, 5))
+                    fill_value = shape_props['fill']
+                    if fill_value.startswith('gradient:'):
+                        # Handle gradient fills: gradient:linear:0:#0066CC:1:#003399
+                        self._apply_gradient_fill(shape, fill_value, updated_info)
+                    elif fill_value.startswith('#'):
+                        # Handle solid color fills
+                        rgb = tuple(int(fill_value[j:j+2], 16) for j in (1, 3, 5))
                         shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
                         updated_info['properties_applied'].append('fill')
-                        logger.debug(f"Applied fill color {fill_color} to shape {shape.Name}")
+                        logger.debug(f"Applied fill color {fill_value} to shape {shape.Name}")
+                    else:
+                        logger.warning(f"Unsupported fill format: {fill_value}")
                 except Exception as e:
-                    logger.warning(f"Could not apply fill color to shape {shape.Name}: {e}")
+                    logger.warning(f"Could not apply fill to shape {shape.Name}: {e}")
             
             # Apply outline color
             if 'out_col' in shape_props and shape_props['out_col']:
@@ -1927,21 +2091,27 @@ class PowerPointWorker:
                         logger.warning(f"Could not apply first line indent to shape {shape.Name}: {e}")
                 
                 # Apply paragraph spacing
+                # Note: PowerPoint COM uses internal units where 1 point = 1/14.4 internal units
+                # So we need to convert points to internal units by dividing by 14.4
                 if 'space_before' in shape_props and shape_props['space_before'] is not None:
                     try:
-                        space_before = float(shape_props['space_before'])
-                        text_range.ParagraphFormat.SpaceBefore = space_before
+                        space_before_points = float(shape_props['space_before'])
+                        # Convert points to PowerPoint internal units (1 point = 1/14.4 internal units)
+                        space_before_internal = space_before_points / 14.4
+                        text_range.ParagraphFormat.SpaceBefore = space_before_internal
                         updated_info['properties_applied'].append('space_before')
-                        logger.debug(f"Applied space before {space_before}pt to shape {shape.Name}")
+                        logger.debug(f"Applied space before {space_before_points}pt ({space_before_internal} internal units) to shape {shape.Name}")
                     except Exception as e:
                         logger.warning(f"Could not apply space before to shape {shape.Name}: {e}")
                 
                 if 'space_after' in shape_props and shape_props['space_after'] is not None:
                     try:
-                        space_after = float(shape_props['space_after'])
-                        text_range.ParagraphFormat.SpaceAfter = space_after
+                        space_after_points = float(shape_props['space_after'])
+                        # Convert points to PowerPoint internal units (1 point = 1/14.4 internal units)
+                        space_after_internal = space_after_points / 14.4
+                        text_range.ParagraphFormat.SpaceAfter = space_after_internal
                         updated_info['properties_applied'].append('space_after')
-                        logger.debug(f"Applied space after {space_after}pt to shape {shape.Name}")
+                        logger.debug(f"Applied space after {space_after_points}pt ({space_after_internal} internal units) to shape {shape.Name}")
                     except Exception as e:
                         logger.warning(f"Could not apply space after to shape {shape.Name}: {e}")
                 
@@ -1952,27 +2122,47 @@ class PowerPointWorker:
                         if isinstance(line_spacing, str):
                             line_spacing = line_spacing.lower()
                             
-                        if line_spacing == 'single' or line_spacing == '1':
-                            text_range.ParagraphFormat.LineSpacing = 1.0
-                            text_range.ParagraphFormat.LineSpacingRule = 1  # ppLineSpaceSingle
-                        elif line_spacing == 'double' or line_spacing == '2':
-                            text_range.ParagraphFormat.LineSpacing = 2.0
-                            text_range.ParagraphFormat.LineSpacingRule = 2  # ppLineSpaceDouble
-                        elif line_spacing == '1.5':
-                            text_range.ParagraphFormat.LineSpacing = 1.5
-                            text_range.ParagraphFormat.LineSpacingRule = 3  # ppLineSpaceExactly
+                        # Ensure we have a valid TextFrame before proceeding
+                        if not hasattr(shape, 'TextFrame') or not shape.TextFrame:
+                            logger.warning(f"Shape {shape.Name} does not have a valid text frame for line spacing")
                         else:
-                            # Try to parse as custom numeric value
+                            # Try to access the TextRange and ParagraphFormat
                             try:
-                                custom_spacing = float(line_spacing)
-                                text_range.ParagraphFormat.LineSpacing = custom_spacing
-                                text_range.ParagraphFormat.LineSpacingRule = 3  # ppLineSpaceExactly
-                            except ValueError:
-                                logger.warning(f"Invalid line spacing value: {line_spacing}")
-                                pass  # Skip setting line spacing for invalid values
-                        
-                        updated_info['properties_applied'].append('line_spacing')
-                        logger.debug(f"Applied line spacing {line_spacing} to shape {shape.Name}")
+                                text_range = shape.TextFrame.TextRange
+                                paragraph_format = text_range.ParagraphFormat
+                                
+                                if line_spacing == 'single' or line_spacing == '1' or line_spacing == '1.0':
+                                    paragraph_format.LineSpacingRule = 1  # ppLineSpaceSingle
+                                    logger.debug(f"Applied single line spacing to shape {shape.Name}")
+                                elif line_spacing == 'double' or line_spacing == '2' or line_spacing == '2.0':
+                                    paragraph_format.LineSpacingRule = 2  # ppLineSpaceDouble
+                                    logger.debug(f"Applied double line spacing to shape {shape.Name}")
+                                elif line_spacing == '1.5':
+                                    # For 1.5x spacing, use ppLineSpaceMultiple with 1.5 multiplier
+                                    paragraph_format.LineSpacingRule = 0  # ppLineSpaceMultiple
+                                    paragraph_format.LineSpacing = 1.5
+                                    logger.debug(f"Applied 1.5x line spacing to shape {shape.Name}")
+                                else:
+                                    # Try to parse as custom numeric value
+                                    try:
+                                        custom_spacing = float(line_spacing)
+                                        if custom_spacing <= 3.0:  # Treat as multiplier (1.0x, 2.5x, etc.)
+                                            paragraph_format.LineSpacingRule = 0  # ppLineSpaceMultiple
+                                            paragraph_format.LineSpacing = custom_spacing
+                                            logger.debug(f"Applied {custom_spacing}x line spacing to shape {shape.Name}")
+                                        else:  # Treat as exact points (18pt, 24pt, etc.)
+                                            paragraph_format.LineSpacingRule = 3  # ppLineSpaceExactly
+                                            paragraph_format.LineSpacing = custom_spacing
+                                            logger.debug(f"Applied {custom_spacing}pt exact line spacing to shape {shape.Name}")
+                                    except ValueError:
+                                        logger.warning(f"Invalid line spacing value: {line_spacing}")
+                                        pass  # Skip setting line spacing for invalid values
+                                
+                                # Only add to applied properties if we successfully set the line spacing
+                                updated_info['properties_applied'].append('line_spacing')
+                                
+                            except Exception as e:
+                                logger.warning(f"Could not access paragraph format for shape {shape.Name}: {e}")
                         
                     except Exception as e:
                         logger.warning(f"Could not apply line spacing to shape {shape.Name}: {e}")
@@ -2043,29 +2233,49 @@ class PowerPointWorker:
                     except Exception as e:
                         logger.warning(f"Could not apply hanging indent to shape {shape.Name}: {e}")
                 
-                # Apply bullet color
-                if 'bullet_color' in shape_props and shape_props['bullet_color']:
+                # Apply bullet color (support both bullet_color and bullet_font_color)
+                bullet_color_prop = shape_props.get('bullet_color') or shape_props.get('bullet_font_color')
+                if bullet_color_prop:
                     try:
-                        bullet_color = shape_props['bullet_color']
-                        if bullet_color.startswith('#'):
+                        if bullet_color_prop.startswith('#'):
                             # Convert hex to RGB
-                            rgb = tuple(int(bullet_color[j:j+2], 16) for j in (1, 3, 5))
+                            rgb = tuple(int(bullet_color_prop[j:j+2], 16) for j in (1, 3, 5))
                             text_range.ParagraphFormat.Bullet.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
                             updated_info['properties_applied'].append('bullet_color')
-                            logger.debug(f"Applied bullet color {bullet_color} to shape {shape.Name}")
+                            logger.debug(f"Applied bullet color {bullet_color_prop} to shape {shape.Name}")
                     except Exception as e:
-                        logger.warning(f"Could not apply bullet color to shape {shape.Name}: {e}")
+                        logger.warning(f"Could not apply bullet color {bullet_color_prop} to shape {shape.Name}: {e}")
                 
                 # Apply bullet size
                 if 'bullet_size' in shape_props and shape_props['bullet_size'] is not None:
                     try:
                         bullet_size = float(shape_props['bullet_size'])
-                        # Bullet size is typically specified as a percentage of text size
-                        text_range.ParagraphFormat.Bullet.RelativeSize = bullet_size
+                        # PowerPoint COM API expects RelativeSize as a decimal (0.0 to 4.0)
+                        # Convert percentage (120) to decimal (1.2)
+                        if bullet_size > 4.0:  # Assume it's a percentage
+                            bullet_size_decimal = bullet_size / 100.0
+                        else:  # Assume it's already a decimal
+                            bullet_size_decimal = bullet_size
+                        
+                        # Clamp to valid range (0.25 to 4.0 based on PowerPoint limits)
+                        bullet_size_decimal = max(0.25, min(4.0, bullet_size_decimal))
+                        
+                        text_range.ParagraphFormat.Bullet.RelativeSize = bullet_size_decimal
                         updated_info['properties_applied'].append('bullet_size')
-                        logger.debug(f"Applied bullet size {bullet_size}% to shape {shape.Name}")
+                        logger.debug(f"Applied bullet size {bullet_size}% ({bullet_size_decimal} decimal) to shape {shape.Name}")
                     except Exception as e:
                         logger.warning(f"Could not apply bullet size to shape {shape.Name}: {e}")
+                
+                # Apply paragraph-level formatting (including per-paragraph bullet formatting)
+                # Support both 'paragraph_formatting' and 'paragraphs' properties
+                paragraph_data = shape_props.get('paragraph_formatting') or shape_props.get('paragraphs')
+                if paragraph_data:
+                    try:
+                        if isinstance(paragraph_data, list):
+                            logger.info(f"Applying paragraph formatting to {len(paragraph_data)} paragraphs in shape {shape.Name}")
+                            self._apply_paragraph_formatting(shape, paragraph_data, updated_info)
+                    except Exception as e:
+                        logger.warning(f"Could not apply paragraph formatting to shape {shape.Name}: {e}")
                 
                 # Apply paragraph runs formatting (character-level formatting)
                 if 'paragraph_runs' in shape_props and shape_props['paragraph_runs']:
