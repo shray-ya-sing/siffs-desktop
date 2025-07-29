@@ -1522,10 +1522,9 @@ class PowerPointWorker:
                         break
             except Exception as fallback_error:
                 logger.warning(f"Could not apply fallback fill color: {fallback_error}")
-    
     def _apply_paragraph_formatting(self, shape, paragraph_data: List[Dict[str, Any]], updated_info: Dict[str, Any]) -> None:
-        """Apply paragraph-level formatting to a shape's text content.
-        
+        """Apply character-level formatting to specified substrings within paragraphs.
+
         Args:
             shape: PowerPoint shape object
             paragraph_data: List of paragraph objects with individual formatting
@@ -1535,86 +1534,39 @@ class PowerPointWorker:
             if not hasattr(shape, 'TextFrame') or not shape.TextFrame:
                 logger.warning(f"Shape {shape.Name} does not have a valid text frame for paragraph formatting")
                 return
-            
-            # Build the complete text and collect all paragraph runs for character-level formatting
-            text_parts = []
+
+            # Get the existing text
+            full_text = shape.TextFrame.TextRange.Text
+
+            # Collect all paragraph runs for character-level formatting
             all_paragraph_runs = []
-            
             for para in paragraph_data:
-                if 'text' in para and para['text']:
-                    text_parts.append(para['text'])
-                    
-                    # If this paragraph has paragraph_runs, collect them for character-level formatting
-                    if 'paragraph_runs' in para and para['paragraph_runs']:
-                        all_paragraph_runs.extend(para['paragraph_runs'])
-            
-            if not text_parts:
-                logger.warning(f"No text content found in paragraph data for shape {shape.Name}")
-                return
-            
-            # Set the complete text content first
-            full_text = '\n'.join(text_parts)
-            shape.TextFrame.TextRange.Text = full_text
-            logger.debug(f"Set text content for shape {shape.Name}: {len(text_parts)} paragraphs")
-            
-            text_range = shape.TextFrame.TextRange
-            
-            # Apply basic paragraph-level properties (bullets, spacing, etc.) to each paragraph
-            for para_idx, para in enumerate(paragraph_data):
-                try:
-                    # Apply bullet formatting if specified
-                    if 'bullet_style' in para and para['bullet_style']:
-                        if para['bullet_style'].lower() == 'number':
-                            text_range.ParagraphFormat.Bullet.Visible = True
-                            text_range.ParagraphFormat.Bullet.Type = 2  # ppBulletNumbered
-                        elif para['bullet_style'].lower() == 'bullet':
-                            text_range.ParagraphFormat.Bullet.Visible = True
-                            text_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
-                    
-                    # Apply bullet character if specified
-                    if 'bullet_char' in para and para['bullet_char']:
-                        try:
-                            text_range.ParagraphFormat.Bullet.Character = str(para['bullet_char'])
-                        except Exception as e:
-                            logger.warning(f"Could not set bullet character '{para['bullet_char']}': {e}")
-                    
-                    # Apply indentation if specified
-                    if 'left_indent' in para and para['left_indent'] is not None:
-                        text_range.ParagraphFormat.LeftIndent = float(para['left_indent'])
-                    
-                    if 'first_line_indent' in para and para['first_line_indent'] is not None:
-                        text_range.ParagraphFormat.FirstLineIndent = float(para['first_line_indent'])
-                    
-                    # Apply spacing before paragraph if specified
-                    if 'space_before' in para and para['space_before'] is not None:
-                        text_range.ParagraphFormat.SpaceBefore = float(para['space_before'])
-                        logger.debug(f"Applied space_before {para['space_before']} to paragraph {para_idx + 1} in shape {shape.Name}")
-                    
-                except Exception as e:
-                    logger.warning(f"Could not apply paragraph properties to paragraph {para_idx + 1} in shape {shape.Name}: {e}")
-                    continue
-            
-            # Apply character-level formatting using paragraph runs if any were collected
+                if 'paragraph_runs' in para and para['paragraph_runs']:
+                    all_paragraph_runs.extend(para['paragraph_runs'])
+
+            # Apply character-level formatting if runs exist
             if all_paragraph_runs:
                 try:
                     from .paragraph_runs_formatter import _apply_paragraph_runs_formatting, convert_substring_runs_to_indices
-                    
+
                     # Convert substring-based runs to index-based runs
                     index_runs = convert_substring_runs_to_indices(full_text, all_paragraph_runs)
-                    
+
                     if index_runs:
                         # Apply the character-level formatting
+                        text_range = shape.TextFrame.TextRange
                         _apply_paragraph_runs_formatting(text_range, index_runs, shape.Name)
                         logger.debug(f"Applied {len(index_runs)} character-level formatting runs to shape {shape.Name}")
                         updated_info['properties_applied'].append('paragraph_runs')
-                    
+
                 except Exception as e:
                     logger.warning(f"Could not apply paragraph runs formatting to shape {shape.Name}: {e}")
-            
+
             updated_info['properties_applied'].append('paragraph_formatting')
-            logger.info(f"Successfully applied paragraph-level formatting to {len(paragraph_data)} paragraphs in shape {shape.Name}")
-            
+            logger.info(f"Successfully applied character-level formatting to shape {shape.Name}")
+
         except Exception as e:
+            logger.error(f"Error in _apply_paragraph_formatting for shape {shape.Name}: {e}", exc_info=True)
             logger.error(f"Error in _apply_paragraph_formatting for shape {shape.Name}: {e}", exc_info=True)
     
     def _apply_cell_font_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
