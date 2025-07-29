@@ -1536,11 +1536,17 @@ class PowerPointWorker:
                 logger.warning(f"Shape {shape.Name} does not have a valid text frame for paragraph formatting")
                 return
             
-            # Build the complete text from all paragraphs
+            # Build the complete text and collect all paragraph runs for character-level formatting
             text_parts = []
+            all_paragraph_runs = []
+            
             for para in paragraph_data:
                 if 'text' in para and para['text']:
                     text_parts.append(para['text'])
+                    
+                    # If this paragraph has paragraph_runs, collect them for character-level formatting
+                    if 'paragraph_runs' in para and para['paragraph_runs']:
+                        all_paragraph_runs.extend(para['paragraph_runs'])
             
             if not text_parts:
                 logger.warning(f"No text content found in paragraph data for shape {shape.Name}")
@@ -1551,48 +1557,59 @@ class PowerPointWorker:
             shape.TextFrame.TextRange.Text = full_text
             logger.debug(f"Set text content for shape {shape.Name}: {len(text_parts)} paragraphs")
             
-            # Now apply formatting to each paragraph using PowerPoint's paragraph collection
             text_range = shape.TextFrame.TextRange
             
-            # Get the actual PowerPoint paragraphs collection
-            try:
-                paragraphs = text_range.Paragraphs()
-                total_paragraphs = paragraphs.Count
-                logger.debug(f"Shape {shape.Name} has {total_paragraphs} PowerPoint paragraphs")
-            except Exception as e:
-                logger.warning(f"Could not access paragraphs collection for shape {shape.Name}: {e}")
-                # Fallback to applying formatting to entire text range
-                for para_idx, para in enumerate(paragraph_data):
-                    self._apply_paragraph_properties_to_range(text_range, para, para_idx + 1, shape.Name)
-                return
-            
-            # Apply formatting to each paragraph using PowerPoint's paragraph indexing
+            # Apply basic paragraph-level properties (bullets, spacing, etc.) to each paragraph
             for para_idx, para in enumerate(paragraph_data):
-                ppt_para_index = para_idx + 1  # PowerPoint uses 1-based indexing
-                
-                # Skip if paragraph index exceeds PowerPoint's paragraph count
-                if ppt_para_index > total_paragraphs:
-                    logger.warning(f"Paragraph {ppt_para_index} exceeds PowerPoint paragraph count ({total_paragraphs}) for shape {shape.Name}")
-                    continue
-                
                 try:
-                    # Get the specific PowerPoint paragraph
-                    ppt_paragraph = paragraphs(ppt_para_index)
-                    para_range = ppt_paragraph.Range
+                    # Apply bullet formatting if specified
+                    if 'bullet_style' in para and para['bullet_style']:
+                        if para['bullet_style'].lower() == 'number':
+                            text_range.ParagraphFormat.Bullet.Visible = True
+                            text_range.ParagraphFormat.Bullet.Type = 2  # ppBulletNumbered
+                        elif para['bullet_style'].lower() == 'bullet':
+                            text_range.ParagraphFormat.Bullet.Visible = True
+                            text_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
                     
-                    # Apply paragraph-level formatting
-                    self._apply_paragraph_properties_to_range(para_range, para, ppt_para_index, shape.Name)
-                    
-                    # Apply character-level formatting if specified
-                    if 'paragraph_runs' in para and para['paragraph_runs']:
+                    # Apply bullet character if specified
+                    if 'bullet_char' in para and para['bullet_char']:
                         try:
-                            self._apply_paragraph_runs_to_range(para_range, para['paragraph_runs'], ppt_para_index, shape.Name)
+                            text_range.ParagraphFormat.Bullet.Character = str(para['bullet_char'])
                         except Exception as e:
-                            logger.warning(f"Could not apply paragraph runs to paragraph {ppt_para_index} in shape {shape.Name}: {e}")
+                            logger.warning(f"Could not set bullet character '{para['bullet_char']}': {e}")
+                    
+                    # Apply indentation if specified
+                    if 'left_indent' in para and para['left_indent'] is not None:
+                        text_range.ParagraphFormat.LeftIndent = float(para['left_indent'])
+                    
+                    if 'first_line_indent' in para and para['first_line_indent'] is not None:
+                        text_range.ParagraphFormat.FirstLineIndent = float(para['first_line_indent'])
+                    
+                    # Apply spacing before paragraph if specified
+                    if 'space_before' in para and para['space_before'] is not None:
+                        text_range.ParagraphFormat.SpaceBefore = float(para['space_before'])
+                        logger.debug(f"Applied space_before {para['space_before']} to paragraph {para_idx + 1} in shape {shape.Name}")
                     
                 except Exception as e:
-                    logger.warning(f"Could not apply formatting to paragraph {ppt_para_index} in shape {shape.Name}: {e}")
+                    logger.warning(f"Could not apply paragraph properties to paragraph {para_idx + 1} in shape {shape.Name}: {e}")
                     continue
+            
+            # Apply character-level formatting using paragraph runs if any were collected
+            if all_paragraph_runs:
+                try:
+                    from .paragraph_runs_formatter import _apply_paragraph_runs_formatting, convert_substring_runs_to_indices
+                    
+                    # Convert substring-based runs to index-based runs
+                    index_runs = convert_substring_runs_to_indices(full_text, all_paragraph_runs)
+                    
+                    if index_runs:
+                        # Apply the character-level formatting
+                        _apply_paragraph_runs_formatting(text_range, index_runs, shape.Name)
+                        logger.debug(f"Applied {len(index_runs)} character-level formatting runs to shape {shape.Name}")
+                        updated_info['properties_applied'].append('paragraph_runs')
+                    
+                except Exception as e:
+                    logger.warning(f"Could not apply paragraph runs formatting to shape {shape.Name}: {e}")
             
             updated_info['properties_applied'].append('paragraph_formatting')
             logger.info(f"Successfully applied paragraph-level formatting to {len(paragraph_data)} paragraphs in shape {shape.Name}")
