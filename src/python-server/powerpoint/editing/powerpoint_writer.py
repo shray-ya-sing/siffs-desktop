@@ -1,3 +1,4 @@
+
 import os
 import queue
 import threading
@@ -2061,17 +2062,152 @@ class PowerPointWorker:
             
             return None
     
+    def _apply_axis_formatting(self, chart, shape_props: Dict[str, Any]) -> None:
+        """Apply comprehensive axis formatting to the chart."""
+        axis_map = {
+            'x': 1,  # xlCategory
+            'y': 2,  # xlValue
+        }
+
+        for axis_name, axis_index in axis_map.items():
+            try:
+                axis = chart.Axes(axis_index)
+
+                # Axis Visibility
+                if f'{axis_name}_axis_visible' in shape_props:
+                    axis.Visible = bool(shape_props[f'{axis_name}_axis_visible'])
+                if f'{axis_name}_axis_line_visible' in shape_props:
+                    axis.Format.Line.Visible = bool(shape_props[f'{axis_name}_axis_line_visible'])
+                if f'{axis_name}_axis_labels_visible' in shape_props:
+                    axis.TickLabels.Visible = bool(shape_props[f'{axis_name}_axis_labels_visible'])
+                if f'{axis_name}_axis_tick_marks_visible' in shape_props:
+                    axis.HasMajorTickMarks = bool(shape_props[f'{axis_name}_axis_tick_marks_visible'])
+
+                # Axis Scale
+                if f'{axis_name}_axis_minimum' in shape_props:
+                    axis.MinimumScale = float(shape_props[f'{axis_name}_axis_minimum'])
+                if f'{axis_name}_axis_maximum' in shape_props:
+                    axis.MaximumScale = float(shape_props[f'{axis_name}_axis_maximum'])
+                if f'{axis_name}_axis_major_unit' in shape_props:
+                    axis.MajorUnit = float(shape_props[f'{axis_name}_axis_major_unit'])
+                if f'{axis_name}_axis_minor_unit' in shape_props:
+                    axis.MinorUnit = float(shape_props[f'{axis_name}_axis_minor_unit'])
+                if f'{axis_name}_axis_scale_type' in shape_props:
+                    scale_type = shape_props[f'{axis_name}_axis_scale_type'].lower()
+                    if scale_type == 'logarithmic':
+                        axis.ScaleType = 2  # xlScaleLogarithmic
+                    else:
+                        axis.ScaleType = 1  # xlScaleLinear
+
+                # Axis Line Styling
+                if f'{axis_name}_axis_line_color' in shape_props:
+                    color = shape_props[f'{axis_name}_axis_line_color']
+                    if color.startswith('#'):
+                        rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                        axis.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                if f'{axis_name}_axis_line_weight' in shape_props:
+                    axis.Format.Line.Weight = float(shape_props[f'{axis_name}_axis_line_weight'])
+                if f'{axis_name}_axis_line_style' in shape_props:
+                    style = shape_props[f'{axis_name}_axis_line_style'].lower()
+                    style_map = {'solid': 1, 'dashed': 2, 'dotted': 3, 'dashdot': 4}
+                    if style in style_map:
+                        axis.Format.Line.DashStyle = style_map[style]
+
+                # Axis Label Formatting
+                tick_labels = axis.TickLabels
+                if f'{axis_name}_axis_font_name' in shape_props:
+                    tick_labels.Font.Name = shape_props[f'{axis_name}_axis_font_name']
+                if f'{axis_name}_axis_font_size' in shape_props:
+                    tick_labels.Font.Size = float(shape_props[f'{axis_name}_axis_font_size'])
+                if f'{axis_name}_axis_font_color' in shape_props:
+                    color = shape_props[f'{axis_name}_axis_font_color']
+                    if color.startswith('#'):
+                        rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                        tick_labels.Font.Color = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                if f'{axis_name}_axis_font_bold' in shape_props:
+                    tick_labels.Font.Bold = bool(shape_props[f'{axis_name}_axis_font_bold'])
+                if f'{axis_name}_axis_font_italic' in shape_props:
+                    tick_labels.Font.Italic = bool(shape_props[f'{axis_name}_axis_font_italic'])
+                if f'{axis_name}_axis_label_orientation' in shape_props:
+                    tick_labels.Orientation = int(shape_props[f'{axis_name}_axis_label_orientation'])
+
+                # Axis Label Number Formatting
+                if f'{axis_name}_axis_number_format' in shape_props:
+                    tick_labels.NumberFormat = shape_props[f'{axis_name}_axis_number_format']
+                if f'{axis_name}_axis_decimal_places' in shape_props:
+                    decimal_places = int(shape_props[f'{axis_name}_axis_decimal_places'])
+                    tick_labels.NumberFormat = f'0.{'0' * decimal_places}'
+
+                # Axis Title
+                if f'{axis_name}_axis_title' in shape_props:
+                    axis.HasTitle = True
+                    axis.AxisTitle.Text = shape_props[f'{axis_name}_axis_title']
+
+                # Axis Title Formatting
+                if axis.HasTitle:
+                    axis_title = axis.AxisTitle
+                    if f'{axis_name}_axis_title_font_name' in shape_props:
+                        axis_title.Font.Name = shape_props[f'{axis_name}_axis_title_font_name']
+                    if f'{axis_name}_axis_title_font_size' in shape_props:
+                        axis_title.Font.Size = float(shape_props[f'{axis_name}_axis_title_font_size'])
+                    if f'{axis_name}_axis_title_font_color' in shape_props:
+                        color = shape_props[f'{axis_name}_axis_title_font_color']
+                        if color.startswith('#'):
+                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                            axis_title.Font.Color = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                    if f'{axis_name}_axis_title_bold' in shape_props:
+                        axis_title.Font.Bold = bool(shape_props[f'{axis_name}_axis_title_bold'])
+                    if f'{axis_name}_axis_title_italic' in shape_props:
+                        axis_title.Font.Italic = bool(shape_props[f'{axis_name}_axis_title_italic'])
+
+            except Exception as e:
+                logger.warning(f"Could not apply formatting for {axis_name}-axis: {e}")
+
+        # Gridlines
+        try:
+            if 'show_major_gridlines' in shape_props:
+                chart.Axes(2).HasMajorGridlines = bool(shape_props['show_major_gridlines'])
+            if 'show_minor_gridlines' in shape_props:
+                chart.Axes(2).HasMinorGridlines = bool(shape_props['show_minor_gridlines'])
+            if 'x_axis_major_gridlines' in shape_props:
+                chart.Axes(1).HasMajorGridlines = bool(shape_props['x_axis_major_gridlines'])
+            if 'x_axis_minor_gridlines' in shape_props:
+                chart.Axes(1).HasMinorGridlines = bool(shape_props['x_axis_minor_gridlines'])
+
+            if 'major_gridlines_color' in shape_props:
+                color = shape_props['major_gridlines_color']
+                if color.startswith('#'):
+                    rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                    chart.Axes(2).MajorGridlines.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+            if 'minor_gridlines_color' in shape_props:
+                color = shape_props['minor_gridlines_color']
+                if color.startswith('#'):
+                    rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                    chart.Axes(2).MinorGridlines.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+
+            if 'major_gridlines_weight' in shape_props:
+                chart.Axes(2).MajorGridlines.Format.Line.Weight = float(shape_props['major_gridlines_weight'])
+            if 'minor_gridlines_weight' in shape_props:
+                chart.Axes(2).MinorGridlines.Format.Line.Weight = float(shape_props['minor_gridlines_weight'])
+
+            if 'major_gridlines_style' in shape_props:
+                style = shape_props['major_gridlines_style'].lower()
+                style_map = {'solid': 1, 'dashed': 2, 'dotted': 3, 'dashdot': 4}
+                if style in style_map:
+                    chart.Axes(2).MajorGridlines.Format.Line.DashStyle = style_map[style]
+            if 'minor_gridlines_style' in shape_props:
+                style = shape_props['minor_gridlines_style'].lower()
+                style_map = {'solid': 1, 'dashed': 2, 'dotted': 3, 'dashdot': 4}
+                if style in style_map:
+                    chart.Axes(2).MinorGridlines.Format.Line.DashStyle = style_map[style]
+        except Exception as e:
+            logger.warning(f"Could not apply gridline formatting: {e}")
+
     def _apply_chart_formatting(self, chart, shape_props: Dict[str, Any]) -> None:
         """Apply advanced chart formatting to the chart shape."""
         try:
-            # Gridlines
-            if 'show_major_gridlines' in shape_props:
-                show_major_gridlines = shape_props.get('show_major_gridlines', True)
-                try:
-                    chart.Axes(2).HasMajorGridlines = show_major_gridlines
-                    logger.debug(f"Applied major gridlines: {show_major_gridlines}")
-                except Exception as e:
-                    logger.warning(f"Could not set major gridlines: {e}")
+            # COMPREHENSIVE AXIS FORMATTING
+            self._apply_axis_formatting(chart, shape_props)
             
             # Series colors
             if 'series_colors' in shape_props:
@@ -2335,27 +2471,6 @@ class PowerPointWorker:
                         logger.debug("Applied data labels to all series (legacy mode)")
                     except Exception as e:
                         logger.warning(f"Could not set data labels: {e}")
-
-            # Axis formatting
-            if 'x_axis_color' in shape_props:
-                x_axis_color = shape_props.get('x_axis_color')
-                if x_axis_color and x_axis_color.startswith('#'):
-                    try:
-                        rgb = tuple(int(x_axis_color[j:j+2], 16) for j in (1, 3, 5))
-                        chart.Axes(1).Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
-                        logger.debug(f"Applied X-axis color: {x_axis_color}")
-                    except Exception as e:
-                        logger.warning(f"Could not set X-axis color: {e}")
-
-            if 'y_axis_color' in shape_props:
-                y_axis_color = shape_props.get('y_axis_color')
-                if y_axis_color and y_axis_color.startswith('#'):
-                    try:
-                        rgb = tuple(int(y_axis_color[j:j+2], 16) for j in (1, 3, 5))
-                        chart.Axes(2).Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
-                        logger.debug(f"Applied Y-axis color: {y_axis_color}")
-                    except Exception as e:
-                        logger.warning(f"Could not set Y-axis color: {e}")
 
             # Chart outline
             if 'chart_outline_color' in shape_props:

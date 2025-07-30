@@ -678,7 +678,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
               Different chart types support different data label positions. Use appropriate positions:
               
               PIE/DOUGHNUT CHARTS - SUPPORTED POSITIONS:
-              * center, inside_end, outside_end, best_fit
+              * center, inside_end, best_fit (outside_end is NOT supported for these chart types)
               * AVOID: inside_base, above, below, left, right (will cause errors)
               
               COLUMN/BAR CHARTS - SUPPORTED POSITIONS:
@@ -722,7 +722,90 @@ Example: slide_layout="Title Slide" or slide_layout=0
               
               x_axis_title="X Axis Label" (horizontal axis title)
               y_axis_title="Y Axis Label" (vertical axis title)
-              show_gridlines=true/false (display gridlines)
+              
+              *** COMPREHENSIVE AXIS FORMATTING PROPERTIES ***:
+              
+              AXIS VISIBILITY CONTROL:
+              x_axis_visible=true/false (show/hide entire X-axis including line and labels)
+              y_axis_visible=true/false (show/hide entire Y-axis including line and labels)
+              x_axis_line_visible=true/false (show/hide X-axis line only, keep labels)
+              y_axis_line_visible=true/false (show/hide Y-axis line only, keep labels)
+              x_axis_labels_visible=true/false (show/hide X-axis labels only, keep line)
+              y_axis_labels_visible=true/false (show/hide Y-axis labels only, keep line)
+              x_axis_tick_marks_visible=true/false (show/hide X-axis tick marks)
+              y_axis_tick_marks_visible=true/false (show/hide Y-axis tick marks)
+              
+              AXIS RANGE AND SCALE CONTROL:
+              x_axis_minimum=0 (minimum value for X-axis scale)
+              x_axis_maximum=100 (maximum value for X-axis scale)
+              y_axis_minimum=0 (minimum value for Y-axis scale)
+              y_axis_maximum=100 (maximum value for Y-axis scale)
+              x_axis_major_unit=10 (interval between major tick marks on X-axis)
+              y_axis_major_unit=10 (interval between major tick marks on Y-axis)
+              x_axis_minor_unit=5 (interval between minor tick marks on X-axis)
+              y_axis_minor_unit=5 (interval between minor tick marks on Y-axis)
+              x_axis_scale_type="linear"/"logarithmic" (axis scale type)
+              y_axis_scale_type="linear"/"logarithmic" (axis scale type)
+              
+              AXIS LINE STYLING:
+              x_axis_line_color="#000000" (X-axis line color in hex)
+              y_axis_line_color="#000000" (Y-axis line color in hex)
+              x_axis_line_weight=1.0 (X-axis line thickness in points)
+              y_axis_line_weight=1.0 (Y-axis line thickness in points)
+              x_axis_line_style="solid"/"dashed"/"dotted"/"dashdot" (X-axis line style)
+              y_axis_line_style="solid"/"dashed"/"dotted"/"dashdot" (Y-axis line style)
+              
+              AXIS LABEL FORMATTING:
+              x_axis_font_name="Arial" (X-axis labels font family)
+              y_axis_font_name="Arial" (Y-axis labels font family)
+              x_axis_font_size=10 (X-axis labels font size in points)
+              y_axis_font_size=10 (Y-axis labels font size in points)
+              x_axis_font_color="#000000" (X-axis labels font color in hex)
+              y_axis_font_color="#000000" (Y-axis labels font color in hex)
+              x_axis_font_bold=true/false (X-axis labels bold formatting)
+              y_axis_font_bold=true/false (Y-axis labels bold formatting)
+              x_axis_font_italic=true/false (X-axis labels italic formatting)
+              y_axis_font_italic=true/false (Y-axis labels italic formatting)
+              x_axis_label_orientation=0 (X-axis label rotation in degrees: -90 to 90)
+              y_axis_label_orientation=0 (Y-axis label rotation in degrees: -90 to 90)
+              
+              AXIS LABEL NUMBER FORMATTING:
+              x_axis_number_format="General"/"Number"/"Currency"/"Percentage"/"Scientific" (X-axis label format)
+              y_axis_number_format="General"/"Number"/"Currency"/"Percentage"/"Scientific" (Y-axis label format)
+              x_axis_decimal_places=2 (number of decimal places for X-axis labels)
+              y_axis_decimal_places=2 (number of decimal places for Y-axis labels)
+              
+              AXIS TITLE FORMATTING:
+              x_axis_title_font_name="Arial" (X-axis title font family)
+              y_axis_title_font_name="Arial" (Y-axis title font family)
+              x_axis_title_font_size=12 (X-axis title font size in points)
+              y_axis_title_font_size=12 (Y-axis title font size in points)
+              x_axis_title_font_color="#000000" (X-axis title font color in hex)
+              y_axis_title_font_color="#000000" (Y-axis title font color in hex)
+              x_axis_title_bold=true/false (X-axis title bold formatting)
+              y_axis_title_bold=true/false (Y-axis title bold formatting)
+              x_axis_title_italic=true/false (X-axis title italic formatting)
+              y_axis_title_italic=true/false (Y-axis title italic formatting)
+              
+              GRIDLINES CONTROL:
+              show_major_gridlines=true/false (show/hide major gridlines on Y-axis)
+              show_minor_gridlines=true/false (show/hide minor gridlines on Y-axis)
+              x_axis_major_gridlines=true/false (show/hide major gridlines on X-axis)
+              x_axis_minor_gridlines=true/false (show/hide minor gridlines on X-axis)
+              major_gridlines_color="#D3D3D3" (major gridlines color in hex)
+              minor_gridlines_color="#E8E8E8" (minor gridlines color in hex)
+              major_gridlines_weight=0.5 (major gridlines thickness in points)
+              minor_gridlines_weight=0.25 (minor gridlines thickness in points)
+              major_gridlines_style="solid"/"dashed"/"dotted" (major gridlines line style)
+              minor_gridlines_style="solid"/"dashed"/"dotted" (minor gridlines line style)
+              
+              TICK MARKS CONTROL:
+              x_axis_tick_mark_type="inside"/"outside"/"cross"/"none" (X-axis tick mark position)
+              y_axis_tick_mark_type="inside"/"outside"/"cross"/"none" (Y-axis tick mark position)
+              x_axis_minor_tick_marks=true/false (show/hide minor tick marks on X-axis)
+              y_axis_minor_tick_marks=true/false (show/hide minor tick marks on Y-axis)
+              
+              show_gridlines=true/false (legacy - display gridlines, use specific gridline controls instead)
               chart_style=1-48 (PowerPoint chart style number)
               
             - LEGACY CHART VISIBILITY (MAINTAINED FOR BACKWARD COMPATIBILITY):
