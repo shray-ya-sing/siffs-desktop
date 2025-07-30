@@ -1737,7 +1737,9 @@ class PowerPointWorker:
                 "area": 1,     # msoChartTypeArea
                 "scatter": 72, # msoChartTypeXYScatter
                 "doughnut": -4120, # xlDoughnut (correct constant for doughnut charts)
+                "donut": -4120, # xlDoughnut (alias for doughnut)
                 "doughnut_exploded": 80, # xlDoughnutExploded
+                "donut_exploded": 80, # xlDoughnutExploded (alias)
                 "combo": 92    # msoChartTypeCombo
             }
             
@@ -1833,6 +1835,22 @@ class PowerPointWorker:
                 logger.error(f"Failed to get workbook/worksheet for chart '{shape_name}': {wb_error}")
                 raise
 
+            # CRITICAL: Activate the chart data first for proper data assignment
+            try:
+                logger.debug("Activating chart data for proper data assignment")
+                chart.ChartData.Activate()
+                logger.debug("Chart data activated successfully")
+                
+                # CRITICAL: Clear existing default data in the worksheet BEFORE populating new data
+                try:
+                    worksheet.UsedRange.Clear()
+                    logger.debug("Cleared existing worksheet default data")
+                except Exception as clear_error:
+                    logger.warning(f"Could not clear existing worksheet data: {clear_error}")
+                    
+            except Exception as activate_error:
+                logger.warning(f"Could not activate chart data: {activate_error}")
+
             try:
                 category_start = 2
                 logger.debug(f"Populating {len(categories)} categories starting at row {category_start}")
@@ -1883,14 +1901,6 @@ class PowerPointWorker:
             except Exception as series_populate_error:
                 logger.error(f"Failed to populate series data: {series_populate_error}")
                 raise
-
-            # CRITICAL: Activate the chart data first for proper data assignment
-            try:
-                logger.debug("Activating chart data for proper data assignment")
-                chart.ChartData.Activate()
-                logger.debug("Chart data activated successfully")
-            except Exception as activate_error:
-                logger.warning(f"Could not activate chart data: {activate_error}")
 
             # Use direct value assignment instead of SetSourceData for reliable chart data
             try:
