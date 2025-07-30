@@ -1,3 +1,55 @@
+def _fix_python_literal_quotes(text: str) -> str:
+    """Fixes unescaped apostrophes in Python literal strings.
+    
+    This function specifically handles the case where text content within Python
+    literals contains unescaped apostrophes that break ast.literal_eval parsing.
+    
+    Args:
+        text: Python literal string that may contain unescaped apostrophes
+        
+    Returns:
+        Fixed string with properly escaped apostrophes
+    """
+    import re
+    
+    def fix_text_value(match):
+        """Fix apostrophes within a 'text': '...' value"""
+        prefix = match.group(1)  # 'text': '
+        content = match.group(2)  # the actual text content
+        suffix = match.group(3)   # '
+        
+        # Escape apostrophes that aren't already escaped
+        # Temporarily protect existing escapes
+        content = content.replace("\\'", "___TEMP_ESCAPE___")
+        # Escape unescaped apostrophes
+        content = content.replace("'", "\\'")
+        # Restore protected escapes
+        content = content.replace("___TEMP_ESCAPE___", "\\'")
+        
+        return f"{prefix}{content}{suffix}"
+    
+    # Fix 'text' values specifically - pattern matches 'text': 'content with apostrophe's'
+    # This regex handles the most common case where text content has unescaped apostrophes
+    fixed_text = re.sub(r"('text':\s*')([^']*(?:\\'[^']*)*)(')(?=\s*[,}])", fix_text_value, text)
+    
+    # If that didn't fix it, try a more general approach
+    if fixed_text.count("'") % 2 != 0:
+        # Count quotes to see if we still have an odd number
+        # Apply a broader fix for any long quoted strings (likely text content)
+        def fix_long_strings(match):
+            content = match.group(1)
+            if len(content) > 15:  # Only fix long strings (likely text content)
+                # Same escape logic as above
+                content = content.replace("\\'", "___TEMP_ESCAPE___")
+                content = content.replace("'", "\\'")
+                content = content.replace("___TEMP_ESCAPE___", "\\'")
+            return f"'{content}'"
+        
+        # Match any single-quoted string
+        fixed_text = re.sub(r"'([^']*(?:\\'[^']*)*)'(?=\s*[,}\]])", fix_long_strings, fixed_text)
+    
+    return fixed_text
+
 import re
 import json
 import logging
@@ -191,8 +243,11 @@ def _parse_property_value(value: str, extractions: Dict[str, str] = None) -> Any
                     # If JSON parsing still fails, try ast.literal_eval for Python literal structures
                     try:
                         import ast
-                        return ast.literal_eval(text_value)
-                    except (ValueError, SyntaxError):
+                        # Apply robust quote fixing before ast.literal_eval to handle unescaped apostrophes
+                        fixed_text = _fix_python_literal_quotes(text_value)
+                        return ast.literal_eval(fixed_text)
+                    except (ValueError, SyntaxError) as e:
+                        logger.warning(f"Could not parse Python literal '{text_value[:100]}...': {e}")
                         # If both fail, return as string
                         pass
         
@@ -322,6 +377,22 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                 if not entry:
                     continue
 
+                if entry.strip().startswith('delete_shapes:'):
+                    try:
+                        # Extract the list of shape names to delete
+                        shapes_to_delete_str = entry.split(':', 1)[1].strip()
+                        shapes_to_delete = _parse_property_value(shapes_to_delete_str)
+                        if isinstance(shapes_to_delete, list):
+                            if '_shapes_to_delete' not in result[slide_number]:
+                                result[slide_number]['_shapes_to_delete'] = []
+                            result[slide_number]['_shapes_to_delete'].extend(shapes_to_delete)
+                            logger.info(f"Parsed delete request for shapes {shapes_to_delete} on slide {slide_number}")
+                        else:
+                            logger.warning(f"Could not parse list of shapes to delete: {entry}")
+                    except Exception as e:
+                        logger.error(f"Error parsing delete_shapes directive: {entry} - {e}")
+                    continue
+
                 # Parse shape entry: "shape_name, prop1=value1, prop2=value2, ..."
                 shape_parts, extractions = _parse_shape_properties(entry)
                 if not shape_parts:
@@ -384,6 +455,24 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                                             series['values'] = series['numbers']
                                             del series['numbers']
                                             logger.debug(f"Normalized chart series 'numbers' key to 'values' for shape '{shape_name}'")
+                            
+                            # Handle paragraphs property - extract text content and preserve formatting
+                            if key == 'paragraphs' and isinstance(parsed_value, list):
+                                # Extract text content from paragraphs and combine into a single text property
+                                text_lines = []
+                                for paragraph in parsed_value:
+                                    if isinstance(paragraph, dict) and 'text' in paragraph:
+                                        text_lines.append(paragraph['text'])
+                                
+                                # Combine all paragraph text into a single text property
+                                if text_lines:
+                                    combined_text = '\n'.join(text_lines)
+                                    shape_data['text'] = combined_text
+                                    logger.debug(f"Extracted text content from paragraphs for shape '{shape_name}': '{combined_text[:100]}...'")
+                                
+                                # Keep the original paragraphs data for formatting purposes
+                                # The writer can use this for advanced paragraph-level formatting
+                                logger.debug(f"Preserved paragraphs formatting data for shape '{shape_name}': {len(parsed_value)} paragraphs")
                             
                             shape_data[key] = parsed_value
                             

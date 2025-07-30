@@ -269,14 +269,40 @@ class PowerPointWorker:
                         
                         logger.debug(f"Processing slide {slide_number}")
                         
+                        # Handle shape deletions first
+                        if '_shapes_to_delete' in shapes_data:
+                            shapes_to_delete = shapes_data.pop('_shapes_to_delete')
+                            if isinstance(shapes_to_delete, list):
+                                for shape_name in shapes_to_delete:
+                                    try:
+                                        shape_to_delete = slide.Shapes(shape_name)
+                                        shape_to_delete.Delete()
+                                        logger.info(f"Deleted shape '{shape_name}' from slide {slide_number}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not delete shape '{shape_name}': {e}")
+
                         for shape_name, shape_props in shapes_data.items():
                             try:
-                                # Find the shape by name
+                                # Check if this is a title-related shape and try to use existing title placeholder first
                                 shape = None
-                                for shape_obj in slide.Shapes:
-                                    if shape_obj.Name == shape_name:
-                                        shape = shape_obj
-                                        break
+                                if "title" in shape_name.strip().lower():
+                                    # Try to find and reuse existing title placeholder
+                                    title_placeholder = self._find_title_placeholder(slide)
+                                    if title_placeholder:
+                                        shape = title_placeholder
+                                        logger.info(f"Reusing title placeholder for shape '{shape_name}' in slide {slide_number}")
+                                    else:
+                                        # No title placeholder found, look for existing shape by name
+                                        for shape_obj in slide.Shapes:
+                                            if shape_obj.Name == shape_name:
+                                                shape = shape_obj
+                                                break
+                                else:
+                                    # Not a title shape, find by name as usual
+                                    for shape_obj in slide.Shapes:
+                                        if shape_obj.Name == shape_name:
+                                            shape = shape_obj
+                                            break
                                 
                                 # Handle deletion if specified in shape properties
                                 if shape_props.get('delete_shape', False):
@@ -489,6 +515,69 @@ class PowerPointWorker:
                 
         except Exception as e:
             logger.error(f"Error getting or creating slide {slide_number}: {e}")
+            return None
+    
+    def _find_title_placeholder(self, slide):
+        """Find an existing title placeholder on the slide.
+        
+        Args:
+            slide: PowerPoint slide object
+            
+        Returns:
+            The title placeholder shape or None if not found
+        """
+        try:
+            # Look for common title placeholder patterns
+            title_indicators = [
+                'title',
+                'slide title', 
+                'presentation title',
+                'heading',
+                'header'
+            ]
+            
+            for shape in slide.Shapes:
+                try:
+                    # Check if shape has a name that indicates it's a title
+                    shape_name = getattr(shape, 'Name', '').lower().strip()
+                    
+                    # Check for title indicators in shape name
+                    if any(indicator in shape_name for indicator in title_indicators):
+                        # Verify it has a text frame to confirm it's a text-based title
+                        if hasattr(shape, 'TextFrame') and shape.TextFrame:
+                            logger.debug(f"Found title placeholder by name: '{shape.Name}'")
+                            return shape
+                    
+                    # Check if it's a placeholder shape (common for title placeholders)
+                    if hasattr(shape, 'PlaceholderFormat'):
+                        try:
+                            # PowerPoint placeholder types: 1=Title, 2=Body, 3=CenterTitle, etc.
+                            placeholder_type = shape.PlaceholderFormat.Type
+                            if placeholder_type in [1, 3]:  # Title or CenterTitle
+                                logger.debug(f"Found title placeholder by type: '{shape.Name}' (type {placeholder_type})")
+                                return shape
+                        except Exception:
+                            # PlaceholderFormat may not be accessible for all shapes
+                            pass
+                    
+                    # Check for shapes positioned at the top of the slide (likely titles)
+                    if hasattr(shape, 'Top') and hasattr(shape, 'TextFrame'):
+                        if shape.TextFrame and shape.Top < 100:  # Top 100 points of slide
+                            # Additional check: ensure it spans a reasonable width (not a small label)
+                            if hasattr(shape, 'Width') and shape.Width > 200:
+                                logger.debug(f"Found potential title placeholder by position: '{shape.Name}' (top={shape.Top}, width={shape.Width})")
+                                return shape
+                            
+                except Exception as shape_error:
+                    # Continue checking other shapes if one fails
+                    logger.debug(f"Error checking shape for title placeholder: {shape_error}")
+                    continue
+            
+            logger.debug("No title placeholder found on slide")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Error searching for title placeholder: {e}")
             return None
     
     def _create_new_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
@@ -1598,7 +1687,7 @@ class PowerPointWorker:
             except Exception as fallback_error:
                 logger.warning(f"Could not apply fallback fill color: {fallback_error}")
     def _apply_paragraph_formatting(self, shape, paragraph_data: List[Dict[str, Any]], updated_info: Dict[str, Any]) -> None:
-        """Apply character-level formatting to specified substrings within paragraphs.
+        """Apply paragraph-level and character-level formatting to text in a shape.
 
         Args:
             shape: PowerPoint shape object
@@ -1610,9 +1699,131 @@ class PowerPointWorker:
                 logger.warning(f"Shape {shape.Name} does not have a valid text frame for paragraph formatting")
                 return
 
-            # Get the existing text
-            full_text = shape.TextFrame.TextRange.Text
-
+            # Get the text range for formatting
+            text_range = shape.TextFrame.TextRange
+            full_text = text_range.Text
+            
+            # Split text into lines to match paragraph data
+            text_lines = full_text.split('\n')
+            
+            # Apply paragraph-level formatting (bullets, indentation, etc.)
+            # This handles the paragraph-level properties for each paragraph
+            for i, para in enumerate(paragraph_data):
+                if i >= len(text_lines):
+                    break  # Don't go beyond available text lines
+                
+                try:
+                    # Calculate the character range for this paragraph
+                    if i == 0:
+                        start_char = 0
+                    else:
+                        # Sum lengths of previous lines plus newline characters
+                        start_char = sum(len(text_lines[j]) + 1 for j in range(i))
+                    
+                    end_char = start_char + len(text_lines[i])
+                    
+                    # Get the paragraph range
+                    if end_char > start_char:
+                        para_range = text_range.Characters(start_char + 1, end_char - start_char)  # PowerPoint uses 1-based indexing
+                        
+                        # Apply bullet formatting for this paragraph
+                        if 'bullet_style' in para and para['bullet_style']:
+                            bullet_style = para['bullet_style'].lower()
+                            if bullet_style == 'bullet':
+                                para_range.ParagraphFormat.Bullet.Visible = True
+                                para_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
+                                
+                                # Apply custom bullet character if specified
+                                if 'bullet_char' in para and para['bullet_char']:
+                                    para_range.ParagraphFormat.Bullet.Character = para['bullet_char']
+                                    logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
+                                
+                                logger.debug(f"Applied bullet formatting to paragraph {i} in shape {shape.Name}")
+                                
+                            elif bullet_style == 'number':
+                                para_range.ParagraphFormat.Bullet.Visible = True
+                                para_range.ParagraphFormat.Bullet.Type = 2  # ppBulletNumbered
+                                para_range.ParagraphFormat.Bullet.Style = 1  # ppBulletArabicPeriod
+                                logger.debug(f"Applied number formatting to paragraph {i} in shape {shape.Name}")
+                                
+                            elif bullet_style == 'none':
+                                para_range.ParagraphFormat.Bullet.Visible = False
+                                logger.debug(f"Disabled bullet formatting for paragraph {i} in shape {shape.Name}")
+                        
+                        # Apply indent level for this paragraph
+                        if 'indent_level' in para and para['indent_level'] is not None:
+                            indent_level = int(para['indent_level'])
+                            if 0 <= indent_level <= 8:
+                                para_range.IndentLevel = indent_level
+                                logger.debug(f"Applied indent level {indent_level} to paragraph {i} in shape {shape.Name}")
+                        
+                        # Apply other paragraph-level formatting properties
+                        if 'bullet_color' in para and para['bullet_color']:
+                            bullet_color = para['bullet_color']
+                            if bullet_color.startswith('#'):
+                                rgb = tuple(int(bullet_color[j:j+2], 16) for j in (1, 3, 5))
+                                para_range.ParagraphFormat.Bullet.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                logger.debug(f"Applied bullet color {bullet_color} to paragraph {i} in shape {shape.Name}")
+                        
+                        if 'bullet_size' in para and para['bullet_size'] is not None:
+                            bullet_size = float(para['bullet_size'])
+                            # Convert percentage to decimal if needed
+                            if bullet_size > 4.0:
+                                bullet_size_decimal = bullet_size / 100.0
+                            else:
+                                bullet_size_decimal = bullet_size
+                            bullet_size_decimal = max(0.25, min(4.0, bullet_size_decimal))
+                            para_range.ParagraphFormat.Bullet.RelativeSize = bullet_size_decimal
+                            logger.debug(f"Applied bullet size {bullet_size}% to paragraph {i} in shape {shape.Name}")
+                        
+                        # Apply paragraph spacing
+                        if 'space_before' in para and para['space_before'] is not None:
+                            space_before_points = float(para['space_before'])
+                            space_before_internal = space_before_points / 14.4
+                            para_range.ParagraphFormat.SpaceBefore = space_before_internal
+                            logger.debug(f"Applied space before {space_before_points}pt to paragraph {i} in shape {shape.Name}")
+                        
+                        if 'space_after' in para and para['space_after'] is not None:
+                            space_after_points = float(para['space_after'])
+                            space_after_internal = space_after_points / 14.4
+                            para_range.ParagraphFormat.SpaceAfter = space_after_internal
+                            logger.debug(f"Applied space after {space_after_points}pt to paragraph {i} in shape {shape.Name}")
+                        
+                        # Apply left and right indentation
+                        if 'left_indent' in para and para['left_indent'] is not None:
+                            left_indent = float(para['left_indent'])
+                            para_range.ParagraphFormat.LeftIndent = left_indent
+                            logger.debug(f"Applied left indent {left_indent}pt to paragraph {i} in shape {shape.Name}")
+                        
+                        if 'right_indent' in para and para['right_indent'] is not None:
+                            right_indent = float(para['right_indent'])
+                            para_range.ParagraphFormat.RightIndent = right_indent
+                            logger.debug(f"Applied right indent {right_indent}pt to paragraph {i} in shape {shape.Name}")
+                        
+                        # Apply first line indent
+                        if 'first_line_indent' in para and para['first_line_indent'] is not None:
+                            first_line_indent = float(para['first_line_indent'])
+                            para_range.ParagraphFormat.FirstLineIndent = first_line_indent
+                            logger.debug(f"Applied first line indent {first_line_indent}pt to paragraph {i} in shape {shape.Name}")
+                        
+                        # Apply text alignment for this paragraph
+                        if 'text_align' in para and para['text_align']:
+                            text_align = para['text_align'].lower()
+                            align_map = {
+                                'left': 1,     # ppAlignLeft
+                                'center': 2,   # ppAlignCenter
+                                'right': 3,    # ppAlignRight
+                                'justify': 4   # ppAlignJustify
+                            }
+                            if text_align in align_map:
+                                para_range.ParagraphFormat.Alignment = align_map[text_align]
+                                logger.debug(f"Applied text alignment {text_align} to paragraph {i} in shape {shape.Name}")
+                        
+                        updated_info['properties_applied'].append(f'paragraph_{i}_formatting')
+                        
+                except Exception as para_error:
+                    logger.warning(f"Could not apply formatting to paragraph {i} in shape {shape.Name}: {para_error}")
+            
             # Collect all paragraph runs for character-level formatting
             all_paragraph_runs = []
             for para in paragraph_data:
@@ -1629,7 +1840,6 @@ class PowerPointWorker:
 
                     if index_runs:
                         # Apply the character-level formatting
-                        text_range = shape.TextFrame.TextRange
                         _apply_paragraph_runs_formatting(text_range, index_runs, shape.Name)
                         logger.debug(f"Applied {len(index_runs)} character-level formatting runs to shape {shape.Name}")
                         updated_info['properties_applied'].append('paragraph_runs')
@@ -1638,10 +1848,9 @@ class PowerPointWorker:
                     logger.warning(f"Could not apply paragraph runs formatting to shape {shape.Name}: {e}")
 
             updated_info['properties_applied'].append('paragraph_formatting')
-            logger.info(f"Successfully applied character-level formatting to shape {shape.Name}")
+            logger.info(f"Successfully applied paragraph-level formatting to {len(paragraph_data)} paragraphs in shape {shape.Name}")
 
         except Exception as e:
-            logger.error(f"Error in _apply_paragraph_formatting for shape {shape.Name}: {e}", exc_info=True)
             logger.error(f"Error in _apply_paragraph_formatting for shape {shape.Name}: {e}", exc_info=True)
     
     def _apply_cell_font_formatting(self, table, shape_props: Dict[str, Any], rows: int, cols: int) -> None:
@@ -2914,6 +3123,11 @@ class PowerPointWorker:
                         shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
                         updated_info['properties_applied'].append('fill')
                         logger.debug(f"Applied fill color {fill_value} to shape {shape.Name}")
+                    elif fill_value.lower() in ['none', 'no_fill']:
+                        # Handle transparent/no fill
+                        shape.Fill.Visible = False
+                        updated_info['properties_applied'].append('fill')
+                        logger.debug(f"Applied transparent fill to shape {shape.Name}")
                     else:
                         logger.warning(f"Unsupported fill format: {fill_value}")
                 except Exception as e:
@@ -3333,6 +3547,38 @@ class PowerPointWorker:
                 paragraph_data = shape_props.get('paragraph_formatting') or shape_props.get('paragraphs')
                 if paragraph_data:
                     try:
+                        # Handle string representation of paragraph data (from LLM output)
+                        if isinstance(paragraph_data, str):
+                            try:
+                                import ast
+                                # DEBUG: Log the exact string before parsing
+                                logger.info(f"DEBUG: Attempting to parse paragraph data for shape {shape.Name}")
+                                logger.info(f"DEBUG: String type: {type(paragraph_data)}")
+                                logger.info(f"DEBUG: String length: {len(paragraph_data)}")
+                                logger.info(f"DEBUG: First 200 chars: {repr(paragraph_data[:200])}")
+                                logger.info(f"DEBUG: Last 200 chars: {repr(paragraph_data[-200:])}")
+                                
+                                # Look for the problematic part
+                                if "Republic Bank" in paragraph_data:
+                                    problem_start = paragraph_data.find("JPMorgan Chase did not assume First Republic Bank")
+                                    if problem_start != -1:
+                                        problem_end = problem_start + 100
+                                        problem_segment = paragraph_data[problem_start:problem_end]
+                                        logger.info(f"DEBUG: Problematic segment: {repr(problem_segment)}")
+                                        
+                                        # Character-by-character analysis of the problematic area
+                                        for i, char in enumerate(problem_segment):
+                                            if i > 80:  # Limit output
+                                                break
+                                            logger.info(f"DEBUG: Char {i:2d}: {repr(char):4s} (ord: {ord(char):3d})")
+                                
+                                paragraph_data = ast.literal_eval(paragraph_data)
+                                logger.debug(f"Parsed paragraph data string into {len(paragraph_data)} paragraphs for shape {shape.Name}")
+                            except (ValueError, SyntaxError) as e:
+                                logger.warning(f"Could not parse paragraph data string for shape {shape.Name}: {e}")
+                                logger.warning(f"DEBUG: Failed string was: {repr(paragraph_data)}")
+                                paragraph_data = None
+                        
                         if isinstance(paragraph_data, list):
                             logger.info(f"Applying paragraph formatting to {len(paragraph_data)} paragraphs in shape {shape.Name}")
                             self._apply_paragraph_formatting(shape, paragraph_data, updated_info)

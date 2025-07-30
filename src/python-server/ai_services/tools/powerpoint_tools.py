@@ -484,6 +484,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
         ❌ top=500, height=100 (500+100=600 > 540)
         ❌ width=800 (exceeds slide width)
 
+        IMPORTANT: DO NOT embed bullet characters directly within text. Instead, apply bullets using the bullet_style property separately.
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
         2. List each shape's metadata as: shape_name="DESCRIPTIVE_SHAPE_NAME", visual properties, size/position properties, text properties (if applicable).
@@ -554,7 +555,8 @@ Example: slide_layout="Title Slide" or slide_layout=0
         *** CRITICAL NEW SLIDE vs EXISTING SHAPE RULES ***:
         
         FOR NEW SLIDES (slides that don't exist yet):
-        - ALWAYS create completely NEW shapes with unique, descriptive names
+        - ALWAYS create completely NEW shapes with unique, descriptive names for the main body content.
+        - IGNORE and DO NOT create shapes for footer, date, or slide number placeholders unless the user explicitly asks for them. Focus ONLY on the title and body content.
         - NEVER try to replace or modify placeholder content like "Title 1", "Content Placeholder 2", "TextBox 3"
         - NEVER reference existing placeholder shapes from slide layouts
         - CREATE your own shapes: shape_name="Company Overview Title", shape_name="Key Metrics Chart", shape_name="Contact Information"
@@ -565,6 +567,11 @@ Example: slide_layout="Title Slide" or slide_layout=0
         - To MODIFY an existing shape: Use the EXACT shape name from the slide metadata (e.g., "Title 1", "Content Placeholder 2")
         - To ADD new shapes to existing slides: Create NEW shapes with unique names that don't conflict with existing ones
         - To DELETE a shape: Reference the existing shape name and set appropriate deletion properties
+        
+        *** PLACEHOLDER MANAGEMENT (Title, Footer, Date, Page Number) ***:
+        - To MODIFY standard placeholders like titles, footers, dates, or page numbers, use their existing placeholder names (e.g., "Date Placeholder 3", "Footer Placeholder 4", "Slide Number Placeholder 5").
+        - DO NOT create NEW shapes for these elements (e.g., shape_name="Date", geom="textbox") UNLESS the user explicitly asks for a custom date/footer element outside of the standard placeholders.
+        - If the user asks to "add a date" or "insert a footer", this means MODIFY the existing placeholder, not create a new shape.
         
         EXAMPLES:
         ✅ NEW SLIDE: shape_name="Revenue Chart", shape_type="chart", chart_type="column", left=100, top=150, width=500, height=300
@@ -941,6 +948,12 @@ Example: slide_layout="Title Slide" or slide_layout=0
         logger.info(f"Capturing slide images for slides: {slide_numbers}")
         slide_images = _capture_slide_images(temp_file_path, slide_numbers)
         logger.info(f"Successfully captured {len(slide_images)} slide images")
+
+        # Capture first 3 slides for styling reference
+        reference_slides = list(range(1, min(4, slide_count + 1)))
+        logger.info(f"Capturing reference slides: {reference_slides}")
+        reference_images = _capture_slide_images(temp_file_path, reference_slides)
+        logger.info(f"Successfully captured {len(reference_images)} reference slide images")
         
         # Get detailed slide metadata
         logger.info(f"Retrieving slide metadata for slides: {slide_numbers}")
@@ -985,6 +998,39 @@ Example: slide_layout="Title Slide" or slide_layout=0
         {layout_context}
         {metadata_context}
         
+        *** CRITICAL SLIDE PLACEHOLDER HANDLING RULES ***:
+
+        REUSE THESE SPECIFIC PLACEHOLDERS:
+        - For slide titles, footers, and slide numbers, you MUST reuse existing placeholder shapes.
+        - Look for these exact names in the metadata and reuse them:
+          * Title Placeholders: "Title 1", "Slide Title", "Center Title 1"
+          * Footer Placeholders: "Footer Placeholder 1", "Footer"
+          * Slide Number Placeholders: "Slide Number Placeholder 1", "Slide Number"
+          * Date Placeholders: "Date Placeholder 1", "Date"
+        - Example: If metadata shows a shape named "Title 1", you must use shape_name="Title 1" to modify it.
+
+        DO NOT REUSE CONTENT PLACEHOLDERS - CREATE NEW SHAPES FOR BODY CONTENT:
+        - NEVER reuse "Content Placeholder" shapes for body content (charts, tables, text boxes).
+        - ALWAYS create NEW shapes with unique, descriptive names for all body content.
+        - Example: Instead of using `shape_name="Content Placeholder 2"`, create `shape_name="Q1 Sales Chart"` or `shape_name="Key Takeaways Textbox"`.
+        - All new shapes for body content MUST have unique names like "Revenue Chart", "Main Points", "Product Image".
+
+        *** CRITICAL SHAPE NAMING RULES ***:
+        
+        NEVER USE "TITLE" IN SHAPE NAMES UNLESS IT'S THE ACTUAL SLIDE TITLE:
+        - DO NOT name shapes with "title" in the name unless it's the actual slide title placeholder
+        - WRONG: shape_name="Chart Title", shape_name="Section Title", shape_name="Data Title"
+        - CORRECT: shape_name="Revenue Chart", shape_name="Sales Performance", shape_name="Key Metrics"
+        - ONLY ACCEPTABLE: shape_name="Title 1" (when modifying the actual slide title placeholder)
+        - For chart titles, use the chart_title property instead: chart_title="Q1 Revenue Analysis"
+        - For section headers, use descriptive names: shape_name="Financial Summary Header"
+        - This ensures the PowerPoint writer can properly identify and reuse slide title placeholders
+
+        SUMMARY:
+        - REUSE: Title, Footer, Date, and Slide Number placeholders.
+        - CREATE NEW: Everything else (all body content).
+        - NAMING: Never use "title" in shape names except for actual slide title placeholders.
+
         IMPORTANT: Use the EXACT shape names from the metadata above when modifying existing shapes. Do not create new shapes with similar names.
         
         Here are the instructions for this step, generate the powerpoint slide object metadata to fulfill these instructions: {edit_instructions}
@@ -1104,6 +1150,21 @@ Example: slide_layout="Title Slide" or slide_layout=0
                     "type": "image_url",
                     "image_url": {
                         "url": slide_images[slide_num]
+                    }
+                })
+        
+        # Add reference slide images to the message content
+        if reference_images:
+            content_parts.append({
+                "type": "text",
+                "text": "The following are reference slides. Observe the styling and apply it to your generated slides:"
+            })
+            for slide_num, image_url in reference_images.items():
+                logger.info(f"Adding reference slide {slide_num} image to LLM context")
+                content_parts.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": image_url
                     }
                 })
         
@@ -1775,7 +1836,7 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
 @tool
 def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0) -> str:
     """
-    Edit PowerPoint files. You can generate and modify objects in PowerPoint slides like shapes, paragraphs, text.
+    Edit PowerPoint files. You can generate and modify objects in PowerPoint slides like shapes, paragraphs, text.\n    If the review feedback indicates that the edit was not fully successful, don't automatically try to retry -- wait for the user to ask for a retry.
     
     CRITICAL COORDINATE SYSTEM AND SIZE CONSTRAINTS:
         ALL POSITION AND SIZE VALUES MUST BE SPECIFIED IN POINTS (NOT EMUs):
@@ -1873,7 +1934,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: 
         - Title color: [observed hex color]
         - Header color: [observed hex color]
         - Body text color: [observed hex color]
-        - Shape fill color: [observed hex color]
+        - Shape fill color: [observed hex color, "none", or "no_fill"]
         - Shape border color: [observed hex color]
         - Text alignment: [observed pattern]
         - [Any other observed formatting patterns]
