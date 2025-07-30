@@ -914,6 +914,40 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - Example grid positions for 3x2 logo layout on 720px slide:
               * Row 1: left=120, left=300, left=480 (top=150)
               * Row 2: left=120, left=300, left=480 (top=250)
+        
+        25. SHAPE COPY-AND-MODIFY OPERATIONS:
+            When you need to copy an existing shape from one slide to another and then modify it:
+            
+            REQUIRED COPY PROPERTIES:
+            - copy_from_slide: The slide number containing the source shape (integer)
+            - copy_shape: The exact name of the shape to copy (string)
+            - new_name: Optional new name for the copied shape (defaults to current shape_name)
+            
+            POSITIONING AFTER COPY:
+            - left: New left position for copied shape (in points)
+            - top: New top position for copied shape (in points)
+            - You can also modify width, height, and any other properties after copying
+            
+            COPY-AND-MODIFY WORKFLOW:
+            1. The system will copy the specified shape from the source slide
+            2. Paste it to the target slide with all original properties (geometry, text, formatting)
+            3. Apply any new properties you specify (position, size, text changes, etc.)
+            
+            COPY OPERATION EXAMPLES:
+            - Copy and reposition: shape_name="Company Logo Copy", copy_from_slide=1, copy_shape="Microsoft Logo", new_name="Logo Header", left=500, top=50
+            - Copy and modify text: shape_name="Modified Title", copy_from_slide=2, copy_shape="Title 1", text="New Title Text", left=100, top=200
+            - Copy chart and resize: shape_name="Sales Chart Copy", copy_from_slide=3, copy_shape="Revenue Chart", width=400, height=250, left=150, top=100
+            
+            CRITICAL COPY REQUIREMENTS:
+            ⚠️  IMPORTANT: Both copy_from_slide and copy_shape MUST be present for copy operations to work
+            ⚠️  The source shape must exist on the specified slide, or the operation will fail
+            ⚠️  Use exact shape names from slide metadata - case-sensitive matching
+            
+            USE CASES FOR COPY OPERATIONS:
+            - Creating consistent elements across multiple slides (logos, headers, footers)
+            - Duplicating complex shapes (charts, tables, formatted text boxes) with modifications
+            - Building slide templates by copying and modifying base elements
+            - Maintaining design consistency while making targeted changes
         """
 
         # Get the user id for the API key

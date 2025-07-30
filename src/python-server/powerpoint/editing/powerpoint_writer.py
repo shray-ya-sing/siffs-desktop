@@ -304,6 +304,16 @@ class PowerPointWorker:
                                             shape = shape_obj
                                             break
                                 
+                                # Handle copy operations first if specified
+                                copy_result = None
+                                if self._is_copy_operation(shape_props):
+                                    copy_result = self._handle_copy_operation(slide, shape_name, shape_props, slide_number)
+                                    if copy_result is None:
+                                        logger.warning(f"Copy operation failed for shape '{shape_name}' in slide {slide_number}")
+                                        continue
+                                    # Use the copied shape for further modifications
+                                    shape = copy_result
+                                
                                 # Handle deletion if specified in shape properties
                                 if shape_props.get('delete_shape', False):
                                     if shape:
@@ -799,6 +809,41 @@ class PowerPointWorker:
         """Check if the shape properties indicate a chart creation request."""
         return shape_props.get('shape_type') == 'chart' or 'chart_type' in shape_props
     
+    def _is_copy_operation(self, shape_props: Dict[str, Any]) -> bool:
+        """Check if the shape properties indicate a copy operation."""
+        return 'copy_from_slide' in shape_props and 'copy_shape' in shape_props
+
+    def _handle_copy_operation(self, slide, shape_name: str, shape_props: Dict[str, Any], slide_number: int):
+        """Handle a shape copy operation."""
+        try:
+            from_slide_number = shape_props['copy_from_slide']
+            from_shape_name = shape_props['copy_shape']
+            new_shape_name = shape_props.get('new_name', shape_name)
+            
+            # Get the slide to copy from
+            from_slide = self._presentation.Slides(from_slide_number)
+            from_shape = next((s for s in from_slide.Shapes if s.Name == from_shape_name), None)
+            if not from_shape:
+                logger.warning(f"Shape '{from_shape_name}' not found in slide {from_slide_number}")
+                return None
+            
+            # Copy and paste the shape
+            from_shape.Copy()
+            pasted_shape = slide.Shapes.Paste()[0]
+            pasted_shape.Name = new_shape_name
+            
+            # Adjust position if needed
+            if 'top' in shape_props:
+                pasted_shape.Top = float(shape_props['top'])
+            if 'left' in shape_props:
+                pasted_shape.Left = float(shape_props['left'])
+            
+            logger.info(f"Copied shape '{from_shape_name}' from slide {from_slide_number} to '{new_shape_name}' at slide {slide_number}")
+            return pasted_shape
+        except Exception as e:
+            logger.error(f"Error in copy operation for shape '{shape_name}': {e}")
+            return None
+
     def _is_image_creation_request(self, shape_props: Dict[str, Any]) -> bool:
         """Check if the shape properties indicate an image creation request."""
         return shape_props.get('shape_type') == 'picture' or 'image_path' in shape_props
