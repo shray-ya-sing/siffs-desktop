@@ -1794,7 +1794,7 @@ class PowerPointWorker:
             
             logger.debug(f"Chart created successfully for shape '{shape_name}'. Proceeding with setup.")
 
-            chart_data = shape_props.get('chart_data', {})
+            chart_data = shape_props.get('chart_data', shape_props.get('data', {}))
             if isinstance(chart_data, str):
                 import ast
                 chart_data = ast.literal_eval(chart_data)
@@ -2244,6 +2244,12 @@ class PowerPointWorker:
                                     logger.debug(f"Applied series {i} color: {color}")
                     except Exception as e:
                         logger.warning(f"Could not set series colors: {e}")
+
+            # Series outline/border formatting
+            self._apply_series_outline_formatting(chart, shape_props)
+
+            # Data labels using harmonized visibility flags
+            self._apply_series_outline_formatting(chart, shape_props)
 
             # Data labels using harmonized visibility flags
             if 'has_data_labels' in shape_props:
@@ -2772,7 +2778,43 @@ class PowerPointWorker:
             logger.debug("Applied advanced chart formatting")
         except Exception as e:
             logger.error(f"Error applying chart formatting: {e}")
-    
+
+    def _apply_series_outline_formatting(self, chart, shape_props: Dict[str, Any]) -> None:
+        """Apply outline formatting to chart series."""
+        try:
+            series_outline_visible = shape_props.get('series_outline_visible', True)
+            series_outline_width = float(shape_props.get('series_outline_width', 1.0))
+            series_outline_style = shape_props.get('series_outline_style', 'solid').lower()
+            series_outline_colors = shape_props.get('series_outline_colors', ['#000000'])
+
+            style_map = {'solid': 1, 'dashed': 2, 'dotted': 3, 'dashdot': 4}
+            line_style = style_map.get(series_outline_style, 1)
+
+            chart_type = shape_props.get('chart_type', 'column').lower()
+            is_pie_or_doughnut = chart_type in ['pie', 'doughnut', 'pie_exploded', 'doughnut_exploded']
+
+            for i, series in enumerate(chart.SeriesCollection(), 1):
+                outline_color = series_outline_colors[i - 1] if i - 1 < len(series_outline_colors) else series_outline_colors[0]
+                if not (outline_color and outline_color.startswith('#')):
+                    continue
+                rgb = tuple(int(outline_color[j:j+2], 16) for j in (1, 3, 5))
+                rgb_val = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                
+                if is_pie_or_doughnut:
+                    for point in series.Points():
+                        point.Format.Line.Visible = series_outline_visible
+                        point.Format.Line.ForeColor.RGB = rgb_val
+                        point.Format.Line.Weight = series_outline_width
+                        point.Format.Line.DashStyle = line_style
+                else:
+                    series.Format.Line.Visible = series_outline_visible
+                    series.Format.Line.ForeColor.RGB = rgb_val
+                    series.Format.Line.Weight = series_outline_width
+                    series.Format.Line.DashStyle = line_style
+            logger.info("Applied series outline formatting")
+        except Exception as e:
+            logger.error(f"Error applying series outline formatting: {e}")
+
     def _create_image_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new image shape on the slide with the specified properties.
         

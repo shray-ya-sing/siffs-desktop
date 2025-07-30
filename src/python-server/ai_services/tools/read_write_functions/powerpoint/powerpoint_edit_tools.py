@@ -53,7 +53,7 @@ def _sanitize_text_content(text: str) -> str:
     return text
 
 
-def _parse_shape_properties(entry: str) -> list:
+def _parse_shape_properties(entry: str):
     """
     Parse shape properties from a comma-separated string, handling quoted values and brackets properly.
     
@@ -61,24 +61,41 @@ def _parse_shape_properties(entry: str) -> list:
         entry: String like "shape_name, prop1=value1, prop2="quoted value", table_data="[['A', 'B'], ['C', 'D']]"
         
     Returns:
-        List of property strings
+        A tuple containing the list of property strings and the extractions dictionary.
     """
-    # First, extract bracketed content to avoid comma splitting issues
+    # First, extract bracketed content and JSON objects to avoid comma splitting issues
     import re
     
-    # Dictionary to store extracted bracketed content
-    bracket_extractions = {}
+    # Dictionary to store extracted content
+    extractions = {}
+    bracket_counter = 0
+    json_counter = 0
     
     def extract_brackets(match):
         """Extract bracketed content and replace with placeholder"""
+        nonlocal bracket_counter
         content = match.group(1)
-        placeholder = f"BRACKET_PLACEHOLDER_{len(bracket_extractions)}"
-        bracket_extractions[placeholder] = content
+        placeholder = f"BRACKET_PLACEHOLDER_{bracket_counter}"
+        extractions[placeholder] = content
+        bracket_counter += 1
         return f"[{placeholder}]"
+    
+    def extract_json_objects(match):
+        """Extract JSON object content and replace with placeholder"""
+        nonlocal json_counter
+        content = match.group(1)
+        placeholder = f"JSON_PLACEHOLDER_{json_counter}"
+        extractions[placeholder] = content
+        json_counter += 1
+        return f"{{{placeholder}}}"
     
     # Extract nested brackets for table properties
     # This regex handles nested brackets like [[...], [...]] 
     entry_with_placeholders = re.sub(r'\[([^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*)\]', extract_brackets, entry)
+    
+    # Extract JSON objects to avoid comma splitting issues
+    # This regex handles nested JSON objects like {"key": ["val1", "val2"], "key2": [{"nested": "value"}]}
+    entry_with_placeholders = re.sub(r'\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}', extract_json_objects, entry_with_placeholders)
     
     # Now parse the entry with placeholders
     parts = []
@@ -114,26 +131,39 @@ def _parse_shape_properties(entry: str) -> list:
     if current_part.strip():
         parts.append(current_part.strip())
     
-    # Restore bracketed content in the final parts
-    for i, part in enumerate(parts):
-        for placeholder, content in bracket_extractions.items():
-            parts[i] = parts[i].replace(placeholder, content)
-    
-    return parts
+    return parts, extractions
 
 
-def _parse_property_value(value: str) -> Any:
+def _parse_property_value(value: str, extractions: Dict[str, str] = None) -> Any:
     """
     Parse a property value string into the appropriate Python type.
     
     Args:
         value: String value to parse
+        extractions: Dictionary of placeholder -> content mappings for restoration
         
     Returns:
         Parsed value (str, int, float, bool, dict, list)
     """
     if not value:
         return value
+    
+    # Restore placeholders if extractions are provided (with recursive restoration)
+    if extractions:
+        # Recursive placeholder restoration to handle nested structures
+        def restore_placeholders_recursive(text, extractions, max_iterations=10):
+            """Recursively restore placeholders to handle nested structures."""
+            for iteration in range(max_iterations):
+                changed = False
+                for placeholder, content in extractions.items():
+                    if placeholder in text:
+                        text = text.replace(placeholder, content)
+                        changed = True
+                if not changed:
+                    break  # No more placeholders to replace
+            return text
+        
+        value = restore_placeholders_recursive(value, extractions)
     
     # Handle backtick-wrapped values (remove backticks)
     if value.startswith('`') and value.endswith('`'):
@@ -148,16 +178,23 @@ def _parse_property_value(value: str) -> Any:
         if (text_value.startswith('{') and text_value.endswith('}')) or (text_value.startswith('[') and text_value.endswith(']')):
             try:
                 import json
-                # Try to parse as JSON
+                # Try to parse as JSON - first attempt direct parsing
                 return json.loads(text_value)
             except (json.JSONDecodeError, ValueError):
-                # If JSON parsing fails, try ast.literal_eval for Python literal structures
+                # If JSON parsing fails, try unescaping quotes and parsing again
                 try:
-                    import ast
-                    return ast.literal_eval(text_value)
-                except (ValueError, SyntaxError):
-                    # If both fail, return as string
-                    pass
+                    import json
+                    # Handle escaped quotes in JSON strings
+                    unescaped_text = text_value.replace('\\"', '"')
+                    return json.loads(unescaped_text)
+                except (json.JSONDecodeError, ValueError):
+                    # If JSON parsing still fails, try ast.literal_eval for Python literal structures
+                    try:
+                        import ast
+                        return ast.literal_eval(text_value)
+                    except (ValueError, SyntaxError):
+                        # If both fail, return as string
+                        pass
         
         # Handle escape sequences for regular text
         text_value = text_value.replace('\\n', '\n')
@@ -286,24 +323,22 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                     continue
 
                 # Parse shape entry: "shape_name, prop1=value1, prop2=value2, ..."
-                shape_parts = _parse_shape_properties(entry)
+                shape_parts, extractions = _parse_shape_properties(entry)
                 if not shape_parts:
                     continue
                 
-                # First part is the shape name
-                shape_name = shape_parts[0].strip()
-                
-                # Handle cases where LLM includes shape_name prefix with colon or equals
-                if shape_name.startswith('shape_name:'):
-                    shape_name = shape_name.replace('shape_name:', '').strip()
-                elif shape_name.startswith('shape_name='):
-                    shape_name = shape_name.replace('shape_name=', '').strip()
-                
-                # Remove quotes if present
-                if shape_name.startswith('"') and shape_name.endswith('"'):
-                    shape_name = shape_name[1:-1]
-                elif shape_name.startswith("'") and shape_name.endswith("'"):
-                    shape_name = shape_name[1:-1]
+                # First part must be the shape name property
+                first_part = shape_parts[0].strip()
+                if not first_part.startswith('shape_name='):
+                    logger.warning(f"Skipping shape entry because it does not start with shape_name=: {entry}")
+                    continue
+
+                # Extract shape name
+                try:
+                    shape_name = re.match(r'shape_name=\"(.*?)\"', first_part).group(1)
+                except (AttributeError, IndexError):
+                    logger.warning(f"Could not parse shape_name from entry: {entry}")
+                    continue
                 
                 shape_name = shape_name.strip()
                 if not shape_name:
@@ -320,7 +355,7 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                             value = value.strip()
                             
                             # Parse the value based on its type
-                            parsed_value = _parse_property_value(value)
+                            parsed_value = _parse_property_value(value, extractions)
                             
                             # Convert geometry property to lowercase for consistency
                             if key == 'geom' and isinstance(parsed_value, str):
@@ -338,8 +373,7 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                                     if isinstance(series, dict):
                                         # If series has 'data' key but not 'values', normalize it
                                         if 'data' in series and 'values' not in series:
-                                            series['values'] = series['data']
-                                            del series['data']
+                                            series['values'] = series.pop('data')
                                             logger.debug(f"Normalized chart series 'data' key to 'values' for shape '{shape_name}'")
                                         # Also handle other possible keys that should be 'values'
                                         elif 'series_data' in series and 'values' not in series:

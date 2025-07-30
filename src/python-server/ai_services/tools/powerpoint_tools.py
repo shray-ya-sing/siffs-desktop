@@ -447,21 +447,22 @@ Example: slide_layout="Title Slide" or slide_layout=0
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        slide_number: slide1, slide_layout="Title Slide" | Microsoft Logo, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
+        slide_number: slide1, slide_layout="Title Slide" | shape_name="Microsoft Logo", fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
         *** CRITICAL POSITIONING AND NAMING RULES ***
         
         SHAPE NAMING REQUIREMENTS - CRITICAL FOR SLIDE CREATION:
-        - NEVER use generic names like "shape_name", "Picture 1", "Shape 1", "Rectangle 1"
-        - ALWAYS use descriptive, unique names like "Microsoft Logo", "Sales Chart", "Header Text", "Contact Info"
+        - Each shape MUST specify: shape_name="DESCRIPTIVE_UNIQUE_NAME"
+        - NEVER use generic names like shape_name="shape_name", shape_name="Picture 1", shape_name="Shape 1", shape_name="Rectangle 1"
+        - ALWAYS use descriptive, unique names like shape_name="Microsoft Logo", shape_name="Sales Chart", shape_name="Header Text", shape_name="Contact Info"
         - Each shape MUST have a COMPLETELY DIFFERENT name to avoid conflicts and overwrites
-        - Use the actual purpose/content as the name (e.g., "Google Logo", not "Logo 2")
+        - Use the actual purpose/content as the name (e.g., shape_name="Google Logo", not shape_name="Logo 2")
         - NEVER repeat shape names within the same slide or across slides
-        - Examples of GOOD naming: "Company Title", "Mission Arrow", "Values Arrow", "Strategy Label", "Vision Label", "Finance Box", "Customer Box", "Process Box", "Growth Box"
-        - Examples of BAD naming: "Rectangle 1", "Rectangle 2", "Arrow 1", "Arrow 2" (these cause overwrites!)
-        - If creating similar shapes, use descriptive differences: "Top Navigation Arrow", "Bottom Navigation Arrow"
+        - Examples of GOOD naming: shape_name="Company Title", shape_name="Mission Arrow", shape_name="Values Arrow", shape_name="Strategy Label", shape_name="Vision Label", shape_name="Finance Box", shape_name="Customer Box", shape_name="Process Box", shape_name="Growth Box"
+        - Examples of BAD naming: shape_name="Rectangle 1", shape_name="Rectangle 2", shape_name="Arrow 1", shape_name="Arrow 2" (these cause overwrites!)
+        - If creating similar shapes, use descriptive differences: shape_name="Top Navigation Arrow", shape_name="Bottom Navigation Arrow"
         
         POSITION AND SIZE CONSTRAINTS - STRICTLY ENFORCE:
         - SLIDE DIMENSIONS: Standard slide is 720 points wide × 540 points tall
@@ -485,7 +486,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
 
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
-        2. List each shape's metadata as: DESCRIPTIVE_SHAPE_NAME, visual properties, size/position properties, text properties (if applicable).
+        2. List each shape's metadata as: shape_name="DESCRIPTIVE_SHAPE_NAME", visual properties, size/position properties, text properties (if applicable).
         3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
         
         SHAPE GEOMETRY (geom) TYPES - CASE SENSITIVE:
@@ -539,7 +540,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
            ✗ text="<b>Finance</b>" (HTML tags)
            ✗ text="Finance<br>Lorem ipsum" (HTML line breaks)
         6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
-           - paragraph_name, geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
+           - shape_name="Paragraph Name", geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
         7. TEXT FORMATTING EXAMPLES:
            - Title text: font_size=24, font_name="Arial", bold=true, text_align="center"
            - Body text: font_size=12, font_name="Calibri", text_align="left"
@@ -549,6 +550,28 @@ Example: slide_layout="Title Slide" or slide_layout=0
         10. Always use concise keys for properties and ensure proper formatting for parsing.
         11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
         12. SLIDE NUMBERING: If you need to add a new slide, use slide number {slide_count + 1} or higher. Existing slides are numbered 1 through {slide_count}.
+        
+        *** CRITICAL NEW SLIDE vs EXISTING SHAPE RULES ***:
+        
+        FOR NEW SLIDES (slides that don't exist yet):
+        - ALWAYS create completely NEW shapes with unique, descriptive names
+        - NEVER try to replace or modify placeholder content like "Title 1", "Content Placeholder 2", "TextBox 3"
+        - NEVER reference existing placeholder shapes from slide layouts
+        - CREATE your own shapes: shape_name="Company Overview Title", shape_name="Key Metrics Chart", shape_name="Contact Information"
+        - Position your new shapes appropriately on the slide using left, top, width, height properties
+        - Example for new slide: shape_name="Executive Summary Header", geom="textbox", left=50, top=50, width=620, height=60, text="Executive Summary"
+        
+        FOR EXISTING SLIDES (slides that already exist):
+        - To MODIFY an existing shape: Use the EXACT shape name from the slide metadata (e.g., "Title 1", "Content Placeholder 2")
+        - To ADD new shapes to existing slides: Create NEW shapes with unique names that don't conflict with existing ones
+        - To DELETE a shape: Reference the existing shape name and set appropriate deletion properties
+        
+        EXAMPLES:
+        ✅ NEW SLIDE: shape_name="Revenue Chart", shape_type="chart", chart_type="column", left=100, top=150, width=500, height=300
+        ✅ MODIFY EXISTING: shape_name="Title 1", text="Updated Title Text" (when "Title 1" exists on the slide)
+        ✅ ADD TO EXISTING: shape_name="Additional Notes", geom="textbox", left=50, top=400, width=300, height=100 (new shape on existing slide)
+        ❌ WRONG FOR NEW SLIDE: shape_name="Title 1", text="My Title" (trying to use placeholder name on new slide)
+        ❌ WRONG FOR NEW SLIDE: shape_name="Content Placeholder 2", text="My Content" (trying to use placeholder name)
         13. SLIDE LAYOUT RULES:
             - For new slides, specify layout using: slide_layout="layout_name" or slide_layout=index
             - Choose appropriate layouts based on slide content (e.g., "Title Slide", "Title and Content", "Section Header")
@@ -617,7 +640,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
               * Color-coded cells: cell_font_colors="[['#1e3a8a', '#1e3a8a'], ['#000000', '#000000']]"
         
         18. TABLE EXAMPLE:
-            Table Sales Data, shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '41107'], ['Frank', 'West', '268', '72707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]", row_heights="[30, 25, 25]", cell_font_sizes="[[14, 14, 14, 14], [12, 12, 12, 12], [12, 12, 12, 12]]", col_number_formats="['', '', 'integer', 'currency']", col_alignments="['left', 'left', 'right', 'right']"
+            shape_name="Table Sales Data", shape_type="table", rows=3, cols=4, left=48, top=119, width=864, height=360, table_data="[['SalesRep', 'Region', '# Orders', 'Total Sales'], ['Bill', 'West', '217', '41107'], ['Frank', 'West', '268', '72707']]", cell_font_bold="[[true, true, true, true], [false, false, false, false], [false, false, false, false]]", cell_fill_color="[['#D0E0C0', '#D0E0C0', '#D0E0C0', '#D0E0C0'], ['', '', '', ''], ['', '', '', '']]", font_name="Calibri", col_widths="[216, 216, 216, 216]", row_heights="[30, 25, 25]", cell_font_sizes="[[14, 14, 14, 14], [12, 12, 12, 12], [12, 12, 12, 12]]", col_number_formats="['', '', 'integer', 'currency']", col_alignments="['left', 'left', 'right', 'right']"
 
         19. CHART CREATION RULES:
             - Use shape_type="chart" to create charts
@@ -627,7 +650,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
             *** CRITICAL CHART DATA FORMAT - MUST USE EXACT JSON STRUCTURE ***:
             ⚠️  CRITICAL: CHARTS WILL FAIL IF JSON FORMAT IS WRONG! ⚠️
             
-            - chart_data MUST be VALID JSON with QUOTED KEYS: 'categories' and 'series'
+            - chart_data MUST be a VALID JSON string enclosed in quotes. The keys inside the JSON MUST be quoted: 'categories' and 'series'
             - Each series MUST use 'name' and 'values' keys (NOT 'data' or any other key)
             - MANDATORY JSON FORMAT: chart_data="{{'categories': ['Category1', 'Category2'], 'series': [{{'name': 'SeriesName', 'values': [value1, value2]}}]}}"
             
@@ -808,6 +831,10 @@ Example: slide_layout="Title Slide" or slide_layout=0
               show_gridlines=true/false (legacy - display gridlines, use specific gridline controls instead)
               chart_style=1-48 (PowerPoint chart style number)
               
+              CHART BACKGROUND AND OUTLINE STYLING:
+              chart_background_color="#F5F5F5" (chart background/fill color in hex)
+              chart_outline_color="#666666" (chart outline/border color in hex)
+              
             - LEGACY CHART VISIBILITY (MAINTAINED FOR BACKWARD COMPATIBILITY):
               show_legend=true/false (legacy - use has_legend instead)
               data_labels=true/false (legacy - use has_data_labels instead)
@@ -816,6 +843,24 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - SERIES FORMATTING:
               series_colors="['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']" (colors for each data series)
               smooth_lines=true/false (for line charts - smooth or straight lines)
+              
+            - SERIES OUTLINE/BORDER FORMATTING:
+              series_outline_colors="['#000000', '#333333', '#666666']" (outline colors for each data series)
+              series_outline_width=1.5 (outline thickness in points for all series)
+              series_outline_style="solid"/"dashed"/"dotted"/"dashdot" (outline style for all series)
+              series_outline_visible=true/false (show/hide outlines on all data series)
+              
+              *** SERIES OUTLINE BEHAVIOR BY CHART TYPE ***:
+              • COLUMN/BAR CHARTS: Outlines applied to each bar/column in the series
+              • PIE/DOUGHNUT CHARTS: Outlines applied to individual slices/segments
+              • LINE CHARTS: Outlines modify the line thickness and style (series_outline_width overrides line thickness)
+              • AREA CHARTS: Outlines applied to the area border
+              • SCATTER CHARTS: Outlines applied to data point markers
+              
+              EXAMPLES:
+              - Outlined Bars: series_outline_colors="['#000000', '#333333']", series_outline_width=2.0, series_outline_visible=true
+              - Dashed Pie Slices: series_outline_style="dashed", series_outline_width=1.5, series_outline_visible=true
+              - Thick Line Chart: series_outline_width=3.0, series_outline_colors="['#FF0000']", series_outline_visible=true
             - PIE CHART SPECIFIC:
               explosion="[0, 0.1, 0, 0]" (explode specific slices, 0=no explosion, 0.1=10% explosion)
               show_percentages=true/false (display percentages on pie slices)
@@ -826,10 +871,10 @@ Example: slide_layout="Title Slide" or slide_layout=0
               secondary_axis="[false, true]" (which series use secondary y-axis)
 
         20. CHART EXAMPLES:
-            - Column Chart: Sales Chart, shape_type="chart", chart_type="column", left=50, top=100, width=400, height=300, chart_title="Quarterly Sales", chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Revenue', 'values': [100000, 150000, 200000, 180000]}}]}}", show_legend=true, x_axis_title="Quarter", y_axis_title="Revenue ($)"
-            - Pie Chart: Market Share, shape_type="chart", chart_type="pie", left=50, top=100, width=350, height=300, chart_title="Market Share 2024", chart_data="{{'categories': ['Product A', 'Product B', 'Product C', 'Product D'], 'series': [{{'name': 'Share', 'values': [35, 25, 20, 20]}}]}}", show_percentages=true, explosion="[0.1, 0, 0, 0]"
-            - Doughnut Chart with Colors: Asset Allocation, shape_type="chart", chart_type="doughnut", left=50, top=100, width=400, height=300, chart_title="Asset Allocation", chart_data="{{'categories': ['Stocks', 'Bonds', 'Real Estate', 'Cash'], 'series': [{{'name': 'Allocation', 'values': [40, 30, 20, 10]}}]}}", series_colors="['#4F81BD', '#C0504D', '#9BBB59', '#8064A2']", show_percentages=true, hole_size=50
-            - Multi-Series Line: Trend Chart, shape_type="chart", chart_type="line", left=50, top=100, width=500, height=300, chart_title="Sales vs Costs Trend", chart_data="{{'categories': ['Jan', 'Feb', 'Mar', 'Apr', 'May'], 'series': [{{'name': 'Sales', 'values': [100, 120, 140, 130, 160]}}, {{'name': 'Costs', 'values': [80, 90, 110, 105, 125]}}]}}", smooth_lines=true, data_labels=false, series_colors="['#2E86AB', '#A23B72']"
+            - shape_name="Sales Chart", shape_type="chart", chart_type="column", left=50, top=100, width=400, height=300, chart_title="Quarterly Sales", chart_data="{{'categories': ['Q1', 'Q2', 'Q3', 'Q4'], 'series': [{{'name': 'Revenue', 'values': [100000, 150000, 200000, 180000]}}]}}", show_legend=true, x_axis_title="Quarter", y_axis_title="Revenue ($)"
+            - shape_name="Market Share", shape_type="chart", chart_type="pie", left=50, top=100, width=350, height=300, chart_title="Market Share 2024", chart_data="{{'categories': ['Product A', 'Product B', 'Product C', 'Product D'], 'series': [{{'name': 'Share', 'values': [35, 25, 20, 20]}}]}}", show_percentages=true, explosion="[0.1, 0, 0, 0]"
+            - shape_name="Asset Allocation", shape_type="chart", chart_type="doughnut", left=50, top=100, width=400, height=300, chart_title="Asset Allocation", chart_data="{{'categories': ['Stocks', 'Bonds', 'Real Estate', 'Cash'], 'series': [{{'name': 'Allocation', 'values': [40, 30, 20, 10]}}]}}", series_colors="['#4F81BD', '#C0504D', '#9BBB59', '#8064A2']", show_percentages=true, hole_size=50
+            - shape_name="Trend Chart", shape_type="chart", chart_type="line", left=50, top=100, width=500, height=300, chart_title="Sales vs Costs Trend", chart_data="{{'categories': ['Jan', 'Feb', 'Mar', 'Apr', 'May'], 'series': [{{'name': 'Sales', 'values': [100, 120, 140, 130, 160]}}, {{'name': 'Costs', 'values': [80, 90, 110, 105, 125]}}]}}", smooth_lines=true, data_labels=false, series_colors="['#2E86AB', '#A23B72']"
         
         21. IMAGE CREATION RULES:
             - Use shape_type="picture" to insert images from URLs or attachments
@@ -842,9 +887,9 @@ Example: slide_layout="Title Slide" or slide_layout=0
               * Recommended sizes: width=100-300 points, height=100-300 points
             
         22. IMAGE EXAMPLES:
-            - Company Logo: Microsoft Logo, shape_type="picture", image_path="/path/to/microsoft_logo.png", left=50, top=50, width=120, height=60
-            - Product Image: Product Photo, shape_type="picture", image_path="/path/to/product.jpg", left=200, top=150, width=200, height=150
-            - Background Image: Background, shape_type="picture", image_path="/path/to/background.png", left=0, top=0, width=720, height=540
+            - shape_name="Microsoft Logo", shape_type="picture", image_path="/path/to/microsoft_logo.png", left=50, top=50, width=120, height=60
+            - shape_name="Product Photo", shape_type="picture", image_path="/path/to/product.jpg", left=200, top=150, width=200, height=150
+            - shape_name="Background", shape_type="picture", image_path="/path/to/background.png", left=0, top=0, width=720, height=540
         
         23. SPECIAL IMAGE HANDLING INSTRUCTIONS:
             When the user mentions company names for logos or requests images:
@@ -912,7 +957,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
                     shape_name = shape.get('name', 'Unnamed')
                     shape_type = shape.get('shape_type', 'Unknown')
                     position = shape.get('position', {})
-                    metadata_context += f"  - Shape: '{shape_name}' (Type: {shape_type})"
+                    metadata_context += f'  - shape_name="{shape_name}", shape_type="{shape_type}"'
                     if position:
                         # Convert EMUs to points for LLM context (1 point = 12700 EMUs)
                         left_emus = position.get('left', 0)
@@ -925,10 +970,10 @@ Example: slide_layout="Title Slide" or slide_layout=0
                         width_points = round(width_emus / 12700, 1) if width_emus else 0
                         height_points = round(height_emus / 12700, 1) if height_emus else 0
                         
-                        metadata_context += f" at ({left_points}, {top_points}) size ({width_points}x{height_points}) points"
+                        metadata_context += f' at ({left_points}, {top_points}) size ({width_points}x{height_points}) points'
                     if shape.get('text'):
                         text_preview = shape['text'][:50] + '...' if len(shape['text']) > 50 else shape['text']
-                        metadata_context += f" with text: '{text_preview}'"
+                        metadata_context += f' with text: \'{text_preview}\''
                     metadata_context += "\n"
             logger.info(f"Generated metadata context for LLM: {metadata_context}")
         else:
@@ -946,13 +991,13 @@ Example: slide_layout="Title Slide" or slide_layout=0
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
         
-        slide_number: slide1, slide_layout="Title Slide" | shape_name, fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
+        slide_number: slide1, slide_layout="Title Slide" | shape_name="Microsoft Logo", fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
         RULES:
         1. Start each slide with 'slide_number: exact slide number' followed by a pipe (|).
-        2. List each shape's metadata as: shape_name, visual properties, size/position properties, text properties (if applicable).
+        2. List each shape's metadata as: shape_name="DESCRIPTIVE_SHAPE_NAME", visual properties, size/position properties, text properties (if applicable).
         3. VISUAL PROPERTIES: fill, outline color (out_col), outline style (out_style), outline width (out_width), geometric preset (geom).
            
            FILL PROPERTY FORMATS:
@@ -998,7 +1043,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
              Example: paragraph_runs="[{{"text": "$1.75M", "bold": true}}, {{"text": "3%", "bold": true}}]"
              Use this to apply different formatting to specific text substrings within the same text content
         6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
-           - paragraph_name, geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
+           - shape_name="Paragraph Name", geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
         7. TEXT FORMATTING EXAMPLES:
            - Title text: font_size=24, font_name="Arial", bold=true, text_align="center"
            - Body text: font_size=12, font_name="Calibri", text_align="left"
@@ -1008,6 +1053,28 @@ Example: slide_layout="Title Slide" or slide_layout=0
         10. Always use concise keys for properties and ensure proper formatting for parsing.
         11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
         12. SLIDE NUMBERING: If you need to add a new slide, use slide number {slide_count + 1} or higher. Existing slides are numbered 1 through {slide_count}.
+        
+        *** CRITICAL NEW SLIDE vs EXISTING SHAPE RULES ***:
+        
+        FOR NEW SLIDES (slides that don't exist yet):
+        - ALWAYS create completely NEW shapes with unique, descriptive names
+        - NEVER try to replace or modify placeholder content like "Title 1", "Content Placeholder 2", "TextBox 3"
+        - NEVER reference existing placeholder shapes from slide layouts
+        - CREATE your own shapes: shape_name="Company Overview Title", shape_name="Key Metrics Chart", shape_name="Contact Information"
+        - Position your new shapes appropriately on the slide using left, top, width, height properties
+        - Example for new slide: shape_name="Executive Summary Header", geom="textbox", left=50, top=50, width=620, height=60, text="Executive Summary"
+        
+        FOR EXISTING SLIDES (slides that already exist):
+        - To MODIFY an existing shape: Use the EXACT shape name from the slide metadata (e.g., "Title 1", "Content Placeholder 2")
+        - To ADD new shapes to existing slides: Create NEW shapes with unique names that don't conflict with existing ones
+        - To DELETE a shape: Reference the existing shape name and set appropriate deletion properties
+        
+        EXAMPLES:
+        ✅ NEW SLIDE: shape_name="Revenue Chart", shape_type="chart", chart_type="column", left=100, top=150, width=500, height=300
+        ✅ MODIFY EXISTING: shape_name="Title 1", text="Updated Title Text" (when "Title 1" exists on the slide)
+        ✅ ADD TO EXISTING: shape_name="Additional Notes", geom="textbox", left=50, top=400, width=300, height=100 (new shape on existing slide)
+        ❌ WRONG FOR NEW SLIDE: shape_name="Title 1", text="My Title" (trying to use placeholder name on new slide)
+        ❌ WRONG FOR NEW SLIDE: shape_name="Content Placeholder 2", text="My Content" (trying to use placeholder name)
         13. SLIDE LAYOUT RULES:
             - For new slides, specify layout using: slide_layout="layout_name" or slide_layout=index
             - Choose appropriate layouts based on slide content (e.g., "Title Slide", "Title and Content", "Section Header")
