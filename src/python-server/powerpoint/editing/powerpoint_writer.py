@@ -10,7 +10,18 @@ import json
 import pythoncom
 import logging
 from win32com.client import Dispatch
-from .paragraph_runs_formatter import _apply_paragraph_runs_formatting, convert_substring_runs_to_indices
+try:
+    from .paragraph_runs_formatter import _apply_paragraph_runs_formatting, convert_substring_runs_to_indices
+except ImportError:
+    # Fallback for direct execution
+    try:
+        from paragraph_runs_formatter import _apply_paragraph_runs_formatting, convert_substring_runs_to_indices
+    except ImportError:
+        # If paragraph_runs_formatter is not available, define dummy functions
+        def _apply_paragraph_runs_formatting(text_range, runs, shape_name):
+            pass
+        def convert_substring_runs_to_indices(text, runs):
+            return []
 
 logger = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -1976,9 +1987,42 @@ class PowerPointWorker:
                     logger.error(f"SetSourceData fallback also failed: {fallback_error}")
                     # Continue anyway - the chart may still work with worksheet data
 
-            chart.HasTitle = True
-            chart.ChartTitle.Text = shape_props.get('chart_title', '')
-            chart.HasLegend = shape_props.get('show_legend', True)
+            # Set chart title using harmonized visibility flags
+            if 'has_chart_title' in shape_props:
+                has_title = shape_props['has_chart_title']
+                if has_title is True:
+                    chart.HasTitle = True
+                    # Set title text if provided
+                    if 'chart_title' in shape_props:
+                        chart.ChartTitle.Text = str(shape_props['chart_title'])
+                        logger.debug(f"Enabled chart title with text: {shape_props['chart_title']}")
+                    else:
+                        logger.debug("Enabled chart title (text not specified)")
+                elif has_title is False:
+                    chart.HasTitle = False
+                    logger.debug("Explicitly disabled chart title")
+                # If has_chart_title is None or omitted, preserve current state (do not modify)
+            elif 'chart_title' in shape_props and shape_props['chart_title']:
+                # Legacy behavior: if chart_title is provided without has_chart_title flag, enable title
+                chart.HasTitle = True
+                chart.ChartTitle.Text = str(shape_props['chart_title'])
+                logger.debug(f"Set chart title (legacy mode): {shape_props['chart_title']}")
+            
+            # Set legend using harmonized visibility flags  
+            if 'has_legend' in shape_props:
+                has_legend = shape_props['has_legend']
+                if has_legend is not None:
+                    chart.HasLegend = bool(has_legend)
+                    logger.debug(f"Set legend visibility: {bool(has_legend)}")
+                # If has_legend is None or omitted, preserve current state (do not modify)
+            elif 'show_legend' in shape_props:
+                # Legacy behavior: if show_legend is provided without has_legend flag
+                chart.HasLegend = shape_props.get('show_legend', True)
+                logger.debug(f"Set legend visibility (legacy mode): {shape_props.get('show_legend', True)}")
+            else:
+                # Default behavior for new charts if no legend flags are specified
+                chart.HasLegend = True
+                logger.debug("Set default legend visibility: True")
 
             # Apply advanced chart formatting
             self._apply_chart_formatting(chart, shape_props)
@@ -2065,8 +2109,177 @@ class PowerPointWorker:
                     except Exception as e:
                         logger.warning(f"Could not set series colors: {e}")
 
-            # Data labels
-            if 'show_data_labels' in shape_props:
+            # Data labels using harmonized visibility flags
+            if 'has_data_labels' in shape_props:
+                has_data_labels = shape_props['has_data_labels']
+                if has_data_labels is not None:
+                    try:
+                        for i in range(1, chart.SeriesCollection().Count + 1):
+                            series = chart.SeriesCollection(i)
+                            series.HasDataLabels = bool(has_data_labels)
+                            
+                            # Apply comprehensive data label formatting if specified and data labels are enabled
+                            if has_data_labels:
+                                data_labels = series.DataLabels()
+                                
+                                # Font styling
+                                if 'data_label_font_size' in shape_props:
+                                    try:
+                                        data_labels.Font.Size = float(shape_props['data_label_font_size'])
+                                        logger.debug(f"Applied data label font size: {shape_props['data_label_font_size']}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set data label font size: {e}")
+                                
+                                if 'data_label_font_color' in shape_props:
+                                    data_label_font_color = shape_props.get('data_label_font_color')
+                                    if data_label_font_color and data_label_font_color.startswith('#'):
+                                        try:
+                                            rgb = tuple(int(data_label_font_color[j:j+2], 16) for j in (1, 3, 5))
+                                            # For data labels, set color directly as integer RGB value
+                                            rgb_value = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                            data_labels.Font.Color = rgb_value
+                                            logger.debug(f"Applied data label font color: {data_label_font_color}")
+                                        except Exception as e:
+                                            logger.warning(f"Could not set data label font color: {e}")
+                                
+                                # Data label font name
+                                if 'data_label_font_name' in shape_props:
+                                    try:
+                                        data_labels.Font.Name = str(shape_props['data_label_font_name'])
+                                        logger.debug(f"Applied data label font name: {shape_props['data_label_font_name']}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set data label font name: {e}")
+                                
+                                # Data label bold formatting
+                                if 'data_label_bold' in shape_props:
+                                    try:
+                                        data_labels.Font.Bold = bool(shape_props['data_label_bold'])
+                                        logger.debug(f"Applied data label bold: {shape_props['data_label_bold']}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set data label bold: {e}")
+                                
+                                # Data label italic formatting
+                                if 'data_label_italic' in shape_props:
+                                    try:
+                                        data_labels.Font.Italic = bool(shape_props['data_label_italic'])
+                                        logger.debug(f"Applied data label italic: {shape_props['data_label_italic']}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set data label italic: {e}")
+                                
+                                # Data label underline formatting
+                                if 'data_label_underline' in shape_props:
+                                    try:
+                                        data_labels.Font.Underline = bool(shape_props['data_label_underline'])
+                                        logger.debug(f"Applied data label underline: {shape_props['data_label_underline']}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set data label underline: {e}")
+                                
+                                # Data label position
+                                if 'data_label_position' in shape_props:
+                                    data_label_position_raw = shape_props.get('data_label_position', '')
+                                    
+                                    # Handle both string names and numeric constants
+                                    try:
+                                        # First, try to parse as a numeric constant
+                                        position_constant = int(data_label_position_raw)
+                                        logger.debug(f"Using numeric data label position constant: {position_constant}")
+                                    except (ValueError, TypeError):
+                                        # If not numeric, try to map from string names
+                                        data_label_position = data_label_position_raw.lower().strip()
+                                        position_map = {
+                                            'center': -4108,      # xlLabelPositionCenter
+                                            'inside_end': -4119,  # xlLabelPositionInsideEnd
+                                            'inside_base': -4114, # xlLabelPositionInsideBase 
+                                            'outside_end': -4177, # xlLabelPositionOutsideEnd
+                                            'above': -4117,       # xlLabelPositionAbove
+                                            'below': -4107,       # xlLabelPositionBelow
+                                            'left': -4131,        # xlLabelPositionLeft
+                                            'right': -4152,       # xlLabelPositionRight
+                                            'best_fit': -4105,    # xlLabelPositionBestFit
+                                            'mixed': -4181,       # xlLabelPositionMixed
+                                            # Additional naming variations
+                                            'insideend': -4119,   # Alternative naming
+                                            'outsideend': -4177,  # Alternative naming
+                                            'insidebase': -4114,  # Alternative naming
+                                            'bestfit': -4105      # Alternative naming
+                                        }
+                                        
+                                        if data_label_position in position_map:
+                                            position_constant = position_map[data_label_position]
+                                            logger.debug(f"Mapped data label position '{data_label_position}' to constant: {position_constant}")
+                                        else:
+                                            logger.warning(f"Unknown data label position: '{data_label_position_raw}'. Available options: {list(position_map.keys())}")
+                                            position_constant = None
+                                    
+                                    # Apply the position constant if we have one
+                                    if position_constant is not None:
+                                        position_applied = False
+                                        
+                                        # Try to apply the requested position
+                                        try:
+                                            data_labels.Position = position_constant
+                                            logger.debug(f"Applied data label position constant: {position_constant}")
+                                            position_applied = True
+                                        except Exception as e:
+                                            logger.debug(f"Could not set data label position to {position_constant}: {e}")
+                                        
+                                        # If the requested position failed, try fallback positions
+                                        if not position_applied:
+                                            fallback_positions = [-4105, -4108, -4117]  # best_fit, center, above
+                                            for fallback_pos in fallback_positions:
+                                                if fallback_pos != position_constant:  # Don't try the same position again
+                                                    try:
+                                                        data_labels.Position = fallback_pos
+                                                        logger.debug(f"Applied fallback data label position: {fallback_pos} (original {position_constant} failed)")
+                                                        position_applied = True
+                                                        break
+                                                    except Exception as fallback_e:
+                                                        logger.debug(f"Fallback position {fallback_pos} also failed: {fallback_e}")
+                                                        continue
+                                        
+                                        if not position_applied:
+                                            logger.warning(f"Could not apply any data label position (requested: {position_constant})")
+                                
+                                # Data label background/fill color
+                                if 'data_label_background_color' in shape_props:
+                                    data_label_bg_color = shape_props.get('data_label_background_color')
+                                    if data_label_bg_color and data_label_bg_color.startswith('#'):
+                                        try:
+                                            rgb = tuple(int(data_label_bg_color[j:j+2], 16) for j in (1, 3, 5))
+                                            data_labels.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                            data_labels.Format.Fill.Visible = True
+                                            logger.debug(f"Applied data label background color: {data_label_bg_color}")
+                                        except Exception as e:
+                                            logger.warning(f"Could not set data label background color: {e}")
+                                
+                                # Data label border/outline color
+                                if 'data_label_border_color' in shape_props:
+                                    data_label_border_color = shape_props.get('data_label_border_color')
+                                    if data_label_border_color and data_label_border_color.startswith('#'):
+                                        try:
+                                            rgb = tuple(int(data_label_border_color[j:j+2], 16) for j in (1, 3, 5))
+                                            data_labels.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                            data_labels.Format.Line.Visible = True
+                                            logger.debug(f"Applied data label border color: {data_label_border_color}")
+                                        except Exception as e:
+                                            logger.warning(f"Could not set data label border color: {e}")
+                                
+                                # Data label border width
+                                if 'data_label_border_width' in shape_props:
+                                    try:
+                                        border_width = float(shape_props['data_label_border_width'])
+                                        data_labels.Format.Line.Weight = border_width
+                                        data_labels.Format.Line.Visible = True
+                                        logger.debug(f"Applied data label border width: {border_width}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set data label border width: {e}")
+                                
+                        logger.debug(f"Set data labels visibility: {bool(has_data_labels)}")
+                    except Exception as e:
+                        logger.warning(f"Could not set data labels: {e}")
+                # If has_data_labels is None or omitted, preserve current state (do not modify)
+            elif 'show_data_labels' in shape_props:
+                # Legacy behavior: if show_data_labels is provided without has_data_labels flag
                 show_data_labels = shape_props.get('show_data_labels', False)
                 if show_data_labels:
                     try:
@@ -2074,15 +2287,52 @@ class PowerPointWorker:
                             series = chart.SeriesCollection(i)
                             series.HasDataLabels = True
                             
-                            # Apply data label formatting if specified
+                            # Apply comprehensive data label formatting if specified (legacy mode)
+                            data_labels = series.DataLabels
+                            
+                            # Font styling (legacy mode)
                             if 'data_label_font_size' in shape_props:
-                                series.DataLabels.Font.Size = float(shape_props['data_label_font_size'])
-                            if 'data_label_font_color' in shape_props and shape_props['data_label_font_color'].startswith('#'):
-                                color = shape_props['data_label_font_color']
-                                rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
-                                series.DataLabels.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                try:
+                                    data_labels.Font.Size = float(shape_props['data_label_font_size'])
+                                    logger.debug(f"Applied data label font size (legacy): {shape_props['data_label_font_size']}")
+                                except Exception as e:
+                                    logger.warning(f"Could not set data label font size (legacy): {e}")
+                            
+                            if 'data_label_font_color' in shape_props:
+                                data_label_font_color = shape_props.get('data_label_font_color')
+                                if data_label_font_color and data_label_font_color.startswith('#'):
+                                    try:
+                                        rgb = tuple(int(data_label_font_color[j:j+2], 16) for j in (1, 3, 5))
+                                        # Try different access patterns for data label font color
+                                        try:
+                                            data_labels.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                            logger.debug(f"Applied data label font color (legacy): {data_label_font_color}")
+                                        except Exception:
+                                            try:
+                                                data_labels.Font.Color.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                                logger.debug(f"Applied data label font color using ForeColor (legacy): {data_label_font_color}")
+                                            except Exception:
+                                                data_labels.Font.Color.SchemeColor = 80
+                                                logger.debug(f"Applied data label font color using SchemeColor fallback (legacy)")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set data label font color (legacy): {e}")
+                            
+                            # Apply other formatting properties in legacy mode
+                            if 'data_label_font_name' in shape_props:
+                                try:
+                                    data_labels.Font.Name = str(shape_props['data_label_font_name'])
+                                    logger.debug(f"Applied data label font name (legacy): {shape_props['data_label_font_name']}")
+                                except Exception as e:
+                                    logger.warning(f"Could not set data label font name (legacy): {e}")
+                            
+                            if 'data_label_bold' in shape_props:
+                                try:
+                                    data_labels.Font.Bold = bool(shape_props['data_label_bold'])
+                                    logger.debug(f"Applied data label bold (legacy): {shape_props['data_label_bold']}")
+                                except Exception as e:
+                                    logger.warning(f"Could not set data label bold (legacy): {e}")
                                 
-                        logger.debug("Applied data labels to all series")
+                        logger.debug("Applied data labels to all series (legacy mode)")
                     except Exception as e:
                         logger.warning(f"Could not set data labels: {e}")
 
@@ -2146,7 +2396,7 @@ class PowerPointWorker:
                     except Exception as e:
                         logger.warning(f"Could not set legend position: {e}")
                         
-            # Legend font formatting
+            # Comprehensive legend formatting (similar to chart title)
             if 'legend_font_size' in shape_props:
                 try:
                     chart.Legend.Font.Size = float(shape_props['legend_font_size'])
@@ -2159,10 +2409,250 @@ class PowerPointWorker:
                 if legend_font_color and legend_font_color.startswith('#'):
                     try:
                         rgb = tuple(int(legend_font_color[j:j+2], 16) for j in (1, 3, 5))
-                        chart.Legend.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
-                        logger.debug(f"Applied legend font color: {legend_font_color}")
+                        # Try different access patterns for legend font color (similar to chart title)
+                        try:
+                            # Pattern 1: Direct RGB access
+                            chart.Legend.Font.Color.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                            logger.debug(f"Applied legend font color using direct RGB: {legend_font_color}")
+                        except Exception:
+                            try:
+                                # Pattern 2: Use ForeColor property
+                                chart.Legend.Font.Color.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                logger.debug(f"Applied legend font color using ForeColor: {legend_font_color}")
+                            except Exception:
+                                # Pattern 3: Use SchemeColor approach
+                                chart.Legend.Font.Color.SchemeColor = 80  # Default to automatic color
+                                logger.debug(f"Applied legend font color using SchemeColor fallback")
                     except Exception as e:
                         logger.warning(f"Could not set legend font color: {e}")
+            
+            # Legend font name
+            if 'legend_font_name' in shape_props:
+                try:
+                    chart.Legend.Font.Name = str(shape_props['legend_font_name'])
+                    logger.debug(f"Applied legend font name: {shape_props['legend_font_name']}")
+                except Exception as e:
+                    logger.warning(f"Could not set legend font name: {e}")
+            
+            # Legend bold formatting
+            if 'legend_bold' in shape_props:
+                try:
+                    chart.Legend.Font.Bold = bool(shape_props['legend_bold'])
+                    logger.debug(f"Applied legend bold: {shape_props['legend_bold']}")
+                except Exception as e:
+                    logger.warning(f"Could not set legend bold: {e}")
+            
+            # Legend italic formatting
+            if 'legend_italic' in shape_props:
+                try:
+                    chart.Legend.Font.Italic = bool(shape_props['legend_italic'])
+                    logger.debug(f"Applied legend italic: {shape_props['legend_italic']}")
+                except Exception as e:
+                    logger.warning(f"Could not set legend italic: {e}")
+            
+            # Legend underline formatting
+            if 'legend_underline' in shape_props:
+                try:
+                    chart.Legend.Font.Underline = bool(shape_props['legend_underline'])
+                    logger.debug(f"Applied legend underline: {shape_props['legend_underline']}")
+                except Exception as e:
+                    logger.warning(f"Could not set legend underline: {e}")
+            
+            # Legend background/fill color
+            if 'legend_background_color' in shape_props:
+                legend_bg_color = shape_props.get('legend_background_color')
+                if legend_bg_color and legend_bg_color.startswith('#'):
+                    try:
+                        rgb = tuple(int(legend_bg_color[j:j+2], 16) for j in (1, 3, 5))
+                        chart.Legend.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        chart.Legend.Format.Fill.Visible = True
+                        logger.debug(f"Applied legend background color: {legend_bg_color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set legend background color: {e}")
+            
+            # Legend border/outline color
+            if 'legend_border_color' in shape_props:
+                legend_border_color = shape_props.get('legend_border_color')
+                if legend_border_color and legend_border_color.startswith('#'):
+                    try:
+                        rgb = tuple(int(legend_border_color[j:j+2], 16) for j in (1, 3, 5))
+                        chart.Legend.Format.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        chart.Legend.Format.Line.Visible = True
+                        logger.debug(f"Applied legend border color: {legend_border_color}")
+                    except Exception as e:
+                        logger.warning(f"Could not set legend border color: {e}")
+            
+            # Legend border width
+            if 'legend_border_width' in shape_props:
+                try:
+                    border_width = float(shape_props['legend_border_width'])
+                    chart.Legend.Format.Line.Weight = border_width
+                    chart.Legend.Format.Line.Visible = True
+                    logger.debug(f"Applied legend border width: {border_width}")
+                except Exception as e:
+                    logger.warning(f"Could not set legend border width: {e}")
+            
+            # Legend manual positioning (advanced)
+            legend_position_applied = False
+            if 'legend_left' in shape_props or 'legend_top' in shape_props:
+                try:
+                    # Manual positioning using Left/Top coordinates
+                    legend_left = float(shape_props.get('legend_left', chart.Legend.Left))
+                    legend_top = float(shape_props.get('legend_top', chart.Legend.Top))
+                    
+                    # Apply manual position
+                    chart.Legend.Left = legend_left
+                    chart.Legend.Top = legend_top
+                    legend_position_applied = True
+                    
+                    logger.debug(f"Applied manual legend position: Left={legend_left}, Top={legend_top}")
+                    
+                except Exception as manual_pos_error:
+                    logger.warning(f"Could not apply manual legend position: {manual_pos_error}")
+
+            # Chart title formatting (only if chart has a title)
+            if chart.HasTitle:
+                try:
+                    # Apply chart title font size
+                    if 'chart_title_font_size' in shape_props:
+                        try:
+                            chart.ChartTitle.Font.Size = float(shape_props['chart_title_font_size'])
+                            logger.debug(f"Applied chart title font size: {shape_props['chart_title_font_size']}")
+                        except Exception as e:
+                            logger.warning(f"Could not set chart title font size: {e}")
+                    
+                    # Apply chart title font color
+                    if 'chart_title_font_color' in shape_props:
+                        chart_title_font_color = shape_props.get('chart_title_font_color')
+                        if chart_title_font_color and chart_title_font_color.startswith('#'):
+                            try:
+                                rgb = tuple(int(chart_title_font_color[j:j+2], 16) for j in (1, 3, 5))
+                                # For chart title, set color directly as integer RGB value
+                                rgb_value = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                chart.ChartTitle.Font.Color = rgb_value
+                                logger.debug(f"Applied chart title font color: {chart_title_font_color}")
+                            except Exception as e:
+                                logger.warning(f"Could not set chart title font color: {e}")
+                    
+                    # Apply chart title font name
+                    if 'chart_title_font_name' in shape_props:
+                        try:
+                            chart.ChartTitle.Font.Name = str(shape_props['chart_title_font_name'])
+                            logger.debug(f"Applied chart title font name: {shape_props['chart_title_font_name']}")
+                        except Exception as e:
+                            logger.warning(f"Could not set chart title font name: {e}")
+                    
+                    # Apply chart title bold formatting
+                    if 'chart_title_bold' in shape_props:
+                        try:
+                            chart.ChartTitle.Font.Bold = bool(shape_props['chart_title_bold'])
+                            logger.debug(f"Applied chart title bold: {shape_props['chart_title_bold']}")
+                        except Exception as e:
+                            logger.warning(f"Could not set chart title bold: {e}")
+                    
+                    # Apply chart title italic formatting
+                    if 'chart_title_italic' in shape_props:
+                        try:
+                            chart.ChartTitle.Font.Italic = bool(shape_props['chart_title_italic'])
+                            logger.debug(f"Applied chart title italic: {shape_props['chart_title_italic']}")
+                        except Exception as e:
+                            logger.warning(f"Could not set chart title italic: {e}")
+                    
+                    # Apply chart title underline formatting
+                    if 'chart_title_underline' in shape_props:
+                        try:
+                            chart.ChartTitle.Font.Underline = bool(shape_props['chart_title_underline'])
+                            logger.debug(f"Applied chart title underline: {shape_props['chart_title_underline']}")
+                        except Exception as e:
+                            logger.warning(f"Could not set chart title underline: {e}")
+                    
+                    # Apply chart title position (supports both preset positions and manual coordinates)
+                    position_applied = False
+                    
+                    # Check for manual positioning first (takes precedence)
+                    if 'chart_title_left' in shape_props or 'chart_title_top' in shape_props:
+                        try:
+                            # Manual positioning using Left/Top coordinates
+                            title_left = float(shape_props.get('chart_title_left', chart.ChartTitle.Left))
+                            title_top = float(shape_props.get('chart_title_top', chart.ChartTitle.Top))
+                            
+                            # Apply manual position
+                            chart.ChartTitle.Left = title_left
+                            chart.ChartTitle.Top = title_top
+                            position_applied = True
+                            
+                            logger.debug(f"Applied manual chart title position: Left={title_left}, Top={title_top}")
+                            
+                        except Exception as manual_pos_error:
+                            logger.warning(f"Could not apply manual chart title position: {manual_pos_error}")
+                    
+                    # If manual positioning wasn't applied, try preset positions
+                    if not position_applied and 'chart_title_position' in shape_props:
+                        chart_title_position = shape_props.get('chart_title_position', '').lower()
+                        position_map = {
+                            'above': -4107,      # xlChartTitlePositionAbove
+                            'center': -4108,     # xlChartTitlePositionCenter (for doughnut hole)
+                            'overlay': -4109,    # xlChartTitlePositionOverlay
+                            'automatic': -4105,  # xlChartTitlePositionAutomatic
+                            'manual': -4138      # xlChartTitlePositionManual (for backwards compatibility)
+                        }
+                        
+                        if chart_title_position == 'manual':
+                            # Manual position was requested but no coordinates provided
+                            logger.warning("Chart title position 'manual' requested but no chart_title_left/chart_title_top coordinates provided")
+                            logger.info("Tip: Use chart_title_left and chart_title_top properties to specify exact coordinates")
+                        elif chart_title_position in position_map:
+                            try:
+                                # Note: Position property may not be available on all chart types
+                                # For doughnut charts, we may need to use different positioning approach
+                                chart_type = shape_props.get('chart_type', 'column').lower()
+                                is_doughnut = chart_type in ['doughnut', 'donut', 'doughnut_exploded', 'donut_exploded']
+                                
+                                if is_doughnut and chart_title_position == 'center':
+                                    # For doughnut charts, manually position title in center
+                                    try:
+                                        # Get chart area dimensions to calculate center
+                                        chart_area = chart.ChartArea
+                                        title_left = chart_area.Left + (chart_area.Width / 2) - (chart.ChartTitle.Width / 2)
+                                        title_top = chart_area.Top + (chart_area.Height / 2) - (chart.ChartTitle.Height / 2)
+                                        
+                                        chart.ChartTitle.Left = title_left
+                                        chart.ChartTitle.Top = title_top
+                                        logger.debug(f"Positioned chart title in doughnut center: Left={title_left}, Top={title_top}")
+                                    except Exception as pos_error:
+                                        logger.warning(f"Could not manually position chart title in doughnut center: {pos_error}")
+                                        # Fallback to overlay position
+                                        try:
+                                            chart.ChartTitle.Position = -4109  # xlChartTitlePositionOverlay
+                                            logger.debug(f"Applied fallback chart title position: overlay")
+                                        except Exception as fallback_error:
+                                            logger.warning(f"Could not apply fallback chart title position: {fallback_error}")
+                                else:
+                                    # For other chart types or positions, use standard positioning
+                                    try:
+                                        chart.ChartTitle.Position = position_map[chart_title_position]
+                                        logger.debug(f"Applied chart title position: {chart_title_position}")
+                                    except Exception as std_pos_error:
+                                        logger.warning(f"Could not set standard chart title position: {std_pos_error}")
+                            except Exception as position_error:
+                                logger.warning(f"Could not apply chart title position '{chart_title_position}': {position_error}")
+                    
+                    # Apply chart title background/fill color
+                    if 'chart_title_background_color' in shape_props:
+                        chart_title_bg_color = shape_props.get('chart_title_background_color')
+                        if chart_title_bg_color and chart_title_bg_color.startswith('#'):
+                            try:
+                                rgb = tuple(int(chart_title_bg_color[j:j+2], 16) for j in (1, 3, 5))
+                                chart.ChartTitle.Format.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                                chart.ChartTitle.Format.Fill.Visible = True
+                                logger.debug(f"Applied chart title background color: {chart_title_bg_color}")
+                            except Exception as e:
+                                logger.warning(f"Could not set chart title background color: {e}")
+                    
+                    logger.debug("Applied chart title formatting")
+                    
+                except Exception as title_error:
+                    logger.warning(f"Error applying chart title formatting: {title_error}")
 
             logger.debug("Applied advanced chart formatting")
         except Exception as e:

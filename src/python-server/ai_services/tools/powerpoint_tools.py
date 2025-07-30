@@ -648,17 +648,90 @@ Example: slide_layout="Title Slide" or slide_layout=0
             2. Use proper JSON syntax with curly braces and square brackets
             3. The key MUST be exactly 'values' - no other variation will work! 🔥
             
+            - CHART VISIBILITY CONTROL (HARMONIZED FLAGS - PREFERRED):
+              has_chart_title=true/false/omit (true to show, false to hide, omit to keep unchanged)
+              chart_title="Chart Title" (text to set if has_chart_title is true)
+              has_legend=true/false/omit (true to show legend, false to hide, omit to keep unchanged)
+              has_data_labels=true/false/omit (true to show data labels, false to hide, omit to keep unchanged)
+              
+            - COMPREHENSIVE DATA LABEL FORMATTING (works with has_data_labels=true):
+              data_label_font_size=12 (data label font size in points)
+              data_label_font_color="#000000" (data label font color in hex)
+              data_label_font_name="Arial" (data label font family)
+              data_label_bold=true/false (data label bold formatting)
+              data_label_italic=true/false (data label italic formatting)
+              data_label_underline=true/false (data label underline formatting)
+              data_label_position="center"/"inside_end"/"inside_base"/"outside_end"/"above"/"below"/"left"/"right"/"best_fit" (data label position)
+              data_label_background_color="#F0F0F0" (data label background/fill color)
+              data_label_border_color="#CCCCCC" (data label border/outline color)
+              data_label_border_width=1.0 (data label border thickness in points)
+              
+              POSITION TYPES:
+              * center: Labels centered on data points
+              * inside_end: Labels inside data points at the end
+              * inside_base: Labels inside data points at the base  
+              * outside_end: Labels outside data points at the end
+              * above/below/left/right: Direction-specific positioning (for line/scatter charts)
+              * best_fit: PowerPoint automatically chooses best position
+              
+              ⚠️  CRITICAL: CHART-TYPE-SPECIFIC POSITION CONSTRAINTS ⚠️
+              Different chart types support different data label positions. Use appropriate positions:
+              
+              PIE/DOUGHNUT CHARTS - SUPPORTED POSITIONS:
+              * center, inside_end, outside_end, best_fit
+              * AVOID: inside_base, above, below, left, right (will cause errors)
+              
+              COLUMN/BAR CHARTS - SUPPORTED POSITIONS:
+              * center, inside_end, inside_base, outside_end, above, best_fit
+              * CONDITIONAL: below, left, right (may work depending on orientation)
+              
+              LINE/SCATTER CHARTS - SUPPORTED POSITIONS:
+              * center, above, below, left, right, best_fit
+              * AVOID: inside_end, inside_base, outside_end (limited applicability)
+              
+              AREA CHARTS - SUPPORTED POSITIONS:
+              * center, above, below, best_fit
+              * AVOID: inside_end, inside_base, outside_end, left, right
+              
+              RECOMMENDATION: When in doubt, use 'best_fit' for automatic positioning
+              
             - CHART STYLING PROPERTIES:
-              chart_title="Chart Title" (main chart title)
-              show_legend=true/false (display legend)
+              chart_title_position="above"/"center"/"overlay"/"automatic" (preset title positions)
+              chart_title_left=250.5 (exact left position in points for manual positioning)
+              chart_title_top=150.75 (exact top position in points for manual positioning)
+              chart_title_font_size=14 (title font size in points)
+              chart_title_font_color="#000000" (title font color in hex)
+              chart_title_font_name="Arial" (title font family)
+              chart_title_bold=true/false (title bold formatting)
+              chart_title_italic=true/false (title italic formatting)
+              chart_title_underline=true/false (title underline formatting)
+              chart_title_background_color="#F0F0F0" (title background color)
+              
               legend_position="right"/"top"/"bottom"/"left" (legend placement)
+              legend_left=500.5 (exact legend left position in points for manual positioning)
+              legend_top=100.0 (exact legend top position in points for manual positioning)
+              legend_font_size=10 (legend font size in points)
+              legend_font_color="#333333" (legend font color in hex)
+              legend_font_name="Arial" (legend font family)
+              legend_bold=true/false (legend bold formatting)
+              legend_italic=true/false (legend italic formatting)
+              legend_underline=true/false (legend underline formatting)
+              legend_background_color="#F8F8F8" (legend background/fill color)
+              legend_border_color="#CCCCCC" (legend border/outline color)
+              legend_border_width=1.0 (legend border thickness in points)
+              
               x_axis_title="X Axis Label" (horizontal axis title)
               y_axis_title="Y Axis Label" (vertical axis title)
               show_gridlines=true/false (display gridlines)
               chart_style=1-48 (PowerPoint chart style number)
+              
+            - LEGACY CHART VISIBILITY (MAINTAINED FOR BACKWARD COMPATIBILITY):
+              show_legend=true/false (legacy - use has_legend instead)
+              data_labels=true/false (legacy - use has_data_labels instead)
+              show_data_labels=true/false (legacy - use has_data_labels instead)
+              
             - SERIES FORMATTING:
               series_colors="['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']" (colors for each data series)
-              data_labels=true/false (show values on data points)
               smooth_lines=true/false (for line charts - smooth or straight lines)
             - PIE CHART SPECIFIC:
               explosion="[0, 0.1, 0, 0]" (explode specific slices, 0=no explosion, 0.1=10% explosion)
