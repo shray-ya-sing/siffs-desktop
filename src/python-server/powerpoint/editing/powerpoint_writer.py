@@ -669,16 +669,19 @@ class PowerPointWorker:
                 'trapezoid': 3,                    # msoShapeTrapezoid
                 'diamond': 4,                      # msoShapeDiamond
                 'roundedrectangle': 5,             # msoShapeRoundedRectangle
+                'rounded_rectangle': 5,            # msoShapeRoundedRectangle (with underscore)
                 'roundrectangle': 5,               # msoShapeRoundedRectangle (alias)
                 'roundrect': 5,                    # msoShapeRoundedRectangle (alias)
                 'octagon': 6,                      # msoShapeOctagon
                 'triangle': 10,                    # msoShapeIsoscelesTriangle
                 'righttriangle': 7,                # msoShapeRightTriangle
+                'right_triangle': 7,               # msoShapeRightTriangle (with underscore)
                 'oval': 9,                         # msoShapeOval
                 'circle': 9,                       # msoShapeOval (alias)
                 'hexagon': 8,                      # msoShapeHexagon
                 'cross': 11,                       # msoShapeCross
                 'regularpentagon': 12,            # msoShapeRegularPentagon
+                'regular_pentagon': 12,            # msoShapeRegularPentagon (with underscore)
                 'square': 1,                       # msoShapeRectangle (special handling)
                 
                 # Lines and Connectors
@@ -3223,10 +3226,16 @@ class PowerPointWorker:
             if 'out_col' in shape_props and shape_props['out_col']:
                 try:
                     outline_color = shape_props['out_col']
-                    if outline_color.startswith('#'):
+                    if outline_color.lower() == 'none':
+                        # Remove outline by setting visibility to false
+                        shape.Line.Visible = False
+                        updated_info['properties_applied'].append('out_col')
+                        logger.debug(f"Removed outline (set invisible) for shape {shape.Name}")
+                    elif outline_color.startswith('#'):
                         # Convert hex to RGB
                         rgb = tuple(int(outline_color[j:j+2], 16) for j in (1, 3, 5))
                         shape.Line.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                        shape.Line.Visible = True  # Ensure outline is visible when color is applied
                         updated_info['properties_applied'].append('out_col')
                         logger.debug(f"Applied outline color {outline_color} to shape {shape.Name}")
                 except Exception as e:
