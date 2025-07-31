@@ -1200,6 +1200,30 @@ class PowerPointWorker:
             # Get the table object
             table = table_shape.Table
             
+            # CRITICAL: Remove default PowerPoint table styling to create clean no-fill tables
+            try:
+                # Clear default table style by setting it to no style
+                table_shape.Table.ApplyStyle("", False)  # Remove any applied table style
+                logger.debug(f"Removed default table style from table '{shape_name}'")
+            except Exception as style_error:
+                logger.debug(f"Could not remove default table style (acceptable): {style_error}")
+            
+            # Remove default alternating row colors and borders by clearing all cell formatting
+            try:
+                for row_idx in range(1, table_rows + 1):
+                    for col_idx in range(1, table_cols + 1):
+                        cell = table.Cell(row_idx, col_idx)
+                        # Clear cell fill (make transparent)
+                        cell.Shape.Fill.Visible = False
+                        # Optionally clear borders - but keep minimal borders for table structure
+                        # cell.Borders.Item(1).Visible = False  # Top border
+                        # cell.Borders.Item(2).Visible = False  # Left border  
+                        # cell.Borders.Item(3).Visible = False  # Bottom border
+                        # cell.Borders.Item(4).Visible = False  # Right border
+                logger.debug(f"Cleared default cell fills for table '{shape_name}' to create no-fill baseline")
+            except Exception as clear_error:
+                logger.debug(f"Could not clear default cell formatting: {clear_error}")
+            
             # Apply column widths if specified
             if 'col_widths' in shape_props:
                 col_widths = shape_props['col_widths']
@@ -3611,32 +3635,41 @@ class PowerPointWorker:
                         logger.warning(f"Could not apply indent level to shape {shape.Name}: {e}")
                 
                 # Apply paragraph indentation
-                if 'left_indent' in shape_props and shape_props['left_indent'] is not None:
+                # Note: For PowerPoint COM API, indentation properties require bullets to be enabled
+                if ('left_indent' in shape_props and shape_props['left_indent'] is not None) or \
+                   ('right_indent' in shape_props and shape_props['right_indent'] is not None) or \
+                   ('first_line_indent' in shape_props and shape_props['first_line_indent'] is not None):
                     try:
-                        left_indent = float(shape_props['left_indent'])
-                        text_range.ParagraphFormat.LeftIndent = left_indent
-                        updated_info['properties_applied'].append('left_indent')
-                        logger.debug(f"Applied left indent {left_indent}pt to shape {shape.Name}")
+                        # Ensure bullets are enabled for indentation to work
+                        paragraph_format = text_range.ParagraphFormat
+                        if not paragraph_format.Bullet.Visible:
+                            paragraph_format.Bullet.Visible = True
+                            paragraph_format.Bullet.Type = 1  # ppBulletUnnumbered
+                            logger.debug(f"Enabled bullets for indentation on shape {shape.Name}")
+                        
+                        # Apply left indent
+                        if 'left_indent' in shape_props and shape_props['left_indent'] is not None:
+                            left_indent = float(shape_props['left_indent'])
+                            paragraph_format.LeftIndent = left_indent
+                            updated_info['properties_applied'].append('left_indent')
+                            logger.debug(f"Applied left indent {left_indent}pt to shape {shape.Name}")
+                        
+                        # Apply right indent
+                        if 'right_indent' in shape_props and shape_props['right_indent'] is not None:
+                            right_indent = float(shape_props['right_indent'])
+                            paragraph_format.RightIndent = right_indent
+                            updated_info['properties_applied'].append('right_indent')
+                            logger.debug(f"Applied right indent {right_indent}pt to shape {shape.Name}")
+                        
+                        # Apply first line indent
+                        if 'first_line_indent' in shape_props and shape_props['first_line_indent'] is not None:
+                            first_line_indent = float(shape_props['first_line_indent'])
+                            paragraph_format.FirstLineIndent = first_line_indent
+                            updated_info['properties_applied'].append('first_line_indent')
+                            logger.debug(f"Applied first line indent {first_line_indent}pt to shape {shape.Name}")
+                            
                     except Exception as e:
-                        logger.warning(f"Could not apply left indent to shape {shape.Name}: {e}")
-                
-                if 'right_indent' in shape_props and shape_props['right_indent'] is not None:
-                    try:
-                        right_indent = float(shape_props['right_indent'])
-                        text_range.ParagraphFormat.RightIndent = right_indent
-                        updated_info['properties_applied'].append('right_indent')
-                        logger.debug(f"Applied right indent {right_indent}pt to shape {shape.Name}")
-                    except Exception as e:
-                        logger.warning(f"Could not apply right indent to shape {shape.Name}: {e}")
-                
-                if 'first_line_indent' in shape_props and shape_props['first_line_indent'] is not None:
-                    try:
-                        first_line_indent = float(shape_props['first_line_indent'])
-                        text_range.ParagraphFormat.FirstLineIndent = first_line_indent
-                        updated_info['properties_applied'].append('first_line_indent')
-                        logger.debug(f"Applied first line indent {first_line_indent}pt to shape {shape.Name}")
-                    except Exception as e:
-                        logger.warning(f"Could not apply first line indent to shape {shape.Name}: {e}")
+                        logger.warning(f"Could not apply paragraph indentation to shape {shape.Name}: {e}")
                 
                 # Apply paragraph spacing
                 # Note: PowerPoint COM uses internal units where 1 point = 1/14.4 internal units
