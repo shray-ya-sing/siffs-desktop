@@ -262,10 +262,16 @@ class PowerPointWorker:
                     
                     try:
                         # Get the slide, create it with the specified layout if it doesn't exist
-                        slide = self._get_or_create_slide(slide_number, slide_layout)
+                        slide, was_created = self._get_or_create_slide(slide_number, slide_layout)
                         if slide is None:
                             logger.error(f"Failed to get or create slide {slide_number}")
                             continue
+                        if was_created:
+                            updated_shapes.append({
+                                'slide_number': slide_number,
+                                'action': 'created_slide',
+                                'properties_applied': ['new_slide']
+                            })
                         
                         logger.debug(f"Processing slide {slide_number}")
                         
@@ -278,6 +284,13 @@ class PowerPointWorker:
                                         shape_to_delete = slide.Shapes(shape_name)
                                         shape_to_delete.Delete()
                                         logger.info(f"Deleted shape '{shape_name}' from slide {slide_number}")
+                                        # Track shape deletion in updated_shapes
+                                        updated_shapes.append({
+                                            'shape_name': shape_name,
+                                            'slide_number': slide_number,
+                                            'action': 'deleted_shape',
+                                            'properties_applied': ['_shapes_to_delete']
+                                        })
                                     except Exception as e:
                                         logger.warning(f"Could not delete shape '{shape_name}': {e}")
 
@@ -319,6 +332,13 @@ class PowerPointWorker:
                                     if shape:
                                         shape.Delete()
                                         logger.info(f"Deleted shape '{shape_name}' from slide {slide_number}")
+                                        # Track shape deletion in updated_shapes
+                                        updated_shapes.append({
+                                            'shape_name': shape_name,
+                                            'slide_number': slide_number,
+                                            'action': 'deleted_shape',
+                                            'properties_applied': ['delete_shape']
+                                        })
                                     continue
                                 
                                 # Check if we need to create a chart, table, or image (for both new and existing shapes)
@@ -327,6 +347,13 @@ class PowerPointWorker:
                                     if shape is not None:
                                         logger.info(f"Replacing existing shape '{shape_name}' with chart in slide {slide_number}")
                                         shape.Delete()
+                                        # Track shape deletion for replacement in updated_shapes
+                                        updated_shapes.append({
+                                            'shape_name': shape_name,
+                                            'slide_number': slide_number,
+                                            'action': 'deleted_shape',
+                                            'properties_applied': ['replaced_with_chart']
+                                        })
                                     logger.info(f"Creating new chart '{shape_name}' in slide {slide_number}")
                                     shape = self._create_chart_shape(slide, shape_name, shape_props)
                                     if shape is None:
@@ -337,6 +364,13 @@ class PowerPointWorker:
                                     if shape is not None:
                                         logger.info(f"Replacing existing shape '{shape_name}' with table in slide {slide_number}")
                                         shape.Delete()
+                                        # Track shape deletion for replacement in updated_shapes
+                                        updated_shapes.append({
+                                            'shape_name': shape_name,
+                                            'slide_number': slide_number,
+                                            'action': 'deleted_shape',
+                                            'properties_applied': ['replaced_with_table']
+                                        })
                                     logger.info(f"Creating new table '{shape_name}' in slide {slide_number}")
                                     shape = self._create_table_shape(slide, shape_name, shape_props)
                                     if shape is None:
@@ -347,6 +381,13 @@ class PowerPointWorker:
                                     if shape is not None:
                                         logger.info(f"Replacing existing shape '{shape_name}' with image in slide {slide_number}")
                                         shape.Delete()
+                                        # Track shape deletion for replacement in updated_shapes
+                                        updated_shapes.append({
+                                            'shape_name': shape_name,
+                                            'slide_number': slide_number,
+                                            'action': 'deleted_shape',
+                                            'properties_applied': ['replaced_with_image']
+                                        })
                                     logger.info(f"Creating new image '{shape_name}' in slide {slide_number}")
                                     shape = self._create_image_shape(slide, shape_name, shape_props)
                                     if shape is None:
@@ -497,7 +538,7 @@ class PowerPointWorker:
             try:
                 slide = self._presentation.Slides(slide_number)
                 logger.debug(f"Found existing slide {slide_number}")
-                return slide
+                return slide, False
             except Exception:
                 # Slide doesn't exist, create it
                 logger.info(f"Slide {slide_number} doesn't exist, creating new slide")
@@ -518,10 +559,10 @@ class PowerPointWorker:
                     
                     # If this is the slide we want, return it
                     if i == slide_number:
-                        return new_slide
+                        return new_slide, True
                 
                 # If we get here, try to get the slide again
-                return self._presentation.Slides(slide_number)
+                return self._presentation.Slides(slide_number), True
                 
         except Exception as e:
             logger.error(f"Error getting or creating slide {slide_number}: {e}")

@@ -515,10 +515,11 @@ def update_powerpoint_cache(workspace_path: str, updated_shapes: List[Dict[str, 
         bool: True if at least one shape was updated successfully, False otherwise.
     """
     try:
-        # Define paths
-        current_path = Path(__file__).parent.parent.parent.parent.parent
-        cache_file = current_path / "metadata" / "_cache" / "powerpoint_metadata_hotcache.json"
-        mappings_file = current_path / "metadata" / "__cache" / "files_mappings.json"
+        # Define paths using the same python_server_dir as other functions
+        from pathlib import Path
+        python_server_dir = Path(__file__).parent.parent.parent.parent.parent.absolute()
+        cache_file = python_server_dir / "metadata" / "_cache" / "powerpoint_metadata_hotcache.json"
+        mappings_file = python_server_dir / "metadata" / "__cache" / "files_mappings.json"
 
         # Get the temp file path from mappings
         try:

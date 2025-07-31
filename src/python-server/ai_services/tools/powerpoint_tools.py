@@ -17,7 +17,7 @@ sys.path.append(str(python_server_dir))
 # Import required modules
 from api_key_management.providers.gemini_provider import GeminiProvider
 from ai_services.orchestration.cancellation_manager import cancellation_manager, CancellationError
-
+from ai_services.tools.read_write_functions.powerpoint.powerpoint_edit_tools import update_powerpoint_cache
 # Set up logger
 logger = logging.getLogger(__name__)
 
@@ -337,7 +337,7 @@ def _get_slide_metadata(workspace_path: str, slide_numbers: List[int]) -> Dict[i
     return slide_metadata
 
 
-def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0) -> str:
+def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0, reference_slide_numbers: Optional[List[int]] = None) -> str:
     """
     Edit a PowerPoint presentation by generating and applying shape formatting metadata.
     Supports images from URLs, attachments, and logo databases.
@@ -347,6 +347,8 @@ def _edit_powerpoint_helper(workspace_path: str, edit_instructions: str, slide_n
         edit_instructions: Instructions for editing shapes in the presentation.
         slide_numbers: List of slide numbers to be edited.
         slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
+        reference_slide_numbers: Optional list of specific slide numbers to capture as references for the LLM.
+                               If None, defaults to capturing first 3 slides as references.
 
     Returns:
         String containing the updated shape metadata in JSON format.
@@ -983,16 +985,36 @@ Example: slide_layout="Title Slide" or slide_layout=0
         slide_images = _capture_slide_images(temp_file_path, slide_numbers)
         logger.info(f"Successfully captured {len(slide_images)} slide images")
 
-        # Capture first 3 slides for styling reference
-        reference_slides = list(range(1, min(4, slide_count + 1)))
-        logger.info(f"Capturing reference slides: {reference_slides}")
-        reference_images = _capture_slide_images(temp_file_path, reference_slides)
+        # Capture additional reference slides if specified
+        if reference_slide_numbers:
+            logger.info(f"Capturing custom reference slides: {reference_slide_numbers}")
+            reference_images = _capture_slide_images(temp_file_path, reference_slide_numbers)
+            
+            # Also capture first 3 slides for general styling reference
+            reference_slides = list(range(1, min(4, slide_count + 1)))
+            logger.info(f"Also capturing default reference slides: {reference_slides}")
+            default_reference_images = _capture_slide_images(temp_file_path, reference_slides)
+            reference_images.update(default_reference_images)
+        else:
+            # Capture first 3 slides for styling reference
+            reference_slides = list(range(1, min(4, slide_count + 1)))
+            logger.info(f"Capturing default reference slides: {reference_slides}")
+            reference_images = _capture_slide_images(temp_file_path, reference_slides)
+
         logger.info(f"Successfully captured {len(reference_images)} reference slide images")
         
-        # Get detailed slide metadata
+        # Get detailed slide metadata for slides being edited
         logger.info(f"Retrieving slide metadata for slides: {slide_numbers}")
         slide_metadata = _get_slide_metadata(workspace_path, slide_numbers)
         logger.info(f"Successfully retrieved metadata for {len(slide_metadata)} slides")
+        
+        # Get metadata for reference slides too
+        reference_metadata = {}
+        if reference_images:
+            reference_slide_nums = list(reference_images.keys())
+            logger.info(f"Retrieving reference slide metadata for slides: {reference_slide_nums}")
+            reference_metadata = _get_slide_metadata(workspace_path, reference_slide_nums)
+            logger.info(f"Successfully retrieved metadata for {len(reference_metadata)} reference slides")
         
         # Enhance prompt with slide metadata and visual context
         metadata_context = ""
@@ -1189,9 +1211,15 @@ Example: slide_layout="Title Slide" or slide_layout=0
         
         # Add reference slide images to the message content
         if reference_images:
+            # Create different prompt text based on whether custom reference slides were provided
+            if reference_slide_numbers:
+                reference_text = f"The following slides (including slides {reference_slide_numbers}) are provided as reference slides that the user specifically requested you to reference for styling and design patterns. Pay special attention to these reference slides when generating content:"
+            else:
+                reference_text = "The following are the first few slides of the presentation provided for reference. Observe the styling and apply it to your generated slides:"
+                
             content_parts.append({
                 "type": "text",
-                "text": "The following are reference slides. Observe the styling and apply it to your generated slides:"
+                "text": reference_text
             })
             for slide_num, image_url in reference_images.items():
                 logger.info(f"Adding reference slide {slide_num} image to LLM context")
@@ -1306,7 +1334,6 @@ Example: slide_layout="Title Slide" or slide_layout=0
                 
                 # Update the PowerPoint metadata cache with the updated shapes
                 try:
-                    from ai_services.tools.read_write_functions.powerpoint.powerpoint_edit_tools import update_powerpoint_cache
                     cache_updated = update_powerpoint_cache(workspace_path, updated_shapes)
                     if cache_updated:
                         logger.info("PowerPoint cache updated successfully")
@@ -1868,7 +1895,7 @@ def get_powerpoint_slide_details(workspace_path: str, slide_numbers: List[int]) 
 
 
 @tool
-def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0) -> str:
+def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: List[int], slide_count: int = 0, reference_slide_numbers: Optional[List[int]] = None) -> str:
     """
     Edit PowerPoint files. You can generate and modify objects in PowerPoint slides like shapes, paragraphs, text.\n    If the review feedback indicates that the edit was not fully successful, don't automatically try to retry -- wait for the user to ask for a retry.
     
@@ -1981,6 +2008,8 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: 
         - Shape identification failures
         
         slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
+        reference_slide_numbers: When the user mentions copying from or referencing other slides (e.g., "copy slide 5", "based on slide 3"), 
+                               you MUST include those slide numbers here. Example: reference_slide_numbers=[5] when copying from slide 5.
     
     Returns:
         A JSON string containing the results of the shape editing operation:
