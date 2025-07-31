@@ -331,6 +331,17 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                 logger.warning("Empty slide info found, skipping section")
                 continue
 
+            # Check for slide duplication first
+            if slide_info.startswith('duplicate_slide:'):
+                try:
+                    slide_duplicate_from = int(slide_info.split(':')[1].strip())
+                    logger.info(f"Parsed slide duplication from slide {slide_duplicate_from}")
+                    result[section] = {'_duplicate_slide_from': slide_duplicate_from}
+                    continue
+                except ValueError:
+                    logger.error(f"Invalid slide duplication specification: {slide_info}")
+                    continue
+            
             # Parse slide number and optional layout
             slide_number = slide_info
             slide_layout = None

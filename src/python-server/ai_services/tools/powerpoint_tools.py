@@ -992,6 +992,15 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - Duplicating complex shapes (charts, tables, formatted text boxes) with modifications
             - Building slide templates by copying and modifying base elements
             - Maintaining design consistency while making targeted changes
+        
+        SLIDE DUPLICATION FORMAT
+        - Duplicate an existing slide using the syntax: duplicate_slide:[source_slide_number]
+        - Optional: target_slide=[target_slide_number] to specify the target position. If omitted, adds at the end.
+        
+        SLIDE DUPLICATION EXAMPLES
+        - "duplicate_slide:3" (duplicate slide 3 at end)
+        - "duplicate_slide:2, target_slide=5" (duplicate slide 2 and insert at position 5)
+        - To duplicate multiple slides: "duplicate_slide:1; duplicate_slide:4"
         """
 
         # Get the user id for the API key
@@ -1412,38 +1421,24 @@ Example: slide_layout="Title Slide" or slide_layout=0
                     if post_edit_images:
                         # Prepare review prompt
                         review_prompt = f"""
-                        POWERPOINT EDIT REVIEW TASK:
+                        POWERPOINT EDIT REVIEW - BE CONCISE:
                         
-                        You just completed a PowerPoint editing task. Please review the slide images below to determine if the edit was performed correctly.
+                        Original request: {edit_instructions}
+                        Slides: {slide_numbers} | Shapes updated: {len(updated_shapes)}
                         
-                        ORIGINAL EDIT INSTRUCTIONS:
-                        {edit_instructions}
+                        Review the slide images and provide BRIEF, ACTIONABLE feedback:
                         
-                        SLIDES AFFECTED: {slide_numbers}
-                        SHAPES UPDATED: {len(updated_shapes)}
+                        Status: [SUCCESS/NEEDS_CHANGES]
                         
-                        Please examine the slide images and provide feedback on:
-                        1. Were the original edit instructions fulfilled correctly?
-                        2. Are there any visual issues, formatting problems, or errors introduced?
-                        3. Does the result match what was requested in the original instructions?
-                        4. Are there any improvements or corrections needed?
+                        If NEEDS_CHANGES, provide specific formatting instructions:
+                        - Shape positioning issues: "Move [shape name] to left=X, top=Y"
+                        - Size problems: "Resize [shape name] to width=X, height=Y"
+                        - Text formatting: "Change [shape name] font_size=X, font_color=#XXXXXX"
+                        - Color/fill issues: "Set [shape name] fill=#XXXXXX, out_col=#XXXXXX"
+                        - Missing elements: "Add [specific shape description] at position X,Y"
+                        - Alignment problems: "Align [shape names] to center/left/right"
                         
-                        Provide your feedback in this format:
-                        
-                        EDIT REVIEW FEEDBACK:
-                        Status: [SUCCESS/PARTIAL_SUCCESS/ISSUES_FOUND]
-                        
-                        Analysis:
-                        - [Your detailed analysis of whether the edit was completed correctly]
-                        
-                        Issues Found (if any):
-                        - [List any problems, errors, or deviations from the original instructions]
-                        
-                        Recommendations:
-                        - [Any suggestions for improvements or corrections needed]
-                        
-                        Overall Assessment:
-                        [Summary of whether the edit was successful and meets the original requirements]
+                        Keep response under 200 words. Focus ONLY on what needs to be fixed with exact property values.
                         """
                         
                         # Prepare multimodal review message

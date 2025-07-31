@@ -235,6 +235,32 @@ class PowerPointWorker:
                 self._close_chart_data_grid()
                 
                 for slide_key, shapes_data in slide_data.items():
+                    # Check for slide duplication first (handles special case where slide_key might be a raw section)
+                    if isinstance(shapes_data, dict) and '_duplicate_slide_from' in shapes_data:
+                        duplicate_from = shapes_data.get('_duplicate_slide_from')
+                        try:
+                            # Determine target slide number - could be embedded in the slide_key or use next available
+                            if re.search(r'\d+', slide_key):
+                                target_slide_number = int(re.search(r'\d+', slide_key).group())
+                            else:
+                                target_slide_number = self._presentation.Slides.Count + 1
+                            
+                            # Perform slide duplication
+                            success = self.duplicate_slide(duplicate_from, target_slide_number)
+                            if success:
+                                logger.info(f"Successfully duplicated slide {duplicate_from} to slide {target_slide_number}")
+                                updated_shapes.append({
+                                    'slide_number': target_slide_number,
+                                    'action': 'duplicated_slide',
+                                    'source_slide': duplicate_from,
+                                    'properties_applied': ['_duplicate_slide_from']
+                                })
+                            else:
+                                logger.error(f"Failed to duplicate slide {duplicate_from} to slide {target_slide_number}")
+                        except Exception as e:
+                            logger.error(f"Error duplicating slide from {duplicate_from}: {e}")
+                        continue  # Skip normal shape processing for duplicated slides
+                    
                     # Extract slide number from slide key (e.g., "slide1" -> 1)
                     slide_number = int(re.search(r'\d+', slide_key).group())
                     
@@ -460,6 +486,96 @@ class PowerPointWorker:
                 return False
         
         return self._execute(_add_blank_slide)
+    
+    def duplicate_slide(self, source_slide_number: int, target_slide_number: int = None) -> bool:
+        """Duplicate an entire slide by copying all its shapes and properties.
+        
+        Args:
+            source_slide_number: The slide number to duplicate (1-based)
+            target_slide_number: Optional position to insert the duplicated slide (1-based).
+                               If None, adds at the end.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        def _duplicate_slide() -> bool:
+            try:
+                if not self._presentation:
+                    logger.error("No presentation is open")
+                    return False
+                
+                # Get the source slide
+                try:
+                    source_slide = self._presentation.Slides(source_slide_number)
+                except Exception as e:
+                    logger.error(f"Source slide {source_slide_number} not found: {e}")
+                    return False
+                
+                # Determine target position
+                if target_slide_number is None:
+                    target_slide_number = self._presentation.Slides.Count + 1
+                
+                # Use PowerPoint's built-in duplicate method if available
+                try:
+                    # Try using the Duplicate method (available in some PowerPoint versions)
+                    duplicated_slide = source_slide.Duplicate()
+                    # Move the duplicated slide to the target position if needed
+                    if duplicated_slide.SlideIndex != target_slide_number:
+                        duplicated_slide.MoveTo(target_slide_number)
+                    logger.info(f"Duplicated slide {source_slide_number} to position {target_slide_number} using Duplicate method")
+                    return True
+                except Exception:
+                    # Duplicate method not available, use manual copy approach
+                    logger.debug("Duplicate method not available, using manual copy approach")
+                    pass
+                
+                # Manual duplication approach: create new slide and copy all shapes
+                try:
+                    # Get the layout of the source slide
+                    source_layout = source_slide.CustomLayout
+                    
+                    # Create a new slide with the same layout
+                    new_slide = self._presentation.Slides.AddSlide(target_slide_number, source_layout)
+                    
+                    # Copy background if it has one
+                    try:
+                        if hasattr(source_slide, 'Background') and hasattr(new_slide, 'Background'):
+                            # Copy background properties if accessible
+                            new_slide.Background.Fill.ForeColor.RGB = source_slide.Background.Fill.ForeColor.RGB
+                    except Exception:
+                        # Background copying might fail, continue without it
+                        pass
+                    
+                    # Copy all shapes from source slide to new slide
+                    shapes_copied = 0
+                    for shape in source_slide.Shapes:
+                        try:
+                            # Copy the shape
+                            shape.Copy()
+                            # Paste it to the new slide
+                            pasted_shapes = new_slide.Shapes.Paste()
+                            if pasted_shapes.Count > 0:
+                                pasted_shape = pasted_shapes[0]
+                                # Preserve the original shape name with a suffix to avoid conflicts
+                                original_name = getattr(shape, 'Name', f'Shape_{shapes_copied + 1}')
+                                pasted_shape.Name = f"{original_name}_copy"
+                            shapes_copied += 1
+                        except Exception as shape_error:
+                            logger.warning(f"Failed to copy shape '{getattr(shape, 'Name', 'Unknown')}': {shape_error}")
+                            continue
+                    
+                    logger.info(f"Successfully duplicated slide {source_slide_number} to position {target_slide_number} with {shapes_copied} shapes")
+                    return True
+                    
+                except Exception as manual_error:
+                    logger.error(f"Manual duplication failed: {manual_error}")
+                    return False
+                
+            except Exception as e:
+                logger.error(f"Error duplicating slide {source_slide_number}: {e}")
+                return False
+        
+        return self._execute(_duplicate_slide)
     
     def _get_slide_layout(self, layout_name: str = None):
         """Get a slide layout by name or index, or return default layout.
