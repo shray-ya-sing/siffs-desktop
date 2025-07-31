@@ -508,83 +508,29 @@ class PowerPointWorker:
             if not self._presentation:
                 logger.error("No presentation is open")
                 return False
-            
+
             # Get the source slide
             try:
                 source_slide = self._presentation.Slides(source_slide_number)
             except Exception as e:
                 logger.error(f"Source slide {source_slide_number} not found: {e}")
                 return False
-            
+
             # Determine target position
             if target_slide_number is None:
                 target_slide_number = self._presentation.Slides.Count + 1
-            
-            # Use manual duplication approach (more reliable than built-in Duplicate method)
+
+            # Use PowerPoint's built-in Duplicate method for slide duplication
             try:
-                logger.debug(f"Starting manual duplication of slide {source_slide_number} to position {target_slide_number}")
-                
-                # Get the layout of the source slide
-                logger.debug(f"Step 1: Getting layout of source slide {source_slide_number}")
-                source_layout = source_slide.CustomLayout
-                logger.debug(f"Step 1 completed: Got source layout '{getattr(source_layout, 'Name', 'Unknown')}'")
-                
-                # Create a new slide with the same layout
-                logger.debug(f"Step 2: Creating new slide at position {target_slide_number} with source layout")
-                new_slide = self._presentation.Slides.AddSlide(target_slide_number, source_layout)
-                logger.debug(f"Step 2 completed: New slide created successfully at position {target_slide_number}")
-                
-                # Copy background if it has one
-                logger.debug(f"Step 3: Attempting to copy background from source slide")
-                try:
-                    if hasattr(source_slide, 'Background') and hasattr(new_slide, 'Background'):
-                        # Copy background properties if accessible
-                        new_slide.Background.Fill.ForeColor.RGB = source_slide.Background.Fill.ForeColor.RGB
-                        logger.debug(f"Step 3 completed: Background copied successfully")
-                    else:
-                        logger.debug(f"Step 3 skipped: No background properties to copy")
-                except Exception as bg_error:
-                    # Background copying might fail, continue without it
-                    logger.debug(f"Step 3 failed: Background copying failed: {bg_error}")
-                    pass
-                
-                # Copy all shapes from source slide to new slide
-                logger.debug(f"Step 4: Starting to copy shapes from source slide (total shapes: {source_slide.Shapes.Count})")
-                shapes_copied = 0
-                for shape_index, shape in enumerate(source_slide.Shapes, 1):
-                    try:
-                        shape_name = getattr(shape, 'Name', f'Shape_{shape_index}')
-                        logger.debug(f"Step 4.{shape_index}: Copying shape '{shape_name}'")
-                        
-                        # Copy the shape
-                        shape.Copy()
-                        logger.debug(f"Step 4.{shape_index}a: Shape '{shape_name}' copied to clipboard")
-                        
-                        # Paste it to the new slide
-                        pasted_shapes = new_slide.Shapes.Paste()
-                        logger.debug(f"Step 4.{shape_index}b: Shape '{shape_name}' pasted to new slide")
-                        
-                        if pasted_shapes.Count > 0:
-                            pasted_shape = pasted_shapes[0]
-                            # Preserve the original shape name with a suffix to avoid conflicts
-                            original_name = getattr(shape, 'Name', f'Shape_{shapes_copied + 1}')
-                            pasted_shape.Name = f"{original_name}_copy"
-                            logger.debug(f"Step 4.{shape_index}c: Shape renamed to '{pasted_shape.Name}'")
-                        shapes_copied += 1
-                        logger.debug(f"Step 4.{shape_index} completed: Shape '{shape_name}' successfully copied")
-                    except Exception as shape_error:
-                        logger.warning(f"Step 4.{shape_index} failed: Failed to copy shape '{getattr(shape, 'Name', 'Unknown')}': {shape_error}")
-                        continue
-                
-                logger.debug(f"Step 4 completed: All shapes processed ({shapes_copied} successfully copied)")
-                
-                logger.info(f"Successfully duplicated slide {source_slide_number} to position {target_slide_number} with {shapes_copied} shapes")
+                logger.debug(f"Starting duplication of slide {source_slide_number} using the built-in Duplicate method")
+                source_slide.Duplicate()
+                logger.info(f"Successfully duplicated slide {source_slide_number} to position {target_slide_number}")
                 return True
-                
-            except Exception as manual_error:
-                logger.error(f"Manual duplication failed: {manual_error}")
+
+            except Exception as duplicate_error:
+                logger.error(f"Direct duplication using built-in method failed: {duplicate_error}")
                 return False
-            
+
         except Exception as e:
             logger.error(f"Error duplicating slide {source_slide_number}: {e}")
             return False
