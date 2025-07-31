@@ -508,28 +508,25 @@ Example: slide_layout="Title Slide" or slide_layout=0
         temp_file_path = get_temp_filepath(workspace_path)
         logger.info(f"Using temp file path for image capture: {temp_file_path}")
         
-        # Capture slide images for visual context
-        logger.info(f"Capturing slide images for slides: {slide_numbers}")
-        slide_images = _capture_slide_images(temp_file_path, slide_numbers)
-        logger.info(f"Successfully captured {len(slide_images)} slide images")
-
-        # Capture additional reference slides if specified
+        # Consolidate all slide numbers to be captured
+        all_slide_numbers = set(slide_numbers)
         if reference_slide_numbers:
-            logger.info(f"Capturing custom reference slides: {reference_slide_numbers}")
-            reference_images = _capture_slide_images(temp_file_path, reference_slide_numbers)
-            
-            # Also capture first 3 slides for general styling reference
-            reference_slides = list(range(1, min(4, slide_count + 1)))
-            logger.info(f"Also capturing default reference slides: {reference_slides}")
-            default_reference_images = _capture_slide_images(temp_file_path, reference_slides)
-            reference_images.update(default_reference_images)
-        else:
-            # Capture first 3 slides for styling reference
-            reference_slides = list(range(1, min(4, slide_count + 1)))
-            logger.info(f"Capturing default reference slides: {reference_slides}")
-            reference_images = _capture_slide_images(temp_file_path, reference_slides)
+            all_slide_numbers.update(reference_slide_numbers)
+        
+        # Always include the first 3 slides for reference
+        reference_slides = list(range(1, min(4, slide_count + 1)))
+        all_slide_numbers.update(reference_slides)
 
-        logger.info(f"Successfully captured {len(reference_images)} reference slide images")
+        # Capture all necessary slides at once
+        logger.info(f"Capturing images for all slides: {sorted(all_slide_numbers)}")
+        captured_images = _capture_slide_images(temp_file_path, list(all_slide_numbers))
+        logger.info(f"Successfully captured {len(captured_images)} slide images")
+
+        # Separate captured images into target and reference
+        slide_images = {num: img for num, img in captured_images.items() if num in slide_numbers}
+        reference_images = {num: img for num, img in captured_images.items() if num in reference_slides or num in (reference_slide_numbers or [])}
+        
+        logger.info(f"Separated {len(slide_images)} target and {len(reference_images)} reference slide images.")
         
         # Get detailed slide metadata for slides being edited
         logger.info(f"Retrieving slide metadata for slides: {slide_numbers}")
@@ -586,12 +583,12 @@ Example: slide_layout="Title Slide" or slide_layout=0
         BEFORE creating individual shapes, check if you need to DUPLICATE AN ENTIRE SLIDE:
         
         SLIDE DUPLICATION SYNTAX:
-        - To duplicate an existing slide: "duplicate_slide:[source_slide_number]"
+        - To duplicate an existing slide: "duplicate_slide=[source_slide_number]"
         - This copies ALL content from the source slide automatically
         - DO NOT manually recreate shapes when duplicating - use this syntax instead
         - Examples:
-          • "duplicate_slide:3" (duplicate slide 3 and add at end)
-          • "duplicate_slide:1" (duplicate slide 1 and add at end)
+          • "duplicate_slide=3" (duplicate slide 3 and add at end)
+          • "duplicate_slide=1" (duplicate slide 1 and add at end)
         
         WHEN TO USE SLIDE DUPLICATION:
         - User asks to "duplicate slide X"
@@ -1114,13 +1111,13 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - Maintaining design consistency while making targeted changes
         
         SLIDE DUPLICATION FORMAT
-        - Duplicate an existing slide using the syntax: duplicate_slide:[source_slide_number]
+        - Duplicate an existing slide using the syntax: duplicate_slide=[source_slide_number]
         - Optional: target_slide=[target_slide_number] to specify the target position. If omitted, adds at the end.
         
         SLIDE DUPLICATION EXAMPLES
-        - "duplicate_slide:3" (duplicate slide 3 at end)
-        - "duplicate_slide:2, target_slide=5" (duplicate slide 2 and insert at position 5)
-        - To duplicate multiple slides: "duplicate_slide:1; duplicate_slide:4"
+        - "duplicate_slide=3" (duplicate slide 3 at end)
+        - "duplicate_slide=2, target_slide=5" (duplicate slide 2 and insert at position 5)
+        - To duplicate multiple slides: "duplicate_slide=1; duplicate_slide=4"
         """
         
         combined_prompt = prompt + f"""

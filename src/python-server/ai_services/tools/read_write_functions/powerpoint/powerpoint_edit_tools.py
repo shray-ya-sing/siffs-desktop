@@ -332,9 +332,9 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                 continue
 
             # Check for slide duplication first
-            if slide_info.startswith('duplicate_slide:'):
+            if slide_info.startswith('duplicate_slide='):
                 try:
-                    slide_duplicate_from = int(slide_info.split(':')[1].strip())
+                    slide_duplicate_from = int(slide_info.split('=')[1].strip())
                     logger.info(f"Parsed slide duplication from slide {slide_duplicate_from}")
                     result[section] = {'_duplicate_slide_from': slide_duplicate_from}
                     continue
