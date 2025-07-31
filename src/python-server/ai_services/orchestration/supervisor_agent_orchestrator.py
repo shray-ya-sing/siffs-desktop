@@ -28,6 +28,7 @@ class SupervisorAgentOrchestrator:
     """Orchestrates WebSocket communication with SupervisorAgent"""
     CACHE_DIR = Path(__file__).parent.parent.parent / "metadata" / "_cache"
     CONVERSATION_CACHE = CACHE_DIR / "conversation_cache.json"
+    ATTACHMENTS_CACHE = CACHE_DIR / "request_attachments_cache.json"
     
     EXCLUDED_NODES = {
        # "simple_excel_agent",
@@ -153,6 +154,59 @@ class SupervisorAgentOrchestrator:
         except Exception as e:
             logger.error(f"Error loading conversation cache: {e}")
             return {}
+    
+    def _save_request_attachments(self, request_id: str, attachments: List[Dict[str, Any]]) -> None:
+        """Save request attachments to cache file"""
+        try:
+            # Load existing cache or create new one
+            cache_data = {}
+            if self.ATTACHMENTS_CACHE.exists():
+                with open(self.ATTACHMENTS_CACHE, 'r') as f:
+                    cache_data = json.load(f)
+            
+            # Add current request attachments
+            cache_data[request_id] = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "attachments": attachments
+            }
+            
+            # Clean up old entries (keep only last 50 requests to prevent cache bloat)
+            if len(cache_data) > 50:
+                # Sort by timestamp and keep only the 50 most recent
+                sorted_items = sorted(
+                    cache_data.items(),
+                    key=lambda x: x[1].get("timestamp", ""),
+                    reverse=True
+                )
+                cache_data = dict(sorted_items[:50])
+            
+            # Save updated cache
+            with open(self.ATTACHMENTS_CACHE, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            logger.info(f"Cached {len(attachments)} attachments for request {request_id}")
+            
+        except Exception as e:
+            logger.error(f"Error saving request attachments cache: {e}")
+    
+    def _get_request_attachments(self, request_id: str) -> List[Dict[str, Any]]:
+        """Get attachments for a specific request from cache"""
+        try:
+            if not self.ATTACHMENTS_CACHE.exists():
+                return []
+            
+            with open(self.ATTACHMENTS_CACHE, 'r') as f:
+                cache_data = json.load(f)
+            
+            request_data = cache_data.get(request_id, {})
+            attachments = request_data.get("attachments", [])
+            
+            logger.info(f"Retrieved {len(attachments)} cached attachments for request {request_id}")
+            return attachments
+            
+        except Exception as e:
+            logger.error(f"Error loading request attachments: {e}")
+            return []
         
     def setup_event_handlers(self):
         """Register WebSocket event handlers"""
@@ -559,6 +613,9 @@ class SupervisorAgentOrchestrator:
                         logger.warning(f"Attachment {i+1} is not an image type: {attachment_type}")
                 
                 user_message["attachments"] = attachments
+
+                # Save attachments to cache
+                self._save_request_attachments(request_id, attachments)
             
             # Convert message with attachments to proper format if needed
             if attachments:

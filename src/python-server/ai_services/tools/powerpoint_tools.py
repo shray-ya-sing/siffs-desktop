@@ -119,6 +119,48 @@ def get_user_id_from_cache():
         return None
 
 
+def get_user_attachments_from_cache():
+    """Get user-attached images from the request attachments cache for the current request"""
+    try:
+        request_id = get_request_id_from_cache()
+        if not request_id:
+            logger.debug("No request_id found, cannot retrieve user attachments")
+            return []
+        
+        cache_file = python_server_dir / "metadata" / "_cache" / "request_attachments_cache.json"
+        if not cache_file.exists():
+            logger.debug("Attachments cache file not found")
+            return []
+        
+        with open(cache_file, 'r') as f:
+            cache_data = json.load(f)
+        
+        request_data = cache_data.get(request_id, {})
+        attachments = request_data.get("attachments", [])
+        
+        # Filter only image attachments
+        image_attachments = []
+        for attachment in attachments:
+            if attachment.get('type') == 'image':
+                data_url = attachment.get('data', '')
+                if data_url.startswith('data:'):
+                    image_attachments.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": data_url
+                        },
+                        "filename": attachment.get('filename', 'User attachment'),
+                        "mimeType": attachment.get('mimeType', 'image/unknown')
+                    })
+        
+        logger.info(f"Retrieved {len(image_attachments)} user image attachments for request {request_id}")
+        return image_attachments
+        
+    except Exception as e:
+        logger.error(f"Error retrieving user attachments from cache: {str(e)}")
+        return []
+
+
 def get_powerpoint_from_cache(workspace_path: str) -> Optional[Dict[str, Any]]:
     """Get PowerPoint document from cache by workspace path."""
     try:
@@ -1195,8 +1237,24 @@ Example: slide_layout="Title Slide" or slide_layout=0
             logger.info(f"Request {request_id} cancelled before LLM call")
             return "Request was cancelled"
 
+        # Get user-attached images from cache
+        user_attachments = get_user_attachments_from_cache()
+        logger.info(f"Retrieved {len(user_attachments)} user-attached images")
+        
         # Prepare multimodal message with text and images
         content_parts = [{"type": "text", "text": enhanced_prompt}]
+        
+        # Add user-attached images first with context
+        if user_attachments:
+            user_attachment_context = f"\n\nUSER-ATTACHED IMAGES:\nThe user has attached {len(user_attachments)} image(s) to this request. These images are provided as reference or source material for the PowerPoint editing task. Please consider these user-attached images when generating slide content and reference them as needed in your response.\n"
+            content_parts.append({
+                "type": "text",
+                "text": user_attachment_context
+            })
+            
+            for i, attachment in enumerate(user_attachments):
+                logger.info(f"Adding user attachment {i+1} to LLM context: {attachment.get('filename', 'Unknown')}")
+                content_parts.append(attachment)  # attachment is already in proper format
         
         # Add slide images to the message content
         for slide_num in slide_numbers:
@@ -2008,8 +2066,21 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: 
         - Shape identification failures
         
         slide_count: Number of slides currently in the presentation (used to determine new slide numbers)
-        reference_slide_numbers: When the user mentions copying from or referencing other slides (e.g., "copy slide 5", "based on slide 3"), 
-                               you MUST include those slide numbers here. Example: reference_slide_numbers=[5] when copying from slide 5.
+        reference_slide_numbers: CRITICAL FOR COPY/DUPLICATE OPERATIONS - Whenever the user asks to:
+                               - Copy a slide (e.g., "copy slide 5", "duplicate slide 3")
+                               - Copy objects/shapes from another slide (e.g., "copy the chart from slide 2", "use the layout from slide 4")
+                               - Reference another slide for styling (e.g., "based on slide 3", "match the format of slide 1")
+                               - Duplicate content from another slide (e.g., "make this look like slide 6")
+                               
+                               You MUST include the source slide number(s) in this parameter.
+                               
+                               Examples:
+                               - "Copy slide 5" → reference_slide_numbers=[5]
+                               - "Copy the table from slide 2 and the chart from slide 7" → reference_slide_numbers=[2, 7]
+                               - "Make this slide look like slide 3" → reference_slide_numbers=[3]
+                               - "Use the same layout as slides 1 and 4" → reference_slide_numbers=[1, 4]
+                               
+                               This parameter enables the LLM to see the source slides visually for accurate copying/duplication.
     
     Returns:
         A JSON string containing the results of the shape editing operation:
