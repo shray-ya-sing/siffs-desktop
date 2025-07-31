@@ -1096,6 +1096,43 @@ class PowerPointWorker:
         except Exception as e:
             logger.error(f"Error setting transparent fills for table '{table_name}': {e}")
     
+    def _set_table_borders_invisible(self, table, rows: int, cols: int, table_name: str) -> None:
+        """Set all table cell borders to invisible by default.
+        
+        This ensures tables start with no borders regardless of PowerPoint's default styling.
+        Only borders explicitly specified in the metadata will be applied later.
+        
+        Args:
+            table: PowerPoint table object
+            rows: Number of rows in the table
+            cols: Number of columns in the table
+            table_name: Name of the table for logging
+        """
+        try:
+            logger.debug(f"Setting all borders to invisible for table '{table_name}' ({rows}x{cols})")
+            
+            for row_idx in range(1, rows + 1):
+                for col_idx in range(1, cols + 1):
+                    try:
+                        cell = table.Cell(row_idx, col_idx)
+                        
+                        # Set all four borders (top, left, bottom, right) to invisible
+                        for border_position in [1, 2, 3, 4]:  # ppBorderTop, ppBorderLeft, ppBorderBottom, ppBorderRight
+                            try:
+                                border = cell.Borders(border_position)
+                                border.Visible = False
+                                logger.debug(f"Set border {border_position} invisible for cell ({row_idx}, {col_idx})")
+                            except Exception as border_error:
+                                logger.debug(f"Could not set border {border_position} invisible for cell ({row_idx}, {col_idx}): {border_error}")
+                        
+                    except Exception as cell_error:
+                        logger.warning(f"Could not access cell ({row_idx}, {col_idx}) for border removal in table '{table_name}': {cell_error}")
+            
+            logger.info(f"Successfully set all borders to invisible for table '{table_name}'")
+            
+        except Exception as e:
+            logger.error(f"Error setting invisible borders for table '{table_name}': {e}")
+    
     def _apply_table_column_alignments(self, table_shape, col_alignments: list, rows: int, cols: int, table_name: str) -> None:
         """Apply column-specific text alignments to table cells.
         
@@ -1199,6 +1236,13 @@ class PowerPointWorker:
                 table_rows = int(shape_props.get('table_rows', shape_props.get('rows', 0)))
                 table_cols = int(shape_props.get('table_cols', shape_props.get('cols', 0)))
                 table_data = shape_props.get('table_data')
+                
+                # If dimensions are not specified but table_data exists, derive them from table_data
+                if (table_rows == 0 or table_cols == 0) and table_data:
+                    if isinstance(table_data, list) and len(table_data) > 0:
+                        table_rows = len(table_data)
+                        table_cols = len(table_data[0]) if isinstance(table_data[0], list) else 0
+                        logger.info(f"Derived table dimensions from table_data: {table_rows} rows x {table_cols} cols")
             
             if table_rows == 0 or table_cols == 0:
                 logger.warning(f"Invalid table dimensions: rows={table_rows}, cols={table_cols}")
@@ -1221,6 +1265,10 @@ class PowerPointWorker:
             # This ensures we have a clean no-fill baseline regardless of PowerPoint's default styling
             self._set_table_cells_transparent(table, table_rows, table_cols, shape_name)
             
+            # CRITICAL: Set all table borders to invisible by default
+            # This ensures tables start with no borders regardless of PowerPoint's default styling
+            self._set_table_borders_invisible(table, table_rows, table_cols, shape_name)
+            
             # Parse table data if it's a string
             if isinstance(table_data, str):
                 try:
@@ -1230,7 +1278,7 @@ class PowerPointWorker:
                     logger.warning(f"Could not parse table_data: {e}")
                     table_data = []
             
-            # Fill table with data
+            # Fill table with data and apply default formatting
             if table_data and isinstance(table_data, list):
                 for row_idx, row_data in enumerate(table_data, 1):
                     if row_idx > table_rows:
@@ -1243,14 +1291,35 @@ class PowerPointWorker:
                             
                             try:
                                 cell = table.Cell(row_idx, col_idx)
-                                cell.Shape.TextFrame.TextRange.Text = str(cell_data)
+                                text_range = cell.Shape.TextFrame.TextRange
+                                text_range.Text = str(cell_data)
+                                
+                                # Apply default font size of 10 points to all cells
+                                text_range.Font.Size = 10.0
                                 
                                 # Apply font name to cell if specified
                                 if 'font_name' in shape_props:
-                                    cell.Shape.TextFrame.TextRange.Font.Name = shape_props['font_name']
+                                    text_range.Font.Name = shape_props['font_name']
                                 
                             except Exception as e:
                                 logger.warning(f"Could not set cell ({row_idx}, {col_idx}): {e}")
+            else:
+                # Even if no data is provided, set default font size for all cells
+                for row_idx in range(1, table_rows + 1):
+                    for col_idx in range(1, table_cols + 1):
+                        try:
+                            cell = table.Cell(row_idx, col_idx)
+                            text_range = cell.Shape.TextFrame.TextRange
+                            
+                            # Apply default font size of 10 points to all cells
+                            text_range.Font.Size = 10.0
+                            
+                            # Apply font name to cell if specified
+                            if 'font_name' in shape_props:
+                                text_range.Font.Name = shape_props['font_name']
+                                
+                        except Exception as e:
+                            logger.warning(f"Could not set default formatting for cell ({row_idx}, {col_idx}): {e}")
             
             # Apply cell formatting if specified
             self._apply_cell_formatting(table, shape_props, table_rows, table_cols)
@@ -1262,6 +1331,20 @@ class PowerPointWorker:
                     self._apply_table_column_alignments(table_shape, col_alignments, table_rows, table_cols, shape_name)
                 except Exception as align_error:
                     logger.warning(f"Could not apply column alignments to table '{shape_name}': {align_error}")
+            
+            # ALWAYS apply auto-fit row heights as default behavior
+            # This makes rows automatically adjust to the minimum height needed for their content
+            try:
+                for row_idx in range(1, table_rows + 1):
+                    row = table.Rows(row_idx)
+                    # Set to 1 point to force PowerPoint to auto-calculate minimum height
+                    row.Height = 1
+                    auto_height = row.Height
+                    logger.debug(f"Auto-fit row {row_idx} to height {auto_height:.1f}")
+                
+                logger.info(f"Applied auto-fit heights to all {table_rows} rows in table '{shape_name}'")
+            except Exception as e:
+                logger.warning(f"Could not apply auto-fit row heights to table '{shape_name}': {e}")
             
             # Extract table metadata using COM API
             table_metadata = self._extract_table_metadata(table_shape, table, table_rows, table_cols)
@@ -1908,8 +1991,19 @@ class PowerPointWorker:
             # Apply width
             border.Weight = width
             
-            # Apply style
-            border.LineStyle = style_map.get(style, 1)
+            # Apply style - For table cell borders, use DashStyle instead of LineStyle
+            style_constant = style_map.get(style, 1)
+            try:
+                # Try DashStyle first (for table cell borders)
+                border.DashStyle = style_constant
+                logger.debug(f"Applied border style using DashStyle: {style} ({style_constant})")
+            except Exception as dash_error:
+                try:
+                    # Fallback to LineStyle if DashStyle fails
+                    border.LineStyle = style_constant
+                    logger.debug(f"Applied border style using LineStyle fallback: {style} ({style_constant})")
+                except Exception as line_error:
+                    logger.warning(f"Could not apply border style '{style}' using either DashStyle or LineStyle: DashStyle={dash_error}, LineStyle={line_error}")
             
         except Exception as e:
             logger.warning(f"Could not apply border (position {position_constant}): {e}")
