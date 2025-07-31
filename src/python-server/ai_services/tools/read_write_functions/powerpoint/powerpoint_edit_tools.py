@@ -578,10 +578,40 @@ def update_powerpoint_cache(workspace_path: str, updated_shapes: List[Dict[str, 
                         try:
                             slide_number = shape_info.get('slide_number')
                             shape_name = shape_info.get('shape_name')
+                            action = shape_info.get('action')
                             properties_applied = shape_info.get('properties_applied', [])
                             
-                            if not slide_number or not shape_name:
+                            # Handle slide-level operations (like duplication) that don't have shape_name
+                            if action == 'duplicated_slide':
+                                source_slide = shape_info.get('source_slide')
+                                logger.info(f"Processing slide duplication: slide {source_slide} duplicated to slide {slide_number}")
+                                
+                                # For slide duplication, we need to:
+                                # 1. Check if the duplicated slide exists in cache
+                                # 2. If not, trigger a full cache refresh to capture the new slide
+                                slides = presentation_data.get('slides', [])
+                                duplicated_slide_found = any(slide.get('slideNumber') == slide_number for slide in slides)
+                                
+                                if not duplicated_slide_found:
+                                    logger.info(f"Duplicated slide {slide_number} not found in cache, needs cache refresh")
+                                    # Mark that we need to refresh cache to capture duplicated slide content
+                                    presentation_data['_needs_cache_refresh'] = True
+                                    presentation_data['_cache_refresh_reason'] = f'slide_duplication_slide_{slide_number}'
+                                
+                                success_count += 1
+                                logger.debug(f"Processed slide duplication: slide {source_slide} -> slide {slide_number}")
+                                continue  # Skip shape-specific processing
+                            
+                            # Skip entries that don't have slide_number or are not slide-level operations
+                            if not slide_number:
                                 error_count += 1
+                                logger.warning(f"Skipping update with missing slide_number: {shape_info}")
+                                continue
+                            
+                            # Skip shape updates that don't have shape_name (unless it's a slide-level operation)
+                            if not shape_name and not action:
+                                error_count += 1
+                                logger.warning(f"Skipping update with missing shape_name and no action: {shape_info}")
                                 continue
                             
                             # Find the slide within the presentation
@@ -611,6 +641,27 @@ def update_powerpoint_cache(workspace_path: str, updated_shapes: List[Dict[str, 
                                 slide_found = True
                             
                             if slide_found and target_slide:
+                                # Handle slide-level operations without specific shapes
+                                if not shape_name:
+                                    # This is a slide-level operation (like created_slide, deleted_slide)
+                                    if action in ['created_slide', 'deleted_slide']:
+                                        # Update slide metadata if needed
+                                        if 'editingHistory' not in target_slide:
+                                            target_slide['editingHistory'] = []
+                                        
+                                        from datetime import datetime
+                                        editing_record = {
+                                            'timestamp': datetime.now().isoformat(),
+                                            'action': action,
+                                            'properties_applied': properties_applied
+                                        }
+                                        target_slide['editingHistory'].append(editing_record)
+                                        target_slide['lastModified'] = datetime.now().isoformat()
+                                        
+                                        success_count += 1
+                                        logger.debug(f"Updated slide {slide_number} with action: {action}")
+                                    continue  # Skip shape-specific processing
+                                
                                 # Find the shape within the slide
                                 shapes = target_slide.get('shapes', [])
                                 shape_found = False
@@ -693,6 +744,24 @@ def update_powerpoint_cache(workspace_path: str, updated_shapes: List[Dict[str, 
                         from datetime import datetime
                         presentation_data['lastModified'] = datetime.now().isoformat()
                         presentation_data['file_mtime'] = os.path.getmtime(temp_file_path) if os.path.exists(temp_file_path) else None
+                        
+                        # Update totalSlides count based on the actual number of slides in cache
+                        slides = presentation_data.get('slides', [])
+                        new_total_slides = len(slides)
+                        old_total_slides = presentation_data.get('totalSlides', 0)
+                        
+                        if new_total_slides != old_total_slides:
+                            presentation_data['totalSlides'] = new_total_slides
+                            logger.info(f"Updated totalSlides from {old_total_slides} to {new_total_slides}")
+                        
+                        # Check if cache refresh is needed (e.g., due to slide duplication)
+                        if presentation_data.get('_needs_cache_refresh'):
+                            logger.info(f"Cache refresh needed: {presentation_data.get('_cache_refresh_reason', 'unknown reason')}")
+                            # Note: A full cache refresh would require re-extracting all slide/shape metadata
+                            # from the actual PowerPoint file. This is a placeholder for that functionality.
+                            # For now, we'll just log that a refresh is needed.
+                            presentation_data.pop('_needs_cache_refresh', None)
+                            presentation_data.pop('_cache_refresh_reason', None)
                     
                     break
             

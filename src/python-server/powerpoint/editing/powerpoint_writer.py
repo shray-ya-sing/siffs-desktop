@@ -250,15 +250,24 @@ class PowerPointWorker:
                                 logger.info(f"No target specified, duplicating slide {duplicate_from} to end of presentation (position {target_slide_number})")
                             
                             # Perform slide duplication
-                            success = self._duplicate_slide(duplicate_from, target_slide_number)
+                            success, shape_metadata = self._duplicate_slide(duplicate_from, target_slide_number)
                             if success:
                                 logger.info(f"Successfully duplicated slide {duplicate_from} to slide {target_slide_number}")
+                                
+                                # Add slide duplication action to updated_shapes
                                 updated_shapes.append({
                                     'slide_number': target_slide_number,
                                     'action': 'duplicated_slide',
                                     'source_slide': duplicate_from,
                                     'properties_applied': ['_duplicate_slide_from']
                                 })
+                                
+                                # Add individual shape metadata from the duplicated slide
+                                if shape_metadata:
+                                    updated_shapes.extend(shape_metadata)
+                                    logger.info(f"Added metadata for {len(shape_metadata)} shapes from duplicated slide {target_slide_number}")
+                                else:
+                                    logger.warning(f"No shape metadata extracted from duplicated slide {target_slide_number}")
                             else:
                                 logger.error(f"Failed to duplicate slide {duplicate_from} to slide {target_slide_number if target_slide_number else 'unknown'}")
                         except Exception as e:
@@ -491,7 +500,7 @@ class PowerPointWorker:
         
         return self._execute(_add_blank_slide)
     
-    def _duplicate_slide(self, source_slide_number: int, target_slide_number: int = None) -> bool:
+    def _duplicate_slide(self, source_slide_number: int, target_slide_number: int = None) -> Tuple[bool, List[Dict[str, Any]]]:
         """Duplicate an entire slide by copying all its shapes and properties.
         
         This is a private method called directly from within _write_shapes (no threading wrapper).
@@ -502,19 +511,19 @@ class PowerPointWorker:
                                If None, adds at the end.
         
         Returns:
-            True if successful, False otherwise
+            Tuple[bool, List[Dict[str, Any]]]: (True, shape metadata) if successful, (False, None) otherwise
         """
         try:
             if not self._presentation:
                 logger.error("No presentation is open")
-                return False
+                return False, None
 
             # Get the source slide
             try:
                 source_slide = self._presentation.Slides(source_slide_number)
             except Exception as e:
                 logger.error(f"Source slide {source_slide_number} not found: {e}")
-                return False
+                return False, None
 
             # Determine target position
             if target_slide_number is None:
@@ -523,17 +532,80 @@ class PowerPointWorker:
             # Use PowerPoint's built-in Duplicate method for slide duplication
             try:
                 logger.debug(f"Starting duplication of slide {source_slide_number} using the built-in Duplicate method")
-                source_slide.Duplicate()
+                duplicated_slide = source_slide.Duplicate()[0]  # Duplicate returns a collection, get first item
                 logger.info(f"Successfully duplicated slide {source_slide_number} to position {target_slide_number}")
-                return True
+                
+                # Extract shape metadata from duplicated slide using COM interface
+                shape_metadata = []
+                try:
+                    for shape in duplicated_slide.Shapes:
+                        try:
+                            # Extract basic shape properties
+                            metadata = {
+                                'shape_name': shape.Name,
+                                'slide_number': target_slide_number,
+                                'action': 'duplicated_shape',
+                                'properties_applied': ['name', 'type', 'position', 'size']
+                            }
+                            
+                            # Add shape type if available
+                            if hasattr(shape, 'Type'):
+                                metadata['shape_type'] = shape.Type
+                            
+                            # Add position and size if available
+                            if hasattr(shape, 'Left') and hasattr(shape, 'Top'):
+                                metadata['left'] = shape.Left
+                                metadata['top'] = shape.Top
+                            
+                            if hasattr(shape, 'Width') and hasattr(shape, 'Height'):
+                                metadata['width'] = shape.Width
+                                metadata['height'] = shape.Height
+                            
+                            # Add text content if it's a text shape
+                            if hasattr(shape, 'HasTextFrame') and shape.HasTextFrame:
+                                try:
+                                    if shape.TextFrame and shape.TextFrame.HasText:
+                                        metadata['text'] = shape.TextFrame.TextRange.Text
+                                        metadata['properties_applied'].append('text')
+                                except Exception:
+                                    pass  # Text extraction failed, continue without text
+                            
+                            # Add fill color if available
+                            if hasattr(shape, 'Fill'):
+                                try:
+                                    fill = shape.Fill
+                                    if hasattr(fill, 'ForeColor') and hasattr(fill.ForeColor, 'RGB'):
+                                        rgb_value = fill.ForeColor.RGB
+                                        # Convert RGB integer to hex color
+                                        r = rgb_value & 0xFF
+                                        g = (rgb_value >> 8) & 0xFF
+                                        b = (rgb_value >> 16) & 0xFF
+                                        metadata['fill_color'] = f"#{r:02x}{g:02x}{b:02x}"
+                                        metadata['properties_applied'].append('fill')
+                                except Exception:
+                                    pass  # Fill color extraction failed, continue without fill
+                            
+                            shape_metadata.append(metadata)
+                            logger.debug(f"Extracted metadata for shape '{shape.Name}' on duplicated slide {target_slide_number}")
+                            
+                        except Exception as shape_error:
+                            logger.warning(f"Could not extract metadata for shape: {shape_error}")
+                            continue
+                    
+                    logger.info(f"Extracted metadata for {len(shape_metadata)} shapes from duplicated slide {target_slide_number}")
+                    return True, shape_metadata
+                    
+                except Exception as extract_error:
+                    logger.error(f"Error extracting shape metadata for duplicated slide {target_slide_number}: {extract_error}")
+                    return True, []  # Return empty list instead of None to maintain consistency
 
             except Exception as duplicate_error:
                 logger.error(f"Direct duplication using built-in method failed: {duplicate_error}")
-                return False
+                return False, None
 
         except Exception as e:
             logger.error(f"Error duplicating slide {source_slide_number}: {e}")
-            return False
+            return False, None
     
     def _get_slide_layout(self, layout_name: str = None):
         """Get a slide layout by name or index, or return default layout.
@@ -3495,6 +3567,37 @@ class PowerPointWorker:
                             
                     except Exception as e:
                         logger.warning(f"Could not apply bullet formatting to shape {shape.Name}: {e}")
+                
+                # Apply standalone bullet character (when bullet_char is specified without bullet_style)
+                elif 'bullet_char' in shape_props and shape_props['bullet_char']:
+                    try:
+                        # Ensure the text range has content before applying bullets
+                        if not text_range.Text.strip():
+                            logger.warning(f"Shape {shape.Name} has no text content, cannot apply bullets")
+                        else:
+                            # Enable bullets if not already enabled and set the custom character
+                            bullet_format = text_range.ParagraphFormat.Bullet
+                            bullet_format.Visible = True
+                            bullet_format.Type = 1  # ppBulletUnnumbered
+                            
+                            # Convert bullet character to correct type
+                            bullet_char = shape_props['bullet_char']
+                            if isinstance(bullet_char, int):
+                                # Already an ASCII/Unicode code point
+                                bullet_format.Character = bullet_char
+                                logger.debug(f"Applied bullet character code {bullet_char} to shape {shape.Name}")
+                            elif isinstance(bullet_char, str) and len(bullet_char) > 0:
+                                # Convert string character to ASCII/Unicode code point
+                                bullet_format.Character = ord(bullet_char[0])
+                                logger.debug(f"Applied bullet character '{bullet_char[0]}' (ord: {ord(bullet_char[0])}) to shape {shape.Name}")
+                            else:
+                                # Fallback to default bullet character
+                                bullet_format.Character = ord('•')
+                                logger.debug(f"Applied default bullet character '•' (ord: {ord('•')}) to shape {shape.Name}")
+                            
+                            updated_info['properties_applied'].append('bullet_char')
+                    except Exception as e:
+                        logger.warning(f"Could not apply bullet character to shape {shape.Name}: {e}")
                 
                 # Apply indent level (for bullets)
                 if 'indent_level' in shape_props and shape_props['indent_level'] is not None:
