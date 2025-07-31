@@ -755,6 +755,8 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - REQUIRED BASIC properties: rows, cols, table_data
             - REQUIRED SIZING properties: left, top, width, height, col_widths, row_heights
             - REQUIRED FORMATTING properties: cell_font_bold, cell_fill_color, font_name
+            - DEFAULT TABLE BEHAVIOR: Tables are created with NO FILL/NO SHADING by default
+            - CELL FILL COLORS: Use empty string '' for no fill/no color, hex colors for specific fills
             - REQUIRED ALIGNMENT properties: col_alignments
             - REQUIRED for FINANCIAL/NUMERIC tables: col_number_formats, cell_font_sizes
             
@@ -762,16 +764,36 @@ Example: slide_layout="Title Slide" or slide_layout=0
             1. POSITIONING: left, top, width, height (table container dimensions)
             2. COLUMN SIZING: col_widths="[width1, width2, ...]" (width for each column in points)
             3. ROW SIZING: row_heights="[height1, height2, ...]" (height for each row in points)
-            4. CELL COLORS: cell_fill_color="[['color1', 'color2'], ['color3', '']]" (color per cell, '' for no color)
+            4. CELL COLORS: cell_fill_color="[['color1', 'color2'], ['color3', '']]" (color per cell, '' for no color/transparent)
+               *** IMPORTANT: Use empty string '' for cells with no fill color - this creates transparent/no-fill cells ***
             5. TEXT FORMATTING: cell_font_bold="[[true, false], [false, true]]" (bold per cell)
             6. COLUMN ALIGNMENT: col_alignments="['left', 'right', 'center']" (alignment per column)
             7. FONT CONTROL: font_name="Arial" (table-wide font), cell_font_sizes for cell-specific sizes
+            8. BORDER STYLING: table_border_color, table_border_width, table_border_style, cell_borders
+               *** BORDER CONTROL OPTIONS ***:
+               • TABLE-WIDE BORDERS (uniform borders on all cells):
+                 table_border_color="#000000" (hex color for all table borders)
+                 table_border_width=1.0 (border thickness in points for all borders)
+                 table_border_style="solid" (border line style for all borders)
+               • BORDER STYLES: "solid", "dash", "dot", "dashdot", "dashdotdot", "none"
+               • INDIVIDUAL CELL BORDERS (custom borders per cell):
+                 cell_borders="[{{'row':0,'col':0,'top':'#000000/1.0/solid','bottom':'#FF0000/2.0/dash'}},{{'row':0,'col':1,'all':'#333333/1.5/solid'}}]"
+                 Border format per cell: {{'row':row_index,'col':col_index,'side':'color/width/style'}}
+                 • BORDER SIDES: "top", "bottom", "left", "right", "all" (use 'all' for uniform borders on all sides)
+                 • BORDER FORMAT: "color/width/style" where color is hex (#000000), width is points (1.0), style is border type
+               *** BORDER EXAMPLES ***:
+               Simple uniform borders: table_border_color="#333333", table_border_width=1.5, table_border_style="solid"
+               Dashed borders: table_border_color="#666666", table_border_width=1.0, table_border_style="dash"
+               Custom cell borders: cell_borders="[{{'row':0,'col':0,'top':'#FF0000/2.0/solid','bottom':'#0000FF/1.0/dash'}},{{'row':0,'col':1,'all':'#333333/1.5/solid'}}]"
+               Multiple cell borders: cell_borders="[{{'row':0,'col':0,'top':'#000000/1.0/solid'}},{{'row':0,'col':1,'left':'#FF0000/2.0/dash','right':'#0000FF/1.0/dot'}}]"
+               No borders: table_border_style="none" (removes all table borders)
             
             - TABLE DATA FORMAT: Use simple 2D array format
               Example: table_data="[['Header1', 'Header2'], ['Data1', 'Data2']]"
             - CELL FORMATTING: Use separate properties for styling
               cell_font_bold="[[true, true], [false, false]]" (row by row, col by col)
-              cell_fill_color="[['#D0E0C0', '#D0E0C0'], ['', '']]" (empty string for no color)
+              cell_fill_color="[['#D0E0C0', '#D0E0C0'], ['', '']]" ('' = no fill, hex color = colored fill)
+              *** CRITICAL: Tables default to NO FILL. Only specify colors where needed. Use '' for transparent cells. ***
             - COLUMN WIDTHS: col_widths="[144, 144, 144]" (in points) - REQUIRED
             - ROW HEIGHTS: row_heights="[30, 25, 25]" (in points) - REQUIRED
             - FONT: font_name="Calibri" (applies to entire table) - REQUIRED

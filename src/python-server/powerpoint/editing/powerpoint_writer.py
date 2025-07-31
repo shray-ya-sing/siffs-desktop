@@ -1,4 +1,3 @@
-
 import os
 import queue
 import threading
@@ -398,6 +397,25 @@ class PowerPointWorker:
                                     if shape is None:
                                         logger.warning(f"Failed to create chart '{shape_name}' in slide {slide_number}")
                                         continue
+                                    
+                                    # Extract chart metadata after creation
+                                    try:
+                                        if hasattr(shape, 'HasChart') and shape.HasChart:
+                                            chart = shape.Chart
+                                            chart_metadata = self._extract_chart_metadata(shape, chart)
+                                            
+                                            # Add chart creation info with metadata to updated_shapes
+                                            chart_create_info = {
+                                                'shape_name': shape_name,
+                                                'slide_number': slide_number,
+                                                'action': 'created_chart',
+                                                'properties_applied': ['chart_type', 'chart_data'],
+                                                'chart_metadata': chart_metadata
+                                            }
+                                            updated_shapes.append(chart_create_info)
+                                            logger.debug(f"Extracted metadata for new chart '{shape_name}'")
+                                    except Exception as metadata_error:
+                                        logger.warning(f"Could not extract metadata for new chart '{shape_name}': {metadata_error}")
                                 elif self._is_table_creation_request(shape_props):
                                     # Delete existing shape if present and create table
                                     if shape is not None:
@@ -411,10 +429,21 @@ class PowerPointWorker:
                                             'properties_applied': ['replaced_with_table']
                                         })
                                     logger.info(f"Creating new table '{shape_name}' in slide {slide_number}")
-                                    shape = self._create_table_shape(slide, shape_name, shape_props)
+                                    shape, table_metadata = self._create_table_shape(slide, shape_name, shape_props)
                                     if shape is None:
                                         logger.warning(f"Failed to create table '{shape_name}' in slide {slide_number}")
                                         continue
+                                    
+                                    # Add table creation info with metadata to updated_shapes
+                                    if table_metadata:
+                                        table_create_info = {
+                                            'shape_name': shape_name,
+                                            'slide_number': slide_number,
+                                            'action': 'created_table',
+                                            'properties_applied': ['table_rows', 'table_cols', 'table_data'],
+                                            'table_metadata': table_metadata
+                                        }
+                                        updated_shapes.append(table_create_info)
                                 elif self._is_image_creation_request(shape_props):
                                     # Delete existing shape if present and create image
                                     if shape is not None:
@@ -1038,6 +1067,82 @@ class PowerPointWorker:
         """Check if the shape properties indicate an image creation request."""
         return shape_props.get('shape_type') == 'picture' or 'image_path' in shape_props
     
+    def _set_table_cells_transparent(self, table, rows: int, cols: int, table_name: str) -> None:
+        """Set all table cells to transparent fill by default.
+        
+        This ensures tables have no background fill regardless of PowerPoint's default styling.
+        
+        Args:
+            table: PowerPoint table object
+            rows: Number of rows in the table
+            cols: Number of columns in the table
+            table_name: Name of the table for logging
+        """
+        try:
+            logger.debug(f"Setting all cells to transparent for table '{table_name}' ({rows}x{cols})")
+            
+            for row_idx in range(1, rows + 1):
+                for col_idx in range(1, cols + 1):
+                    try:
+                        cell = table.Cell(row_idx, col_idx)
+                        # Set cell fill to transparent/invisible
+                        cell.Shape.Fill.Visible = False
+                        logger.debug(f"Set cell ({row_idx}, {col_idx}) to transparent fill")
+                    except Exception as cell_error:
+                        logger.warning(f"Could not set transparent fill for cell ({row_idx}, {col_idx}) in table '{table_name}': {cell_error}")
+            
+            logger.info(f"Successfully set all cells to transparent for table '{table_name}'")
+            
+        except Exception as e:
+            logger.error(f"Error setting transparent fills for table '{table_name}': {e}")
+    
+    def _apply_table_column_alignments(self, table_shape, col_alignments: list, rows: int, cols: int, table_name: str) -> None:
+        """Apply column-specific text alignments to table cells.
+        
+        Args:
+            table_shape: The PowerPoint table shape object
+            col_alignments: List of alignment strings for each column ('left', 'center', 'right', 'justify')
+            rows: Number of rows in the table
+            cols: Number of columns in the table
+            table_name: Name of the table for logging
+        """
+        try:
+            logger.debug(f"Applying column alignments to table '{table_name}': {col_alignments}")
+            
+            # PowerPoint alignment constants
+            alignment_map = {
+                'left': 1,    # ppAlignLeft
+                'center': 2,  # ppAlignCenter
+                'right': 3,   # ppAlignRight
+                'justify': 4  # ppAlignJustify
+            }
+            
+            table = table_shape.Table
+            
+            # Apply alignment to each column
+            for col_idx in range(1, min(cols + 1, len(col_alignments) + 1)):
+                alignment_str = col_alignments[col_idx - 1].lower()
+                
+                if alignment_str in alignment_map:
+                    alignment_value = alignment_map[alignment_str]
+                    
+                    # Apply alignment to all cells in this column
+                    for row_idx in range(1, rows + 1):
+                        try:
+                            cell = table.Cell(row_idx, col_idx)
+                            # Set paragraph alignment for the cell text
+                            cell.Shape.TextFrame.TextRange.ParagraphFormat.Alignment = alignment_value
+                            logger.debug(f"Set cell ({row_idx}, {col_idx}) alignment to '{alignment_str}'")
+                        except Exception as cell_error:
+                            logger.warning(f"Could not set alignment for cell ({row_idx}, {col_idx}) in table '{table_name}': {cell_error}")
+                else:
+                    logger.warning(f"Invalid alignment '{alignment_str}' for column {col_idx} in table '{table_name}'")
+            
+            logger.info(f"Successfully applied column alignments to table '{table_name}'")
+            
+        except Exception as e:
+            logger.error(f"Error applying column alignments to table '{table_name}': {e}")
+    
     def _create_table_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new table shape on the slide with the specified properties.
         
@@ -1047,7 +1152,7 @@ class PowerPointWorker:
             shape_props: Dictionary of shape properties including table data
             
         Returns:
-            The created table shape object or None if creation failed
+            Tuple of (table_shape, table_metadata) or (None, None) if creation failed
         """
         try:
             # Handle different table property formats
@@ -1112,6 +1217,10 @@ class PowerPointWorker:
             # Get the table object
             table = table_shape.Table
             
+            # CRITICAL: Set all table cells to transparent by default
+            # This ensures we have a clean no-fill baseline regardless of PowerPoint's default styling
+            self._set_table_cells_transparent(table, table_rows, table_cols, shape_name)
+            
             # Parse table data if it's a string
             if isinstance(table_data, str):
                 try:
@@ -1146,12 +1255,113 @@ class PowerPointWorker:
             # Apply cell formatting if specified
             self._apply_cell_formatting(table, shape_props, table_rows, table_cols)
             
+            # Apply column alignments if specified
+            col_alignments = shape_props.get('col_alignments', [])
+            if col_alignments:
+                try:
+                    self._apply_table_column_alignments(table_shape, col_alignments, table_rows, table_cols, shape_name)
+                except Exception as align_error:
+                    logger.warning(f"Could not apply column alignments to table '{shape_name}': {align_error}")
+            
+            # Extract table metadata using COM API
+            table_metadata = self._extract_table_metadata(table_shape, table, table_rows, table_cols)
+            
             logger.info(f"Created table '{shape_name}' with {table_rows} rows and {table_cols} columns")
-            return table_shape
+            return table_shape, table_metadata
             
         except Exception as e:
             logger.error(f"Error creating table shape '{shape_name}': {e}")
-            return None
+            return None, None
+    
+    def _extract_table_metadata(self, table_shape, table, table_rows: int, table_cols: int) -> Dict[str, Any]:
+        """Extract comprehensive table metadata using COM API.
+        
+        Args:
+            table_shape: PowerPoint table shape object
+            table: PowerPoint table object
+            table_rows: Number of rows in the table
+            table_cols: Number of columns in the table
+            
+        Returns:
+            Dictionary containing table metadata
+        """
+        try:
+            metadata = {
+                'shapeType': 'TABLE',
+                'table_rows': table_rows,
+                'table_cols': table_cols,
+                'position': {
+                    'left': table_shape.Left,
+                    'top': table_shape.Top,
+                    'width': table_shape.Width,
+                    'height': table_shape.Height,
+                    'leftInches': round(table_shape.Left / 72, 2),
+                    'topInches': round(table_shape.Top / 72, 2),
+                    'widthInches': round(table_shape.Width / 72, 2),
+                    'heightInches': round(table_shape.Height / 72, 2)
+                },
+                'table_data': [],
+                'column_widths': [],
+                'row_heights': []
+            }
+            
+            # Extract table data
+            for row_idx in range(1, table_rows + 1):
+                row_data = []
+                for col_idx in range(1, table_cols + 1):
+                    try:
+                        cell = table.Cell(row_idx, col_idx)
+                        cell_text = cell.Shape.TextFrame.TextRange.Text
+                        row_data.append(cell_text)
+                    except Exception as e:
+                        logger.debug(f"Could not extract cell ({row_idx}, {col_idx}) text: {e}")
+                        row_data.append("")
+                metadata['table_data'].append(row_data)
+            
+            # Extract column widths
+            for col_idx in range(1, table_cols + 1):
+                try:
+                    width = table.Columns(col_idx).Width
+                    metadata['column_widths'].append(width)
+                except Exception as e:
+                    logger.debug(f"Could not extract column {col_idx} width: {e}")
+                    metadata['column_widths'].append(0)
+            
+            # Extract row heights
+            for row_idx in range(1, table_rows + 1):
+                try:
+                    height = table.Rows(row_idx).Height
+                    metadata['row_heights'].append(height)
+                except Exception as e:
+                    logger.debug(f"Could not extract row {row_idx} height: {e}")
+                    metadata['row_heights'].append(0)
+            
+            # Extract additional table formatting if available
+            try:
+                # Extract font information from first cell as representative
+                first_cell = table.Cell(1, 1)
+                text_range = first_cell.Shape.TextFrame.TextRange
+                
+                metadata['font_info'] = {
+                    'font_name': text_range.Font.Name,
+                    'font_size': text_range.Font.Size,
+                    'font_bold': text_range.Font.Bold
+                }
+            except Exception as e:
+                logger.debug(f"Could not extract font info: {e}")
+                metadata['font_info'] = {}
+            
+            logger.debug(f"Extracted table metadata: {table_rows}x{table_cols} table with position data")
+            return metadata
+            
+        except Exception as e:
+            logger.error(f"Error extracting table metadata: {e}")
+            return {
+                'shapeType': 'TABLE',
+                'table_rows': table_rows,
+                'table_cols': table_cols,
+                'error': str(e)
+            }
     
     def _apply_table_properties(self, shape, shape_props: Dict[str, Any], updated_info: Dict[str, Any]):
         """Apply table-specific properties to create or modify a table."""
@@ -1199,6 +1409,30 @@ class PowerPointWorker:
             
             # Get the table object
             table = table_shape.Table
+            
+            # CRITICAL: Remove default PowerPoint table styling to create clean no-fill tables
+            try:
+                # Clear default table style by setting it to no style
+                table_shape.Table.ApplyStyle("", False)  # Remove any applied table style
+                logger.debug(f"Removed default table style from table '{shape_name}'")
+            except Exception as style_error:
+                logger.debug(f"Could not remove default table style (acceptable): {style_error}")
+            
+            # Remove default alternating row colors and borders by clearing all cell formatting
+            try:
+                for row_idx in range(1, table_rows + 1):
+                    for col_idx in range(1, table_cols + 1):
+                        cell = table.Cell(row_idx, col_idx)
+                        # Clear cell fill (make transparent)
+                        cell.Shape.Fill.Visible = False
+                        # Optionally clear borders - but keep minimal borders for table structure
+                        # cell.Borders.Item(1).Visible = False  # Top border
+                        # cell.Borders.Item(2).Visible = False  # Left border  
+                        # cell.Borders.Item(3).Visible = False  # Bottom border
+                        # cell.Borders.Item(4).Visible = False  # Right border
+                logger.debug(f"Cleared default cell fills for table '{shape_name}' to create no-fill baseline")
+            except Exception as clear_error:
+                logger.debug(f"Could not clear default cell formatting: {clear_error}")
             
             # CRITICAL: Remove default PowerPoint table styling to create clean no-fill tables
             try:
@@ -1340,7 +1574,7 @@ class PowerPointWorker:
                         
                         if isinstance(row_colors, list):
                             for col_idx, color in enumerate(row_colors, 1):
-                                if col_idx <= cols and color:
+                                if col_idx <= cols:
                                     try:
                                         cell = table.Cell(row_idx, col_idx)
                                         self._apply_cell_fill_color(cell, color)
@@ -1458,10 +1692,16 @@ class PowerPointWorker:
     def _apply_cell_fill_color(self, cell, color: str) -> None:
         """Apply fill color to a single table cell."""
         try:
-            if color and color.startswith('#'):
+            if color == '':
+                # Empty string means transparent/no fill
+                cell.Shape.Fill.Visible = False
+                logger.debug(f"Applied transparent fill to cell (empty string)")
+            elif color and color.startswith('#'):
                 # Convert hex to RGB
                 rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
                 cell.Shape.Fill.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+                cell.Shape.Fill.Visible = True
+                logger.debug(f"Applied fill color {color} to cell")
         except Exception as e:
             logger.warning(f"Could not apply cell fill color {color}: {e}")
     
@@ -1522,20 +1762,28 @@ class PowerPointWorker:
                         cell_borders = []
                 
                 if isinstance(cell_borders, list):
-                    for row_idx, row_borders in enumerate(cell_borders, 1):
-                        if row_idx > rows:
-                            break
-                        
-                        if isinstance(row_borders, list):
-                            for col_idx, border_config in enumerate(row_borders, 1):
-                                if col_idx > cols or not border_config:
-                                    continue
-                                
-                                try:
-                                    cell = table.Cell(row_idx, col_idx)
-                                    self._apply_individual_cell_borders(cell, border_config)
-                                except Exception as e:
-                                    logger.warning(f"Could not apply individual borders for cell ({row_idx}, {col_idx}): {e}")
+                    # Check if this is the new simplified format (list of cell objects)
+                    # vs old 2D array format
+                    if (cell_borders and isinstance(cell_borders[0], dict) and 
+                        'row' in cell_borders[0] and 'col' in cell_borders[0]):
+                        # New simplified format: [{'row':0,'col':0,'top':'#000000/1.0/solid',...}]
+                        self._apply_simplified_cell_borders(table, cell_borders, rows, cols)
+                    else:
+                        # Old 2D array format: [[border_config_row1], [border_config_row2]]
+                        for row_idx, row_borders in enumerate(cell_borders, 1):
+                            if row_idx > rows:
+                                break
+                            
+                            if isinstance(row_borders, list):
+                                for col_idx, border_config in enumerate(row_borders, 1):
+                                    if col_idx > cols or not border_config:
+                                        continue
+                                    
+                                    try:
+                                        cell = table.Cell(row_idx, col_idx)
+                                        self._apply_individual_cell_borders(cell, border_config)
+                                    except Exception as e:
+                                        logger.warning(f"Could not apply individual borders for cell ({row_idx}, {col_idx}): {e}")
         
         except Exception as e:
             logger.error(f"Error applying cell borders: {e}", exc_info=True)
@@ -1543,12 +1791,19 @@ class PowerPointWorker:
     def _apply_individual_cell_borders(self, cell, border_config: Dict[str, Any]) -> None:
         """Apply individual border settings to a single cell.
         
-        border_config format:
+        Supports both old nested dictionary format and new simplified string format:
+        
+        Old format:
         {
             'top': {'color': '#000000', 'width': 1.0, 'style': 'solid'},
-            'bottom': {'color': '#FF0000', 'width': 2.0, 'style': 'dash'},
-            'left': {'color': '#00FF00', 'width': 1.5, 'style': 'dot'},
-            'right': {'color': '#0000FF', 'width': 1.0, 'style': 'solid'}
+            'bottom': {'color': '#FF0000', 'width': 2.0, 'style': 'dash'}
+        }
+        
+        New format:
+        {
+            'top': '#000000/1.0/solid',
+            'bottom': '#FF0000/2.0/dash',
+            'all': '#333333/1.5/solid'  # Applies to all sides
         }
         """
         try:
@@ -1570,34 +1825,142 @@ class PowerPointWorker:
                 'none': 0       # msoLineStyleMixed
             }
             
+            # Handle 'all' property first (applies to all sides)
+            if 'all' in border_config:
+                all_border_spec = border_config['all']
+                if isinstance(all_border_spec, str):
+                    # New simplified format: '#333333/1.5/solid'
+                    color, width, style = self._parse_border_string(all_border_spec)
+                    for position_name, position_constant in border_positions.items():
+                        self._apply_single_border(cell, position_constant, color, width, style, style_map)
+                elif isinstance(all_border_spec, dict):
+                    # Old nested dict format for 'all'
+                    color = all_border_spec.get('color', '#000000')
+                    width = float(all_border_spec.get('width', 1.0))
+                    style = all_border_spec.get('style', 'solid').lower()
+                    for position_name, position_constant in border_positions.items():
+                        self._apply_single_border(cell, position_constant, color, width, style, style_map)
+            
+            # Handle individual side properties (override 'all' if specified)
             for position_name, border_settings in border_config.items():
-                if position_name in border_positions and isinstance(border_settings, dict):
+                if position_name == 'all':  # Already handled above
+                    continue
+                    
+                if position_name in border_positions:
                     position_constant = border_positions[position_name]
                     
-                    # Get border settings with defaults
-                    color = border_settings.get('color', '#000000')
-                    width = float(border_settings.get('width', 1.0))
-                    style = border_settings.get('style', 'solid').lower()
-                    
-                    try:
-                        border = cell.Borders(position_constant)
-                        
-                        # Apply color
-                        if color.startswith('#'):
-                            rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
-                            border.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
-                        
-                        # Apply width
-                        border.Weight = width
-                        
-                        # Apply style
-                        border.LineStyle = style_map.get(style, 1)
-                        
-                    except Exception as e:
-                        logger.warning(f"Could not apply {position_name} border: {e}")
+                    if isinstance(border_settings, str):
+                        # New simplified format: '#000000/1.0/solid'
+                        color, width, style = self._parse_border_string(border_settings)
+                        self._apply_single_border(cell, position_constant, color, width, style, style_map)
+                    elif isinstance(border_settings, dict):
+                        # Old nested dict format
+                        color = border_settings.get('color', '#000000')
+                        width = float(border_settings.get('width', 1.0))
+                        style = border_settings.get('style', 'solid').lower()
+                        self._apply_single_border(cell, position_constant, color, width, style, style_map)
         
         except Exception as e:
             logger.warning(f"Error applying individual cell borders: {e}")
+    
+    def _parse_border_string(self, border_string: str) -> Tuple[str, float, str]:
+        """Parse a simplified border string format.
+        
+        Args:
+            border_string: String in format 'color/width/style' (e.g., '#000000/1.0/solid')
+            
+        Returns:
+            Tuple of (color, width, style) with defaults if parsing fails
+        """
+        try:
+            parts = border_string.split('/')
+            if len(parts) >= 3:
+                color = parts[0].strip()
+                width = float(parts[1].strip())
+                style = parts[2].strip().lower()
+                return color, width, style
+            else:
+                logger.warning(f"Invalid border string format: {border_string}. Expected 'color/width/style'")
+                return '#000000', 1.0, 'solid'
+        except Exception as e:
+            logger.warning(f"Error parsing border string '{border_string}': {e}")
+            return '#000000', 1.0, 'solid'
+    
+    def _apply_single_border(self, cell, position_constant: int, color: str, width: float, style: str, style_map: Dict[str, int]) -> None:
+        """Apply a single border to a cell.
+        
+        Args:
+            cell: PowerPoint table cell object
+            position_constant: Border position constant (1=top, 2=left, 3=bottom, 4=right)
+            color: Hex color string (e.g., '#000000')
+            width: Border width in points
+            style: Border style name (e.g., 'solid', 'dash')
+            style_map: Mapping of style names to PowerPoint constants
+        """
+        try:
+            border = cell.Borders(position_constant)
+            
+            # Apply color
+            if color.startswith('#'):
+                rgb = tuple(int(color[j:j+2], 16) for j in (1, 3, 5))
+                border.ForeColor.RGB = rgb[0] + (rgb[1] << 8) + (rgb[2] << 16)
+            
+            # Apply width
+            border.Weight = width
+            
+            # Apply style
+            border.LineStyle = style_map.get(style, 1)
+            
+        except Exception as e:
+            logger.warning(f"Could not apply border (position {position_constant}): {e}")
+    
+    def _apply_simplified_cell_borders(self, table, cell_borders: List[Dict[str, Any]], rows: int, cols: int) -> None:
+        """Apply simplified cell border format to table cells.
+        
+        Args:
+            table: PowerPoint table object
+            cell_borders: List of cell border objects in simplified format:
+                [{'row': 0, 'col': 0, 'top': '#000000/1.0/solid', 'bottom': '#FF0000/2.0/dash'},
+                 {'row': 0, 'col': 1, 'all': '#333333/1.5/solid'}]
+            rows: Number of rows in the table
+            cols: Number of columns in the table
+        """
+        try:
+            logger.debug(f"Applying simplified cell borders to {len(cell_borders)} cells")
+            
+            for border_spec in cell_borders:
+                if not isinstance(border_spec, dict):
+                    continue
+                
+                # Get row and column (0-based in input, convert to 1-based for PowerPoint)
+                row_idx = border_spec.get('row', -1) + 1
+                col_idx = border_spec.get('col', -1) + 1
+                
+                # Validate indices
+                if not (1 <= row_idx <= rows and 1 <= col_idx <= cols):
+                    logger.warning(f"Invalid cell coordinates: row {row_idx-1}, col {col_idx-1} (table is {rows}x{cols})")
+                    continue
+                
+                try:
+                    cell = table.Cell(row_idx, col_idx)
+                    
+                    # Create border config dict for _apply_individual_cell_borders
+                    # Filter out 'row' and 'col' keys to leave only border properties
+                    border_config = {k: v for k, v in border_spec.items() if k not in ['row', 'col']}
+                    
+                    if border_config:
+                        self._apply_individual_cell_borders(cell, border_config)
+                        logger.debug(f"Applied simplified borders to cell ({row_idx}, {col_idx})")
+                    else:
+                        logger.warning(f"No border properties found for cell ({row_idx}, {col_idx})")
+                        
+                except Exception as e:
+                    logger.warning(f"Could not apply simplified borders for cell ({row_idx}, {col_idx}): {e}")
+            
+            logger.info(f"Successfully processed {len(cell_borders)} simplified cell border specifications")
+            
+        except Exception as e:
+            logger.error(f"Error applying simplified cell borders: {e}")
     
     def _close_chart_data_grid(self):
         """Closes any open chart data grids for the presentation."""
@@ -2137,8 +2500,17 @@ class PowerPointWorker:
                                 
                                 try:
                                     cell = table.Cell(row_idx, col_idx)
-                                    cell.Shape.TextFrame.TextRange.Font.Size = float(font_size)
-                                    logger.debug(f"Applied font size {font_size} to cell ({row_idx}, {col_idx})")
+                                    # Validate font size range - PowerPoint typically supports 1-409 points
+                                    font_size_value = float(font_size)
+                                    if font_size_value < 1:
+                                        font_size_value = 1
+                                        logger.debug(f"Font size {font_size} too small, using minimum of 1")
+                                    elif font_size_value > 409:
+                                        font_size_value = 409
+                                        logger.debug(f"Font size {font_size} too large, using maximum of 409")
+                                    
+                                    cell.Shape.TextFrame.TextRange.Font.Size = font_size_value
+                                    logger.debug(f"Applied font size {font_size_value} to cell ({row_idx}, {col_idx})")
                                     
                                 except Exception as e:
                                     logger.warning(f"Could not set font size for cell ({row_idx}, {col_idx}): {e}")
@@ -2204,6 +2576,51 @@ class PowerPointWorker:
         
         except Exception as e:
             logger.error(f"Error applying cell font formatting: {e}", exc_info=True)
+    
+    def _extract_chart_metadata(self, chart_shape, chart) -> Dict[str, Any]:
+        """Extracts comprehensive chart metadata using COM API.
+        
+        Args:
+            chart_shape: PowerPoint chart shape object
+            chart: PowerPoint chart object
+        
+        Returns:
+            Dictionary containing chart metadata
+        """
+        try:
+            metadata = {
+                'shapeType': 'CHART',
+                'position': {
+                    'left': chart_shape.Left,
+                    'top': chart_shape.Top,
+                    'width': chart_shape.Width,
+                    'height': chart_shape.Height,
+                    'leftInches': round(chart_shape.Left / 72, 2),
+                    'topInches': round(chart_shape.Top / 72, 2),
+                    'widthInches': round(chart_shape.Width / 72, 2),
+                    'heightInches': round(chart_shape.Height / 72, 2)
+                },
+                'chart_type': chart.ChartType,
+                'has_title': chart.HasTitle,
+                'has_legend': chart.HasLegend,
+                'series': []
+            }
+
+            # Extract series data
+            for series in chart.SeriesCollection():
+                series_data = {
+                    'name': series.Name,
+                    'values': list(series.Values),
+                    'x_values': list(series.XValues)
+                }
+                metadata['series'].append(series_data)
+
+            logger.debug(f"Extracted chart metadata for {chart_shape.Name}")
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Error extracting chart metadata: {e}")
+            return {'shapeType': 'CHART', 'error': str(e)}
     
     def _create_chart_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
         """Create a new chart shape on the slide with specified properties."""
@@ -3923,6 +4340,42 @@ class PowerPointWorker:
                 except Exception as e:
                     logger.warning(f"Could not apply table properties to shape {shape.Name}: {e}")
                     return updated_info  # Stop further processing as original shape is deleted
+            
+            # Check if this is an existing chart shape and extract metadata after any modifications
+            try:
+                if hasattr(shape, 'HasChart') and shape.HasChart:
+                    # This is an existing chart that may have been modified
+                    chart = shape.Chart
+
+                    # Extract updated chart metadata
+                    chart_metadata = self._extract_chart_metadata(shape, chart)
+
+                    # Add chart metadata to updated_info for cache updating
+                    updated_info['chart_metadata'] = chart_metadata
+                    updated_info['action'] = 'modified_chart'
+                    logger.debug(f"Extracted metadata for existing chart '{shape.Name}'")
+
+            except Exception as e:
+                logger.debug(f"Shape {shape.Name} is not a chart or metadata extraction failed: {e}")
+
+            # Check if this is an existing table shape and extract metadata after any modifications
+            try:
+                if hasattr(shape, 'HasTable') and shape.HasTable:
+                    # This is an existing table that may have been modified
+                    table = shape.Table
+                    table_rows = table.Rows.Count
+                    table_cols = table.Columns.Count
+                    
+                    # Extract updated table metadata
+                    table_metadata = self._extract_table_metadata(shape, table, table_rows, table_cols)
+                    
+                    # Add table metadata to updated_info for cache updating
+                    updated_info['table_metadata'] = table_metadata
+                    updated_info['action'] = 'modified_table'
+                    logger.debug(f"Extracted metadata for existing table '{shape.Name}' ({table_rows}x{table_cols})")
+                    
+            except Exception as e:
+                logger.debug(f"Shape {shape.Name} is not a table or metadata extraction failed: {e}")
             
             # Apply size properties (width and height)
             if 'width' in shape_props and shape_props['width']:
