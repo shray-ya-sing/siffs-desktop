@@ -479,18 +479,138 @@ AVAILABLE SLIDE LAYOUTS:
 When creating new slides, specify the layout using: slide_layout="layout_name" or slide_layout=layout_index
 Example: slide_layout="Title Slide" or slide_layout=0
 """
+
+        # Get the user id for the API key
+        user_id = get_user_id_from_cache()
+        if not user_id:
+            error_msg = "Error: No authenticated user found"
+            logger.error(error_msg)
+            return error_msg
         
+        # Get Gemini model using the hardcoded gemini-2.5-pro model
+        logger.info("Initializing Gemini model for shape metadata generation")
+        try:
+            if LLMManager.get_llm() is None:
+                LLMManager.set_llm(GeminiProvider.get_gemini_model(
+                    user_id=user_id, 
+                    model="gemini-2.5-pro", 
+                    temperature=0.3,
+                    thinking_budget=0
+                ))
+            
+            llm = LLMManager.get_llm()
+        except Exception as e:
+            error_message = f"Failed to get llm model: {e}"
+            logger.error(error_message)
+            return error_message
+        
+        # Get temp file path for image capture
+        temp_file_path = get_temp_filepath(workspace_path)
+        logger.info(f"Using temp file path for image capture: {temp_file_path}")
+        
+        # Capture slide images for visual context
+        logger.info(f"Capturing slide images for slides: {slide_numbers}")
+        slide_images = _capture_slide_images(temp_file_path, slide_numbers)
+        logger.info(f"Successfully captured {len(slide_images)} slide images")
+
+        # Capture additional reference slides if specified
+        if reference_slide_numbers:
+            logger.info(f"Capturing custom reference slides: {reference_slide_numbers}")
+            reference_images = _capture_slide_images(temp_file_path, reference_slide_numbers)
+            
+            # Also capture first 3 slides for general styling reference
+            reference_slides = list(range(1, min(4, slide_count + 1)))
+            logger.info(f"Also capturing default reference slides: {reference_slides}")
+            default_reference_images = _capture_slide_images(temp_file_path, reference_slides)
+            reference_images.update(default_reference_images)
+        else:
+            # Capture first 3 slides for styling reference
+            reference_slides = list(range(1, min(4, slide_count + 1)))
+            logger.info(f"Capturing default reference slides: {reference_slides}")
+            reference_images = _capture_slide_images(temp_file_path, reference_slides)
+
+        logger.info(f"Successfully captured {len(reference_images)} reference slide images")
+        
+        # Get detailed slide metadata for slides being edited
+        logger.info(f"Retrieving slide metadata for slides: {slide_numbers}")
+        slide_metadata = _get_slide_metadata(workspace_path, slide_numbers)
+        logger.info(f"Successfully retrieved metadata for {len(slide_metadata)} slides")
+        
+        # Get metadata for reference slides too
+        reference_metadata = {}
+        if reference_images:
+            reference_slide_nums = list(reference_images.keys())
+            logger.info(f"Retrieving reference slide metadata for slides: {reference_slide_nums}")
+            reference_metadata = _get_slide_metadata(workspace_path, reference_slide_nums)
+            logger.info(f"Successfully retrieved metadata for {len(reference_metadata)} reference slides")
+        
+        # Enhance prompt with slide metadata and visual context
+        metadata_context = ""
+        if slide_metadata:
+            metadata_context = "\n\nEXISTING SLIDE METADATA FOR CONTEXT:\n"
+            for slide_num, metadata in slide_metadata.items():
+                metadata_context += f"\nSlide {slide_num} (Layout: {metadata.get('layout_name', 'Unknown')}):\n"
+                for shape in metadata.get('shapes', []):
+                    shape_name = shape.get('name', 'Unnamed')
+                    shape_type = shape.get('shape_type', 'Unknown')
+                    position = shape.get('position', {})
+                    metadata_context += f'  - shape_name="{shape_name}", shape_type="{shape_type}"'
+                    if position:
+                        # Convert EMUs to points for LLM context (1 point = 12700 EMUs)
+                        left_emus = position.get('left', 0)
+                        top_emus = position.get('top', 0)
+                        width_emus = position.get('width', 0)
+                        height_emus = position.get('height', 0)
+                        
+                        left_points = round(left_emus / 12700, 1) if left_emus else 0
+                        top_points = round(top_emus / 12700, 1) if top_emus else 0
+                        width_points = round(width_emus / 12700, 1) if width_emus else 0
+                        height_points = round(height_emus / 12700, 1) if height_emus else 0
+                        
+                        metadata_context += f' at ({left_points}, {top_points}) size ({width_points}x{height_points}) points'
+                    if shape.get('text'):
+                        text_preview = shape['text'][:50] + '...' if len(shape['text']) > 50 else shape['text']
+                        metadata_context += f' with text: \'{text_preview}\''
+                    metadata_context += "\n"
+            logger.info(f"Generated metadata context for LLM: {metadata_context}")
+        else:
+            logger.warning("No slide metadata available for LLM context")
+        
+        # Create combined prompt by merging the comprehensive prompt with enhanced placeholder rules
         # Include slide count information in the prompt
         slide_context = f"The presentation currently has {slide_count} slides." if slide_count > 0 else "The presentation slide count is unknown."
         
         prompt = f"""
+        *** CRITICAL: SLIDE DUPLICATION INSTRUCTIONS - READ THIS FIRST ***
+        
+        BEFORE creating individual shapes, check if you need to DUPLICATE AN ENTIRE SLIDE:
+        
+        SLIDE DUPLICATION SYNTAX:
+        - To duplicate an existing slide: "duplicate_slide:[source_slide_number]"
+        - This copies ALL content from the source slide automatically
+        - DO NOT manually recreate shapes when duplicating - use this syntax instead
+        - Examples:
+          • "duplicate_slide:3" (duplicate slide 3 and add at end)
+          • "duplicate_slide:1" (duplicate slide 1 and add at end)
+        
+        WHEN TO USE SLIDE DUPLICATION:
+        - User asks to "duplicate slide X"
+        - User asks to "copy slide X"
+        - User asks to "create a slide based on slide X"
+        - User asks to "use slide X as template"
+        
+        CRITICAL: If you need to duplicate a slide, use ONLY the duplication syntax above.
+        Do NOT manually recreate all the shapes - the system will copy everything automatically.
+        
+        *** END DUPLICATION INSTRUCTIONS ***
+        
         {slide_context}
         {layout_context}
+        {metadata_context}
         
         Here are the instructions for this step, generate the powerpoint slide object metadata to fulfill these instructions: {edit_instructions}
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
-        
         slide_number: slide1, slide_layout="Title Slide" | shape_name="Microsoft Logo", fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
@@ -1002,108 +1122,8 @@ Example: slide_layout="Title Slide" or slide_layout=0
         - "duplicate_slide:2, target_slide=5" (duplicate slide 2 and insert at position 5)
         - To duplicate multiple slides: "duplicate_slide:1; duplicate_slide:4"
         """
-
-        # Get the user id for the API key
-        user_id = get_user_id_from_cache()
-        if not user_id:
-            error_msg = "Error: No authenticated user found"
-            logger.error(error_msg)
-            return error_msg
         
-        # Get Gemini model using the hardcoded gemini-2.5-pro model
-        logger.info("Initializing Gemini model for shape metadata generation")
-        try:
-            if LLMManager.get_llm() is None:
-                LLMManager.set_llm(GeminiProvider.get_gemini_model(
-                    user_id=user_id, 
-                    model="gemini-2.5-pro", 
-                    temperature=0.3,
-                    thinking_budget=0
-                ))
-            
-            llm = LLMManager.get_llm()
-        except Exception as e:
-            error_message = f"Failed to get llm model: {e}"
-            logger.error(error_message)
-            return error_message
-        
-        # Get temp file path for image capture
-        temp_file_path = get_temp_filepath(workspace_path)
-        logger.info(f"Using temp file path for image capture: {temp_file_path}")
-        
-        # Capture slide images for visual context
-        logger.info(f"Capturing slide images for slides: {slide_numbers}")
-        slide_images = _capture_slide_images(temp_file_path, slide_numbers)
-        logger.info(f"Successfully captured {len(slide_images)} slide images")
-
-        # Capture additional reference slides if specified
-        if reference_slide_numbers:
-            logger.info(f"Capturing custom reference slides: {reference_slide_numbers}")
-            reference_images = _capture_slide_images(temp_file_path, reference_slide_numbers)
-            
-            # Also capture first 3 slides for general styling reference
-            reference_slides = list(range(1, min(4, slide_count + 1)))
-            logger.info(f"Also capturing default reference slides: {reference_slides}")
-            default_reference_images = _capture_slide_images(temp_file_path, reference_slides)
-            reference_images.update(default_reference_images)
-        else:
-            # Capture first 3 slides for styling reference
-            reference_slides = list(range(1, min(4, slide_count + 1)))
-            logger.info(f"Capturing default reference slides: {reference_slides}")
-            reference_images = _capture_slide_images(temp_file_path, reference_slides)
-
-        logger.info(f"Successfully captured {len(reference_images)} reference slide images")
-        
-        # Get detailed slide metadata for slides being edited
-        logger.info(f"Retrieving slide metadata for slides: {slide_numbers}")
-        slide_metadata = _get_slide_metadata(workspace_path, slide_numbers)
-        logger.info(f"Successfully retrieved metadata for {len(slide_metadata)} slides")
-        
-        # Get metadata for reference slides too
-        reference_metadata = {}
-        if reference_images:
-            reference_slide_nums = list(reference_images.keys())
-            logger.info(f"Retrieving reference slide metadata for slides: {reference_slide_nums}")
-            reference_metadata = _get_slide_metadata(workspace_path, reference_slide_nums)
-            logger.info(f"Successfully retrieved metadata for {len(reference_metadata)} reference slides")
-        
-        # Enhance prompt with slide metadata and visual context
-        metadata_context = ""
-        if slide_metadata:
-            metadata_context = "\n\nEXISTING SLIDE METADATA FOR CONTEXT:\n"
-            for slide_num, metadata in slide_metadata.items():
-                metadata_context += f"\nSlide {slide_num} (Layout: {metadata.get('layout_name', 'Unknown')}):\n"
-                for shape in metadata.get('shapes', []):
-                    shape_name = shape.get('name', 'Unnamed')
-                    shape_type = shape.get('shape_type', 'Unknown')
-                    position = shape.get('position', {})
-                    metadata_context += f'  - shape_name="{shape_name}", shape_type="{shape_type}"'
-                    if position:
-                        # Convert EMUs to points for LLM context (1 point = 12700 EMUs)
-                        left_emus = position.get('left', 0)
-                        top_emus = position.get('top', 0)
-                        width_emus = position.get('width', 0)
-                        height_emus = position.get('height', 0)
-                        
-                        left_points = round(left_emus / 12700, 1) if left_emus else 0
-                        top_points = round(top_emus / 12700, 1) if top_emus else 0
-                        width_points = round(width_emus / 12700, 1) if width_emus else 0
-                        height_points = round(height_emus / 12700, 1) if height_emus else 0
-                        
-                        metadata_context += f' at ({left_points}, {top_points}) size ({width_points}x{height_points}) points'
-                    if shape.get('text'):
-                        text_preview = shape['text'][:50] + '...' if len(shape['text']) > 50 else shape['text']
-                        metadata_context += f' with text: \'{text_preview}\''
-                    metadata_context += "\n"
-            logger.info(f"Generated metadata context for LLM: {metadata_context}")
-        else:
-            logger.warning("No slide metadata available for LLM context")
-        
-        # Enhanced prompt with metadata context
-        enhanced_prompt = f"""
-        {slide_context}
-        {layout_context}
-        {metadata_context}
+        combined_prompt = prompt + f"""
         
         *** CRITICAL SLIDE PLACEHOLDER HANDLING RULES ***:
 
@@ -1251,7 +1271,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
         logger.info(f"Retrieved {len(user_attachments)} user-attached images")
         
         # Prepare multimodal message with text and images
-        content_parts = [{"type": "text", "text": enhanced_prompt}]
+        content_parts = [{"type": "text", "text": combined_prompt}]
         
         # Add user-attached images first with context
         if user_attachments:
