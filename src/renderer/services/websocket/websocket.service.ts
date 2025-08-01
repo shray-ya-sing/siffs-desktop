@@ -72,7 +72,17 @@ class WebSocketService {
     this.initialize();
   }
 
+  private authenticationRetryCount = 0;
+  private maxAuthRetries = 3;
+  private authRetryDelay = 1000; // 1 second
+  private isAuthenticated = false;
+  private pendingMessages: string[] = []; // Queue for messages waiting for authentication
+
   private initialize() {
+    // Reset authentication state on new connection
+    this.isAuthenticated = false;
+    this.authenticationRetryCount = 0;
+    
     const isDev = process.env.NODE_ENV === 'development';
     const clientId = uuidv4(); 
     const wsUrl = isDev 
@@ -82,17 +92,19 @@ class WebSocketService {
     this.socket = new WebSocket(wsUrl);
     
     this.socket.onopen = () => {
-      console.log('WebSocket connected');
+      console.log('WebSocket connected with client ID:', clientId);
       this.isConnected = true;
       
       // Send user ID to backend for API key association
+      console.log('Sending authentication message immediately after connection');
       this.sendUserIdToBackend();
       
-      // Process any queued messages
+      // Process any queued messages (but NOT authentication-dependent ones)
       this.messageQueue.forEach(message => {
         this.socket?.send(message);
       });
       this.messageQueue = [];
+      console.log('WebSocket connection setup complete');
     };
     
     this.socket.onmessage = (event) => {
@@ -107,6 +119,35 @@ class WebSocketService {
           console.log('Status data:', message.status);
           console.log('Request ID:', message.requestId);
           console.log('===============================');
+        }
+        
+        // Handle authentication success/failure
+        if (message.type === 'USER_AUTHENTICATION_SUCCESS') {
+          console.log('User authentication successful');
+          this.authenticationRetryCount = 0; // Reset retry count on success
+          this.isAuthenticated = true;
+          
+          // Process any pending messages that were waiting for authentication
+          this.pendingMessages.forEach(pendingMessage => {
+            if (this.socket) {
+              this.socket.send(pendingMessage);
+            }
+          });
+          this.pendingMessages = [];
+          console.log('Processed pending messages after authentication');
+        } else if (message.type === 'USER_AUTHENTICATION_FAILED') {
+          console.warn('User authentication failed, retrying...', message);
+          this.isAuthenticated = false;
+          this.retryAuthentication();
+        } else if (message.type === 'AUTHENTICATION_REQUIRED') {
+          console.log('Backend requested re-authentication, sending user ID...');
+          this.authenticationRetryCount = 0; // Reset retry count
+          this.isAuthenticated = false;
+          this.sendUserIdToBackend();
+        } else if (message.type === 'REQUEST_USER_AUTHENTICATION') {
+          console.log('Backend requesting dynamic authentication recovery...');
+          // Immediately send authentication in response to recovery request
+          this.sendUserIdToBackend();
         }
         
         // Special handling for chunked messages
@@ -172,6 +213,14 @@ class WebSocketService {
 
   public sendMessage(message: any): void {
     const messageStr = JSON.stringify(message);
+    
+    // If it's a CHAT_MESSAGE and we're not authenticated, queue it for after authentication
+    if (message.type === 'CHAT_MESSAGE' && !this.isAuthenticated) {
+      console.log('Queueing CHAT_MESSAGE until authentication completes');
+      this.pendingMessages.push(messageStr);
+      return;
+    }
+    
     if (this.isConnected && this.socket) {
       this.socket.send(messageStr);
     } else {
@@ -288,6 +337,23 @@ class WebSocketService {
       }
     } catch (error) {
       console.warn('Failed to send user ID to backend:', error);
+    }
+  }
+
+  private async retryAuthentication(): Promise<void> {
+    if (this.authenticationRetryCount < this.maxAuthRetries) {
+      this.authenticationRetryCount++;
+      console.log(`Retrying authentication (attempt ${this.authenticationRetryCount}/${this.maxAuthRetries})`);
+      
+      setTimeout(async () => {
+        await this.sendUserIdToBackend();
+      }, this.authRetryDelay * this.authenticationRetryCount); // Exponential backoff
+    } else {
+      console.error('Max authentication retries reached. User may need to reconnect manually.');
+      // Optionally notify the UI about authentication failure
+      this.errorHandlers.forEach(handler => {
+        handler(new Error('Authentication failed after multiple retries'));
+      });
     }
   }
 
