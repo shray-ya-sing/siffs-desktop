@@ -101,18 +101,23 @@ def clear_metadata_cache():
             logger.info(f"Cleared metadata cache at {cache_dir}")
             cache_dir = Path(__file__).parent / "metadata" / "__cache"
         if cache_dir.exists() and cache_dir.is_dir():
-            # Remove all files except user_api_keys.json
+            # Files to preserve during cache clearing
+            preserved_files = ["user_api_keys.json", "global_powerpoint_rules.json"]
+            
+            # Remove all files except preserved ones
             for item in cache_dir.glob('*'):
-                if item.is_file() and item.name != "user_api_keys.json":
+                if item.is_file() and item.name not in preserved_files:
                     os.unlink(item)
                     logger.info(f"Removed {item.name} from {cache_dir}")
                 elif item.is_dir():
                     shutil.rmtree(item)
                     logger.info(f"Removed directory {item.name} from {cache_dir}")
-            # Log that user_api_keys.json was preserved
-            user_api_keys_path = cache_dir / "user_api_keys.json"
-            if user_api_keys_path.exists():
-                logger.info(f"Preserved user_api_keys.json in {cache_dir}")
+            
+            # Log preserved files
+            for preserved_file in preserved_files:
+                preserved_path = cache_dir / preserved_file
+                if preserved_path.exists():
+                    logger.info(f"Preserved {preserved_file} in {cache_dir}")
         else:
             logger.info(f"Cache directory {cache_dir} does not exist, skipping clear")
     except Exception as e:
@@ -162,6 +167,8 @@ async def startup_event():
     logger.info("Starting up...WordCacheHandler initialized")
     from api_key_management.handlers.api_key_handler import api_key_handler
     logger.info("Starting up...APIKeyHandler initialized")
+    from powerpoint.rules.powerpoint_rules_handler import powerpoint_rules_handler
+    logger.info("Starting up...PowerPointRulesHandler initialized")
     
     # Initialize cache service
     try:

@@ -334,9 +334,9 @@ class PowerPointWorker:
 
                         for shape_name, shape_props in shapes_data.items():
                             try:
-                                # Check if this is a title-related shape and try to use existing title placeholder first
+                                # Check if this is a title-related or subtitle-related shape and try to use existing placeholders first
                                 shape = None
-                                if "title" in shape_name.strip().lower():
+                                if shape_name.strip().lower() == "slide title":
                                     # Try to find and reuse existing title placeholder
                                     title_placeholder = self._find_title_placeholder(slide)
                                     if title_placeholder:
@@ -348,8 +348,20 @@ class PowerPointWorker:
                                             if shape_obj.Name == shape_name:
                                                 shape = shape_obj
                                                 break
+                                elif shape_name.strip().lower() == "slide subtitle":
+                                    # Try to find and reuse existing subtitle placeholder
+                                    subtitle_placeholder = self._find_subtitle_placeholder(slide)
+                                    if subtitle_placeholder:
+                                        shape = subtitle_placeholder
+                                        logger.info(f"Reusing subtitle placeholder for shape '{shape_name}' in slide {slide_number}")
+                                    else:
+                                        # No subtitle placeholder found, look for existing shape by name
+                                        for shape_obj in slide.Shapes:
+                                            if shape_obj.Name == shape_name:
+                                                shape = shape_obj
+                                                break
                                 else:
-                                    # Not a title shape, find by name as usual
+                                    # Not a title or subtitle shape, find by name as usual
                                     for shape_obj in slide.Shapes:
                                         if shape_obj.Name == shape_name:
                                             shape = shape_obj
@@ -804,6 +816,69 @@ class PowerPointWorker:
             
         except Exception as e:
             logger.warning(f"Error searching for title placeholder: {e}")
+            return None
+    
+    def _find_subtitle_placeholder(self, slide):
+        """Find an existing subtitle placeholder on the slide.
+        
+        Args:
+            slide: PowerPoint slide object
+            
+        Returns:
+            The subtitle placeholder shape or None if not found
+        """
+        try:
+            # Look for common subtitle placeholder patterns
+            subtitle_indicators = [
+                'subtitle',
+                'slide subtitle', 
+                'subtitle 1',
+                'subheading',
+                'sub-title'
+            ]
+            
+            for shape in slide.Shapes:
+                try:
+                    # Check if shape has a name that indicates it's a subtitle
+                    shape_name = getattr(shape, 'Name', '').lower().strip()
+                    
+                    # Check for subtitle indicators in shape name
+                    if any(indicator in shape_name for indicator in subtitle_indicators):
+                        # Verify it has a text frame to confirm it's a text-based subtitle
+                        if hasattr(shape, 'TextFrame') and shape.TextFrame:
+                            logger.debug(f"Found subtitle placeholder by name: '{shape.Name}'")
+                            return shape
+                    
+                    # Check if it's a placeholder shape (common for subtitle placeholders)
+                    if hasattr(shape, 'PlaceholderFormat'):
+                        try:
+                            # PowerPoint placeholder types: 2=Body, 4=Subtitle, etc.
+                            placeholder_type = shape.PlaceholderFormat.Type
+                            if placeholder_type == 4:  # Subtitle placeholder
+                                logger.debug(f"Found subtitle placeholder by type: '{shape.Name}' (type {placeholder_type})")
+                                return shape
+                        except Exception:
+                            # PlaceholderFormat may not be accessible for all shapes
+                            pass
+                    
+                    # Check for shapes positioned below title but in upper portion of slide (likely subtitles)
+                    if hasattr(shape, 'Top') and hasattr(shape, 'TextFrame'):
+                        if shape.TextFrame and 100 < shape.Top < 200:  # Between 100-200 points from top
+                            # Additional check: ensure it spans a reasonable width (not a small label)
+                            if hasattr(shape, 'Width') and shape.Width > 200:
+                                logger.debug(f"Found potential subtitle placeholder by position: '{shape.Name}' (top={shape.Top}, width={shape.Width})")
+                                return shape
+                            
+                except Exception as shape_error:
+                    # Continue checking other shapes if one fails
+                    logger.debug(f"Error checking shape for subtitle placeholder: {shape_error}")
+                    continue
+            
+            logger.debug("No subtitle placeholder found on slide")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Error searching for subtitle placeholder: {e}")
             return None
     
     def _create_new_shape(self, slide, shape_name: str, shape_props: Dict[str, Any]):
@@ -3879,6 +3954,22 @@ class PowerPointWorker:
                 'slide_number': slide_number,
                 'properties_applied': []
             }
+            
+            # Special handling for Slide Subtitle shapes
+            if shape.Name == 'Slide Subtitle':
+                try:
+                    # Set no fill (transparent interior)
+                    shape.Fill.Visible = False
+                    updated_info['properties_applied'].append('subtitle_transparent_fill')
+                    logger.debug(f"Applied transparent fill to Slide Subtitle shape {shape.Name}")
+                    
+                    # Remove outline
+                    shape.Line.Visible = False
+                    updated_info['properties_applied'].append('subtitle_no_outline')
+                    logger.debug(f"Removed outline from Slide Subtitle shape {shape.Name}")
+                except Exception as e:
+                    logger.warning(f"Could not apply special Slide Subtitle formatting to shape {shape.Name}: {e}")
+            
             
             # Apply fill color
             if 'fill' in shape_props and shape_props['fill']:

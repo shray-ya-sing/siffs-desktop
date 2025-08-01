@@ -487,6 +487,16 @@ Example: slide_layout="Title Slide" or slide_layout=0
             logger.error(error_msg)
             return error_msg
         
+        # Get global PowerPoint formatting rules
+        global_rules_context = ""
+        try:
+            from powerpoint.rules.powerpoint_rules_service import powerpoint_rules_service
+            global_rules_context = powerpoint_rules_service.format_rules_for_llm(user_id)
+            if global_rules_context:
+                logger.info("Applied global PowerPoint formatting rules")
+        except Exception as e:
+            logger.warning(f"Could not load global PowerPoint rules: {e}")
+        
         # Get Gemini model using the hardcoded gemini-2.5-pro model
         logger.info("Initializing Gemini model for shape metadata generation")
         try:
@@ -1142,7 +1152,20 @@ Example: slide_layout="Title Slide" or slide_layout=0
         - To duplicate multiple slides: "duplicate_slide=1; duplicate_slide=4"
         """
         
-        combined_prompt = prompt + f"""
+        # Include global formatting rules at the START of the prompt if available
+        global_rules_prompt = ""
+        if global_rules_context:
+            global_rules_prompt = f"""
+        *** MANDATORY GLOBAL FORMATTING RULES ***:
+        {global_rules_context}
+        
+        These are the user's global PowerPoint formatting rules that MUST be applied to ALL slides and shapes in this presentation.
+        Follow these rules in addition to the specific edit instructions below.
+        *** END GLOBAL FORMATTING RULES ***
+        
+        """
+        
+        combined_prompt = global_rules_prompt + prompt + f"""
         
         *** CRITICAL SLIDE PLACEHOLDER HANDLING RULES ***:
 
@@ -1150,6 +1173,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
         - For slide titles, footers, and slide numbers, you MUST reuse existing placeholder shapes.
         - Look for these exact names in the metadata and reuse them:
           * Title Placeholders: "Title 1", "Slide Title", "Center Title 1"
+          * Subtitle Placeholders: "Slide Subtitle", "Subtitle 1"
           * Footer Placeholders: "Footer Placeholder 1", "Footer"
           * Slide Number Placeholders: "Slide Number Placeholder 1", "Slide Number"
           * Date Placeholders: "Date Placeholder 1", "Date"
@@ -1163,14 +1187,24 @@ Example: slide_layout="Title Slide" or slide_layout=0
 
         *** CRITICAL SHAPE NAMING RULES ***:
         
-        NEVER USE "TITLE" IN SHAPE NAMES UNLESS IT'S THE ACTUAL SLIDE TITLE:
-        - DO NOT name shapes with "title" in the name unless it's the actual slide title placeholder
-        - WRONG: shape_name="Chart Title", shape_name="Section Title", shape_name="Data Title"
-        - CORRECT: shape_name="Revenue Chart", shape_name="Sales Performance", shape_name="Key Metrics"
-        - ONLY ACCEPTABLE: shape_name="Title 1" (when modifying the actual slide title placeholder)
-        - For chart titles, use the chart_title property instead: chart_title="Q1 Revenue Analysis"
+        MANDATORY TITLE AND SUBTITLE NAMING CONVENTION:
+        - For slide TITLES: ALWAYS use the exact name "Slide Title" when creating or modifying slide title shapes
+        - For slide SUBTITLES: ALWAYS use the exact name "Slide Subtitle" when creating or modifying slide subtitle shapes
+        - NEVER use variations like "Title 1", "Slide Title 1", "Main Title", "Chart Title", "Section Title"
+        - NEVER use "title" or "subtitle" in any other shape names
+        
+        EXAMPLES:
+        - ✅ CORRECT: shape_name="Slide Title", text="Quarterly Revenue Report"
+        - ✅ CORRECT: shape_name="Slide Subtitle", text="Q1 2024 Financial Summary"
+        - ❌ WRONG: shape_name="Chart Title", shape_name="Section Title", shape_name="Data Title"
+        - ❌ WRONG: shape_name="Title 1", shape_name="Main Title", shape_name="Report Title"
+        
+        FOR NON-TITLE SHAPES:
+        - Use descriptive names: shape_name="Revenue Chart", shape_name="Sales Performance", shape_name="Key Metrics"
+        - For chart titles, use the chart_title property: chart_title="Q1 Revenue Analysis"
         - For section headers, use descriptive names: shape_name="Financial Summary Header"
-        - This ensures the PowerPoint writer can properly identify and reuse slide title placeholders
+        
+        This ensures the PowerPoint writer can properly identify and reuse slide title placeholders through exact matching.
 
         SUMMARY:
         - REUSE: Title, Footer, Date, and Slide Number placeholders.
@@ -1464,6 +1498,13 @@ Example: slide_layout="Title Slide" or slide_layout=0
                         
                         Original request: {edit_instructions}
                         Slides: {slide_numbers} | Shapes updated: {len(updated_shapes)}
+                        
+                        UPDATED SHAPES METADATA:
+                        The following is the detailed metadata of shapes that were actually modified/created during this editing operation:
+                        {json.dumps(updated_shapes, indent=2) if updated_shapes else "No shape metadata available"}
+                        
+                        This metadata shows exactly which properties were applied to each shape, including positioning, sizing, colors, fonts, and other formatting.
+                        Use this information to understand what changes were actually made and verify they match the original request.
                         
                         Review the slide images and provide BRIEF, ACTIONABLE feedback:
                         

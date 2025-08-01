@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { APIKeyManagement } from '../components/settings/APIKeyManagement';
+import { PowerPointRulesManagement } from '../components/settings/PowerPointRulesManagement';
 
 interface UserData {
   name: string;
@@ -10,7 +11,7 @@ interface UserData {
   confirmPassword: string;
 }
 
-type ActiveTab = 'profile' | 'password' | 'api-keys';
+type ActiveTab = 'profile' | 'password' | 'api-keys' | 'powerpoint-rules';
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -126,6 +127,16 @@ export function SettingsPage() {
               }`}
             >
               API Keys
+            </button>
+            <button
+              onClick={() => handleTabChange('powerpoint-rules')}
+              className={`px-6 py-3 text-sm font-light rounded-full transition-all duration-300 ${
+                activeTab === 'powerpoint-rules'
+                  ? 'bg-gray-800/70 text-white border border-gray-700/50 shadow-lg'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              }`}
+            >
+              PowerPoint Rules
             </button>
           </div>
         </div>
@@ -265,6 +276,13 @@ export function SettingsPage() {
             {activeTab === 'api-keys' && (
               <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">
                 <APIKeyManagement />
+              </div>
+            )}
+            
+            {/* PowerPoint Rules Tab */}
+            {activeTab === 'powerpoint-rules' && (
+              <div className="bg-gray-900/60 backdrop-blur-sm p-8 rounded-2xl border border-gray-700/50 shadow-2xl">
+                <PowerPointRulesManagement />
               </div>
             )}
           </div>
