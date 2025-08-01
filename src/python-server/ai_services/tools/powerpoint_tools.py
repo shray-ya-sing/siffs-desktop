@@ -671,12 +671,32 @@ Example: slide_layout="Title Slide" or slide_layout=0
         - Flowchart: "flowchartprocess", "flowchartdecision", "flowchartterminator"
         - CRITICAL: All geometry names must be lowercase. "rightarrow" NOT "rightArrow"!
         4. SIZE/POSITION PROPERTIES: width, height, left, top (ALL IN POINTS, WITHIN RANGES SPECIFIED ABOVE).
-        5. TEXT PROPERTIES (for shapes with text content):
+            5. TEXT PROPERTIES (for shapes with text content):
            *** CRITICAL TEXT FORMATTING RULES ***:
            - text: The actual text content (enclose in quotes) - MUST BE PLAIN TEXT ONLY
            - NEVER use HTML tags like <p>, <b>, <i>, <font>, or style attributes in text content
            - For multi-line text, use \\n (double backslash n) for line breaks
            - Apply formatting using separate properties, NOT embedded in text
+           
+           *** CRITICAL SUB-BULLET FORMATTING RULES ***:
+
+           BULLET HIERARCHY LEVELS:
+           - indent_level=0: Main bullet points (• First level)
+           - indent_level=1: Sub-bullets (◦ Second level, indented)
+           - indent_level=2: Sub-sub-bullets (▪ Third level, further indented)
+           - indent_level=3-8: Additional nesting levels
+
+           SUB-BULLET EXAMPLES:
+           ✓ CORRECT Multi-level bullets:
+           paragraphs="[
+             {{'text': 'Main Point 1', 'bullet_style': 'bullet', 'indent_level': 0}},
+             {{'text': 'Sub-point A', 'bullet_style': 'bullet', 'indent_level': 1}}, 
+             {{'text': 'Sub-point B', 'bullet_style': 'bullet', 'indent_level': 1}},
+             {{'text': 'Main Point 2', 'bullet_style': 'bullet', 'indent_level': 0}}
+           ]"
+
+           CRITICAL: Each paragraph with a different indent_level creates a different bullet hierarchy level.
+           Use indent_level=1 for SUB-BULLETS, indent_level=2 for SUB-SUB-BULLETS, etc.
            
            FORMATTING PROPERTIES (applied separately from text):
            - font_size: Font size in points (typical range: 8-72)
