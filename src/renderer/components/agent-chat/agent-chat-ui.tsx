@@ -77,7 +77,6 @@ const MODEL_OPTIONS: ModelOption[] = [
   
   // Google Models
   { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "Google" },
-  { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 Flash Lite", provider: "Google" },
 ]
 
 
@@ -197,7 +196,7 @@ export default function AIChatUI({ isSidebarOpen }: { isSidebarOpen: boolean }) 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite-preview-06-17")
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-pro")
   const [attachments, setAttachments] = useState<Array<{type: 'image', data: string, mimeType: string, filename?: string}>>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [messageFeedback, setMessageFeedback] = useState<{[messageId: string]: 'up' | 'down' | null}>({})
