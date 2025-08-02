@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ConnectionManager:
     """Manages WebSocket connections with heartbeat support"""
     
-    def __init__(self, heartbeat_interval: int = 30, timeout: int = 300):
+    def __init__(self, heartbeat_interval: int = 30, timeout: int = 3600):
         self.active_connections: Dict[str, WebSocket] = {}
         self.client_info: Dict[str, dict] = {}
         self.client_user_mapping: Dict[str, str] = {}  # Maps client_id to user_id
