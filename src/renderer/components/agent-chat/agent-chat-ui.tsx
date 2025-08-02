@@ -77,6 +77,7 @@ const MODEL_OPTIONS: ModelOption[] = [
   
   // Google Models
   { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "Google" },
+  { id: "gemini-2.5-flash-lite-preview-06-17", name: "Gemini 2.5 Flash Lite", provider: "Google" },
 ]
 
 
