@@ -249,19 +249,10 @@ class SupervisorAgentOrchestrator:
             user_id = auth_data.get("user_id")
             email = auth_data.get("email")
             
-            logger.info(f"=== AUTHENTICATION REQUEST ===\nClient ID: {client_id}\nUser ID: {user_id}\nEmail: {email}\n===============================")
-            
             if user_id:
                 # Store the user_id association in the WebSocket manager
                 manager.set_user_id(client_id, user_id)
-                logger.info(f"User authentication successful for client {client_id} -> user {user_id}")
-                
-                # Verify the mapping was stored correctly
-                stored_user_id = manager.get_user_id(client_id)
-                logger.info(f"Verification - stored user_id for client {client_id}: {stored_user_id}")
-                
-                # Complete any pending authentication recovery
-                self._complete_authentication_recovery(client_id, user_id)
+                logger.info("User authentication successful")
                 
                 # Agent will be initialized on first chat message with model selection
                 logger.info("User authenticated successfully, supervisor agent will be initialized on first chat message")
@@ -277,7 +268,7 @@ class SupervisorAgentOrchestrator:
                     }
                 )
             else:
-                logger.warning(f"User authentication failed for client {client_id}: no user_id provided")
+                logger.warning("User authentication failed: no user_id provided")
                 await self._send_to_client(
                     client_id=client_id,
                     data={
@@ -485,28 +476,17 @@ class SupervisorAgentOrchestrator:
         """Stream the supervisor agent's response"""
         try:
             # Get user_id from the client
-            logger.info(f"=== STREAM SUPERVISOR REQUEST ===\nClient ID: {client_id}\nRequest ID: {request_id}\nMessage: {message[:100]}...\n===============================\n")
             user_id = manager.get_user_id(client_id)
-            logger.info(f"Retrieved user_id for client {client_id}: {user_id}")
             
             if not user_id:
-                logger.error(f"No user_id found for client {client_id} in _stream_supervisor_response")
-                # Try to recover authentication dynamically
-                logger.info(f"Attempting dynamic authentication recovery for client {client_id}")
-                
-                recovered_user_id = await self._recover_authentication(client_id, request_id)
-                if recovered_user_id:
-                    user_id = recovered_user_id
-                    logger.info(f"Authentication recovery successful for client {client_id} -> user {user_id}")
-                else:
-                    logger.error(f"Authentication recovery failed for client {client_id}")
-                    yield {
-                        "type": "error",
-                        "error": "User authentication failed. Please refresh the page and try again.",
-                        "requestId": request_id,
-                        "done": True
-                    }
-                    return
+                logger.error("No user_id found for client in _stream_supervisor_response")
+                yield {
+                    "type": "error",
+                    "error": "User not authenticated",
+                    "requestId": request_id,
+                    "done": True
+                }
+                return
             
             # Initialize the agent with the user's API key and selected model
             if not supervisor_agent.current_user_id or supervisor_agent.current_user_id != user_id or not hasattr(supervisor_agent, '_current_model') or supervisor_agent._current_model != model:
@@ -1110,58 +1090,6 @@ class SupervisorAgentOrchestrator:
         
         logger.info(f"Sanitized {len(messages)} messages for provider {provider_name}, kept {len(sanitized_messages)} messages")
         return sanitized_messages
-
-    async def _recover_authentication(self, client_id: str, request_id: Optional[str] = None) -> Optional[str]:
-        """Attempt to recover user authentication dynamically by requesting it from the frontend"""
-        try:
-            logger.info(f"Starting authentication recovery for client {client_id}")
-            
-            # Create a future to wait for authentication response
-            auth_future = asyncio.Future()
-            
-            # Store the future so we can resolve it when authentication arrives
-            if not hasattr(self, '_auth_recovery_futures'):
-                self._auth_recovery_futures = {}
-            self._auth_recovery_futures[client_id] = auth_future
-            
-            # Request authentication from the frontend
-            await self._send_to_client(
-                client_id=client_id,
-                data={
-                    "type": "REQUEST_USER_AUTHENTICATION",
-                    "message": "Please provide authentication to continue",
-                    "requestId": request_id
-                }
-            )
-            
-            try:
-                # Wait for authentication response (with timeout)
-                user_id = await asyncio.wait_for(auth_future, timeout=10.0)  # 10 second timeout
-                logger.info(f"Authentication recovery successful for client {client_id}: {user_id}")
-                return user_id
-                
-            except asyncio.TimeoutError:
-                logger.warning(f"Authentication recovery timed out for client {client_id}")
-                return None
-            except Exception as e:
-                logger.error(f"Error during authentication recovery for client {client_id}: {e}")
-                return None
-            finally:
-                # Clean up the future
-                if client_id in self._auth_recovery_futures:
-                    del self._auth_recovery_futures[client_id]
-                    
-        except Exception as e:
-            logger.error(f"Failed to initiate authentication recovery for client {client_id}: {e}")
-            return None
-    
-    def _complete_authentication_recovery(self, client_id: str, user_id: str):
-        """Complete the authentication recovery process"""
-        if hasattr(self, '_auth_recovery_futures') and client_id in self._auth_recovery_futures:
-            future = self._auth_recovery_futures[client_id]
-            if not future.done():
-                future.set_result(user_id)
-                logger.info(f"Authentication recovery completed for client {client_id}")
 
     def extract_ai_message_content(self, message_chunk):
         """Extract text content from an AIMessage or AIMessageChunk."""
