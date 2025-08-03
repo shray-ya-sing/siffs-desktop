@@ -1271,7 +1271,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
            - text_align: "left", "center", "right", or "justify" for horizontal alignment
            - vertical_align: "top", "middle", or "bottom" for vertical alignment
            - bullet_style: "bullet", "number", "none" for bullet formatting
-           - bullet_char: Custom bullet character (e.g., "•", "→", "★")
+           - bullet_char: Custom bullet character (e.g., "•", "→", "★", "■", "□", "○", "◆", "◇", "-", "–", "✓")
            - bullet_size: Bullet size as percentage (e.g., 120 for 120% of text size)
            - bullet_font_color: Bullet color in hex format (e.g., "#0066CC")
            - indent_level: Indentation level for bullets (0-8, default 0)
@@ -1290,9 +1290,9 @@ Example: slide_layout="Title Slide" or slide_layout=0
            
            ADVANCED CHARACTER-LEVEL FORMATTING:
            - paragraph_runs: Array of character-level formatting instructions for specific text substrings
-             Format: [{{"text": "substring", "bold": true, "italic": false, "font_color": "#FF0000"}}]
-             Example: paragraph_runs="[{{"text": "$1.75M", "bold": true}}, {{"text": "3%", "bold": true}}]"
-             Use this to apply different formatting to specific text substrings within the same text content
+             Format: [{{"text": "substring", "bold": True, "italic": True, "font_color": "#FF0000"}}]
+             Example: paragraph_runs="[{{"text": "$1.75M", "bold": True}}, {{"text": "3%", "bold": True}}]"
+             Use this to apply different formatting to specific text substrings within the same text content. Remember to capitalize bool value of bold and italic properties.
         6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
            - shape_name="Paragraph Name", geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
         7. TEXT FORMATTING EXAMPLES:

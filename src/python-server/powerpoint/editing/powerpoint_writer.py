@@ -4506,22 +4506,35 @@ class PowerPointWorker:
                                 logger.info(f"DEBUG: String length: {len(paragraph_data)}")
                                 logger.info(f"DEBUG: First 200 chars: {repr(paragraph_data[:200])}")
                                 logger.info(f"DEBUG: Last 200 chars: {repr(paragraph_data[-200:])}")
+
+                                # Preprocess: Escape any unescaped apostrophes within text values
+                                # This assumes the string follows the pattern: 'text': 'content'
+                                def escape_inner_quotes(s):
+                                    in_text_value = False
+                                    result = []
+                                    i = 0
+                                    while i < len(s):
+                                        if s[i:i+7] == "'text':":  # Found a text key
+                                            in_text_value = True
+                                            result.append(s[i:i+7])
+                                            i += 7
+                                        elif in_text_value and s[i] == "'":  # Found a quote in text value
+                                            if i > 0 and s[i-1] != '\\':  # If quote is not already escaped
+                                                if i < len(s)-1 and s[i+1] == ",":  # End of text value
+                                                    in_text_value = False
+                                                    result.append(s[i])
+                                                else:
+                                                    result.append("\\'")  # Escape the quote
+                                            else:
+                                                result.append(s[i])
+                                        else:
+                                            result.append(s[i])
+                                        i += 1
+                                    return ''.join(result)
                                 
-                                # Look for the problematic part
-                                if "Republic Bank" in paragraph_data:
-                                    problem_start = paragraph_data.find("JPMorgan Chase did not assume First Republic Bank")
-                                    if problem_start != -1:
-                                        problem_end = problem_start + 100
-                                        problem_segment = paragraph_data[problem_start:problem_end]
-                                        logger.info(f"DEBUG: Problematic segment: {repr(problem_segment)}")
-                                        
-                                        # Character-by-character analysis of the problematic area
-                                        for i, char in enumerate(problem_segment):
-                                            if i > 80:  # Limit output
-                                                break
-                                            logger.info(f"DEBUG: Char {i:2d}: {repr(char):4s} (ord: {ord(char):3d})")
-                                
-                                paragraph_data = ast.literal_eval(paragraph_data)
+                                processed_data = escape_inner_quotes(paragraph_data)
+                                logger.debug(f"Preprocessed paragraph data: {processed_data[:200]}...")
+                                paragraph_data = ast.literal_eval(processed_data)
                                 logger.debug(f"Parsed paragraph data string into {len(paragraph_data)} paragraphs for shape {shape.Name}")
                             except (ValueError, SyntaxError) as e:
                                 logger.warning(f"Could not parse paragraph data string for shape {shape.Name}: {e}")
