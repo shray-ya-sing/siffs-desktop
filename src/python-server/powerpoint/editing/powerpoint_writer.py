@@ -237,17 +237,23 @@ class PowerPointWorker:
                     # Check for slide duplication first (handles special case where slide_key might be a raw section)
                     if isinstance(shapes_data, dict) and '_duplicate_slide_from' in shapes_data:
                         duplicate_from = shapes_data.get('_duplicate_slide_from')
+                        if '_insert_after' in shapes_data:
+                            insert_after = shapes_data.get('_insert_after')
                         target_slide_number = None  # Initialize to avoid UnboundLocalError
                         try:
                             # Check if target_slide is explicitly specified in shapes_data
                             if 'target_slide' in shapes_data:
                                 target_slide_number = shapes_data.get('target_slide')
                                 logger.info(f"Using explicit target slide number: {target_slide_number}")
+                            # Default behavior: append duplicated slide at the end. Insert after specified: insert after specified position.
+                            if insert_after:
+                                target_slide_number = insert_after + 1
+                                logger.info(f"Insert after specified, duplicating slide {duplicate_from} to position {target_slide_number}")
+                        
                             else:
-                                # Default behavior: append duplicated slide at the end
                                 target_slide_number = self._presentation.Slides.Count + 1
                                 logger.info(f"No target specified, duplicating slide {duplicate_from} to end of presentation (position {target_slide_number})")
-                            
+                        
                             # Perform slide duplication
                             success, shape_metadata = self._duplicate_slide(duplicate_from, target_slide_number)
                             if success:
@@ -282,6 +288,9 @@ class PowerPointWorker:
                     # Check for slide deletion flag
                     delete_slide = shapes_data.pop('_delete_slide', False) if isinstance(shapes_data, dict) else False
                     
+                    # Check for add new slide flag
+                    add_new = shapes_data.pop('_add_new', False) if isinstance(shapes_data, dict) else False
+                    
                     if delete_slide:
                         # Delete the slide if it exists
                         try:
@@ -299,14 +308,19 @@ class PowerPointWorker:
                         continue  # Skip processing shapes for deleted slides
                     
                     try:
-                        # Get the slide, create it with the specified layout if it doesn't exist
-                        slide, was_created = self._get_or_create_slide(slide_number, slide_layout)
+                        # When add_new not specified. Get the slide, create it with the specified layout if it doesn't exist
+                        if not add_new:
+                            slide, was_created = self._get_or_create_slide(slide_number, slide_layout)
+                        # When add_new specified. Create new slide at the specified position
+                        else:
+                            slide, was_created = self._create_slide_at(slide_number, slide_layout)
                         if slide is None:
                             logger.error(f"Failed to get or create slide {slide_number}")
                             continue
                         if was_created:
                             updated_shapes.append({
                                 'slide_number': slide_number,
+                                "new_slide_added": add_new,
                                 'action': 'created_slide',
                                 'properties_applied': ['new_slide']
                             })
@@ -754,6 +768,34 @@ class PowerPointWorker:
         except Exception as e:
             logger.error(f"Error getting or creating slide {slide_number}: {e}")
             return None
+
+    def _create_slide_at(self, slide_number: int, layout_name: str = None):
+        """Create a new slide at the specified position.
+        
+        Args:
+            slide_number: The slide number (1-based)
+            layout_name: Optional layout name or index for new slides
+            
+        Returns:
+            The slide object or None if creation failed
+        """
+        try:
+            # Try to get existing slide
+            try:
+                # Determine the layout to use
+                slide_layout = self._get_slide_layout(layout_name)                
+                new_slide = self._presentation.Slides.AddSlide(slide_number, slide_layout)
+                if layout_name:
+                    logger.info(f"Created slide {slide_number} with layout '{layout_name}'")
+                else:
+                    logger.info(f"Created slide {slide_number}")
+                return new_slide, True
+            except Exception as e:               
+                logger.error(f"Error creating slide {slide_number}: {e}")
+                return None, False
+        except Exception as e:
+            logger.error(f"Error getting or creating slide {slide_number}: {e}")
+            return None, False
     
     def _find_title_placeholder(self, slide):
         """Find an existing title placeholder on the slide.
