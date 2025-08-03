@@ -250,7 +250,7 @@ def _capture_slide_images(temp_file_path: str, slide_numbers: List[int]) -> Dict
         
         logger.info(f"Capturing images for slides: {slide_numbers}")
         
-        for slide_num in slide_numbers:
+        for slide_num in slide_numbers[:15]:
             try:
                 if slide_num <= presentation.Slides.Count:
                     slide = presentation.Slides(slide_num)
@@ -2180,7 +2180,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: 
                                - "Make this slide look like slide 3" → reference_slide_numbers=[3]
                                - "Use the same layout as slides 1 and 4" → reference_slide_numbers=[1, 4]
                                
-                               This parameter enables the LLM to see the source slides visually for accurate copying/duplication.
+                               This parameter enables the LLM to see the source slides visually for accurate copying/duplication. MAXIMUM 15 slide numbers are allowed in a single tool call.
     
     Returns:
         A JSON string containing the results of the shape editing operation:
