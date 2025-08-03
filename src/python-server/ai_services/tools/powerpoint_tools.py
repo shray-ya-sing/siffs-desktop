@@ -250,7 +250,7 @@ def _capture_slide_images(temp_file_path: str, slide_numbers: List[int]) -> Dict
         
         logger.info(f"Capturing images for slides: {slide_numbers}")
         
-        for slide_num in slide_numbers:
+        for slide_num in slide_numbers[:15]:
             try:
                 if slide_num <= presentation.Slides.Count:
                     slide = presentation.Slides(slide_num)
@@ -599,6 +599,10 @@ Example: slide_layout="Title Slide" or slide_layout=0
         - Examples:
           • "duplicate_slide=3" (duplicate slide 3 and add at end)
           • "duplicate_slide=1" (duplicate slide 1 and add at end)
+          • "duplicate_slide=3, insert_after=5" (duplicate slide 3 and add after slide 5)
+        - DO NOT use the add_new flag with slide duplication. slide duplication assumes that a new slide is created. 
+        DO NOT generate slide_number: 1, add_new=true, duplicate_slide=1.
+        This is wrong. You must always use the duplication syntax instead.
         
         WHEN TO USE SLIDE DUPLICATION:
         - User asks to "duplicate slide X"
@@ -618,7 +622,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
         Here are the instructions for this step, generate the powerpoint slide object metadata to fulfill these instructions: {edit_instructions}
         
         FORMAT YOUR RESPONSE AS FOLLOWS:
-        slide_number: slide1, slide_layout="Title Slide" | shape_name="Microsoft Logo", fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
+        slide_number: 1, add_new=true, slide_layout="Title Slide" | shape_name="Microsoft Logo", fill="#798798", out_col="#789786", out_style="solid", out_width=2, geom="rectangle", width=100, height=100, left=50, top=50, text="Sample text", font_size=14, font_name="Arial", font_color="#000000", bold=true, italic=false, underline=false, text_align="center", vertical_align="middle"
 
         RETURN ONLY THIS - DO NOT ADD ANYTHING ELSE LIKE STRING COMMENTARY, REASONING, EXPLANATION, ETC.
 
@@ -740,13 +744,14 @@ Example: slide_layout="Title Slide" or slide_layout=0
         8. Provide all values using their precise properties writable by PyCOM to PowerPoint.
         9. Separate multiple shape updates with pipes (|).
         10. Always use concise keys for properties and ensure proper formatting for parsing.
-        11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
+        11. SLIDE CREATION: If you specify a slide number that doesn't exist, that slide will be automatically created and added to the end of the presentation. If you specify object metadata for the new slide, those objects will be added to the new slide. If you specify no object metadata, the slide remains blank.
+        To add a slide at a specific position, use the metadata syntax slide_number: 1, add_new=true, slide_layout="Title Slide" |.... This will add a new slide at position 1 and use the "Title Slide" layout. The add_new flag is required to create a new slide at the specified position. Without this flag, the existing slide at that position will be overwritten.
         12. SLIDE NUMBERING: If you need to add a new slide, use slide number {slide_count + 1} or higher. Existing slides are numbered 1 through {slide_count}.
         
         *** CRITICAL NEW SLIDE vs EXISTING SHAPE RULES ***:
         
         FOR NEW SLIDES (slides that don't exist yet):
-        - ALWAYS create completely NEW shapes with unique, descriptive names for the main body content.
+        - ALWAYS create completely NEW shapes with unique, descriptive names for the main body content. Unless user specifies to use the placeholders on a slide.
         - IGNORE and DO NOT create shapes for footer, date, or slide number placeholders unless the user explicitly asks for them. Focus ONLY on the title and body content.
         - NEVER try to replace or modify placeholder content like "Title 1", "Content Placeholder 2", "TextBox 3"
         - NEVER reference existing placeholder shapes from slide layouts
@@ -774,7 +779,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
             - For new slides, specify layout using: slide_layout="layout_name" or slide_layout=index
             - Choose appropriate layouts based on slide content (e.g., "Title Slide", "Title and Content", "Section Header")
             - If no layout is specified, the default layout will be used
-            - Examples: slide_number: 5, slide_layout="Title Slide" | ... or slide_number: 6, slide_layout=0 | ...
+            - Examples: slide_number: 5, add_new=true, slide_layout="Title Slide" | ... or slide_number: 6, add_new=true, slide_layout=0 | ...
         14. TEXT CONTENT RULES:
             - Use \n for line breaks within text
             - Enclose text content in double quotes
@@ -1266,7 +1271,7 @@ Example: slide_layout="Title Slide" or slide_layout=0
            - text_align: "left", "center", "right", or "justify" for horizontal alignment
            - vertical_align: "top", "middle", or "bottom" for vertical alignment
            - bullet_style: "bullet", "number", "none" for bullet formatting
-           - bullet_char: Custom bullet character (e.g., "•", "→", "★")
+           - bullet_char: Custom bullet character (e.g., "•", "→", "★", "■", "□", "○", "◆", "◇", "-", "–", "✓")
            - bullet_size: Bullet size as percentage (e.g., 120 for 120% of text size)
            - bullet_font_color: Bullet color in hex format (e.g., "#0066CC")
            - indent_level: Indentation level for bullets (0-8, default 0)
@@ -1285,9 +1290,9 @@ Example: slide_layout="Title Slide" or slide_layout=0
            
            ADVANCED CHARACTER-LEVEL FORMATTING:
            - paragraph_runs: Array of character-level formatting instructions for specific text substrings
-             Format: [{{"text": "substring", "bold": true, "italic": false, "font_color": "#FF0000"}}]
-             Example: paragraph_runs="[{{"text": "$1.75M", "bold": true}}, {{"text": "3%", "bold": true}}]"
-             Use this to apply different formatting to specific text substrings within the same text content
+             Format: [{{"text": "substring", "bold": True, "italic": True, "font_color": "#FF0000"}}]
+             Example: paragraph_runs="[{{"text": "$1.75M", "bold": True}}, {{"text": "3%", "bold": True}}]"
+             Use this to apply different formatting to specific text substrings within the same text content. Remember to capitalize bool value of bold and italic properties.
         6. PARAGRAPH CREATION: For standalone text elements, use geom="textbox" to create text boxes:
            - shape_name="Paragraph Name", geom="textbox", width=300, height=100, left=50, top=50, text="Your paragraph text here", font_size=12, font_name="Arial", font_color="#000000", text_align="left", vertical_align="top"
         7. TEXT FORMATTING EXAMPLES:
@@ -2175,7 +2180,7 @@ def edit_powerpoint(workspace_path: str, edit_instructions: str, slide_numbers: 
                                - "Make this slide look like slide 3" → reference_slide_numbers=[3]
                                - "Use the same layout as slides 1 and 4" → reference_slide_numbers=[1, 4]
                                
-                               This parameter enables the LLM to see the source slides visually for accurate copying/duplication.
+                               This parameter enables the LLM to see the source slides visually for accurate copying/duplication. MAXIMUM 15 slide numbers are allowed in a single tool call.
     
     Returns:
         A JSON string containing the results of the shape editing operation:

@@ -237,17 +237,23 @@ class PowerPointWorker:
                     # Check for slide duplication first (handles special case where slide_key might be a raw section)
                     if isinstance(shapes_data, dict) and '_duplicate_slide_from' in shapes_data:
                         duplicate_from = shapes_data.get('_duplicate_slide_from')
+                        if '_insert_after' in shapes_data:
+                            insert_after = shapes_data.get('_insert_after')
                         target_slide_number = None  # Initialize to avoid UnboundLocalError
                         try:
                             # Check if target_slide is explicitly specified in shapes_data
                             if 'target_slide' in shapes_data:
                                 target_slide_number = shapes_data.get('target_slide')
                                 logger.info(f"Using explicit target slide number: {target_slide_number}")
+                            # Default behavior: append duplicated slide at the end. Insert after specified: insert after specified position.
+                            if insert_after:
+                                target_slide_number = insert_after + 1
+                                logger.info(f"Insert after specified, duplicating slide {duplicate_from} to position {target_slide_number}")
+                        
                             else:
-                                # Default behavior: append duplicated slide at the end
                                 target_slide_number = self._presentation.Slides.Count + 1
                                 logger.info(f"No target specified, duplicating slide {duplicate_from} to end of presentation (position {target_slide_number})")
-                            
+                        
                             # Perform slide duplication
                             success, shape_metadata = self._duplicate_slide(duplicate_from, target_slide_number)
                             if success:
@@ -282,6 +288,9 @@ class PowerPointWorker:
                     # Check for slide deletion flag
                     delete_slide = shapes_data.pop('_delete_slide', False) if isinstance(shapes_data, dict) else False
                     
+                    # Check for add new slide flag
+                    add_new = shapes_data.pop('_add_new', False) if isinstance(shapes_data, dict) else False
+                    
                     if delete_slide:
                         # Delete the slide if it exists
                         try:
@@ -299,14 +308,19 @@ class PowerPointWorker:
                         continue  # Skip processing shapes for deleted slides
                     
                     try:
-                        # Get the slide, create it with the specified layout if it doesn't exist
-                        slide, was_created = self._get_or_create_slide(slide_number, slide_layout)
+                        # When add_new not specified. Get the slide, create it with the specified layout if it doesn't exist
+                        if not add_new:
+                            slide, was_created = self._get_or_create_slide(slide_number, slide_layout)
+                        # When add_new specified. Create new slide at the specified position
+                        else:
+                            slide, was_created = self._create_slide_at(slide_number, slide_layout)
                         if slide is None:
                             logger.error(f"Failed to get or create slide {slide_number}")
                             continue
                         if was_created:
                             updated_shapes.append({
                                 'slide_number': slide_number,
+                                "new_slide_added": add_new,
                                 'action': 'created_slide',
                                 'properties_applied': ['new_slide']
                             })
@@ -754,6 +768,34 @@ class PowerPointWorker:
         except Exception as e:
             logger.error(f"Error getting or creating slide {slide_number}: {e}")
             return None
+
+    def _create_slide_at(self, slide_number: int, layout_name: str = None):
+        """Create a new slide at the specified position.
+        
+        Args:
+            slide_number: The slide number (1-based)
+            layout_name: Optional layout name or index for new slides
+            
+        Returns:
+            The slide object or None if creation failed
+        """
+        try:
+            # Try to get existing slide
+            try:
+                # Determine the layout to use
+                slide_layout = self._get_slide_layout(layout_name)                
+                new_slide = self._presentation.Slides.AddSlide(slide_number, slide_layout)
+                if layout_name:
+                    logger.info(f"Created slide {slide_number} with layout '{layout_name}'")
+                else:
+                    logger.info(f"Created slide {slide_number}")
+                return new_slide, True
+            except Exception as e:               
+                logger.error(f"Error creating slide {slide_number}: {e}")
+                return None, False
+        except Exception as e:
+            logger.error(f"Error getting or creating slide {slide_number}: {e}")
+            return None, False
     
     def _find_title_placeholder(self, slide):
         """Find an existing title placeholder on the slide.
@@ -2518,16 +2560,48 @@ class PowerPointWorker:
                         para_range = text_range.Characters(start_char + 1, end_char - start_char)  # PowerPoint uses 1-based indexing
                         
                         # Apply bullet formatting for this paragraph
-                        if 'bullet_style' in para and para['bullet_style']:
-                            bullet_style = para['bullet_style'].lower()
-                            if bullet_style == 'bullet':
+                        if ('bullet_style' in para and para['bullet_style']) or 'bullet_char' in para:
+                            # Initialize bullet formatting if bullet_char is specified without style
+                            if 'bullet_char' in para and not ('bullet_style' in para and para['bullet_style']):
+                                # Map of bullet characters to PowerPoint's internal character codes
+                                bullet_char_map = {
+                                    '•': 8226,    # Standard bullet
+                                    '→': 8594,    # Right arrow
+                                    '★': 9733,    # Star
+                                    '■': 9632,    # Black square
+                                    '□': 9633,    # White square
+                                    '○': 9675,    # White circle
+                                    '●': 9679,    # Black circle
+                                    '◆': 9670,    # Black diamond
+                                    '◇': 9671,    # White diamond
+                                    '-': 45,      # Hyphen
+                                    '–': 8211,    # En dash
+                                    '✓': 10003    # Check mark
+                                }
+                                
+                                # Get bullet character and convert to internal code
+                                bullet_char = para['bullet_char']
+                                if bullet_char in bullet_char_map:
+                                    internal_code = bullet_char_map[bullet_char]
+                                else:
+                                    # Default to standard bullet if character not found
+                                    internal_code = 8226  # standard bullet
+                                    logger.warning(f"Bullet character '{bullet_char}' not found in mapping, using default bullet")
+                                
                                 para_range.ParagraphFormat.Bullet.Visible = True
                                 para_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
-                                
-                                # Apply custom bullet character if specified
-                                if 'bullet_char' in para and para['bullet_char']:
-                                    para_range.ParagraphFormat.Bullet.Character = para['bullet_char']
-                                    logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
+                                para_range.ParagraphFormat.Bullet.Character = internal_code
+                                logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
+                            elif 'bullet_style' in para and para['bullet_style']:
+                                bullet_style = para['bullet_style'].lower()
+                                if bullet_style == 'bullet':
+                                    para_range.ParagraphFormat.Bullet.Visible = True
+                                    para_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
+                                    
+                                    # Apply custom bullet character if specified
+                                    if 'bullet_char' in para and para['bullet_char']:
+                                        para_range.ParagraphFormat.Bullet.Character = para['bullet_char']
+                                        logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
                                 
                                 logger.debug(f"Applied bullet formatting to paragraph {i} in shape {shape.Name}")
                                 
@@ -4213,9 +4287,31 @@ class PowerPointWorker:
                                 bullet_format.Character = bullet_char
                                 logger.debug(f"Applied bullet character code {bullet_char} to shape {shape.Name}")
                             elif isinstance(bullet_char, str) and len(bullet_char) > 0:
-                                # Convert string character to ASCII/Unicode code point
-                                bullet_format.Character = ord(bullet_char[0])
-                                logger.debug(f"Applied bullet character '{bullet_char[0]}' (ord: {ord(bullet_char[0])}) to shape {shape.Name}")
+                                # Map of bullet characters to Unicode values
+                                bullet_char_map = {
+                                    '•': 8226,    # Standard bullet
+                                    '→': 8594,    # Right arrow
+                                    '★': 9733,    # Star
+                                    '■': 9632,    # Black square
+                                    '□': 9633,    # White square
+                                    '○': 9675,    # White circle
+                                    '●': 9679,    # Black circle
+                                    '◆': 9670,    # Black diamond
+                                    '◇': 9671,    # White diamond
+                                    '-': 45,      # Hyphen
+                                    '–': 8211,    # En dash
+                                    '✓': 10003    # Check mark
+                                }
+                                
+                                # Check if the character is in our mapping
+                                if bullet_char[0] in bullet_char_map:
+                                    unicode_code = bullet_char_map[bullet_char[0]]
+                                    bullet_format.Character = unicode_code
+                                    logger.debug(f"Applied bullet character '{bullet_char[0]}' (Unicode: {unicode_code}) to shape {shape.Name}")
+                                else:
+                                    # Default to standard bullet if character not found in map
+                                    bullet_format.Character = 8226  # Standard bullet
+                                    logger.warning(f"Bullet character '{bullet_char[0]}' not found in mapping, using standard bullet")
                             else:
                                 # Fallback to default bullet character
                                 bullet_format.Character = ord('•')
@@ -4464,22 +4560,35 @@ class PowerPointWorker:
                                 logger.info(f"DEBUG: String length: {len(paragraph_data)}")
                                 logger.info(f"DEBUG: First 200 chars: {repr(paragraph_data[:200])}")
                                 logger.info(f"DEBUG: Last 200 chars: {repr(paragraph_data[-200:])}")
+
+                                # Preprocess: Escape any unescaped apostrophes within text values
+                                # This assumes the string follows the pattern: 'text': 'content'
+                                def escape_inner_quotes(s):
+                                    in_text_value = False
+                                    result = []
+                                    i = 0
+                                    while i < len(s):
+                                        if s[i:i+7] == "'text':":  # Found a text key
+                                            in_text_value = True
+                                            result.append(s[i:i+7])
+                                            i += 7
+                                        elif in_text_value and s[i] == "'":  # Found a quote in text value
+                                            if i > 0 and s[i-1] != '\\':  # If quote is not already escaped
+                                                if i < len(s)-1 and s[i+1] == ",":  # End of text value
+                                                    in_text_value = False
+                                                    result.append(s[i])
+                                                else:
+                                                    result.append("\\'")  # Escape the quote
+                                            else:
+                                                result.append(s[i])
+                                        else:
+                                            result.append(s[i])
+                                        i += 1
+                                    return ''.join(result)
                                 
-                                # Look for the problematic part
-                                if "Republic Bank" in paragraph_data:
-                                    problem_start = paragraph_data.find("JPMorgan Chase did not assume First Republic Bank")
-                                    if problem_start != -1:
-                                        problem_end = problem_start + 100
-                                        problem_segment = paragraph_data[problem_start:problem_end]
-                                        logger.info(f"DEBUG: Problematic segment: {repr(problem_segment)}")
-                                        
-                                        # Character-by-character analysis of the problematic area
-                                        for i, char in enumerate(problem_segment):
-                                            if i > 80:  # Limit output
-                                                break
-                                            logger.info(f"DEBUG: Char {i:2d}: {repr(char):4s} (ord: {ord(char):3d})")
-                                
-                                paragraph_data = ast.literal_eval(paragraph_data)
+                                processed_data = escape_inner_quotes(paragraph_data)
+                                logger.debug(f"Preprocessed paragraph data: {processed_data[:200]}...")
+                                paragraph_data = ast.literal_eval(processed_data)
                                 logger.debug(f"Parsed paragraph data string into {len(paragraph_data)} paragraphs for shape {shape.Name}")
                             except (ValueError, SyntaxError) as e:
                                 logger.warning(f"Could not parse paragraph data string for shape {shape.Name}: {e}")

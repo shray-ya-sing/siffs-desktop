@@ -1,3 +1,21 @@
+import re
+import json
+import logging
+import os
+import ast
+from pathlib import Path
+from typing import Dict, Optional, Any, List
+from datetime import datetime
+# Configure logger
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+    ]
+)
+logger = logging.getLogger(__name__)
+
 def _fix_python_literal_quotes(text: str) -> str:
     """Fixes unescaped apostrophes in Python literal strings.
     
@@ -50,22 +68,7 @@ def _fix_python_literal_quotes(text: str) -> str:
     
     return fixed_text
 
-import re
-import json
-import logging
-import os
-from pathlib import Path
-from typing import Dict, Optional, Any, List
 
-# Configure logger
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-    ]
-)
-logger = logging.getLogger(__name__)
 
 
 def _sanitize_text_content(text: str) -> str:
@@ -332,15 +335,31 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                 continue
 
             # Check for slide duplication first
-            if slide_info.startswith('duplicate_slide='):
+            if 'duplicate_slide=' in slide_info.lower():
                 try:
-                    slide_duplicate_from = int(slide_info.split('=')[1].strip())
-                    logger.info(f"Parsed slide duplication from slide {slide_duplicate_from}")
-                    result[section] = {'_duplicate_slide_from': slide_duplicate_from}
-                    continue
+                    duplicate_info = {}
+        
+                    # Extract the slide number to duplicate from
+                    dup_match = re.search(r'duplicate_slide=(\d+)', slide_info)
+                    if dup_match:                        
+                        slide_duplicate_from = int(dup_match.group(1))
+                        result[section] = {'_duplicate_slide_from': slide_duplicate_from}
+                        logger.info(f"Parsed slide duplication from slide {slide_duplicate_from}")
+                    
+                    # Check for insert_after flag
+                    insert_after_match = re.search(r'insert_after=(\d+)', slide_info)
+                    if insert_after_match:
+                        insert_after = int(insert_after_match.group(1))
+                        result[section]['_insert_after'] = insert_after 
+                        logger.info(f"Parsed slide duplication insert after {insert_after}")                     
+
+                    else:
+                        logger.error(f"Invalid slide duplication specification: {slide_info}")
+                                           
+                    
                 except ValueError:
                     logger.error(f"Invalid slide duplication specification: {slide_info}")
-                    continue
+                    
             
             # Parse slide number and optional layout
             slide_number = slide_info
@@ -376,7 +395,22 @@ def parse_markdown_powerpoint_data(markdown_input: str) -> Optional[Dict[str, Di
                 logger.info(f"Parsed slide deletion request for slide {slide_number}")
                 continue  # Skip shape processing for deleted slides
 
+            # Check for adding new slide at that position
+            if 'add_new=true' or 'add_new="true"' in slide_info.lower():
+                try:
+                    add_new_match = re.search(r'add_new=(true|false)', slide_info.lower())
+                    if add_new_match:
+                        add_new = add_new_match.group(1).lower() == 'true'
+                        result[slide_number]['_add_new'] = add_new
+                        if add_new:
+                            logger.info(f"Parsed slide addition at specified position")
+                    
+                except ValueError:
+                    logger.error(f"Invalid slide addition specification: {slide_info}")
+                    
+
             if len(parts) == 1:  # No shape entries for this slide
+                logger.info(f"No shape entries found for slide {slide_number}")
                 continue
 
             shape_entries = [e.strip() for e in parts[1].split('|') if e.strip()]
@@ -544,6 +578,13 @@ def update_powerpoint_cache(workspace_path: str, updated_shapes: List[Dict[str, 
             logger.error(f"Error loading file mappings: {str(e)}")
             temp_file_path = workspace_path
 
+        # First pass: Identify all slides that were added and their positions
+        slides_added = []
+        for shape_info in updated_shapes:
+            if shape_info.get('new_slide_added', False):
+                slides_added.append(shape_info['slide_number'])
+        slides_added.sort()  # Sort in ascending order of slide numbers        
+        
         # Load existing cache
         if not cache_file.exists():
             logger.error("PowerPoint cache file not found")
@@ -572,7 +613,24 @@ def update_powerpoint_cache(workspace_path: str, updated_shapes: List[Dict[str, 
                     presentation_data.get('presentation_name') == file_name):
                     
                     presentation_updated = True
-                    
+                    slides = presentation_data.get('slides', [])
+                    # Adjust slide numbers for existing slides if any slides were added
+                    if slides_added:
+                        # Sort slides by slide number in descending order before adjustment
+                        slides.sort(key=lambda x: x.get('slideNumber', 0), reverse=True)
+                        
+                        for slide in slides:
+                            slide_num = slide.get('slideNumber', 0)
+                            # Count how many slides were added before this slide
+                            slides_to_shift = sum(1 for added in slides_added if added <= slide_num)
+                            if slides_to_shift > 0:
+                                new_slide_num = slide_num + slides_to_shift
+                                logger.info(f"Adjusting slide number from {slide_num} to {new_slide_num}")
+                                slide['slideNumber'] = new_slide_num
+                        
+                        # Re-sort slides by new slide numbers
+                        slides.sort(key=lambda x: x.get('slideNumber', 0))
+
                     # Process each updated shape
                     for shape_info in updated_shapes:
                         try:
@@ -580,6 +638,32 @@ def update_powerpoint_cache(workspace_path: str, updated_shapes: List[Dict[str, 
                             shape_name = shape_info.get('shape_name')
                             action = shape_info.get('action')
                             properties_applied = shape_info.get('properties_applied', [])
+                            is_new_slide = shape_info.get('new_slide_added', False)
+                            
+                            # Handle slide-level operations
+                            if action == 'created_slide' and is_new_slide:
+                                # Create new slide in cache
+                                logger.info(f"Creating new slide {slide_number} in cache")
+                                new_slide = {
+                                    'slideNumber': slide_number,
+                                    'slideId': f'slide_{slide_number}',
+                                    'name': f'Slide {slide_number}',
+                                    'layoutName': shape_info.get('layout', 'Title and Content'),
+                                    'shapes': [],
+                                    'notes': {'hasNotes': False},
+                                    'comments': [],
+                                    'editingHistory': [{
+                                        'timestamp': datetime.now().isoformat(),
+                                        'action': 'created_slide',
+                                        'properties_applied': properties_applied
+                                    }],
+                                    'created': datetime.now().isoformat(),
+                                    'lastModified': datetime.now().isoformat()
+                                }
+                                slides.append(new_slide)
+                                success_count += 1
+                                continue
+                            
                             
                             # Handle slide-level operations (like duplication) that don't have shape_name
                             if action == 'duplicated_slide':
