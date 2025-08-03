@@ -2560,16 +2560,23 @@ class PowerPointWorker:
                         para_range = text_range.Characters(start_char + 1, end_char - start_char)  # PowerPoint uses 1-based indexing
                         
                         # Apply bullet formatting for this paragraph
-                        if 'bullet_style' in para and para['bullet_style']:
-                            bullet_style = para['bullet_style'].lower()
-                            if bullet_style == 'bullet':
+                        if ('bullet_style' in para and para['bullet_style']) or 'bullet_char' in para:
+                            # Initialize bullet formatting if bullet_char is specified without style
+                            if 'bullet_char' in para and not ('bullet_style' in para and para['bullet_style']):
                                 para_range.ParagraphFormat.Bullet.Visible = True
                                 para_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
-                                
-                                # Apply custom bullet character if specified
-                                if 'bullet_char' in para and para['bullet_char']:
-                                    para_range.ParagraphFormat.Bullet.Character = para['bullet_char']
-                                    logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
+                                para_range.ParagraphFormat.Bullet.Character = para['bullet_char']
+                                logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
+                            elif 'bullet_style' in para and para['bullet_style']:
+                                bullet_style = para['bullet_style'].lower()
+                                if bullet_style == 'bullet':
+                                    para_range.ParagraphFormat.Bullet.Visible = True
+                                    para_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
+                                    
+                                    # Apply custom bullet character if specified
+                                    if 'bullet_char' in para and para['bullet_char']:
+                                        para_range.ParagraphFormat.Bullet.Character = para['bullet_char']
+                                        logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
                                 
                                 logger.debug(f"Applied bullet formatting to paragraph {i} in shape {shape.Name}")
                                 
