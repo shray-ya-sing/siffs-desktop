@@ -2563,9 +2563,34 @@ class PowerPointWorker:
                         if ('bullet_style' in para and para['bullet_style']) or 'bullet_char' in para:
                             # Initialize bullet formatting if bullet_char is specified without style
                             if 'bullet_char' in para and not ('bullet_style' in para and para['bullet_style']):
+                                # Map of bullet characters to PowerPoint's internal character codes
+                                bullet_char_map = {
+                                    '•': 8226,    # Standard bullet
+                                    '→': 8594,    # Right arrow
+                                    '★': 9733,    # Star
+                                    '■': 9632,    # Black square
+                                    '□': 9633,    # White square
+                                    '○': 9675,    # White circle
+                                    '●': 9679,    # Black circle
+                                    '◆': 9670,    # Black diamond
+                                    '◇': 9671,    # White diamond
+                                    '-': 45,      # Hyphen
+                                    '–': 8211,    # En dash
+                                    '✓': 10003    # Check mark
+                                }
+                                
+                                # Get bullet character and convert to internal code
+                                bullet_char = para['bullet_char']
+                                if bullet_char in bullet_char_map:
+                                    internal_code = bullet_char_map[bullet_char]
+                                else:
+                                    # Default to standard bullet if character not found
+                                    internal_code = 8226  # standard bullet
+                                    logger.warning(f"Bullet character '{bullet_char}' not found in mapping, using default bullet")
+                                
                                 para_range.ParagraphFormat.Bullet.Visible = True
                                 para_range.ParagraphFormat.Bullet.Type = 1  # ppBulletUnnumbered
-                                para_range.ParagraphFormat.Bullet.Character = para['bullet_char']
+                                para_range.ParagraphFormat.Bullet.Character = internal_code
                                 logger.debug(f"Applied bullet character '{para['bullet_char']}' to paragraph {i} in shape {shape.Name}")
                             elif 'bullet_style' in para and para['bullet_style']:
                                 bullet_style = para['bullet_style'].lower()
@@ -4262,9 +4287,31 @@ class PowerPointWorker:
                                 bullet_format.Character = bullet_char
                                 logger.debug(f"Applied bullet character code {bullet_char} to shape {shape.Name}")
                             elif isinstance(bullet_char, str) and len(bullet_char) > 0:
-                                # Convert string character to ASCII/Unicode code point
-                                bullet_format.Character = ord(bullet_char[0])
-                                logger.debug(f"Applied bullet character '{bullet_char[0]}' (ord: {ord(bullet_char[0])}) to shape {shape.Name}")
+                                # Map of bullet characters to Unicode values
+                                bullet_char_map = {
+                                    '•': 8226,    # Standard bullet
+                                    '→': 8594,    # Right arrow
+                                    '★': 9733,    # Star
+                                    '■': 9632,    # Black square
+                                    '□': 9633,    # White square
+                                    '○': 9675,    # White circle
+                                    '●': 9679,    # Black circle
+                                    '◆': 9670,    # Black diamond
+                                    '◇': 9671,    # White diamond
+                                    '-': 45,      # Hyphen
+                                    '–': 8211,    # En dash
+                                    '✓': 10003    # Check mark
+                                }
+                                
+                                # Check if the character is in our mapping
+                                if bullet_char[0] in bullet_char_map:
+                                    unicode_code = bullet_char_map[bullet_char[0]]
+                                    bullet_format.Character = unicode_code
+                                    logger.debug(f"Applied bullet character '{bullet_char[0]}' (Unicode: {unicode_code}) to shape {shape.Name}")
+                                else:
+                                    # Default to standard bullet if character not found in map
+                                    bullet_format.Character = 8226  # Standard bullet
+                                    logger.warning(f"Bullet character '{bullet_char[0]}' not found in mapping, using standard bullet")
                             else:
                                 # Fallback to default bullet character
                                 bullet_format.Character = ord('•')
