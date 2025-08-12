@@ -27,6 +27,7 @@ from ai_services.agents.everything_agent.prompts.system_prompt import EVERYTHING
 from ai_services.tools.excel_tools import EXCEL_TOOLS
 from ai_services.tools.powerpoint_tools import POWERPOINT_TOOLS
 from ai_services.tools.workspace_tools import WORKSPACE_TOOLS
+from ai_services.tools.database_tools import DATABASE_TOOLS
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +58,7 @@ class PrebuiltAgent:
         self.llm_with_tools = None
         self.agent = None
         self.conversation_history = []
-        self.tools = EXCEL_TOOLS + POWERPOINT_TOOLS + WORKSPACE_TOOLS
+        self.tools = EXCEL_TOOLS + POWERPOINT_TOOLS + WORKSPACE_TOOLS + DATABASE_TOOLS
         self.system_prompt = EVERYTHING_AGENT_SYSTEM_PROMPT
         self.provider_models= {
             "anthropic": {
