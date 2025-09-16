@@ -30,32 +30,41 @@ export const SearchPage: React.FC = () => {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchStats, setSearchStats] = useState<{processing_time: number, total_found: number} | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [copiedCardId, setCopiedCardId] = useState<string | null>(null);
 
-  // Function to handle opening presentation files
-  const handleOpenPresentation = async (filePath: string, fileName: string) => {
+  // Function to handle copying file path to clipboard
+  const handleCopyFilePath = async (filePath: string, fileName: string, slideId: string) => {
     try {
-      console.log('🎯 Opening presentation:', fileName, 'at path:', filePath);
+      console.log('📋 Copying file path to clipboard:', fileName, 'at path:', filePath);
       
       // Try both electron and electronAPI (for backward compatibility)
       const electronAPI = window.electron || (window as any).electronAPI;
       
-      if (!electronAPI || !electronAPI.fileSystem) {
-        console.error('❌ Electron API not available');
-        return;
-      }
-      
-      // Use the electron API to open the file with the default application (PowerPoint)
-      const result = await electronAPI.fileSystem.openWithDefault(filePath);
-      
-      if (result.success) {
-        console.log('✅ Successfully opened presentation:', fileName);
+      if (electronAPI && electronAPI.fileSystem && electronAPI.fileSystem.copyToClipboard) {
+        // Use Electron API if available
+        const result = await electronAPI.fileSystem.copyToClipboard(filePath);
+        
+        if (result.success) {
+          console.log('✅ Successfully copied file path to clipboard:', fileName);
+        } else {
+          console.error('❌ Failed to copy via Electron API:', result.error);
+          // Fallback to browser API
+          await navigator.clipboard.writeText(filePath);
+          console.log('✅ Copied file path using browser API fallback');
+        }
       } else {
-        console.error('❌ Failed to open presentation:', result.error);
-        // You could show a toast notification here if desired
+        // Fallback to browser clipboard API
+        await navigator.clipboard.writeText(filePath);
+        console.log('✅ Copied file path to clipboard using browser API:', fileName);
       }
+      
+      // Show visual feedback
+      setCopiedCardId(slideId);
+      setTimeout(() => setCopiedCardId(null), 2000); // Hide after 2 seconds
+      
     } catch (error) {
-      console.error('❌ Error opening presentation:', error);
-      // You could show a toast notification here if desired
+      console.error('❌ Error copying file path to clipboard:', error);
+      // You could show an error notification here if desired
     }
   };
 
@@ -207,8 +216,8 @@ export const SearchPage: React.FC = () => {
             <div 
               key={result.slide_id || index} 
               className="result-card clickable"
-              onClick={() => handleOpenPresentation(result.file_path, result.file_name)}
-              title={`Open ${result.file_name} in PowerPoint`}
+              onClick={() => handleCopyFilePath(result.file_path, result.file_name, result.slide_id || `slide-${index}`)}
+              title={`Copy file path: ${result.file_path}`}
             >
               {result.image_base64 && (
                 <img 
@@ -233,13 +242,23 @@ export const SearchPage: React.FC = () => {
                 </div>
               </div>
               
-              <div className="open-button">
-                <svg className="open-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                  <polyline points="15,3 21,3 21,9"/>
-                  <line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-                Open
+              <div className={`copy-button ${copiedCardId === (result.slide_id || `slide-${index}`) ? 'copied' : ''}`}>
+                {copiedCardId === (result.slide_id || `slide-${index}`) ? (
+                  <>
+                    <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="20,6 9,17 4,12"/>
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg className="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Copy Path
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -466,7 +485,7 @@ export const SearchPage: React.FC = () => {
           box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
         }
         
-        .result-card.clickable:hover .open-button {
+        .result-card.clickable:hover .copy-button {
           opacity: 1;
           transform: translateY(0);
         }
@@ -511,7 +530,7 @@ export const SearchPage: React.FC = () => {
           margin-top: 8px;
         }
         
-        .open-button {
+        .copy-button {
           position: absolute;
           top: 12px;
           right: 12px;
@@ -534,22 +553,32 @@ export const SearchPage: React.FC = () => {
           pointer-events: none; /* Let clicks pass through to the card */
         }
         
-        .open-icon {
+        .copy-icon, .check-icon {
           width: 13px;
           height: 13px;
           color: #6B7280;
           stroke-width: 1.5;
         }
         
-        .result-card.clickable:hover .open-button {
+        .result-card.clickable:hover .copy-button {
           background: rgba(255, 255, 255, 0.95);
           color: #4B5563;
           border-color: rgba(75, 85, 99, 0.3);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
-        .result-card.clickable:hover .open-button .open-icon {
+        .result-card.clickable:hover .copy-button .copy-icon {
           color: #4B5563;
+        }
+        
+        .copy-button.copied {
+          background: rgba(34, 197, 94, 0.9);
+          color: white;
+          border-color: rgba(34, 197, 94, 0.3);
+        }
+        
+        .copy-button.copied .check-icon {
+          color: white;
         }
         
         .error-message {
