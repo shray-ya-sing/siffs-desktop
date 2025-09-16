@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 import os
 from pathlib import Path
@@ -21,6 +21,29 @@ class ProcessFolderResponse(BaseModel):
     files_processed: int
     slides_processed: int
     failed_files: Optional[list] = []
+    error: Optional[str] = None
+
+class SearchSlidesRequest(BaseModel):
+    query: str
+    top_k: Optional[int] = 10
+    file_filter: Optional[str] = None
+    use_reranker: Optional[bool] = True
+
+class SlideResult(BaseModel):
+    slide_id: str
+    score: float
+    file_path: str
+    file_name: str
+    slide_number: int
+    image_base64: str
+
+class SearchSlidesResponse(BaseModel):
+    success: bool
+    query: str
+    results: List[SlideResult]
+    total_found: int
+    processing_time_ms: float
+    used_reranker: bool
     error: Optional[str] = None
 
 # Global variable to track processing status
@@ -183,3 +206,70 @@ async def clear_all_slides():
     except Exception as e:
         logger.error(f"Error clearing slides: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/search", response_model=SearchSlidesResponse)
+async def search_slides(request: SearchSlidesRequest):
+    """
+    Search for slides based on a text query using vector similarity search
+    
+    This endpoint:
+    1. Creates an embedding for the user's query
+    2. Searches for similar slides in the vector database
+    3. Optionally reranks results using VoyageAI reranker for better quality
+    4. Returns slide images, metadata, and relevance scores
+    """
+    import time
+    start_time = time.time()
+    
+    try:
+        logger.info(f"Search request received: query='{request.query}', top_k={request.top_k}, use_reranker={request.use_reranker}")
+        
+        if not request.query.strip():
+            raise HTTPException(status_code=400, detail="Search query cannot be empty")
+        
+        # Initialize slide processing service
+        try:
+            slide_service = get_slide_processing_service()
+        except Exception as e:
+            logger.error(f"Failed to initialize slide processing service: {e}")
+            raise HTTPException(status_code=500, detail=f"Service initialization failed: {str(e)}")
+        
+        # Perform search with optional reranking
+        search_results = slide_service.search_slides(
+            query=request.query,
+            top_k=request.top_k,
+            file_filter=request.file_filter,
+            use_reranker=request.use_reranker
+        )
+        
+        # Convert results to response format
+        slide_results = []
+        for result in search_results:
+            slide_results.append(SlideResult(
+                slide_id=result.get('slide_id', ''),
+                score=result.get('score', 0.0),
+                file_path=result.get('file_path', ''),
+                file_name=result.get('file_name', ''),
+                slide_number=result.get('slide_number', 0),
+                image_base64=result.get('image_base64', '')
+            ))
+        
+        processing_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+        
+        logger.info(f"Search completed: found {len(slide_results)} results in {processing_time:.2f}ms")
+        
+        return SearchSlidesResponse(
+            success=True,
+            query=request.query,
+            results=slide_results,
+            total_found=len(slide_results),
+            processing_time_ms=processing_time,
+            used_reranker=request.use_reranker
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        processing_time = (time.time() - start_time) * 1000
+        logger.error(f"Unexpected error during search: {e}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")

@@ -51,27 +51,56 @@ class VoyageEmbeddingsService:
             List of embedding values
         """
         try:
-            # Prepare input for multimodal embedding
-            inputs = []
+            # Prepare content list for multimodal embedding
+            # According to VoyageAI docs, content should be a list containing text strings and/or PIL images
+            content_list = []
             
-            # Add image input
-            if image_base64:
-                inputs.append({
-                    "type": "image",
-                    "content": image_base64
-                })
-            
-            # Add text input if provided
+            # Add text first if provided
             if text:
-                inputs.append({
-                    "type": "text", 
-                    "content": text
-                })
+                content_list.append(text)
+            
+            # Convert base64 to PIL Image and add to content
+            if image_base64:
+                try:
+                    # Decode base64 to bytes
+                    import base64
+                    from PIL import Image
+                    from io import BytesIO
+                    
+                    image_bytes = base64.b64decode(image_base64)
+                    image = Image.open(BytesIO(image_bytes))
+                    content_list.append(image)
+                    
+                except Exception as e:
+                    logger.error(f"Error converting base64 to PIL Image: {e}")
+                    # If image conversion fails, continue with just text
+                    if not content_list:  # If no text was added either
+                        return []
+            
+            # If no content, return empty
+            if not content_list:
+                logger.warning("No content to create embedding for")
+                return []
+            
+            # Create single input with content list
+            inputs = [content_list]  # VoyageAI expects List[List[Union[str, PIL.Image]]]
+            
+            # Debug logging
+            logger.info(f"🔍 VoyageAI input structure:")
+            logger.info(f"   Content list length: {len(content_list)}")
+            for i, item in enumerate(content_list):
+                if isinstance(item, str):
+                    logger.info(f"   Item {i}: Text (length: {len(item)})")
+                elif isinstance(item, Image.Image):
+                    logger.info(f"   Item {i}: PIL Image (size: {item.size})")
+                else:
+                    logger.info(f"   Item {i}: Unknown type ({type(item)})")
             
             # Create embedding using voyage-multimodal-3 model
             result = self.client.multimodal_embed(
                 inputs=inputs,
-                model="voyage-multimodal-3"
+                model="voyage-multimodal-3",
+                input_type="document"  # Since we're indexing documents
             )
             
             # Extract embedding vector
@@ -89,7 +118,7 @@ class VoyageEmbeddingsService:
     
     def create_text_embedding(self, text: str) -> List[float]:
         """
-        Create text-only embedding for search queries
+        Create text-only embedding for search queries using multimodal model for compatibility
         
         Args:
             text: Input text
@@ -98,17 +127,24 @@ class VoyageEmbeddingsService:
             List of embedding values
         """
         try:
-            result = self.client.embed(
-                texts=[text],
-                model="voyage-3"  # Use text model for queries
+            logger.info(f"🔍 Creating text embedding for query: '{text[:50]}{'...' if len(text) > 50 else ''}'")
+            
+            # Use multimodal model with text-only input for consistency with slide embeddings
+            inputs = [[text]]  # Format as List[List[str]] for multimodal API
+            
+            result = self.client.multimodal_embed(
+                inputs=inputs,
+                model="voyage-multimodal-3",  # Use same model as slide embeddings for compatibility
+                input_type="query"  # Specify this is a query, not a document
             )
             
+            # Extract embedding vector  
             if result and result.embeddings and len(result.embeddings) > 0:
                 embedding = result.embeddings[0]
-                logger.debug(f"Created text embedding with {len(embedding)} dimensions")
+                logger.info(f"✅ Created text embedding with {len(embedding)} dimensions")
                 return embedding
             else:
-                logger.error("No embedding returned from VoyageAI for text")
+                logger.error("❌ No embedding returned from VoyageAI for text query")
                 return []
                 
         except Exception as e:
@@ -180,6 +216,79 @@ class VoyageEmbeddingsService:
         
         logger.info(f"Successfully created {len(embeddings)} embeddings from {len(slides_data)} slides")
         return embeddings
+    
+    def rerank_slides(self, query: str, slide_results: List[Dict], top_k: int = None) -> List[Dict]:
+        """
+        Rerank slide results using VoyageAI's reranker for better relevance
+        
+        Args:
+            query: The search query text
+            slide_results: List of slide result dictionaries from vector search
+            top_k: Number of top results to return after reranking
+            
+        Returns:
+            Reranked list of slide results
+        """
+        try:
+            if not slide_results:
+                return slide_results
+                
+            logger.info(f"🔄 Reranking {len(slide_results)} slides with query: '{query[:50]}{'...' if len(query) > 50 else ''}'")
+            
+            # Extract text representations for reranking
+            # Since VoyageAI reranker only works with text, we create text representations
+            documents = []
+            for result in slide_results:
+                # Create a text representation of each slide
+                file_name = result.get('file_name', 'Unknown')
+                slide_num = result.get('slide_number', 0)
+                
+                # Create a descriptive text for the slide
+                slide_text = f"Slide {slide_num} from {file_name}"
+                
+                # If we had OCR text from the slides, we would add it here:
+                # slide_text += f" Content: {result.get('ocr_text', '')}"
+                
+                documents.append(slide_text)
+            
+            # Use VoyageAI reranker
+            reranking_result = self.client.rerank(
+                query=query,
+                documents=documents,
+                model="rerank-2.5-lite",  # Fast and high quality
+                top_k=top_k,
+                truncation=True
+            )
+            
+            # Reorder the slide results based on reranking
+            reranked_results = []
+            for ranking_result in reranking_result.results:
+                original_index = ranking_result.index
+                slide_result = slide_results[original_index].copy()
+                
+                # Update the score with the reranker score
+                # Combine both vector similarity and reranker scores
+                original_score = slide_result.get('score', 0.0)
+                rerank_score = ranking_result.relevance_score
+                
+                # Weighted combination: 60% reranker, 40% original vector score
+                combined_score = (0.6 * rerank_score) + (0.4 * original_score)
+                slide_result['score'] = combined_score
+                slide_result['rerank_score'] = rerank_score
+                slide_result['original_score'] = original_score
+                
+                reranked_results.append(slide_result)
+            
+            logger.info(f"✅ Reranking completed: {len(reranked_results)} results")
+            if reranked_results:
+                logger.info(f"   Top result: combined_score={reranked_results[0]['score']:.4f}, rerank_score={reranked_results[0]['rerank_score']:.4f}")
+            
+            return reranked_results
+            
+        except Exception as e:
+            logger.error(f"❌ Error during reranking: {e}")
+            logger.info("🔄 Falling back to original vector search results")
+            return slide_results
     
     def get_embedding_dimension(self) -> int:
         """Get the dimension of embeddings from VoyageAI"""

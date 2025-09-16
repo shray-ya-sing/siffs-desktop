@@ -227,7 +227,7 @@ class SlideProcessingService:
                 'slides_processed': 0
             }
     
-    def search_slides(self, query: str, top_k: int = 10, file_filter: str = None) -> List[Dict]:
+    def search_slides(self, query: str, top_k: int = 10, file_filter: str = None, use_reranker: bool = False) -> List[Dict]:
         """
         Search for slides similar to the given query
         
@@ -235,41 +235,62 @@ class SlideProcessingService:
             query: Search query text
             top_k: Number of results to return
             file_filter: Optional filter by file name
+            use_reranker: Whether to use reranker (currently not implemented, kept for API compatibility)
             
         Returns:
             List of similar slides with metadata and images
         """
         try:
-            logger.info(f"Searching slides with query: '{query}'")
+            logger.info(f"🔍 Searching slides with query: '{query}'")
+            logger.info(f"🔍 Search parameters: top_k={top_k}, file_filter={file_filter}, use_reranker={use_reranker}")
             
-            # Create embedding for the search query
+            if use_reranker:
+                logger.info("⚠️  Reranker requested but not yet implemented, proceeding with vector search only")
+            
+            # Step 1: Create embedding for the search query
+            logger.info(f"🧠 Step 1: Creating embedding for search query...")
             query_embedding = self.embeddings_service.create_text_embedding(query)
             
             if not query_embedding:
-                logger.error("Failed to create query embedding")
+                logger.error("❌ Failed to create query embedding")
                 return []
             
-            # Search in vector database
+            logger.info(f"✅ Query embedding created successfully ({len(query_embedding)} dimensions)")
+            
+            # Step 2: Search in vector database
+            logger.info(f"🔎 Step 2: Searching vector database for similar slides...")
             search_results = self.vector_db.search_similar_slides(
                 query_embedding=query_embedding,
                 top_k=top_k,
                 file_filter=file_filter
             )
             
-            # Enhance results with image data
+            logger.info(f"🔎 Found {len(search_results)} initial matches from vector database")
+            
+            # Step 3: Enhance results with image data
+            logger.info(f"🖼️ Step 3: Enhancing {len(search_results)} results with image data...")
             enhanced_results = []
-            for result in search_results:
+            for i, result in enumerate(search_results):
                 try:
                     metadata = result.get('metadata', {})
                     image_path = metadata.get('image_path', '')
+                    score = result.get('score', 0.0)
+                    
+                    logger.info(f"  🔍 Processing result {i+1}: score={score:.4f}, file={metadata.get('file_name', 'unknown')}")
                     
                     # Get image data if path exists
                     image_data = ""
                     if image_path and os.path.exists(image_path):
+                        logger.debug(f"     🔄 Loading image from: {image_path}")
                         image_data = self.ppt_converter.get_slide_image_data(image_path)
                         if image_data:
                             import base64
                             image_data = base64.b64encode(image_data).decode('utf-8')
+                            logger.debug(f"     ✅ Image loaded and encoded ({len(image_data)} chars)")
+                        else:
+                            logger.warning(f"     ⚠️ Failed to load image data from {image_path}")
+                    else:
+                        logger.warning(f"     ⚠️ Image path does not exist: {image_path}")
                     
                     enhanced_result = {
                         'slide_id': result.get('slide_id'),
@@ -286,8 +307,31 @@ class SlideProcessingService:
                     logger.error(f"Error enhancing search result: {e}")
                     continue
             
-            logger.info(f"Found {len(enhanced_results)} matching slides")
-            return enhanced_results
+            logger.info(f"🎉 Initial search completed: {len(enhanced_results)} results")
+            
+            # Step 4: Apply reranking if requested
+            final_results = enhanced_results
+            if use_reranker and enhanced_results:
+                logger.info(f"🔄 Step 4: Applying reranking to improve result quality...")
+                final_results = self.embeddings_service.rerank_slides(
+                    query=query,
+                    slide_results=enhanced_results,
+                    top_k=top_k
+                )
+                logger.info(f"✅ Reranking completed: {len(final_results)} final results")
+            elif use_reranker:
+                logger.info("⚠️  Reranking requested but no results to rerank")
+            else:
+                logger.info("🔍 Reranking disabled, using vector search results")
+            
+            if final_results:
+                top_result = final_results[0]
+                if 'rerank_score' in top_result:
+                    logger.info(f"   Top result: combined_score={top_result['score']:.4f}, rerank_score={top_result['rerank_score']:.4f}, file='{top_result['file_name']}'")
+                else:
+                    logger.info(f"   Top result: score={top_result['score']:.4f}, file='{top_result['file_name']}'")
+                    
+            return final_results
             
         except Exception as e:
             logger.error(f"Error searching slides: {e}")
