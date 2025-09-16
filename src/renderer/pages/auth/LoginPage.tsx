@@ -122,7 +122,7 @@ export default function LoginPage() {
             transition={{ delay: 0.1 }}
             className="space-y-2"
           >
-            <Label htmlFor="email" className="text-sm font-medium text-white/80">
+            <Label htmlFor="email" className="text-sm font-medium text-gray-400">
               Email address
             </Label>
             <div className="relative group">
@@ -137,7 +137,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="pl-10 pr-4 py-3 bg-white/5 border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                className="pl-10 pr-4 py-3 bg-white/5 border-white/10 text-gray-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 autoComplete="email"
                 autoFocus
               />
@@ -151,7 +151,7 @@ export default function LoginPage() {
             className="space-y-2"
           >
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm font-medium text-white/80">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-400">
                 Password
               </Label>
               <Link
@@ -174,7 +174,7 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="pl-10 pr-10 py-3 bg-white/5 border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                className="pl-10 pr-10 py-3 bg-white/5 border-white/10 text-gray-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 autoComplete="current-password"
               />
               <button

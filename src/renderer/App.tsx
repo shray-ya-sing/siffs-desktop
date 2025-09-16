@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Location } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import { HomePage } from './pages/HomePage';
+import { SearchPage } from './pages/SearchPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { NotFound } from './pages/NotFound';
 import AppLoading from './components/loading/AppLoading';
@@ -17,7 +17,6 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordEmailSent from './pages/auth/ResetPasswordEmailSent';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import AuthLoading from './components/loading/AuthLoading';
-import { AgentChatPage } from './pages/agent-chat/AgentChatPage';
 import { FileItem } from './hooks/useFileTree';
 import { TitleBar } from './components/titlebar/TitleBar';
 
@@ -48,9 +47,6 @@ type LocationWithState = Location & {
   state: LocationState | null;
 };
 
-type AgentChatLocationState = {
-  files?: FileItem[];
-};
 
 // Component to handle auth state and routing
 function AppRouter() {
@@ -105,32 +101,18 @@ function AppRouter() {
         {/* Protected Routes */}
         <Route path="/" element={
           <ProtectedRoute>
-            <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
+            <>
               <TitleBar />
-              <div className="flex-1 flex flex-col overflow-hidden pt-8">
-                <HomePage />
-              </div>
-            </div>
+              <SearchPage />
+            </>
           </ProtectedRoute>
         } />
         <Route path="/settings" element={
           <ProtectedRoute>
-            <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
+            <>
               <TitleBar />
-              <div className="flex-1 flex flex-col overflow-hidden pt-8">
-                <SettingsPage />
-              </div>
-            </div>
-          </ProtectedRoute>
-        } />
-        <Route path="/agent-chat" element={
-          <ProtectedRoute>
-            <div className="flex h-screen text-gray-200 font-sans font-thin overflow-hidden">
-              <TitleBar />
-              <div className="flex-1 flex flex-col overflow-hidden pt-8">
-                <AgentChatPage />
-              </div>
-            </div>
+              <SettingsPage />
+            </>
           </ProtectedRoute>
         } />
         

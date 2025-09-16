@@ -88,7 +88,7 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="space-y-6 w-full">
             <div className="space-y-2 text-center">
               <motion.h2 
-                className="text-3xl font-bold text-white"
+                className="text-3xl font-bold text-gray-200"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -96,7 +96,7 @@ export default function SignupPage() {
                 Create an account
               </motion.h2>
               <motion.p 
-                className="text-sm text-white/70"
+                className="text-sm text-gray-400"
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
@@ -128,7 +128,7 @@ export default function SignupPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Label htmlFor="email" className="text-sm font-medium text-white/80">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium text-gray-400">Email</Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-white/40" />
@@ -140,7 +140,7 @@ export default function SignupPage() {
                     value={email}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 
+                    className="w-full pl-10 bg-white/5 border-white/10 text-gray-300 placeholder:text-white/40 
                              focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
                              transition-all duration-200 rounded-lg h-11"
                   />
@@ -153,7 +153,7 @@ export default function SignupPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
               >
-                <Label htmlFor="password" className="text-sm font-medium text-white/80">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium text-gray-400">Password</Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-white/40" />
@@ -168,7 +168,7 @@ export default function SignupPage() {
                     onBlur={() => setPasswordFocused(false)}
                     required
                     minLength={8}
-                    className="w-full pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 
+                    className="w-full pl-10 pr-10 bg-white/5 border-white/10 text-gray-300 placeholder:text-white/40 
                              focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
                              transition-all duration-200 rounded-lg h-11"
                   />
@@ -190,7 +190,7 @@ export default function SignupPage() {
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="mt-2 space-y-1.5 text-xs text-white/60"
+                    className="mt-2 space-y-1.5 text-xs text-gray-400"
                   >
                     {passwordValidations.map((validation) => {
                       const isValid = validation.validator(password);
@@ -203,7 +203,7 @@ export default function SignupPage() {
                               <X className="h-3.5 w-3.5" />
                             )}
                           </div>
-                          <span className={isValid ? 'text-white/80' : ''}>{validation.label}</span>
+                          <span className={isValid ? 'text-gray-300' : ''}>{validation.label}</span>
                         </div>
                       );
                     })}
@@ -217,7 +217,7 @@ export default function SignupPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-white/80">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-400">
                   Confirm Password
                 </Label>
                 <div className="relative">
@@ -238,7 +238,7 @@ export default function SignupPage() {
                           ? 'border-green-500/50'
                           : 'border-red-500/50'
                         : 'border-white/10'
-                    } text-white placeholder:text-white/40 
+                    } text-gray-300 placeholder:text-white/40 
                     focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
                     transition-all duration-200 rounded-lg h-11`}
                   />
@@ -304,7 +304,7 @@ export default function SignupPage() {
             </div>
 
             <motion.div 
-              className="text-center text-sm text-white/60"
+              className="text-center text-sm text-gray-400"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}

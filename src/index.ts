@@ -553,12 +553,12 @@ const createWindow = (): void => {
     height: 800,             // Default height for non-fullscreen
     minWidth: 1024,          // Minimum width when resized
     minHeight: 600,          // Minimum height when resized
-    backgroundColor: '#0a0a0a', // Match your app's background color
+    backgroundColor: '#F8F9FA', // Match your app's pale gradient background
     titleBarStyle: 'hidden', // Hide the default title bar
     frame: false, // Remove the default frame
     titleBarOverlay: {
-      color: '#0a0a0a', // Title bar color
-      symbolColor: '#e5e5e5', // Title text and buttons color
+      color: '#F8F9FA', // Light title bar color to match gradient
+      symbolColor: '#6B7280', // Darker symbols for contrast on light background
       height: 30 // Height of the title bar
     },
     webPreferences: {

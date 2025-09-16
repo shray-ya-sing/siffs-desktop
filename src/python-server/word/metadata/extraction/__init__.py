@@ -1,1 +1,0 @@
-# word extraction module init

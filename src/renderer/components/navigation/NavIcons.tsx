@@ -25,27 +25,27 @@ export const NavIcons = ({ className = '' }: NavIconsProps) => {
     <div className={`flex flex-row gap-2 ${className}`}>
       <button
         onClick={() => navigate('/')}
-        className="p-1.5 rounded hover:bg-gray-700/50 transition-all duration-200
+        className="p-1.5 rounded hover:bg-gray-200/50 transition-all duration-200
                  flex items-center justify-center"
         aria-label="Home"
       >
-        <TechHomeIcon className="w-4 h-4 text-gray-300 hover:text-white" />
+        <TechHomeIcon className="w-4 h-4 text-gray-600 hover:text-gray-800" />
       </button>
       <button
         onClick={() => navigate('/settings')}
-        className="p-1.5 rounded hover:bg-gray-700/50 transition-all duration-200
+        className="p-1.5 rounded hover:bg-gray-200/50 transition-all duration-200
                  flex items-center justify-center"
         aria-label="Settings"
       >
-        <TechSettingsIcon className="w-4 h-4 text-gray-300 hover:text-white" />
+        <TechSettingsIcon className="w-4 h-4 text-gray-600 hover:text-gray-800" />
       </button>
       <button
         onClick={handleSignOut}
-        className="p-1.5 rounded hover:bg-red-700/50 transition-all duration-200
+        className="p-1.5 rounded hover:bg-red-200/50 transition-all duration-200
                  flex items-center justify-center group"
         aria-label="Sign Out"
       >
-        <TechSignOutIcon className="w-4 h-4 text-red-300 group-hover:text-red-200" />
+        <TechSignOutIcon className="w-4 h-4 text-red-500 group-hover:text-red-700" />
       </button>
     </div>
   );

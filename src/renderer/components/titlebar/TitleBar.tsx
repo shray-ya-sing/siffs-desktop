@@ -1,7 +1,7 @@
 import React from 'react';
 import { MinusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { NavIcons } from '../navigation/NavIcons';
-// Use SVG from assets folder
+import { SiffsLogo } from '../icons/SiffsLogo';
 
 interface TitleBarProps {
   title?: string;
@@ -23,17 +23,64 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   };
 
   return (
+    <>
+      {/* Subtle morphism background elements */}
+      <style>{`
+        .titlebar-morphism::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 20%;
+          width: 40px;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 50%;
+          filter: blur(15px);
+          animation: titlebar-float 6s ease-in-out infinite;
+          pointer-events: none;
+        }
+        
+        .titlebar-morphism::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          right: 20%;
+          width: 30px;
+          height: 30px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          filter: blur(10px);
+          animation: titlebar-float 8s ease-in-out infinite reverse;
+          pointer-events: none;
+        }
+        
+        @keyframes titlebar-float {
+          0%, 100% {
+            transform: translateY(-50%) translateX(0px) scale(1);
+          }
+          50% {
+            transform: translateY(-50%) translateX(5px) scale(1.1);
+          }
+        }
+      `}</style>
     <div 
       className={`
+        titlebar-morphism
         fixed top-0 left-0 right-0 z-[9999] 
-        h-8 bg-[#0a0a0a] border-b border-gray-800
-        flex items-center justify-between px-4
+        h-8 flex items-center justify-between px-4
         select-none
         ${className}
       `}
       style={{
         // This is the key CSS property that makes the area draggable
-        WebkitAppRegion: 'drag'
+        WebkitAppRegion: 'drag',
+        background: 'linear-gradient(135deg, #F8F9FA 0%, #F5F6F8 25%, #F2F4F6 50%, #EFF1F4 75%, #ECEEF2 100%)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.4)',
+        position: 'relative',
+        overflow: 'hidden'
       } as React.CSSProperties}
     >
       {/* Left side - Logo and Navigation Icons */}
@@ -45,10 +92,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         } as React.CSSProperties}
       >
         {/* App Logo */}
-        <img 
-          src={require('../../../assets/icons/svg/volute_icon.svg').default || require('../../../assets/icons/svg/volute_icon.svg')} 
-          alt="Volute" 
-          className="w-5 h-5" 
+        <SiffsLogo 
+          className="text-gray-600 hover:text-gray-800 transition-colors" 
+          size={20}
         />
         
         {/* Navigation Icons */}
@@ -65,19 +111,20 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       >
         <button
           onClick={handleMinimize}
-          className="p-1 rounded hover:bg-gray-700 transition-colors"
+          className="p-1 rounded hover:bg-gray-200/50 transition-colors"
           title="Minimize"
         >
-          <MinusIcon className="w-4 h-4 text-gray-400 hover:text-white" />
+          <MinusIcon className="w-4 h-4 text-gray-600 hover:text-gray-800" />
         </button>
         <button
           onClick={handleClose}
-          className="p-1 rounded hover:bg-red-600 transition-colors"
+          className="p-1 rounded hover:bg-red-200/50 transition-colors"
           title="Close"
         >
-          <XMarkIcon className="w-4 h-4 text-gray-400 hover:text-white" />
+          <XMarkIcon className="w-4 h-4 text-gray-600 hover:text-red-600" />
         </button>
       </div>
     </div>
+    </>
   );
 };
