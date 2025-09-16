@@ -137,7 +137,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="pl-10 pr-4 py-3 bg-white/5 border-white/10 text-gray-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                className="pl-10 pr-4 py-3 bg-white/5 border-white/10 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 autoComplete="email"
                 autoFocus
               />
@@ -174,7 +174,7 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="pl-10 pr-10 py-3 bg-white/5 border-white/10 text-gray-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                className="pl-10 pr-10 py-3 bg-white/5 border-white/10 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 autoComplete="current-password"
               />
               <button
@@ -197,44 +197,27 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="pt-2"
+            className="pt-2 flex justify-end"
           >
-            <Button
+            <button
               type="submit"
               disabled={isLoading}
-              className={`w-full group relative overflow-hidden transition-all duration-300 ${
-                isLoading 
-                  ? 'bg-blue-600/80' 
-                  : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg hover:shadow-blue-500/20'
-              }`}
+              className="group p-3 rounded-full bg-transparent hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
+                <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
               ) : (
-                <>
-                  <span className="relative z-10">Continue</span>
-                  <motion.span 
-                    className="absolute right-4 z-10"
-                    initial={{ x: 0 }}
-                    animate={{ x: isHovered ? 4 : 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </motion.span>
-                  <motion.span 
-                    className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-500/30 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    initial={{ x: '-100%' }}
-                    animate={{ x: isHovered ? '100%' : '-100%' }}
-                    transition={{ duration: 1, ease: 'easeInOut' }}
-                  />
-                </>
+                <motion.div
+                  initial={{ x: 0 }}
+                  animate={{ x: isHovered ? 2 : 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                >
+                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-gray-200 transition-colors" />
+                </motion.div>
               )}
-            </Button>
+            </button>
           </motion.div>
         </div>
 

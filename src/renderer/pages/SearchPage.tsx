@@ -1,10 +1,63 @@
 import React, { useState, useEffect } from 'react';
 
+// Types for search results
+interface SlideResult {
+  slide_id: string;
+  score: number;
+  file_path: string;
+  file_name: string;
+  slide_number: number;
+  image_base64: string;
+}
+
+interface SearchResponse {
+  success: boolean;
+  query: string;
+  results: SlideResult[];
+  total_found: number;
+  processing_time_ms: number;
+  used_reranker: boolean;
+  error?: string;
+}
+
 export const SearchPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [inputWidth, setInputWidth] = useState(500); // Default width
   const [previousWidth, setPreviousWidth] = useState(500);
   const [animationClass, setAnimationClass] = useState('');
+  const [searchResults, setSearchResults] = useState<SlideResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchStats, setSearchStats] = useState<{processing_time: number, total_found: number} | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Function to handle opening presentation files
+  const handleOpenPresentation = async (filePath: string, fileName: string) => {
+    try {
+      console.log('🎯 Opening presentation:', fileName, 'at path:', filePath);
+      
+      // Try both electron and electronAPI (for backward compatibility)
+      const electronAPI = window.electron || (window as any).electronAPI;
+      
+      if (!electronAPI || !electronAPI.fileSystem) {
+        console.error('❌ Electron API not available');
+        return;
+      }
+      
+      // Use the electron API to open the file with the default application (PowerPoint)
+      const result = await electronAPI.fileSystem.openWithDefault(filePath);
+      
+      if (result.success) {
+        console.log('✅ Successfully opened presentation:', fileName);
+      } else {
+        console.error('❌ Failed to open presentation:', result.error);
+        // You could show a toast notification here if desired
+      }
+    } catch (error) {
+      console.error('❌ Error opening presentation:', error);
+      // You could show a toast notification here if desired
+    }
+  };
 
   // Calculate dynamic width based on input length
   useEffect(() => {
@@ -45,14 +98,154 @@ export const SearchPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery, inputWidth, previousWidth]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle search submission here
-    console.log('Search query:', searchQuery);
+    
+    if (!searchQuery.trim()) {
+      return;
+    }
+    
+    setIsSearching(true);
+    setSearchError(null);
+    setSearchResults([]);
+    setSearchStats(null);
+    setHasSearched(true);
+    
+    try {
+      console.log('🔍 Searching for:', searchQuery);
+      
+      const response = await fetch('http://localhost:3001/api/slides/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          top_k: 10,
+          use_reranker: true
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const data: SearchResponse = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Search results:', data);
+        setSearchResults(data.results);
+        setSearchStats({
+          processing_time: data.processing_time_ms,
+          total_found: data.total_found
+        });
+      } else {
+        throw new Error(data.error || 'Search failed');
+      }
+      
+    } catch (error) {
+      console.error('❌ Search error:', error);
+      setSearchError(error instanceof Error ? error.message : 'Search failed');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+  
+  // SearchResults component
+  const SearchResults = () => {
+    if (isSearching) {
+      return (
+        <div className="search-results">
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <div className="loading-text">Searching slides...</div>
+          </div>
+        </div>
+      );
+    }
+    
+    if (searchError) {
+      return (
+        <div className="search-results">
+          <div className="error-message">
+            <h3>Search Error</h3>
+            <p>{searchError}</p>
+          </div>
+        </div>
+      );
+    }
+    
+    if (searchResults.length === 0 && searchQuery.trim()) {
+      return (
+        <div className="search-results">
+          <div className="results-header">
+            <p>No slides found for "{searchQuery}"</p>
+          </div>
+        </div>
+      );
+    }
+    
+    if (searchResults.length === 0) {
+      return null;
+    }
+    
+    return (
+      <div className="search-results">
+        <div className="results-header">
+          <p>
+            Found {searchStats?.total_found || searchResults.length} slides 
+            {searchStats && ` in ${searchStats.processing_time.toFixed(1)}ms`}
+          </p>
+        </div>
+        
+        <div className="results-grid">
+          {searchResults.map((result, index) => (
+            <div 
+              key={result.slide_id || index} 
+              className="result-card clickable"
+              onClick={() => handleOpenPresentation(result.file_path, result.file_name)}
+              title={`Open ${result.file_name} in PowerPoint`}
+            >
+              {result.image_base64 && (
+                <img 
+                  src={`data:image/png;base64,${result.image_base64}`}
+                  alt={`Slide ${result.slide_number} from ${result.file_name}`}
+                  className="slide-image"
+                />
+              )}
+              
+              <div className="result-info">
+                <div className="result-title">
+                  {result.file_name}
+                </div>
+                
+                <div className="result-details">
+                  <div>Slide #{result.slide_number}</div>
+                  <div>Path: {result.file_path}</div>
+                </div>
+                
+              <div className="result-score">
+                  Score: {(result.score * 100).toFixed(1)}%
+                </div>
+              </div>
+              
+              <div className="open-button">
+                <svg className="open-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15,3 21,3 21,9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Open
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -120,6 +313,12 @@ export const SearchPage: React.FC = () => {
         .search-container {
           position: relative;
           z-index: 10;
+          transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          transform: translateY(0);
+        }
+        
+        .search-container.has-results {
+          transform: translateY(-25vh);
         }
 
         .search-form {
@@ -145,6 +344,14 @@ export const SearchPage: React.FC = () => {
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           border: 1px solid rgba(255, 255, 255, 0.5);
           transform-origin: center;
+        }
+        
+        .search-container.has-results .search-input {
+          background: rgba(255, 255, 255, 0.9);
+          box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.6);
         }
 
         .search-input::placeholder {
@@ -174,25 +381,244 @@ export const SearchPage: React.FC = () => {
         .search-input.contracting {
           transform: scale(0.99);
         }
+        
+        /* Search results styles */
+        .search-results {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 5;
+          overflow-y: auto;
+          padding-top: calc(25vh + 120px);
+          padding-left: 20px;
+          padding-right: 20px;
+          padding-bottom: 20px;
+          background: rgba(248, 249, 250, 0.95);
+          backdrop-filter: blur(10px);
+          opacity: 0;
+          animation: fadeInResults 0.8s ease-out 0.3s forwards;
+        }
+        
+        @keyframes fadeInResults {
+          0% {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .results-header {
+          text-align: center;
+          margin-bottom: 20px;
+          color: #666;
+          font-size: 14px;
+        }
+        
+        .results-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+        
+        .result-card {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s ease;
+          opacity: 0;
+          transform: translateY(30px) scale(0.95);
+          animation: slideInCard 0.6s ease-out forwards;
+          position: relative;
+        }
+        
+        .result-card.clickable {
+          cursor: pointer;
+        }
+        
+        .result-card:nth-child(1) { animation-delay: 0.1s; }
+        .result-card:nth-child(2) { animation-delay: 0.2s; }
+        .result-card:nth-child(3) { animation-delay: 0.3s; }
+        .result-card:nth-child(4) { animation-delay: 0.4s; }
+        .result-card:nth-child(5) { animation-delay: 0.5s; }
+        .result-card:nth-child(n+6) { animation-delay: 0.6s; }
+        
+        @keyframes slideInCard {
+          0% {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        
+        .result-card:hover {
+          transform: translateY(-4px) scale(1.02);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .result-card.clickable:hover .open-button {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        
+        .result-card:active {
+          transform: translateY(-2px) scale(1.01);
+        }
+        
+        .slide-image {
+          width: 100%;
+          height: 200px;
+          object-fit: contain;
+          background: #f8f9fa;
+        }
+        
+        .result-info {
+          padding: 15px;
+        }
+        
+        .result-title {
+          font-size: 14px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #333;
+          word-break: break-word;
+        }
+        
+        .result-details {
+          font-size: 12px;
+          color: #666;
+          line-height: 1.4;
+        }
+        
+        .result-score {
+          display: inline-block;
+          background: rgba(0, 120, 255, 0.1);
+          color: #0078ff;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 500;
+          margin-top: 8px;
+        }
+        
+        .open-button {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: rgba(255, 255, 255, 0.9);
+          color: #6B7280;
+          border: 1px solid rgba(107, 114, 128, 0.2);
+          border-radius: 6px;
+          padding: 6px 10px;
+          font-size: 11px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          opacity: 0;
+          transform: translateY(-4px);
+          transition: all 0.2s ease;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          pointer-events: none; /* Let clicks pass through to the card */
+        }
+        
+        .open-icon {
+          width: 13px;
+          height: 13px;
+          color: #6B7280;
+          stroke-width: 1.5;
+        }
+        
+        .result-card.clickable:hover .open-button {
+          background: rgba(255, 255, 255, 0.95);
+          color: #4B5563;
+          border-color: rgba(75, 85, 99, 0.3);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .result-card.clickable:hover .open-button .open-icon {
+          color: #4B5563;
+        }
+        
+        .error-message {
+          text-align: center;
+          color: #ff4444;
+          background: rgba(255, 68, 68, 0.1);
+          padding: 20px;
+          border-radius: 8px;
+          margin-top: 20px;
+        }
+        
+        .loading-spinner {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          margin-top: 40px;
+          animation: fadeIn 0.3s ease-out;
+        }
+        
+        .spinner {
+          width: 50px;
+          height: 50px;
+          border: 4px solid rgba(255, 255, 255, 0.3);
+          border-top: 4px solid #0078ff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+        
+        .loading-text {
+          color: #666;
+          font-size: 16px;
+          font-weight: 500;
+          opacity: 0.8;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
       `}</style>
 
       <div className="search-page">
-        <div className="search-container">
+        <div className={`search-container ${hasSearched ? 'has-results' : ''}`}>
           <form className="search-form" onSubmit={handleSubmit}>
             <input
               type="text"
               className={`search-input ${animationClass}`}
-              placeholder="Search..."
+              placeholder={isSearching ? "Searching..." : "Search slides..."}
               value={searchQuery}
               onChange={handleInputChange}
+              disabled={isSearching}
               style={{
                 width: `${inputWidth}px`,
-                minWidth: '300px'
+                minWidth: '300px',
+                opacity: isSearching ? 0.7 : 1
               }}
               autoFocus
             />
           </form>
         </div>
+        
+        <SearchResults />
       </div>
     </>
   );

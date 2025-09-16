@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Label } from '../../components/ui/label';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { useAuth } from '../../providers/AuthProvider';
-import { Loader2, Mail, Lock, AlertCircle, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Loader2, Mail, Lock, AlertCircle, Eye, EyeOff, Check, X, ArrowRight } from 'lucide-react';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -140,7 +140,7 @@ export default function SignupPage() {
                     value={email}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-10 bg-white/5 border-white/10 text-gray-300 placeholder:text-white/40 
+                    className="w-full pl-10 bg-white/5 border-white/10 text-gray-100 placeholder:text-white/40 
                              focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
                              transition-all duration-200 rounded-lg h-11"
                   />
@@ -168,7 +168,7 @@ export default function SignupPage() {
                     onBlur={() => setPasswordFocused(false)}
                     required
                     minLength={8}
-                    className="w-full pl-10 pr-10 bg-white/5 border-white/10 text-gray-300 placeholder:text-white/40 
+                    className="w-full pl-10 pr-10 bg-white/5 border-white/10 text-gray-100 placeholder:text-white/40 
                              focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
                              transition-all duration-200 rounded-lg h-11"
                   />
@@ -238,7 +238,7 @@ export default function SignupPage() {
                           ? 'border-green-500/50'
                           : 'border-red-500/50'
                         : 'border-white/10'
-                    } text-gray-300 placeholder:text-white/40 
+                    } text-gray-100 placeholder:text-white/40 
                     focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:border-transparent
                     transition-all duration-200 rounded-lg h-11`}
                   />
@@ -281,25 +281,34 @@ export default function SignupPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
+                className="flex justify-end"
               >
-                <Button 
+                <button
                   type="submit" 
-                  className={`w-full py-3 rounded-lg ${
+                  className={`group p-3 rounded-full bg-transparent hover:bg-white/5 transition-all duration-200 ${
                     !allValid || !passwordsMatch || !email
-                      ? 'bg-white/5 text-white/40 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white hover:shadow-blue-500/20 transform hover:-translate-y-0.5'
-                  } font-medium shadow-lg transition-all duration-300`}
+                      ? 'opacity-50 cursor-not-allowed'
+                      : ''
+                  }`}
                   disabled={isLoading || !allValid || !passwordsMatch || !email}
                 >
                   {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
+                    <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
                   ) : (
-                    'Sign Up'
+                    <motion.div
+                      initial={{ x: 0 }}
+                      animate={{ x: (!allValid || !passwordsMatch || !email) ? 0 : 2 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      whileHover={{ x: (!allValid || !passwordsMatch || !email) ? 0 : 2 }}
+                    >
+                      <ArrowRight className={`h-6 w-6 transition-colors ${
+                        !allValid || !passwordsMatch || !email
+                          ? 'text-gray-600'
+                          : 'text-gray-400 group-hover:text-gray-200'
+                      }`} />
+                    </motion.div>
                   )}
-                </Button>
+                </button>
               </motion.div>
             </div>
 
