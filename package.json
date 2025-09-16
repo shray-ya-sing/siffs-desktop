@@ -1,7 +1,7 @@
 {
   "name": "siffs",
-  "productName": "SIFFS",
-  "version": "0.1.0",
+  "productName": "Siffs",
+  "version": "0.1.2",
   "description": "Smart Image File Finding System",
   "main": ".webpack/main",
   "scripts": {
@@ -12,12 +12,12 @@
     "clear-api-keys": "python src/scripts/clear_user_api_keys.py",
     "clear-ppt-rules": "python src/scripts/clear_ppt_rules.py",
     "package": "npm run build:python && electron-forge package",
-    "make": "npm run clear-api-keys && npm run clear-ppt-rules && npm run build:python && electron-forge make",
+    "make": "npm run build:python && electron-forge make",
     "make:electron": "electron-forge make",
-    "make:win": "npm run clear-api-keys && npm run clear-ppt-rules && npm run build:python && electron-forge make --platform=win32",
-    "make:mac": "npm run clear-api-keys && npm run clear-ppt-rules && npm run build:python && electron-forge make --platform=darwin",
-    "make:linux": "npm run clear-api-keys && npm run clear-ppt-rules && npm run build:python && electron-forge make --platform=linux",
-    "publish": "npm run clear-api-keys && npm run clear-ppt-rules && npm run build:python && electron-forge publish",
+    "make:win": "npm run build:python && electron-forge make --platform=win32",
+    "make:mac": "npm run build:python && electron-forge make --platform=darwin",
+    "make:linux": "npm run build:python && electron-forge make --platform=linux",
+    "publish": "npm run build:python && electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "clean": "rimraf out",
     "version:patch": "npm version patch --no-git-tag-version",
@@ -26,7 +26,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "SIFFS",
+    "name": "Siffs",
     "email": "github.suggest277@passinbox.com"
   },
   "license": "UNLICENSED",

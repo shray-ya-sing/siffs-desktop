@@ -1,5 +1,10 @@
 class SlideProcessingService {
-  private baseUrl = 'http://localhost:3001/api';
+  private baseUrl: string;
+
+  constructor() {
+    const isDev = process.env.NODE_ENV === 'development';
+    this.baseUrl = isDev ? 'http://localhost:3001/api' : 'http://localhost:5001/api';
+  }
 
   async processFolderIndex(folderPath: string): Promise<any> {
     try {

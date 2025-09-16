@@ -129,7 +129,10 @@ export const SearchPage: React.FC = () => {
     try {
       console.log('🔍 Searching for:', searchQuery);
       
-      const response = await fetch('http://localhost:3001/api/slides/search', {
+      const isDev = process.env.NODE_ENV === 'development';
+      const apiBaseUrl = isDev ? 'http://localhost:3001' : 'http://localhost:5001';
+      
+      const response = await fetch(`${apiBaseUrl}/api/slides/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +152,9 @@ export const SearchPage: React.FC = () => {
       
       if (data.success) {
         console.log('✅ Search results:', data);
-        setSearchResults(data.results);
+        // Sort results by score in descending order (highest score first)
+        const sortedResults = [...data.results].sort((a, b) => b.score - a.score);
+        setSearchResults(sortedResults);
         setSearchStats({
           processing_time: data.processing_time_ms,
           total_found: data.total_found

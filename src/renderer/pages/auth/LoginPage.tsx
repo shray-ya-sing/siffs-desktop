@@ -137,7 +137,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="pl-10 pr-4 py-3 bg-white/5 border-white/10 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                className="pl-10 pr-4 py-3 bg-white/5 border-white/10 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 autoComplete="email"
                 autoFocus
               />
@@ -174,7 +174,7 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="pl-10 pr-10 py-3 bg-white/5 border-white/10 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+                className="pl-10 pr-10 py-3 bg-white/5 border-white/10 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
                 autoComplete="current-password"
               />
               <button
@@ -207,14 +207,14 @@ export default function LoginPage() {
               onMouseLeave={() => setIsHovered(false)}
             >
               {isLoading ? (
-                <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+                <Loader2 className="h-6 w-6 text-gray-600 animate-spin" />
               ) : (
                 <motion.div
                   initial={{ x: 0 }}
                   animate={{ x: isHovered ? 2 : 0 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 >
-                  <ArrowRight className="h-6 w-6 text-gray-400 group-hover:text-gray-200 transition-colors" />
+                  <ArrowRight className="h-6 w-6 text-gray-600 group-hover:text-gray-700 transition-colors" />
                 </motion.div>
               )}
             </button>

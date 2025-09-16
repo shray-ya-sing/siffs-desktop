@@ -37,7 +37,7 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     new MakerDMG({
       // Basic configuration
-      name: 'SIFFS',
+      name: 'Siffs',
       icon: './src/assets/icons/siffs-icon.icns', // Path to your .icns file
       // Format and compression
       format: 'ULFO', // ULFO, UDZO, UDBZ, ULMO, etc.
