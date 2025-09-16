@@ -1,8 +1,0 @@
-{
-  "score": 0.0,
-  "reasoning": "The model response incorrectly identifies errors in the workbook, while the golden answer states there are no errors. Therefore, the model response fails to capture the correct status of the workbook as indicated by the golden answer.",
-  "criteria_scores": {
-    "accuracy": 0.0,
-    "completeness": 0.0
-  }
-}

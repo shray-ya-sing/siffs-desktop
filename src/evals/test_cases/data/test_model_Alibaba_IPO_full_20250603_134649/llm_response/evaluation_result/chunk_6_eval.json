@@ -1,8 +1,0 @@
-{
-  "score": 0.0,
-  "reasoning": "The model response did not capture any of the errors mentioned in the golden answer. It failed to identify the incorrect cell references in M65, N65, and O65, and did not provide any explanation or fix for these errors. Therefore, it scored a 0.0 as it did not match any of the errors from the golden answer.",
-  "criteria_scores": {
-    "accuracy": 0.0,
-    "completeness": 0.0
-  }
-}

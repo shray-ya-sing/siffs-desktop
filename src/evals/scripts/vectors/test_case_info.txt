@@ -1,5 +1,0 @@
-Test Case 1
-
-Number of Rows per Chunk: 10
-Number of Chunks: 8
-Multi-tab model: False

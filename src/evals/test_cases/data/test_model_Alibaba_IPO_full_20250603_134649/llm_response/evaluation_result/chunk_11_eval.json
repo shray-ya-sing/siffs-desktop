@@ -1,8 +1,0 @@
-{
-  "score": 0.0,
-  "reasoning": "The model response did not capture any of the errors listed in the golden answer. It failed to identify the incorrect cell references in C38, D42, and D45, as well as the formula omission error in C11. Since none of the errors were noted, the score reflects a complete failure to match the golden answer.",
-  "criteria_scores": {
-    "accuracy": 0.0,
-    "completeness": 0.0
-  }
-}

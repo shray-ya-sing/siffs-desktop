@@ -1,8 +1,0 @@
-{
-  "score": 0.0,
-  "reasoning": "The model response identified errors in the Excel workbook, while the golden answer stated there were no errors. This indicates a complete mismatch between the two responses. The model response incorrectly identified errors in cells C22 and C9, which were not present according to the golden answer. Therefore, no errors were captured correctly.",
-  "criteria_scores": {
-    "accuracy": 0.0,
-    "completeness": 0.0
-  }
-}

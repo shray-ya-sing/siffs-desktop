@@ -16,8 +16,8 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: process.platform === 'darwin' 
-      ? './src/assets/icons/siffs-icon' // Electron will automatically add .icns
-      : './src/assets/icons/siffs-icon-full.ico',
+      ? './src/assets/icons/icon' // Electron will automatically add .icns
+      : './src/assets/icons/icon.ico',
     // Pass environment variables to the packaged app
     extraResource: [
       '.env',      
@@ -30,8 +30,8 @@ const config: ForgeConfig = {
   makers: [
     // Windows
     new MakerSquirrel({
-      setupIcon: './src/assets/icons/siffs-icon-full.ico',
-      iconUrl: 'https://raw.githubusercontent.com/cori-tan/siffs-desktop/main/src/assets/icons/siffs-icon-full.ico', // URL to icon for Add/Remove Programs
+      setupIcon: './src/assets/icons/icon.ico',
+      iconUrl: 'https://storage.googleapis.com/volute/assets/siffs.ico', // URL to icon for Add/Remove Programs
     }),
     // MacOS 
     new MakerZIP({}, ['darwin']),

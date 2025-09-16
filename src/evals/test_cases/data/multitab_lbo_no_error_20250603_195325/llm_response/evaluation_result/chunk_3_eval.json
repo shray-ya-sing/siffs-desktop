@@ -1,8 +1,0 @@
-{
-  "score": 1.0,
-  "reasoning": "The model response correctly identified that there are no errors in the section of the excel workbook, matching the golden answer's statement of 'No Error'.",
-  "criteria_scores": {
-    "accuracy": 1.0,
-    "completeness": 1.0
-  }
-}

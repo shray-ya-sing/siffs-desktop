@@ -1,9 +1,0 @@
-# Quarterly IS - Chunk 5
-## Source: test_model_Alibaba_IPO(shorter)_llm.xlsx_Quarterly IS_rows_41_50
-## Rows: 41 to 50
-
-Dividends accrued on convertible preference shares
-Net loss attributable to common stockholders | 1722 | -1560 | 4045 | 4197 | 4384 | 4883 | 8266
-(1) Share-based compensation expense | 279 | 462 | 293 | 225 | 396 | 864 | 659
-Growth Analysis and Drivers
-Revenue

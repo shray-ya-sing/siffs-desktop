@@ -1,8 +1,0 @@
-{
-  "score": 1.0,
-  "reasoning": "The model response accurately states that there are no errors in the section of the excel workbook, which matches the golden answer. Therefore, it receives a perfect score.",
-  "criteria_scores": {
-    "accuracy": 1.0,
-    "completeness": 1.0
-  }
-}

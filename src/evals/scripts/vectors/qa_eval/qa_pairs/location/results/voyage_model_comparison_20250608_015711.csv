@@ -1,6 +1,0 @@
-Model,Overall Score,Embedding Time (s),Total Tests,multi_cell_answer_multi_chunk,multi_cell_answer_single_chunk,single_cell_answer_multi_chunk,single_cell_answer_single_chunk
-voyage-3-large,0.855,2.54,114,1.000,0.917,1.000,0.759
-voyage-3.5,0.855,1.39,114,1.000,0.917,1.000,0.759
-voyage-3.5-lite,0.855,1.67,114,1.000,0.917,1.000,0.759
-voyage-code-3,0.855,2.36,114,1.000,0.917,1.000,0.759
-voyage-finance-2,0.855,5.37,114,1.000,0.917,1.000,0.759
