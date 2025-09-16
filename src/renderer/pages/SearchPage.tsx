@@ -37,26 +37,32 @@ export const SearchPage: React.FC = () => {
     try {
       console.log('📋 Copying file path to clipboard:', fileName, 'at path:', filePath);
       
-      // Try both electron and electronAPI (for backward compatibility)
-      const electronAPI = window.electron || (window as any).electronAPI;
+      // Type-safe access to electron API
+      const electronAPI = (window as any).electron || (window as any).electronAPI;
       
-      if (electronAPI && electronAPI.fileSystem && electronAPI.fileSystem.copyToClipboard) {
-        // Use Electron API if available
-        const result = await electronAPI.fileSystem.copyToClipboard(filePath);
-        
-        if (result.success) {
-          console.log('✅ Successfully copied file path to clipboard:', fileName);
-        } else {
-          console.error('❌ Failed to copy via Electron API:', result.error);
-          // Fallback to browser API
-          await navigator.clipboard.writeText(filePath);
-          console.log('✅ Copied file path using browser API fallback');
+      // Check if Electron API is available and has the fileSystem.copyToClipboard method
+      if (electronAPI?.fileSystem?.copyToClipboard) {
+        try {
+          // Use Electron API if available
+          const result = await electronAPI.fileSystem.copyToClipboard(filePath);
+          
+          if (result?.success) {
+            console.log('✅ Successfully copied file path to clipboard:', fileName);
+            // Show visual feedback
+            setCopiedCardId(slideId);
+            setTimeout(() => setCopiedCardId(null), 2000); // Hide after 2 seconds
+            return;
+          } else {
+            console.error('❌ Failed to copy via Electron API:', result?.error);
+          }
+        } catch (electronError) {
+          console.error('❌ Electron API error:', electronError);
         }
-      } else {
-        // Fallback to browser clipboard API
-        await navigator.clipboard.writeText(filePath);
-        console.log('✅ Copied file path to clipboard using browser API:', fileName);
       }
+      
+      // Fallback to browser clipboard API
+      await navigator.clipboard.writeText(filePath);
+      console.log('✅ Copied file path to clipboard using browser API:', fileName);
       
       // Show visual feedback
       setCopiedCardId(slideId);
