@@ -16,8 +16,8 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: process.platform === 'darwin' 
-      ? './src/assets/icons/icon' // Electron will automatically add .icns
-      : './src/assets/icons/icon.ico',
+      ? './src/assets/icons/siffs-icon' // Electron will automatically add .icns
+      : './src/assets/icons/siffs-icon-full.ico',
     // Pass environment variables to the packaged app
     extraResource: [
       '.env',      
@@ -30,15 +30,15 @@ const config: ForgeConfig = {
   makers: [
     // Windows
     new MakerSquirrel({
-      setupIcon: './src/assets/icons/icon.ico',
-      iconUrl: 'https://storage.googleapis.com/volute/assets/icon.ico', // URL to icon for Add/Remove Programs
+      setupIcon: './src/assets/icons/siffs-icon-full.ico',
+      iconUrl: 'https://raw.githubusercontent.com/cori-tan/siffs-desktop/main/src/assets/icons/siffs-icon-full.ico', // URL to icon for Add/Remove Programs
     }),
     // MacOS 
     new MakerZIP({}, ['darwin']),
     new MakerDMG({
       // Basic configuration
-      name: 'Volute',
-      icon: './src/assets/icons/icon.icns', // Path to your .icns file
+      name: 'SIFFS',
+      icon: './src/assets/icons/siffs-icon.icns', // Path to your .icns file
       // Format and compression
       format: 'ULFO', // ULFO, UDZO, UDBZ, ULMO, etc.
     }, ['darwin']),
@@ -81,8 +81,8 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'Volute',  // Replace with your GitHub username
-          name: 'Volute'         // Replace with your repository name
+          owner: 'cori-tan',  // Replace with your GitHub username
+          name: 'siffs-desktop'         // Replace with your repository name
         },
         prerelease: true,  // Set to false if you don't want releases marked as pre-release
         authToken: process.env.GITHUB_TOKEN  // You'll need to set this environment variable
