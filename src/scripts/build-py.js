@@ -1,10 +1,11 @@
-// Build script to create a single-file Python executable for the server
+// Build script to create a single-file Python executable for SIFFS server
 //
 // Usage: node build-py.js
 // IMPORTANT NOTE: always run this script from the ROOT directory of the project, otherwise path resolution will fail and the script will not run successfully
 // 
-// This script will build a single-file Python executable for the server
-// and place it in the resources directory.
+// This script will build a single-file Python executable for the SIFFS server
+// containing only the essential packages: FastAPI, VoyageAI, Pinecone, PyWin32, and Pillow.
+// The executable will be placed in the resources directory.
 // The script will clean up existing build and dist directories if they exist
 //
 // Dependencies: 
@@ -55,121 +56,51 @@ function buildPython() {
         // Hooks
         '--additional-hooks-dir', pythonDir,
         '--runtime-hook', path.join(pythonDir, 'runtime-hook-encoding.py'),
-        // Add all hidden imports
-        '--hidden-import=flask_cors',
-        '--hidden-import=flask.app',
+        // Add essential hidden imports for SIFFS
         '--hidden-import=python_dotenv',
-        '--hidden-import=waitress',
-        '--hidden-import=xlwings',
-        '--hidden-import=anthropic',
-        '--hidden-import=openpyxl',
-        '--hidden-import=asgiref',
         '--hidden-import=uvicorn',
         '--hidden-import=fastapi',
         '--hidden-import=pydantic',
-        '--hidden-import=tqdm',
-        '--hidden-import=requests',
-        '--hidden-import=packaging',
-        '--hidden-import=filelock',
-        '--hidden-import=httpcore',
-        '--hidden-import=httpx',
-        '--hidden-import=regex._regex',     
-        '--hidden-import=langgraph',
-        '--hidden-import=langchain',
-        '--hidden-import=langchain-anthropic',
-        '--hidden-import=langchain-openai',
-        '--hidden-import=langchain-google-genai',   
+        '--hidden-import=starlette',
         '--hidden-import=voyageai',
-        '--hidden-import=langgraph_supervisor',
-        '--hidden-import=docx',
-        '--hidden-import=pptx',
-        '--hidden-import=fitz',
-        '--hidden-import=pdfplumber',
-        '--hidden-import=PyPDF2',
-        '--hidden-import=watchdog',
-        '--hidden-import=sentry_sdk',
-        '--hidden-import=sentry_sdk.integrations',
-        '--hidden-import=sentry_sdk.integrations.fastapi',
-        '--hidden-import=sentry_sdk.integrations.asgi',
-        // copy metadata needed by transformers lib
-        '--copy-metadata', 'regex',
-        '--copy-metadata', 'requests',
-        '--copy-metadata', 'packaging',
-        '--copy-metadata', 'filelock',
-        '--copy-metadata', 'pyyaml',
-        '--copy-metadata', 'joblib',
-        '--copy-metadata', 'threadpoolctl',
-        '--copy-metadata', 'certifi',
-        '--copy-metadata', 'charset_normalizer',
-        '--copy-metadata', 'idna',
-        '--copy-metadata', 'urllib3',    
-        '--copy-metadata', 'langgraph',
-        '--copy-metadata', 'langchain',
-        '--copy-metadata', 'langchain-anthropic',
-        '--copy-metadata', 'langchain-openai',
-        '--copy-metadata', 'langchain-google-genai',
+        '--hidden-import=pinecone',
+        '--hidden-import=PIL',
+        '--hidden-import=PIL.Image',
+        '--hidden-import=win32com.client',
+        '--hidden-import=pythoncom',
+        // Copy metadata for essential SIFFS packages
+        '--copy-metadata', 'fastapi',
+        '--copy-metadata', 'uvicorn',
+        '--copy-metadata', 'pydantic',
+        '--copy-metadata', 'starlette',
         '--copy-metadata', 'voyageai',
-        '--copy-metadata', 'langgraph-supervisor',
-        '--copy-metadata', 'python-docx',
-        '--copy-metadata', 'python-pptx',
-        '--copy-metadata', 'PyMuPDF',
-        '--copy-metadata', 'pdfplumber',
-        '--copy-metadata', 'PyPDF2',
-        '--copy-metadata', 'watchdog',
+        '--copy-metadata', 'pinecone',
+        '--copy-metadata', 'pillow',
+        '--copy-metadata', 'python-dotenv',
+        '--copy-metadata', 'pywin32',
         // Add the python-server directory to the path
         '--paths', pythonDir,
-        // Collect all Flask components
-        '--collect-all', 'flask',
-        '--collect-all', 'python_dotenv',
-        '--collect-all', 'waitress',
-        '--collect-data=xlwings',
-        '--collect-data=anthropic',
+        // Collect essential SIFFS components
         '--collect-all', 'fastapi',
         '--collect-all', 'uvicorn',
         '--collect-all', 'pydantic',
         '--collect-all', 'pydantic_core',
-        '--collect-all', 'anyio',
         '--collect-all', 'starlette',
-        '--collect-all', 'httpcore',
-        '--collect-all', 'httpx',
-        '--collect-all', 'openpyxl',
-        '--collect-all', 'asgiref',
-        '--collect-all', 'requests',
-        '--collect-all', 'packaging',
-        '--collect-all', 'filelock',
-        '--collect-all', 'langgraph',
-        '--collect-all', 'langchain',
-        '--collect-all', 'langchain-anthropic',
-        '--collect-all', 'langchain-openai',
-        '--collect-all', 'langchain-google-genai',
+        '--collect-all', 'anyio',
         '--collect-all', 'voyageai',
-        '--collect-all', 'langgraph_supervisor',
-        '--collect-all', 'python-docx',
-        '--collect-all', 'python-pptx',
-        '--collect-all', 'PyMuPDF',
-        '--collect-all', 'pdfplumber',
-        '--collect-all', 'PyPDF2',
-        '--collect-all', 'watchdog',
-        '--collect-all', 'sentry_sdk',
+        '--collect-all', 'pinecone',
+        '--collect-all', 'PIL',
+        '--collect-all', 'python_dotenv',
         // Name of the main python server dir
         '--name=python-server',        
-        // Add all Python files in the python-server directory
+        // Add SIFFS Python files and directories
         '--add-data', `${path.join(pythonDir, 'app.py')}${path.delimiter}.`,
-        '--add-data', `${path.join(pythonDir, 'wsgi.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'asgi.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, '__init__.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, 'logging_config.py')}${path.delimiter}.`,
         '--add-data', `${path.join(pythonDir, '*.py')}${path.delimiter}.`,
-        '--add-data', `${path.join(pythonDir, 'excel')}${path.delimiter}excel`,
-        '--add-data', `${path.join(pythonDir, 'ai_services')}${path.delimiter}ai_services`,
         '--add-data', `${path.join(pythonDir, 'api')}${path.delimiter}api`,
-        '--add-data', `${path.join(pythonDir, 'core')}${path.delimiter}core`,
-        '--add-data', `${path.join(pythonDir, 'vectors')}${path.delimiter}vectors`,
-        '--add-data', `${path.join(pythonDir, 'word')}${path.delimiter}word`,
-        '--add-data', `${path.join(pythonDir, 'pdf')}${path.delimiter}pdf`,
-        '--add-data', `${path.join(pythonDir, 'powerpoint')}${path.delimiter}powerpoint`,
-        '--add-data', `${path.join(pythonDir, 'api_key_management')}${path.delimiter}api_key_management`,
-        '--add-data', `${path.join(pythonDir, 'cache_management')}${path.delimiter}cache_management`,
+        '--add-data', `${path.join(pythonDir, 'services')}${path.delimiter}services`,
         // Entry point for prod server
         '--onedir',
         path.join(pythonDir, 'asgi.py')
@@ -196,17 +127,11 @@ function buildPython() {
         fs.mkdirSync(resourcesDir, { recursive: true });
     }
 
-    // Copy wsgi.py to resources
-    const wsgiSource = path.join(__dirname, '../python-server/wsgi.py');
-    const wsgiDest = path.join(__dirname, '../../resources/wsgi.py');
-    fs.copyFileSync(wsgiSource, wsgiDest);
-    console.log(`Copied wsgi.py to ${wsgiDest}`);
-
-    // Copy asgi.py to resources
+    // Copy asgi.py to resources (main entry point for SIFFS)
     const asgiSource = path.join(__dirname, '../python-server/asgi.py');
     const asgiDest = path.join(__dirname, '../../resources/asgi.py');
     fs.copyFileSync(asgiSource, asgiDest);
-    console.log(`Copied asgi.py to ${asgiDest}`);   
+    console.log(`Copied asgi.py to ${asgiDest}`);
 
     // Copy the env file to the package resources
     // Update the .env copy section to be non-blocking
