@@ -9,6 +9,8 @@ export function SettingsPage() {
   const [isIndexing, setIsIndexing] = useState(false);
   const [indexingStatus, setIndexingStatus] = useState<string>('');
   const [indexingResults, setIndexingResults] = useState<any>(null);
+  const [progressData, setProgressData] = useState<any>(null);
+  const [isPolling, setIsPolling] = useState(false);
 
   // Check for existing folder connection on component mount
   useEffect(() => {
@@ -20,6 +22,57 @@ export function SettingsPage() {
       setFolderPath(savedFolder);
     }
   }, []);
+
+  // Progress polling effect
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isIndexing && !isPolling) {
+      setIsPolling(true);
+      
+      const pollProgress = async () => {
+        try {
+          const response = await fetch('http://localhost:3001/api/slides/processing-status');
+          const data = await response.json();
+          
+          setProgressData(data);
+          
+          // Stop polling when processing is complete
+          if (!data.is_processing) {
+            setIsPolling(false);
+            setProgressData(null);
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching progress:', error);
+        }
+      };
+
+      // Poll every 2 seconds
+      intervalId = setInterval(pollProgress, 2000);
+      pollProgress(); // Initial fetch
+    }
+
+    if (!isIndexing && isPolling) {
+      setIsPolling(false);
+      setProgressData(null);
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      setIsPolling(false);
+    };
+  }, [isIndexing]);
 
   const handleSubmitFolder = async () => {
     if (!folderPath.trim()) {
@@ -338,6 +391,94 @@ export function SettingsPage() {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+
+        /* Progress Display Styles */
+        .progress-container {
+          margin-top: 1.5rem;
+          padding: 1.5rem;
+          background: rgba(255, 255, 255, 0.6);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .progress-header {
+          font-weight: 600;
+          color: #4a5568;
+          margin-bottom: 1rem;
+          text-align: center;
+          font-size: 1.1rem;
+        }
+
+        .progress-section {
+          margin-bottom: 1rem;
+        }
+
+        .progress-label {
+          color: #6b7280;
+          font-size: 0.9rem;
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+          text-align: center;
+        }
+
+        .progress-bar {
+          width: 100%;
+          height: 8px;
+          background: rgba(0, 0, 0, 0.08);
+          border-radius: 4px;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #0078ff, #00a8ff);
+          border-radius: 4px;
+          transition: width 0.5s ease;
+          position: relative;
+        }
+
+        .progress-fill::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+          animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+
+        .progress-stats {
+          display: flex;
+          justify-content: space-between;
+          color: #6b7280;
+          font-size: 0.85rem;
+          font-weight: 500;
+          margin-bottom: 0.75rem;
+          padding: 0 0.25rem;
+        }
+
+        .current-stage {
+          color: #0078ff;
+          font-size: 0.9rem;
+          font-weight: 600;
+          text-align: center;
+          padding: 0.5rem;
+          background: rgba(0, 120, 255, 0.05);
+          border-radius: 8px;
+          border: 1px solid rgba(0, 120, 255, 0.1);
+        }
       `}</style>
 
       <div className="settings-page">
@@ -449,8 +590,82 @@ export function SettingsPage() {
                     )}
                   </button>
                 </div>
-                
-                {indexingStatus && (
+
+                {/* Progress Display */}
+                {progressData && isIndexing && (
+                  <div className="progress-container">
+                    <div className="progress-header">
+                      <span>Processing Files...</span>
+                    </div>
+                    
+                    {/* Overall Progress Bar */}
+                    <div className="progress-section">
+                      <div className="progress-label">
+                        Progress: {((progressData.files_processed || 0) / Math.max(progressData.files_scanned || 1, 1) * 100).toFixed(1)}%
+                      </div>
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill" 
+                          style={{ 
+                            width: `${(progressData.files_processed || 0) / Math.max(progressData.files_scanned || 1, 1) * 100}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Files Progress */}
+                    <div className="progress-stats">
+                      <span>📁 Files: {progressData.files_processed || 0}/{progressData.files_scanned || 0}</span>
+                      <span>🖼️ Slides: {progressData.slides_processed || 0}</span>
+                    </div>
+
+                    {/* Current Stage */}
+                    {progressData.status && (
+                      <div className="current-stage">
+                        Stage: {progressData.status}
+                      </div>
+                    )}
+                  </div>
+                    )}
+
+                    {/* Progress Display for Re-indexing */}
+                    {progressData && isIndexing && (
+                      <div className="progress-container">
+                        <div className="progress-header">
+                          <span>Re-processing Files...</span>
+                        </div>
+                        
+                        {/* Overall Progress Bar */}
+                        <div className="progress-section">
+                          <div className="progress-label">
+                            Progress: {((progressData.files_processed || 0) / Math.max(progressData.files_scanned || 1, 1) * 100).toFixed(1)}%
+                          </div>
+                          <div className="progress-bar">
+                            <div 
+                              className="progress-fill" 
+                              style={{ 
+                                width: `${(progressData.files_processed || 0) / Math.max(progressData.files_scanned || 1, 1) * 100}%` 
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Files Progress */}
+                        <div className="progress-stats">
+                          <span>📁 Files: {progressData.files_processed || 0}/{progressData.files_scanned || 0}</span>
+                          <span>🖼️ Slides: {progressData.slides_processed || 0}</span>
+                        </div>
+
+                        {/* Current Stage */}
+                        {progressData.status && (
+                          <div className="current-stage">
+                            Stage: {progressData.status}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {indexingStatus && (
                   <div style={{ 
                     marginTop: '1rem', 
                     fontSize: '0.9rem',

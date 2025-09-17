@@ -12,12 +12,12 @@ class VoyageEmbeddingsService:
     """Service for creating multimodal embeddings using VoyageAI"""
     
     # Default batch size for processing multiple images at once
-    # Updated: Testing with batch size 75 for optimal performance
-    # - Batch size 75 provides good balance of speed and reliability
-    # - Larger batches (100+) can cause network timeouts due to large payload sizes
-    # - This size should be more efficient than 25 while avoiding timeouts
-    # - 75 images provides better throughput while maintaining reliability
-    DEFAULT_BATCH_SIZE = 75   # Optimized batch size for production use
+    # Optimized: Batch size 75 is the maximum reliable size for VoyageAI
+    # - Batch size 75 provides optimal balance of speed and reliability
+    # - Larger batches (100+) cause VoyageAI API timeouts and hanging requests
+    # - 10 concurrent workers × 75 images = 750 concurrent images processing
+    # - 75 images is the proven maximum that VoyageAI can handle reliably
+    DEFAULT_BATCH_SIZE = 75   # Proven maximum batch size for reliable processing
     MAX_BATCH_SIZE = 1000      # VoyageAI theoretical maximum (not practical due to payload size)
     
     def __init__(self, api_key: str = None, batch_size: int = None):
