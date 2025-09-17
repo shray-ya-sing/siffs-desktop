@@ -412,7 +412,7 @@ class SlideProcessingService:
                 'slides_processed': 0
             }
     
-    def search_slides(self, query: str, top_k: int = 10, file_filter: str = None, use_reranker: bool = False) -> List[Dict]:
+    def search_slides(self, query: str, top_k: int = 25, file_filter: str = None, use_reranker: bool = False) -> List[Dict]:
         """
         Search for slides similar to the given query
         

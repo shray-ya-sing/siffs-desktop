@@ -1,7 +1,7 @@
 {
   "name": "siffs",
   "productName": "Siffs",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Smart Image File Finding System",
   "main": ".webpack/main",
   "scripts": {

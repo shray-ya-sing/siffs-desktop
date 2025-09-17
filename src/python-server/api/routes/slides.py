@@ -25,7 +25,7 @@ class ProcessFolderResponse(BaseModel):
 
 class SearchSlidesRequest(BaseModel):
     query: str
-    top_k: Optional[int] = 10
+    top_k: Optional[int] = 25
     file_filter: Optional[str] = None
     use_reranker: Optional[bool] = True
 

@@ -172,7 +172,7 @@ class QdrantVectorDB:
             logger.error(f"   Error type: {type(e).__name__}")
             return False
     
-    def search_similar_slides(self, query_embedding: List[float], top_k: int = 10, 
+    def search_similar_slides(self, query_embedding: List[float], top_k: int = 25, 
                             file_filter: str = None) -> List[Dict]:
         """
         Search for similar slides using vector similarity
