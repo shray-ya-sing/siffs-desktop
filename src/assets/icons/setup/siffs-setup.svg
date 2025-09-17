@@ -1,0 +1,38 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for the spinner -->
+    <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Animation for spinner rotation -->
+    <animateTransform id="spin" attributeName="transform" attributeType="XML" type="rotate" 
+                      from="0 200 150" to="360 200 150" dur="1s" repeatCount="indefinite"/>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="300" fill="#F5F5DC"/>
+  
+  <!-- Logo (simplified cursive S) -->
+  <g transform="translate(50, 30)">
+    <path d="M20 10 C25 5, 35 8, 30 18 C25 28, 15 30, 12 35 C9 40, 8 45, 12 50 C16 55, 25 52, 28 47 C30 45, 28 43, 26 45 C24 47, 20 48, 18 45 C16 42, 20 40, 22 42 C23 43, 22 44, 21 43" 
+          fill="none" 
+          stroke="#000000" 
+          stroke-width="2" 
+          stroke-linecap="round"/>
+  </g>
+  
+  <!-- "Siffs" text -->
+  <text x="120" y="50" font-family="Arial, sans-serif" font-size="32" font-weight="500" fill="#333333">Siffs</text>
+  
+  <!-- Spinner in the middle -->
+  <g>
+    <circle cx="200" cy="150" r="20" fill="none" stroke="url(#spinnerGradient)" stroke-width="4" 
+            stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="7.854">
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate" 
+                        from="0 200 150" to="360 200 150" dur="1s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>

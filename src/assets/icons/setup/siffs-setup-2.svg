@@ -1,0 +1,46 @@
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Bubble gradient for the logo -->
+    <linearGradient id="bubbleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient for the spinner -->
+    <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="600" fill="#F5F5DC"/>
+  
+  <!-- Centered Siffs logo and text -->
+  <g transform="translate(340, 80)">
+    <!-- Siffs logo (scaled and positioned) -->
+    <svg width="120" height="140" viewBox="0 0 120 140" x="0" y="0">
+      <path d="M85 25 C95 15, 105 20, 100 35 C95 50, 75 55, 65 65 C55 75, 45 80, 50 95 C55 110, 75 105, 85 95 C90 90, 85 85, 80 90 C75 95, 65 98, 60 90 C55 82, 65 78, 70 82 C72 84, 70 86, 68 84 M25 115 C15 125, 5 120, 10 105 C15 90, 35 85, 45 75 C55 65, 65 60, 60 45 C55 30, 35 35, 25 45 C20 50, 25 55, 30 50 C35 45, 45 42, 50 50 C55 58, 45 62, 40 58 C38 56, 40 54, 42 56" 
+            fill="url(#bubbleGradient)" 
+            stroke="#1E293B" 
+            stroke-width="2" />
+    </svg>
+    
+    <!-- "Siffs" text centered below logo -->
+    <text x="60" y="170" font-family="Arial, sans-serif" font-size="48" font-weight="500" fill="#333333" text-anchor="middle">Siffs</text>
+  </g>
+  
+  <!-- Spinner in the middle -->
+  <g>
+    <circle cx="400" cy="350" r="30" fill="none" stroke="url(#spinnerGradient)" stroke-width="6" 
+            stroke-linecap="round" stroke-dasharray="47.124" stroke-dashoffset="11.781">
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate" 
+                        from="0 400 350" to="360 400 350" dur="1s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- "Siffs is installing" text below spinner -->
+  <text x="400" y="420" font-family="Arial, sans-serif" font-size="24" font-weight="400" fill="#666666" text-anchor="middle">Siffs is installing</text>
+</svg>
