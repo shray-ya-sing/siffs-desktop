@@ -86,7 +86,7 @@ const config: ForgeConfig = {
           owner: 'cori-tan',  // Replace with your GitHub username
           name: 'siffs-desktop'         // Replace with your repository name
         },
-        prerelease: true,  // Set to false if you don't want releases marked as pre-release
+        prerelease: false,  // Set to false if you don't want releases marked as pre-release
         authToken: process.env.GITHUB_TOKEN  // You'll need to set this environment variable
       }
     }

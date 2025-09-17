@@ -16,6 +16,9 @@ export class AutoUpdaterService {
     // Configure auto-updater logging
     autoUpdater.logger = log;
     (autoUpdater.logger as typeof log).transports.file.level = 'info';
+    
+    // Allow pre-release updates
+    autoUpdater.allowPrerelease = true;
 
     // Set up auto-updater event handlers
     this.setupEventHandlers();
