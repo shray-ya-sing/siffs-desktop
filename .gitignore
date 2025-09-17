@@ -145,6 +145,12 @@ excel_embeddings.db
 *.faiss
 *.pkl
 
+# Qdrant vector database (local development data)
+vector_db/
+**/vector_db/
+qdrant_data/
+**/qdrant_data/
+
 # Cache directories
 **/metadata/__cache/
 **/metadata/_cache/
