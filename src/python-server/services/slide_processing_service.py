@@ -69,27 +69,30 @@ class SlideProcessingService:
     
     def scan_folder_for_files(self, folder_path: str) -> Dict[str, List[str]]:
         """
-        Scan folder and subdirectories for both PowerPoint files and image files
+        Scan folder and subdirectories for PowerPoint files only
+        
+        Note: Image file processing has been disabled - only .pptx files are processed
         
         Args:
             folder_path: Path to the folder to scan
             
         Returns:
-            Dictionary with 'pptx' and 'images' keys containing respective file lists
+            Dictionary with 'pptx' and 'images' keys (images will always be empty)
         """
         try:
-            logger.info(f"📁 Scanning folder for PowerPoint files and slide images: {folder_path}")
+            logger.info(f"📁 Scanning folder for PowerPoint files only: {folder_path}")
+            logger.info("📁 Image file processing is disabled - only .pptx files will be processed")
             
-            # Scan for PowerPoint files
+            # Scan for PowerPoint files only
             pptx_files = []
             search_pattern = os.path.join(folder_path, "**", "*.pptx")
             pptx_files = glob.glob(search_pattern, recursive=True)
             
-            # Scan for image files using fast scanning (extension + size check only)
-            image_files = self.image_processor.scan_folder_for_images(folder_path, fast_scan=True)
+            # Image processing is disabled - return empty list
+            image_files = []
             
-            total_files = len(pptx_files) + len(image_files)
-            logger.info(f"📁 Found {len(pptx_files)} PowerPoint files and {len(image_files)} image files ({total_files} total) in {folder_path}")
+            total_files = len(pptx_files)
+            logger.info(f"📁 Found {len(pptx_files)} PowerPoint files ({total_files} total) in {folder_path}")
             
             if pptx_files:
                 logger.info("📁 PowerPoint files found:")
@@ -98,16 +101,12 @@ class SlideProcessingService:
                 if len(pptx_files) > 5:
                     logger.info(f"   ... and {len(pptx_files) - 5} more PowerPoint files")
             
-            if image_files:
-                logger.info(f"📁 Image files found: {len(image_files)} files")
-                # Image details already logged by image_processor.scan_folder_for_images
-            
-            if not pptx_files and not image_files:
-                logger.warning(f"📁 No PowerPoint or image files found in {folder_path}")
+            if not pptx_files:
+                logger.warning(f"📁 No PowerPoint files found in {folder_path}")
             
             return {
                 'pptx': pptx_files,
-                'images': image_files
+                'images': image_files  # Always empty now
             }
             
         except Exception as e:
@@ -129,49 +128,48 @@ class SlideProcessingService:
     
     def process_folder(self, folder_path: str, progress_callback=None) -> Dict[str, Any]:
         """
-        Process all PowerPoint files and standalone image files in a folder
+        Process only PowerPoint files in a folder
+        
+        Note: Image file processing has been disabled - only .pptx files are processed
         
         Args:
-            folder_path: Path to the folder containing PowerPoint files and/or image files
+            folder_path: Path to the folder containing PowerPoint files
             progress_callback: Optional callback function for progress updates
             
         Returns:
             Dictionary with processing results
         """
         try:
-            logger.info(f"Starting folder processing: {folder_path}")
+            logger.info(f"Starting folder processing (PowerPoint files only): {folder_path}")
             
-            # Scan for both PowerPoint files and image files
+            # Scan for PowerPoint files only (images are excluded)
             scan_result = self.scan_folder_for_files(folder_path)
             pptx_files = scan_result['pptx']
-            image_files = scan_result['images']
+            image_files = scan_result['images']  # Will always be empty
             
-            total_files = len(pptx_files) + len(image_files)
+            total_files = len(pptx_files)
             if total_files == 0:
                 return {
                     'success': True,
-                    'message': 'No PowerPoint files or slide images found in the specified folder',
+                    'message': 'No PowerPoint files found in the specified folder',
                     'files_processed': 0,
                     'slides_processed': 0
                 }
             
-            # Use parallel processing for large numbers of images
-            if len(image_files) >= 100:  # Use parallel processing for 100+ images
-                logger.info(f"🚀 Using parallel processing for {len(image_files)} images (batch size: {self.parallel_processor.batch_size})")
-                return self._process_images_parallel(image_files, pptx_files, progress_callback)
+            logger.info(f"📁 Processing {total_files} PowerPoint files (image processing disabled)")
             
             total_slides_processed = 0
             files_processed = 0
             failed_files = []
             
-            # Process PowerPoint files
+            # Process PowerPoint files only
             for i, pptx_file in enumerate(pptx_files):
                 try:
                     if progress_callback:
                         progress_callback({
                             'status': 'processing_file',
                             'file': os.path.basename(pptx_file),
-                            'progress': (i + files_processed) / total_files * 100
+                            'progress': (i + 1) / total_files * 100
                         })
                     
                     logger.info(f"Processing PowerPoint file {i+1}/{len(pptx_files)}: {pptx_file}")
@@ -192,33 +190,8 @@ class SlideProcessingService:
                     failed_files.append(pptx_file)
                     continue
             
-            # Process standalone image files
-            for i, image_file in enumerate(image_files):
-                try:
-                    if progress_callback:
-                        progress_callback({
-                            'status': 'processing_file',
-                            'file': os.path.basename(image_file),
-                            'progress': (len(pptx_files) + i + files_processed - len(pptx_files)) / total_files * 100
-                        })
-                    
-                    logger.info(f"Processing image file {i+1}/{len(image_files)}: {image_file}")
-                    
-                    # Process single image file
-                    result = self.process_single_image_file(image_file)
-                    
-                    if result['success']:
-                        total_slides_processed += result['slides_processed']
-                        files_processed += 1
-                        logger.info(f"Successfully processed image: {image_file}")
-                    else:
-                        failed_files.append(image_file)
-                        logger.error(f"Failed to process {image_file}: {result.get('error', 'Unknown error')}")
-                        
-                except Exception as e:
-                    logger.error(f"Error processing image file {image_file}: {e}")
-                    failed_files.append(image_file)
-                    continue
+            # Image processing is disabled - skip image files entirely
+            logger.info("📁 Image file processing is disabled - skipping any image files")
             
             if progress_callback:
                 progress_callback({
@@ -232,7 +205,7 @@ class SlideProcessingService:
                 'files_processed': files_processed,
                 'slides_processed': total_slides_processed,
                 'failed_files': failed_files,
-                'message': f"Processed {files_processed} files with {total_slides_processed} slides"
+                'message': f"Processed {files_processed} PowerPoint files with {total_slides_processed} slides"
             }
             
         except Exception as e:
@@ -246,111 +219,55 @@ class SlideProcessingService:
     
     def _process_images_parallel(self, image_files: List[str], pptx_files: List[str], progress_callback=None) -> Dict[str, Any]:
         """
-        Process large numbers of images using parallel scanning and batch embedding
+        Legacy method - no longer used since image processing has been disabled
         
-        Args:
-            image_files: List of image file paths (from initial scan)
-            pptx_files: List of PowerPoint files to process normally
-            progress_callback: Optional callback for progress updates
-            
-        Returns:
-            Dictionary with processing results
+        Note: This method is kept for compatibility but will not be called since
+        image_files will always be empty now.
         """
-        try:
-            logger.info(f"🚀 Starting parallel image processing for {len(image_files)} images...")
-            
-            # Create a temporary directory containing only the scanned images
-            # We'll pass the parent directory and let parallel processor scan it fresh
-            # This ensures we get the most up-to-date file list and handle any changes
-            
-            if image_files:
-                # Get the common parent directory
-                parent_dirs = set(os.path.dirname(img_path) for img_path in image_files)
-                if len(parent_dirs) == 1:
-                    # All images in same directory - process that directory
-                    target_dir = parent_dirs.pop()
+        logger.warning("⚠️ _process_images_parallel called but image processing is disabled")
+        
+        # Process only PowerPoint files (images are disabled)
+        total_slides_processed = 0
+        files_processed = 0
+        failed_files = []
+        
+        # Process PowerPoint files normally
+        for i, pptx_file in enumerate(pptx_files):
+            try:
+                if progress_callback:
+                    progress_callback({
+                        'status': 'processing_powerpoint',
+                        'file': os.path.basename(pptx_file),
+                        'progress': ((i + 1) / len(pptx_files)) * 100
+                    })
+                
+                logger.info(f"📄 Processing PowerPoint file {i+1}/{len(pptx_files)}: {pptx_file}")
+                result = self.process_single_file(pptx_file)
+                
+                if result['success']:
+                    total_slides_processed += result['slides_processed']
+                    files_processed += 1
                 else:
-                    # Images in multiple directories - process the original folder
-                    # The parallel processor will find all images recursively
-                    target_dir = os.path.dirname(image_files[0]) if image_files else "."
-                    
-                    # Find common root
-                    common_path = os.path.commonpath([os.path.dirname(img) for img in image_files])
-                    if common_path:
-                        target_dir = common_path
-                
-                logger.info(f"📁 Using parallel processor on directory: {target_dir}")
-                
-                # Use parallel processor for images
-                parallel_result = self.parallel_processor.process_folder_parallel(
-                    folder_path=target_dir,
-                    progress_callback=progress_callback
-                )
-                
-                if not parallel_result['success']:
-                    logger.error(f"❌ Parallel processing failed: {parallel_result.get('error')}")
-                    return parallel_result
-                
-                total_slides_processed = parallel_result['slides_processed']
-                files_processed = parallel_result['files_processed']
-                failed_files = parallel_result.get('failed_files', [])
-                
-                logger.info(f"✅ Parallel processing completed: {files_processed} files, {total_slides_processed} slides")
-            else:
-                total_slides_processed = 0
-                files_processed = 0
-                failed_files = []
-            
-            # Process PowerPoint files normally (if any)
-            pptx_processed = 0
-            for i, pptx_file in enumerate(pptx_files):
-                try:
-                    if progress_callback:
-                        progress_callback({
-                            'status': 'processing_powerpoint',
-                            'file': os.path.basename(pptx_file),
-                            'progress': ((files_processed + i + 1) / (len(image_files) + len(pptx_files))) * 100
-                        })
-                    
-                    logger.info(f"📄 Processing PowerPoint file {i+1}/{len(pptx_files)}: {pptx_file}")
-                    result = self.process_single_file(pptx_file)
-                    
-                    if result['success']:
-                        total_slides_processed += result['slides_processed']
-                        pptx_processed += 1
-                    else:
-                        failed_files.append(pptx_file)
-                        
-                except Exception as e:
-                    logger.error(f"❌ Error processing PowerPoint file {pptx_file}: {e}")
                     failed_files.append(pptx_file)
-            
-            total_files_processed = files_processed + pptx_processed
-            
-            if progress_callback:
-                progress_callback({
-                    'status': 'completed',
-                    'files_processed': total_files_processed,
-                    'slides_processed': total_slides_processed
-                })
-            
-            return {
-                'success': True,
-                'files_processed': total_files_processed,
-                'slides_processed': total_slides_processed,
-                'failed_files': failed_files,
-                'message': f"Parallel processed {total_files_processed} files with {total_slides_processed} slides",
-                'parallel_stats': parallel_result.get('stats', {})
-            }
-            
-        except Exception as e:
-            logger.error(f"❌ Error in parallel image processing: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'files_processed': 0,
-                'slides_processed': 0
-            }
+                    
+            except Exception as e:
+                logger.error(f"❌ Error processing PowerPoint file {pptx_file}: {e}")
+                failed_files.append(pptx_file)
+        
+        if progress_callback:
+            progress_callback({
+                'status': 'completed',
+                'files_processed': files_processed,
+                'slides_processed': total_slides_processed
+            })
+        
+        return {
+            'success': True,
+            'files_processed': files_processed,
+            'slides_processed': total_slides_processed,
+            'failed_files': failed_files,
+            'message': f"Processed {files_processed} PowerPoint files with {total_slides_processed} slides (image processing disabled)"
+        }
     
     def process_single_file(self, pptx_path: str) -> Dict[str, Any]:
         """

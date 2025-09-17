@@ -65,13 +65,15 @@ def update_progress(progress_data: Dict[str, Any]):
 @router.post("/process-folder", response_model=ProcessFolderResponse)
 async def process_folder(request: ProcessFolderRequest, background_tasks: BackgroundTasks):
     """
-    Process all PowerPoint files in a folder
+    Process only PowerPoint files in a folder
     
     This endpoint:
-    1. Scans the folder for .pptx files
+    1. Scans the folder for .pptx files only (image files like jpg, png are excluded)
     2. Converts slides to images using COM automation
     3. Creates multimodal embeddings using VoyageAI
-    4. Stores embeddings in Pinecone vector database
+    4. Stores embeddings in vector database
+    
+    Note: Image file processing has been disabled. Only PowerPoint (.pptx) presentations are processed.
     """
     try:
         # Log the received path for debugging
