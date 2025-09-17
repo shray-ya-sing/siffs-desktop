@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // Types for search results
 interface SlideResult {
@@ -31,6 +31,34 @@ export const SearchPage: React.FC = () => {
   const [searchStats, setSearchStats] = useState<{processing_time: number, total_found: number} | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [copiedCardId, setCopiedCardId] = useState<string | null>(null);
+  
+  // Ref for the search input to focus it programmatically
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut handler for Ctrl+T to focus search input
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl+T (or Cmd+T on Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 't') {
+        event.preventDefault(); // Prevent browser's default Ctrl+T behavior (new tab)
+        
+        // Focus the search input if it exists
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          // Optional: select all text in the input for easy replacement
+          searchInputRef.current.select();
+        }
+      }
+    };
+
+    // Add event listener to the document
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup function to remove event listener
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Function to handle copying file path to clipboard
   const handleCopyFilePath = async (filePath: string, fileName: string, slideId: string) => {
@@ -350,6 +378,20 @@ export const SearchPage: React.FC = () => {
         .search-container.has-results {
           transform: translateY(-25vh);
         }
+        
+        .keyboard-hint {
+          text-align: center;
+          color: #8a8a8a;
+          font-size: 13px;
+          font-weight: 400;
+          margin-bottom: 12px;
+          opacity: 0.7;
+          transition: opacity 0.3s ease;
+        }
+        
+        .search-container.has-results .keyboard-hint {
+          opacity: 0.5;
+        }
 
         .search-form {
           display: flex;
@@ -640,8 +682,12 @@ export const SearchPage: React.FC = () => {
 
       <div className="search-page">
         <div className={`search-container ${hasSearched ? 'has-results' : ''}`}>
+          <div className="keyboard-hint">
+            Hit Ctrl+T to search
+          </div>
           <form className="search-form" onSubmit={handleSubmit}>
             <input
+              ref={searchInputRef}
               type="text"
               className={`search-input ${animationClass}`}
               placeholder={isSearching ? "Searching..." : "Search slides..."}

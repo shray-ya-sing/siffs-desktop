@@ -23,7 +23,8 @@ const config: ForgeConfig = {
       '.env',      
       'resources/python/python-server',
       'resources/asgi.py',
-      'LICENSE'
+      'LICENSE',
+      'src/assets/icons/setup/sifs-setup.gif'
     ],
   },
   rebuildConfig: {},
@@ -32,6 +33,7 @@ const config: ForgeConfig = {
     new MakerSquirrel({
       setupIcon: './src/assets/icons/icon.ico',
       iconUrl: 'https://storage.googleapis.com/volute/assets/siffs.ico', // URL to icon for Add/Remove Programs
+      loadingGif: './src/assets/icons/setup/sifs-setup.gif', // Setup animation GIF
     }),
     // MacOS 
     new MakerZIP({}, ['darwin']),
