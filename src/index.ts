@@ -5,6 +5,7 @@ import log from 'electron-log';
 import { spawn, ChildProcess } from 'child_process';
 import * as dotenv from 'dotenv';
 import { FileWatcherService } from './main/services/fileWatcherService';
+import { AutoUpdaterService } from './main/services/autoUpdaterService';
 import * as ExcelJS from 'exceljs';
 //---------------------------------SENTRY CONFIG------------------------------------------------------
 import * as Sentry from '@sentry/electron/main';
@@ -38,6 +39,7 @@ console.log('Loading environment variables from:', envPath);
 dotenv.config({ path: envPath });
 let pythonProcess: any = null;
 let fileWatcherService: FileWatcherService | null = null;
+let autoUpdaterService: AutoUpdaterService | null = null;
 
 //---------------------------------MAIN PROCESS STARTS HERE------------------------------------------------------
 
@@ -382,6 +384,23 @@ function setupIpcHandlers(): void {
     return window ? window.isMaximized() : false;
   });
 
+  // Auto-updater handlers
+  ipcMain.handle('updater:check-for-updates', () => {
+    if (autoUpdaterService) {
+      autoUpdaterService.checkForUpdates();
+      return { success: true };
+    }
+    return { success: false, error: 'Auto-updater service not initialized' };
+  });
+
+  ipcMain.handle('updater:quit-and-install', () => {
+    if (autoUpdaterService) {
+      autoUpdaterService.quitAndInstall();
+      return { success: true };
+    }
+    return { success: false, error: 'Auto-updater service not initialized' };
+  });
+
 }
 
 // Define allowed environment variables
@@ -686,6 +705,15 @@ app.whenReady().then(() => {
   // Clear cache before creating window
   session.defaultSession.clearCache().then(() => {
     createWindow();
+
+    // Initialize auto-updater after window is created
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    autoUpdaterService = new AutoUpdaterService(mainWindow);
+    autoUpdaterService.configure({
+      checkForUpdatesOnStart: true,
+      autoDownload: true,
+      autoInstallOnAppQuit: true,
+    });
   });
 });
 
@@ -729,10 +757,19 @@ function cleanupFileWatcher() {
   }
 }
 
+function cleanupAutoUpdater() {
+  if (autoUpdaterService) {
+    console.log('🔄 Cleaning up auto-updater service...');
+    autoUpdaterService = null;
+    console.log('✅ Auto-updater service cleaned up');
+  }
+}
+
 app.on('before-quit', (event) => {
   console.log('🔄 App is quitting, cleaning up...');
   cleanupPythonProcess();
   cleanupFileWatcher();
+  cleanupAutoUpdater();
   
   // If you need to wait for cleanup to complete before quitting:
   // event.preventDefault();
@@ -748,9 +785,10 @@ app.on('before-quit', (event) => {
  */
 app.on('window-all-closed', () => {
   // Stop Python server
-  console.log('🚪 All windows closed, cleaning up...');
+  console.log('😆 All windows closed, cleaning up...');
   cleanupPythonProcess();
   cleanupFileWatcher();
+  cleanupAutoUpdater();
   // Quit the electron app
   if (process.platform !== 'darwin') {
     app.quit();
@@ -770,6 +808,7 @@ process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT, cleaning up...');
   cleanupPythonProcess();
   cleanupFileWatcher();
+  cleanupAutoUpdater();
   process.exit(0);
 });
 
@@ -777,6 +816,7 @@ process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, cleaning up...');
   cleanupPythonProcess();
   cleanupFileWatcher();
+  cleanupAutoUpdater();
   process.exit(0);
 });
 // In this file you can include the rest of your app's specific main process

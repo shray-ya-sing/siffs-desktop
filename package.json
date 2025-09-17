@@ -1,7 +1,7 @@
 {
   "name": "siffs",
   "productName": "Siffs",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Smart Image File Finding System",
   "main": ".webpack/main",
   "scripts": {
@@ -30,6 +30,15 @@
     "email": "github.suggest277@passinbox.com"
   },
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cori-tan/siffs-desktop.git"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "cori-tan",
+    "repo": "siffs-desktop"
+  },
   "dependencies": {
     "@electron-forge/maker-dmg": "^7.8.1",
     "@heroicons/react": "^2.2.0",
@@ -54,6 +63,7 @@
     "docx": "^9.5.1",
     "electron-log": "^5.4.0",
     "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.6.2",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.15.0",
     "lucide-react": "^0.511.0",

@@ -142,6 +142,25 @@ const electronAPI = {
         ipcRenderer.removeListener('status-change', handler);
       };
     }
+  },
+
+  // Auto-updater operations
+  updater: {
+    checkForUpdates: () => ipcRenderer.invoke('updater:check-for-updates'),
+    quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
+    
+    onUpdaterMessage: (callback: (event: any, message: string) => void) => {
+      console.log('Preload: Setting up updater-message listener');
+      const handler = (event: any, message: string) => {
+        console.log('Preload: Received updater-message event:', { event, message });
+        callback(event, message);
+      };
+      ipcRenderer.on('updater-message', handler);
+      return () => {
+        console.log('Preload: Removing updater-message listener');
+        ipcRenderer.removeListener('updater-message', handler);
+      };
+    }
   }
 };
 
