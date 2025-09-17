@@ -8,7 +8,7 @@ import glob
 from services.powerpoint_converter import get_powerpoint_converter, cleanup_powerpoint_converter
 from services.image_processing_service import get_image_processing_service
 from services.voyage_embeddings import get_voyage_embeddings_service
-from services.pinecone_db import get_pinecone_service
+from services.qdrant_db import get_qdrant_service
 from services.parallel_image_processor import ParallelImageProcessor
 
 logger = logging.getLogger(__name__)
@@ -47,9 +47,9 @@ class SlideProcessingService:
                 self.embeddings_service = get_voyage_embeddings_service()
                 logger.info("✅ VoyageAI embeddings service initialized with default batch size")
             
-            logger.info("🔧 Initializing Pinecone vector database...")
-            self.vector_db = get_pinecone_service()
-            logger.info("✅ Pinecone vector database initialized")
+            logger.info("🔧 Initializing Qdrant vector database...")
+            self.vector_db = get_qdrant_service()
+            logger.info("✅ Qdrant vector database initialized")
             
             logger.info("🔧 Initializing parallel image processor...")
             batch_size = self.embeddings_service.batch_size
@@ -399,7 +399,7 @@ class SlideProcessingService:
             logger.info(f"✅ Created {len(embeddings_data)} embeddings")
             
             # Step 3: Store embeddings in vector database
-            logger.info(f"💾 Step 3: Storing embeddings in Pinecone...")
+            logger.info(f"💾 Step 3: Storing embeddings in Qdrant...")
             success = self.vector_db.upsert_slide_embeddings(embeddings_data)
             
             if not success:
@@ -468,7 +468,7 @@ class SlideProcessingService:
             logger.info(f"✅ Created embedding for image slide")
             
             # Step 3: Store embedding in vector database
-            logger.info(f"💾 Step 3: Storing embedding in Pinecone...")
+            logger.info(f"💾 Step 3: Storing embedding in Qdrant...")
             success = self.vector_db.upsert_slide_embeddings(embeddings_data)
             
             if not success:
@@ -625,12 +625,26 @@ class SlideProcessingService:
     def get_processing_stats(self) -> Dict[str, Any]:
         """Get statistics about processed slides"""
         try:
-            stats = self.vector_db.get_index_stats()
-            return {
-                'total_slides': stats.get('total_vector_count', 0),
-                'index_dimension': stats.get('dimension', 0),
-                'index_fullness': stats.get('index_fullness', 0.0)
-            }
+            # Try Qdrant collection info method first
+            if hasattr(self.vector_db, 'get_collection_info'):
+                stats = self.vector_db.get_collection_info()
+                return {
+                    'total_slides': stats.get('total_vector_count', 0),
+                    'vector_size': stats.get('vector_size', 0),
+                    'distance_metric': stats.get('distance_metric', 'cosine'),
+                    'indexed_vectors': stats.get('indexed_vectors', 0)
+                }
+            # Fallback to Pinecone method for backward compatibility
+            elif hasattr(self.vector_db, 'get_index_stats'):
+                stats = self.vector_db.get_index_stats()
+                return {
+                    'total_slides': stats.get('total_vector_count', 0),
+                    'index_dimension': stats.get('dimension', 0),
+                    'index_fullness': stats.get('index_fullness', 0.0)
+                }
+            else:
+                logger.warning("Vector database does not support stats retrieval")
+                return {}
         except Exception as e:
             logger.error(f"Error getting processing stats: {e}")
             return {}
