@@ -19,6 +19,17 @@ export class AutoUpdaterService {
     
     // Allow pre-release updates
     autoUpdater.allowPrerelease = true;
+    
+    // Configure GitHub token for private repository access
+    // Note: For public repos, this shouldn't be necessary, but some repos require auth
+    if (process.env.GITHUB_TOKEN) {
+      autoUpdater.requestHeaders = {
+        'Authorization': `token ${process.env.GITHUB_TOKEN}`
+      };
+      log.info('Auto-updater configured with GitHub authentication');
+    } else {
+      log.warn('No GITHUB_TOKEN found - auto-updater may fail if repo requires authentication');
+    }
 
     // Set up auto-updater event handlers
     this.setupEventHandlers();
