@@ -55,7 +55,7 @@ export class AutoUpdaterService {
     try {
       log.info('App version (from app.getVersion()):', require('electron').app.getVersion());
     } catch (e) {
-      log.warn('Could not get app version from electron.app.getVersion():', e.message);
+      log.warn('Could not get app version from electron.app.getVersion():', e instanceof Error ? e.message : String(e));
     }
     log.info('Auto download enabled:', autoUpdater.autoDownload);
     log.info('Allow prerelease:', autoUpdater.allowPrerelease);

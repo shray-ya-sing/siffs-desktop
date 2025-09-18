@@ -445,34 +445,6 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
     }
   }
 
-  // Function to manually check for updates
-  const checkForUpdates = () => {
-    if (window.electron) {
-      window.electron.updater.checkForUpdates()
-        .then(result => {
-          if (result.success) {
-            toast({
-              title: 'Checking for updates...',
-              description: 'Looking for newer versions of the application.',
-            })
-          } else {
-            toast({
-              title: 'Update Check Failed',
-              description: result.error || 'Could not check for updates',
-              variant: 'destructive'
-            })
-          }
-        })
-        .catch(err => {
-          toast({
-            title: 'Error',
-            description: 'Failed to communicate with updater',
-            variant: 'destructive'
-          })
-        })
-    }
-  }
-
   return (
     <main
       className={cn(
