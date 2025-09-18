@@ -83,7 +83,7 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'cori-tan',  // Replace with your GitHub username
+          owner: 'shray-ya-sing',  // Replace with your GitHub username
           name: 'siffs-desktop'         // Replace with your repository name
         },
         prerelease: false,  // Set to false if you don't want releases marked as pre-release
