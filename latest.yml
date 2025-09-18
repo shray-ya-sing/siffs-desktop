@@ -1,0 +1,12 @@
+version: 1.1.2
+files:
+  - url: Siffs-1.1.2 Setup.exe
+    sha512: PI8SP1ZoRfhc0P3IUxeiGT6VTTNlDZLmkZKNITtIjSWHYNPuf2YIlggJdU1AJK0T0bTDs5vFZjX7REA8pNmcJw==
+    size: 189787648
+    blockMapSize: 0
+  - url: Siffs-1.1.2-full.nupkg
+    sha512: Kv121d/golGfx3h/uM5EoZZ/WxQATtdqXruHVU/xHWh9ZtKVaOEPh2jF8UKpBW0DWl0xZ52BvSv2ifWYY7TW1g==
+    size: 186369376
+path: Siffs-1.1.2 Setup.exe
+sha512: PI8SP1ZoRfhc0P3IUxeiGT6VTTNlDZLmkZKNITtIjSWHYNPuf2YIlggJdU1AJK0T0bTDs5vFZjX7REA8pNmcJw==
+releaseDate: 2025-09-18T13:43:43.782Z

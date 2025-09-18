@@ -197,3 +197,4 @@ Write-ColoredOutput "`n🧪 You can test the updater by:" $Cyan
 Write-ColoredOutput "1. Running your v1.0.0 app" $Cyan
 Write-ColoredOutput "2. The app should detect the v$projectVersion update within 5-10 seconds" $Cyan
 Write-ColoredOutput "3. Check the app logs for updater messages" $Cyan
+

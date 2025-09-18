@@ -33,7 +33,7 @@ autoUpdater.setFeedURL({
 autoUpdater.logger = log;
 (autoUpdater.logger as typeof log).transports.file.level = 'info';
 
-log.info('🔧 Auto-updater feed URL configured on import:', autoUpdater.getFeedURL());
+log.info('🔧 Auto-updater configured for GitHub releases: shray-ya-sing/siffs-desktop');
 
 /**
  * Auto-updater service for handling automatic updates from GitHub releases
@@ -59,7 +59,7 @@ export class AutoUpdaterService {
     }
     log.info('Auto download enabled:', autoUpdater.autoDownload);
     log.info('Allow prerelease:', autoUpdater.allowPrerelease);
-    log.info('Feed URL:', autoUpdater.getFeedURL());
+    log.info('Repository: shray-ya-sing/siffs-desktop');
     
     // Configure GitHub token for private repository access
     // Note: For public repos, this shouldn't be necessary, but some repos require auth
@@ -80,7 +80,7 @@ export class AutoUpdaterService {
     // Checking for updates
     autoUpdater.on('checking-for-update', () => {
       log.info('🔍 Checking for update...');
-      log.info('Feed URL:', autoUpdater.getFeedURL());
+      log.info('Repository: shray-ya-sing/siffs-desktop');
       this.sendStatusToWindow('Checking for update...');
     });
 
@@ -147,7 +147,7 @@ export class AutoUpdaterService {
       log.error('❌ Error in auto-updater:', err);
       log.error('Error message:', err.message);
       log.error('Error stack:', err.stack);
-      log.error('Feed URL being used:', autoUpdater.getFeedURL());
+      log.error('Repository: shray-ya-sing/siffs-desktop');
       this.sendStatusToWindow('Error in auto-updater: ' + err.message);
       
       // Show error dialog in development

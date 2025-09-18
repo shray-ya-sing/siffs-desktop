@@ -27,6 +27,7 @@ from services.image_processing_service import get_image_processing_service
 from services.voyage_embeddings import get_voyage_embeddings_service
 from services.qdrant_db import get_qdrant_service
 from services.parallel_image_processor import ParallelImageProcessor
+from services.query_embedding_cache import get_query_embedding_cache
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class SlideProcessingService:
         self.vector_db = None
         self.parallel_processor = None
         self.embedding_batch_size = embedding_batch_size
+        self.query_cache = None
         self._initialize_services()
     
     def _initialize_services(self):
@@ -76,6 +78,10 @@ class SlideProcessingService:
                 batch_size=batch_size
             )
             logger.info(f"✅ Parallel image processor initialized (batch size: {batch_size})")
+            
+            logger.info("🔧 Initializing query embedding cache...")
+            self.query_cache = get_query_embedding_cache()
+            logger.info("✅ Query embedding cache initialized")
             
             logger.info("🎉 All slide processing services initialized successfully")
         except Exception as e:
@@ -449,15 +455,26 @@ class SlideProcessingService:
             if use_reranker:
                 logger.info("⚠️  Reranker requested but not yet implemented, proceeding with vector search only")
             
-            # Step 1: Create embedding for the search query
-            logger.info(f"🧠 Step 1: Creating embedding for search query...")
-            query_embedding = self.embeddings_service.create_text_embedding(query)
+            # Step 1: Try to get cached embedding, or create new one
+            logger.info(f"🧠 Step 1: Getting embedding for search query (checking cache first)...")
             
-            if not query_embedding:
-                logger.error("❌ Failed to create query embedding")
-                return []
+            # Try to get from cache first
+            query_embedding = self.query_cache.get_embedding(query)
             
-            logger.info(f"✅ Query embedding created successfully ({len(query_embedding)} dimensions)")
+            if query_embedding:
+                logger.info(f"🚀 Using cached query embedding ({len(query_embedding)} dimensions)")
+            else:
+                # Create new embedding and cache it
+                logger.info(f"🔄 Creating new query embedding...")
+                query_embedding = self.embeddings_service.create_text_embedding(query)
+                
+                if not query_embedding:
+                    logger.error("❌ Failed to create query embedding")
+                    return []
+                
+                # Cache the new embedding
+                self.query_cache.cache_embedding(query, query_embedding)
+                logger.info(f"✅ Query embedding created and cached ({len(query_embedding)} dimensions)")
             
             # Step 2: Search in vector database
             logger.info(f"🔎 Step 2: Searching vector database for similar slides...")
@@ -583,6 +600,7 @@ class SlideProcessingService:
             logger.error(f"Error getting processing stats: {e}")
             return {}
     
+    
     def clear_all_slides(self) -> bool:
         """Clear all processed slides from the vector database"""
         try:
@@ -593,6 +611,7 @@ class SlideProcessingService:
         except Exception as e:
             logger.error(f"Error clearing slides: {e}")
             return False
+    
     
     def delete_folder_slides(self, folder_path: str) -> int:
         """Delete all slides from a specific folder from the vector database
@@ -617,7 +636,13 @@ class SlideProcessingService:
     def cleanup(self):
         """Cleanup resources"""
         try:
+            # Cleanup query cache
+            if self.query_cache:
+                self.query_cache.cleanup()
+            
+            # Cleanup PowerPoint converter
             cleanup_powerpoint_converter()
+            
             logger.info("Slide processing service cleanup completed")
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
