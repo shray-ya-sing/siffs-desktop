@@ -20,6 +20,7 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
   const [isLoading, setIsLoading] = useState(false)
   const [indexingStatus, setIndexingStatus] = useState<string>("")
   const [indexingResults, setIndexingResults] = useState<any>(null)
+  const [typewriterText, setTypewriterText] = useState("")
 
   const handleNewFolderClick = () => {
     setShowInput(true)
@@ -28,27 +29,30 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
   const handleSubmitFolder = async () => {
     if (inputValue.trim() && !isLoading) {
       setIsLoading(true)
-      setIndexingStatus('Starting indexing process...')
+      setIndexingStatus('')
       setIndexingResults(null)
+      
+      // Strip quotes from the input path
+      const cleanedPath = inputValue.trim().replace(/^["'](.+)["']$/, '$1')
 
       try {
-        console.log('Starting folder indexing for:', inputValue)
+        console.log('Starting folder indexing for:', cleanedPath)
         
-        const result = await slideProcessingService.processFolderIndex(inputValue)
+        const result = await slideProcessingService.processFolderIndex(cleanedPath)
         
         console.log('Indexing completed:', result)
         setIndexingResults(result)
         setIndexingStatus(`Successfully indexed ${result.files_processed} files with ${result.slides_processed} slides`)
         
         const newFolder = {
-          name: inputValue.trim().split(/[\\\\/]/).pop() || inputValue.trim(),
+          name: cleanedPath.split(/[\\\\/]/).pop() || cleanedPath,
           id: Date.now().toString(),
-          path: inputValue.trim()
+          path: cleanedPath
         }
         setFolders((prev) => [...prev, newFolder])
         
         // Save to localStorage
-        localStorage.setItem('connectedFolder', inputValue.trim())
+        localStorage.setItem('connectedFolder', cleanedPath)
         localStorage.setItem('connectedFolderName', newFolder.name)
         
         setInputValue("")
@@ -85,6 +89,32 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
       }
     }
   }
+
+  // Typewriter effect for processing text
+  React.useEffect(() => {
+    if (isLoading && !indexingStatus) {
+      const text = "Processing Folder..."
+      let index = 0
+      setTypewriterText("")
+
+      const typewriterInterval = setInterval(() => {
+        if (index < text.length) {
+          setTypewriterText(text.slice(0, index + 1))
+          index++
+        } else {
+          // Reset and start over for loop effect
+          setTimeout(() => {
+            index = 0
+            setTypewriterText("")
+          }, 1000)
+        }
+      }, 100)
+
+      return () => clearInterval(typewriterInterval)
+    } else {
+      setTypewriterText("")
+    }
+  }, [isLoading, indexingStatus])
 
   // Load saved folder on component mount
   React.useEffect(() => {
@@ -153,12 +183,16 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
                   </button>
                 </div>
                 
-                {indexingStatus && (
+                {(typewriterText || indexingStatus) && (
                   <div className={cn(
-                    "text-xs px-2 py-1 rounded",
-                    indexingStatus.includes('failed') ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'
+                    "text-xs px-2 py-1",
+                    typewriterText 
+                      ? 'text-gray-500 bg-transparent' // Grey text for typewriter effect
+                      : indexingStatus.includes('failed') 
+                        ? 'text-red-600 bg-red-50 rounded' 
+                        : 'text-green-600 bg-green-50 rounded'
                   )}>
-                    {indexingStatus}
+                    {typewriterText || indexingStatus}
                   </div>
                 )}
                 

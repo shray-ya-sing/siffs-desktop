@@ -1,6 +1,16 @@
 import React, { useState } from "react"
 import { ChevronRight, Expand, X } from "lucide-react"
 
+// Types for slide results (imported from MainContent)
+interface SlideResult {
+  slide_id: string;
+  score: number;
+  file_path: string;
+  file_name: string;
+  slide_number: number;
+  image_base64: string;
+}
+
 interface FileCardProps {
   fileName: string
   slideCount: number
@@ -10,6 +20,7 @@ interface FileCardProps {
   slideNumber?: number
   imageBase64?: string
   score?: number
+  slides?: SlideResult[] // Array of slides for gallery mode
   onCopyPath?: (filePath: string, fileName: string) => void
 }
 
@@ -26,10 +37,34 @@ export function FileCard({
   slideNumber,
   imageBase64,
   score,
+  slides,
   onCopyPath
 }: FileCardProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Get current slide data (either from slides array or single slide props)
+  const getCurrentSlideData = () => {
+    if (slides && slides.length > 0) {
+      const slide = slides[currentSlide] || slides[0]
+      return {
+        imageBase64: slide.image_base64,
+        slideNumber: slide.slide_number,
+        fileName: slide.file_name,
+        filePath: slide.file_path,
+        score: slide.score
+      }
+    }
+    return {
+      imageBase64,
+      slideNumber,
+      fileName,
+      filePath,
+      score
+    }
+  }
+
+  const currentSlideData = getCurrentSlideData()
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slideCount)
@@ -45,8 +80,8 @@ export function FileCard({
   }
 
   const handleCardClick = () => {
-    if (filePath && onCopyPath) {
-      onCopyPath(filePath, fileName)
+    if (currentSlideData.filePath && onCopyPath) {
+      onCopyPath(currentSlideData.filePath, currentSlideData.fileName || fileName)
     }
   }
 
@@ -71,22 +106,29 @@ export function FileCard({
         {/* Image Stage - Center focal point */}
         <div className="flex-1 min-h-[50%] relative bg-white rounded-lg mb-4 overflow-hidden border border-gray-100/50">
           {/* Slide image or placeholder */}
-          {imageBase64 ? (
+          {currentSlideData.imageBase64 ? (
             <img 
-              src={`data:image/png;base64,${imageBase64}`}
-              alt={`Slide ${slideNumber || currentSlide + 1} from ${fileName}`}
+              src={`data:image/png;base64,${currentSlideData.imageBase64}`}
+              alt={`Slide ${currentSlideData.slideNumber || currentSlide + 1} from ${fileName}`}
               className="w-full h-full object-contain"
             />
           ) : (
             <div className="w-full h-full bg-white flex items-center justify-center">
               <div className="text-gray-400 text-sm font-medium">
-                Slide {slideNumber || currentSlide + 1}/{slideCount}
+                Slide {currentSlideData.slideNumber || currentSlide + 1}/{slideCount}
               </div>
+            </div>
+          )}
+          
+          {/* Version/filename indicator for gallery mode */}
+          {slides && slides.length > 1 && currentSlideData.fileName && (
+            <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+              {currentSlideData.fileName.replace(/\.pptx$/i, '')}
             </div>
           )}
 
           {/* Navigation chevron */}
-          {slideCount > 1 && !slideNumber && (
+          {slideCount > 1 && (
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -103,9 +145,9 @@ export function FileCard({
         <div className="space-y-3 min-w-0">
           {/* Versions indicator or score */}
           <div className="flex gap-1 flex-wrap">
-            {score !== undefined ? (
+            {currentSlideData.score !== undefined ? (
               <div className="px-2 py-1 text-xs rounded-full bg-blue-100/50 text-blue-600 border border-blue-200/30 whitespace-nowrap">
-                {(score * 100).toFixed(1)}%
+                {(currentSlideData.score * 100).toFixed(1)}%
               </div>
             ) : (
               versions.map((version, index) => (
@@ -121,7 +163,12 @@ export function FileCard({
 
           {/* Slide count */}
           <div className="text-sm text-gray-400">
-            {slideNumber ? `Slide ${slideNumber}` : `${slideCount} slide${slideCount !== 1 ? "s" : ""}`}
+            {slides && slides.length > 1 
+              ? `Slide ${currentSlide + 1} of ${slideCount}` 
+              : currentSlideData.slideNumber 
+                ? `Slide ${currentSlideData.slideNumber}` 
+                : `${slideCount} slide${slideCount !== 1 ? "s" : ""}`
+            }
           </div>
         </div>
 
@@ -148,15 +195,15 @@ export function FileCard({
             <div className="p-8">
               {/* Large image stage */}
               <div className="aspect-video bg-white rounded-xl mb-6 border border-gray-200/50 flex items-center justify-center">
-                {imageBase64 ? (
+                {currentSlideData.imageBase64 ? (
                   <img 
-                    src={`data:image/png;base64,${imageBase64}`}
-                    alt={`Slide ${slideNumber || currentSlide + 1} from ${fileName}`}
+                    src={`data:image/png;base64,${currentSlideData.imageBase64}`}
+                    alt={`Slide ${currentSlideData.slideNumber || currentSlide + 1} from ${fileName}`}
                     className="w-full h-full object-contain"
                   />
                 ) : (
                   <div className="text-gray-400 text-lg font-medium">
-                    Slide {slideNumber || currentSlide + 1}/{slideCount}
+                    Slide {currentSlideData.slideNumber || currentSlide + 1}/{slideCount}
                   </div>
                 )}
               </div>
@@ -164,9 +211,9 @@ export function FileCard({
               {/* Navigation and metadata */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex gap-2">
-                  {score !== undefined ? (
+                  {currentSlideData.score !== undefined ? (
                     <div className="px-3 py-1.5 text-sm rounded-full bg-blue-100/50 text-blue-600 border border-blue-200/30">
-                      Score: {(score * 100).toFixed(1)}%
+                      Score: {(currentSlideData.score * 100).toFixed(1)}%
                     </div>
                   ) : (
                     versions.map((version) => (
@@ -178,9 +225,16 @@ export function FileCard({
                       </div>
                     ))
                   )}
+                  
+                  {/* Show filename for current slide in gallery mode */}
+                  {slides && slides.length > 1 && currentSlideData.fileName && (
+                    <div className="px-3 py-1.5 text-sm rounded-full bg-gray-100/50 text-gray-600 border border-gray-200/30">
+                      {currentSlideData.fileName.replace(/\.pptx$/i, '')}
+                    </div>
+                  )}
                 </div>
 
-                {slideCount > 1 && !slideNumber && (
+                {slideCount > 1 && (
                   <button
                     onClick={nextSlide}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100/50 hover:bg-gray-200/50 transition-colors text-gray-700"
@@ -192,12 +246,17 @@ export function FileCard({
               </div>
 
               <div className="text-gray-500">
-                {slideNumber ? `Slide ${slideNumber} of ${slideCount}` : `${slideCount} slide${slideCount !== 1 ? "s" : ""} total`}
+                {slides && slides.length > 1 
+                  ? `Slide ${currentSlide + 1} of ${slideCount} total slides` 
+                  : currentSlideData.slideNumber 
+                    ? `Slide ${currentSlideData.slideNumber} of ${slideCount}` 
+                    : `${slideCount} slide${slideCount !== 1 ? "s" : ""} total`
+                }
               </div>
               
-              {filePath && (
+              {currentSlideData.filePath && (
                 <div className="mt-4 text-xs text-gray-400 break-all">
-                  Path: {filePath}
+                  Path: {currentSlideData.filePath}
                 </div>
               )}
             </div>
