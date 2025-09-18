@@ -257,40 +257,81 @@ async def search_slides(request: SearchSlidesRequest):
     4. Returns slide images, metadata, and relevance scores
     """
     import time
+    import sys
+    from pathlib import Path
+    # Add utils to path
+    sys.path.append(str(Path(__file__).parent.parent.parent.absolute()))
+    from utils.error_handler import create_slide_error_response, log_error_details
+    
     start_time = time.time()
     
     try:
         logger.info(f"Search request received: query='{request.query}', top_k={request.top_k}, use_reranker={request.use_reranker}")
         
         if not request.query.strip():
-            raise HTTPException(status_code=400, detail="Search query cannot be empty")
+            raise HTTPException(status_code=400, detail={
+                "message": "Please enter a search query.",
+                "context": "search_slides"
+            })
         
         # Initialize slide processing service
         try:
             slide_service = get_slide_processing_service()
         except Exception as e:
-            logger.error(f"Failed to initialize slide processing service: {e}")
-            raise HTTPException(status_code=500, detail=f"Service initialization failed: {str(e)}")
+            log_error_details(e, "search_slides - service_init", {
+                "query": request.query,
+                "top_k": request.top_k
+            })
+            raise create_slide_error_response(
+                "search_failed", 
+                "search_slides", 
+                e,
+                {"operation": "service_initialization"}
+            )
         
         # Perform search with optional reranking
-        search_results = slide_service.search_slides(
-            query=request.query,
-            top_k=request.top_k,
-            file_filter=request.file_filter,
-            use_reranker=request.use_reranker
-        )
+        try:
+            search_results = slide_service.search_slides(
+                query=request.query,
+                top_k=request.top_k,
+                file_filter=request.file_filter,
+                use_reranker=request.use_reranker
+            )
+        except Exception as e:
+            log_error_details(e, "search_slides - search_execution", {
+                "query": request.query,
+                "top_k": request.top_k,
+                "file_filter": request.file_filter,
+                "use_reranker": request.use_reranker
+            })
+            raise create_slide_error_response(
+                "search_failed",
+                "search_slides",
+                e,
+                {"operation": "slide_search"}
+            )
         
         # Convert results to response format
-        slide_results = []
-        for result in search_results:
-            slide_results.append(SlideResult(
-                slide_id=result.get('slide_id', ''),
-                score=result.get('score', 0.0),
-                file_path=result.get('file_path', ''),
-                file_name=result.get('file_name', ''),
-                slide_number=result.get('slide_number', 0),
-                image_base64=result.get('image_base64', '')
-            ))
+        try:
+            slide_results = []
+            for result in search_results:
+                slide_results.append(SlideResult(
+                    slide_id=result.get('slide_id', ''),
+                    score=result.get('score', 0.0),
+                    file_path=result.get('file_path', ''),
+                    file_name=result.get('file_name', ''),
+                    slide_number=result.get('slide_number', 0),
+                    image_base64=result.get('image_base64', '')
+                ))
+        except Exception as e:
+            log_error_details(e, "search_slides - result_formatting", {
+                "query": request.query,
+                "results_count": len(search_results) if search_results else 0
+            })
+            raise HTTPException(status_code=500, detail={
+                "message": "Could not format search results.",
+                "context": "search_slides"
+            })
         
         processing_time = (time.time() - start_time) * 1000  # Convert to milliseconds
         
@@ -309,5 +350,11 @@ async def search_slides(request: SearchSlidesRequest):
         raise
     except Exception as e:
         processing_time = (time.time() - start_time) * 1000
-        logger.error(f"Unexpected error during search: {e}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        log_error_details(e, "search_slides - unexpected_error", {
+            "query": request.query,
+            "processing_time_ms": processing_time
+        })
+        raise HTTPException(status_code=500, detail={
+            "message": "An unexpected error occurred while searching slides.",
+            "context": "search_slides"
+        })

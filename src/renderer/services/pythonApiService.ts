@@ -118,19 +118,21 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Import error handler
+import { logErrorDetails } from '../utils/errorHandler';
+
 // Response interceptor for handling errors
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    if (error.response) {
-      console.error('API Error:', error.response.data);
-      console.error('Status:', error.response.status);
-      console.error('Headers:', error.response.headers);
-    } else if (error.request) {
-      console.error('No response received:', error.request);
-    } else {
-      console.error('Error:', error.message);
-    }
+    // Use the centralized error logging
+    logErrorDetails(error, 'API Request', {
+      url: error.config?.url,
+      method: error.config?.method,
+      params: error.config?.params,
+      data: error.config?.data
+    });
+    
     return Promise.reject(error);
   }
 );

@@ -1,8 +1,8 @@
-version: 1.1.2
+version: 1.1.3
 files:
-  - url: SIFFS-1.1.2-Setup.exe
-    sha512: PLACEHOLDER_SHA512_HASH
-    size: 0
-path: SIFFS-1.1.2-Setup.exe
-sha512: PLACEHOLDER_SHA512_HASH
-releaseDate: 2025-09-18T10:17:46.628Z
+  - url: Siffs-1.1.3.Setup.exe
+    sha512: cYLJ8PJKRFtC3st2H4gt+4ahduW/p0K1la6oHQytJPqYe/lM37KTjyAM54NDo0C8Or7GMs/P3QkzEoPUNbzhDw==
+    size: 189790208
+path: Siffs-1.1.3.Setup.exe
+sha512: cYLJ8PJKRFtC3st2H4gt+4ahduW/p0K1la6oHQytJPqYe/lM37KTjyAM54NDo0C8Or7GMs/P3QkzEoPUNbzhDw==
+releaseDate: 2025-09-18T11:08:38.415Z
