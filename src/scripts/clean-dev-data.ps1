@@ -28,16 +28,17 @@ function Remove-DirectoryWithStats {
         try {
             # Calculate size before removal
             $size = (Get-ChildItem $Path -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-            $sizeMB = [math]::Round($size / 1MB, 2)
+            if ($null -eq $size) { $size = 0 }
+            $sizeMB = [math]::Round($size / 1048576, 2)
             
             if ($WhatIf) {
                 Write-Host "WHAT-IF: Would remove $Description" -ForegroundColor Yellow
                 Write-Host "  Path: $Path" -ForegroundColor Gray
-                Write-Host "  Size: $sizeMB MB" -ForegroundColor Gray
+                Write-Host ('  Size: ' + $sizeMB + ' MB') -ForegroundColor Gray
             } else {
                 Write-Host "🗑️  Removing $Description..." -ForegroundColor Yellow
                 Write-Host "   Path: $Path" -ForegroundColor Gray
-                Write-Host "   Size: $sizeMB MB" -ForegroundColor Gray
+                Write-Host ('   Size: ' + $sizeMB + ' MB') -ForegroundColor Gray
                 
                 Remove-Item $Path -Recurse -Force -ErrorAction SilentlyContinue
                 
@@ -76,12 +77,14 @@ function Clean-TempDirectories {
         foreach ($dir in $tempDirs) {
             try {
                 $size = (Get-ChildItem $dir.FullName -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                if ($null -eq $size) { $size = 0 }
+                $sizeMB = [math]::Round($size / 1048576, 2)
                 
                 if ($WhatIf) {
-                    Write-Host "   WHAT-IF: Would remove $($dir.Name) ($([math]::Round($size / 1MB, 2)) MB)" -ForegroundColor Yellow
+                    Write-Host ('   WHAT-IF: Would remove ' + $dir.Name + ' (' + $sizeMB + ' MB)') -ForegroundColor Yellow
                 } else {
                     if ($Verbose) {
-                        Write-Host "   Removing: $($dir.Name) ($([math]::Round($size / 1MB, 2)) MB)" -ForegroundColor Gray
+                        Write-Host ('   Removing: ' + $dir.Name + ' (' + $sizeMB + ' MB)') -ForegroundColor Gray
                     }
                     Remove-Item $dir.FullName -Recurse -Force -ErrorAction SilentlyContinue
                     $cleanedCount++
@@ -97,8 +100,8 @@ function Clean-TempDirectories {
         if ($WhatIf) {
             Write-Host "   WHAT-IF: Would clean $($tempDirs.Count) directories" -ForegroundColor Yellow
         } else {
-            $sizeMB = [math]::Round($cleanedSize / 1MB, 2)
-            Write-Host "   ✅ Cleaned $cleanedCount directories ($sizeMB MB)" -ForegroundColor Green
+            $sizeMB = [math]::Round($cleanedSize / 1048576, 2)
+            Write-Host ('   ✅ Cleaned ' + $cleanedCount + ' directories (' + $sizeMB + ' MB)') -ForegroundColor Green
             $script:totalCleaned += $sizeMB
         }
     } catch {
@@ -159,7 +162,7 @@ try {
     }
     
     if ($WhatIf) {
-        Write-Host "   WHAT-IF: Would clean $($pycacheents.Count) __pycache__ directories" -ForegroundColor Yellow
+        Write-Host "   WHAT-IF: Would clean $($pycachedirs.Count) __pycache__ directories" -ForegroundColor Yellow
     } else {
         Write-Host "   ✅ Cleaned $cleanedPyCache __pycache__ directories" -ForegroundColor Green
     }
