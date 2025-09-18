@@ -3,19 +3,10 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey.svg)](https://github.com/shray-ya-sing/siffs-desktop)
 
-**Siffs** is a powerful search engine designed for intelligently searching vast corpuses of PowerPoint presentations. Search thousands of presentations in seconds and retrieve the exact slides you're looking for with lightning-fast precision.
+**Siffs** is a powerful search engine designed for intelligently searching vast corpuses of PowerPoint presentations. Search thousands of presentations in seconds and retrieve the exact slides you're looking for with precision.
 
-![Siffs Demo](https://via.placeholder.com/800x400/f8fafc/374151?text=Siffs+Search+Interface)
 
-## ✨ Features
-
-🚀 **Lightning Fast Search** - Retrieve slides and presentations from folders of thousands of documents in seconds  
-🎯 **Intelligent Search** - Advanced semantic search understands context and content  
-📊 **PowerPoint Integration** - Works seamlessly with your existing presentation files  
-🔒 **Secure & Private** - Your data stays on your computer  
-💻 **Modern Interface** - Clean, intuitive desktop application  
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Download & Installation
 
@@ -47,28 +38,14 @@ Download from [GitHub Releases](https://github.com/shray-ya-sing/siffs-desktop/r
 4. **Index Files** - Let Siffs analyze your presentations (this may take some time for large collections)
 5. **Start Searching!** - Begin finding slides instantly
 
-## 🔧 Usage
+## Usage
 
 ### Basic Search
 1. Open Siffs
 2. Type your search query in the search bar
 3. Hit `Enter` or click search
-4. Browse results organized by presentation
-5. Click on any slide to copy its file path
 
-### Keyboard Shortcuts
-- `Ctrl+T` - Focus search bar
-- `Tab` - Navigate between result cards
-- `Ctrl+A` - Expand focused card
-- `Ctrl+C` - Copy file path of focused card
-
-### Advanced Features
-- **Semantic Search** - Search by meaning, not just keywords
-- **Slide Previews** - See slide thumbnails in results
-- **Version Detection** - Automatically groups presentation versions
-- **Duplicate Detection** - Removes duplicate slides from results
-
-## ⚙️ Configuration
+## Configuration
 
 ### Connecting Folders
 1. Click the "New Folder" button in the sidebar
@@ -76,18 +53,7 @@ Download from [GitHub Releases](https://github.com/shray-ya-sing/siffs-desktop/r
 3. Wait for indexing to complete
 4. Folders are automatically saved for future sessions
 
-### Managing Data
-- **Local Storage** - All indexes and data stay on your computer
-- **Privacy First** - No data is sent to external servers (except for authentication)
-- **Cache Management** - Siffs automatically manages search indexes
-
-## 🛠️ Development
-
-This is an open-source project built with:
-- **Frontend**: Electron + React + TypeScript + Tailwind CSS
-- **Backend**: Python + FastAPI
-- **Search**: Vector embeddings and semantic search
-- **License**: GPL-3.0-or-later
+## Development
 
 ### Building from Source
 
@@ -105,10 +71,9 @@ pip install -r requirements.txt
 
 # Start development
 npm run start
-npm run start:python
 ```
 
-## 📋 FAQ
+## FAQ
 
 ### General
 
@@ -137,9 +102,9 @@ A: All your presentation data and search indexes are stored locally on your comp
 **Q: What data does Siffs access?**  
 A: Siffs only reads presentation content to create searchable indexes. No personal data is collected beyond account registration.
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Please read our contributing guidelines and feel free to submit issues or pull requests.
+We welcome contributions! Please feel free to submit issues or pull requests.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -147,18 +112,16 @@ We welcome contributions! Please read our contributing guidelines and feel free 
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📞 Support
+## Support
 
 - **Website**: [www.fastfilesearch.com](https://www.fastfilesearch.com)
 - **GitHub Issues**: [Report bugs or request features](https://github.com/shray-ya-sing/siffs-desktop/issues)
 - **Email**: github.suggest277@passinbox.com
 
-## 📄 License
+## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
-
-**Made with ❤️ for faster file search**
 
 © 2025 Siffs. All rights reserved.
