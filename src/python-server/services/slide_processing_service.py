@@ -594,6 +594,26 @@ class SlideProcessingService:
             logger.error(f"Error clearing slides: {e}")
             return False
     
+    def delete_folder_slides(self, folder_path: str) -> int:
+        """Delete all slides from a specific folder from the vector database
+        
+        Args:
+            folder_path: The folder path to delete slides from
+            
+        Returns:
+            Number of slides deleted
+        """
+        try:
+            deleted_count = self.vector_db.delete_vectors_by_folder(folder_path)
+            if deleted_count > 0:
+                logger.info(f"Deleted {deleted_count} slides from folder: {folder_path}")
+            else:
+                logger.info(f"No slides found for folder: {folder_path}")
+            return deleted_count
+        except Exception as e:
+            logger.error(f"Error deleting folder slides: {e}")
+            return 0
+    
     def cleanup(self):
         """Cleanup resources"""
         try:

@@ -24,7 +24,7 @@ import uuid
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from qdrant_client.models import OptimizersConfig, UpdateResult
+from qdrant_client.models import OptimizersConfig, UpdateResult, PointIdsList
 from qdrant_client.http.exceptions import UnexpectedResponse
 
 logger = logging.getLogger(__name__)
@@ -320,6 +320,88 @@ class QdrantVectorDB:
         except Exception as e:
             logger.error(f"❌ Error clearing Qdrant collection: {e}")
             return False
+    
+    def delete_vectors_by_folder(self, folder_path: str) -> int:
+        """Delete all vectors from a specific folder
+        
+        Args:
+            folder_path: The folder path to delete vectors from
+            
+        Returns:
+            Number of vectors deleted
+        """
+        try:
+            import os
+            # Normalize the folder path for consistent matching
+            normalized_folder = os.path.normpath(folder_path)
+            
+            # First, get all points that match the folder path
+            # We need to scroll through all points and check their file_path metadata
+            matching_ids = []
+            
+            # Scroll through all points to find matches
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=10000,  # Process in batches
+                with_payload=True,
+                with_vectors=False  # We don't need vectors, just IDs and metadata
+            )
+            
+            points = scroll_result[0]  # First element is the points list
+            next_page_offset = scroll_result[1]  # Second element is the next offset
+            
+            while points:
+                for point in points:
+                    if point.payload and 'file_path' in point.payload:
+                        point_file_path = point.payload['file_path']
+                        # Normalize the point's file path for comparison
+                        normalized_point_path = os.path.normpath(point_file_path)
+                        
+                        # Check if the point's file path starts with the folder path
+                        if normalized_point_path.startswith(normalized_folder):
+                            # Additional check to ensure it's actually in this folder (not just a substring match)
+                            # The path should either be exactly the folder or have a path separator after the folder
+                            if (normalized_point_path == normalized_folder or 
+                                normalized_point_path.startswith(normalized_folder + os.sep)):
+                                matching_ids.append(point.id)
+                
+                # Get next batch if there is one
+                if next_page_offset:
+                    scroll_result = self.client.scroll(
+                        collection_name=self.collection_name,
+                        limit=10000,
+                        offset=next_page_offset,
+                        with_payload=True,
+                        with_vectors=False
+                    )
+                    points = scroll_result[0]
+                    next_page_offset = scroll_result[1]
+                else:
+                    break
+            
+            # Delete the matching points if any found
+            if matching_ids:
+                delete_result = self.client.delete(
+                    collection_name=self.collection_name,
+                    points_selector=PointIdsList(
+                        points=matching_ids
+                    )
+                )
+                
+                if isinstance(delete_result, UpdateResult):
+                    deleted_count = len(matching_ids)
+                    logger.info(f"🗑️ Deleted {deleted_count} vectors from folder: {folder_path}")
+                    return deleted_count
+                else:
+                    logger.warning("⚠️ Delete operation returned unexpected result")
+                    return 0
+            else:
+                logger.info(f"🔍 No vectors found for folder: {folder_path}")
+                return 0
+                
+        except Exception as e:
+            logger.error(f"❌ Error deleting vectors by folder: {e}")
+            return 0
     
     def get_database_size(self) -> Dict[str, Any]:
         """Get database storage size information"""

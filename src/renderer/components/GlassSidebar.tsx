@@ -32,8 +32,14 @@ function cn(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(' ')
 }
 
+interface FolderItem {
+  name: string
+  id: string
+  path: string
+}
+
 export function GlassSidebar({ className, children, collapsed = false, onToggle }: GlassSidebarProps) {
-  const [folders, setFolders] = useState<{ name: string; id: string; path: string }[]>([])
+  const [folders, setFolders] = useState<FolderItem[]>([])
   const [showInput, setShowInput] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -53,6 +59,17 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
       
       // Strip quotes from the input path
       const cleanedPath = inputValue.trim().replace(/^["'](.+)["']$/, '$1')
+      
+      // Check if folder already exists
+      const existingFolder = folders.find(f => f.path === cleanedPath)
+      if (existingFolder) {
+        setIndexingStatus('Folder already indexed!')
+        setInputValue("")
+        setShowInput(false)
+        setTimeout(() => setIndexingStatus(''), 3000)
+        setIsLoading(false)
+        return
+      }
 
       try {
         console.log('Starting folder indexing for:', cleanedPath)
@@ -63,16 +80,23 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
         setIndexingResults(result)
         setIndexingStatus(`Successfully indexed ${result.files_processed} files with ${result.slides_processed} slides`)
         
-        const newFolder = {
+        const newFolder: FolderItem = {
           name: cleanedPath.split(/[\\\\/]/).pop() || cleanedPath,
           id: Date.now().toString(),
           path: cleanedPath
         }
-        setFolders((prev) => [...prev, newFolder])
         
-        // Save to localStorage
-        localStorage.setItem('connectedFolder', cleanedPath)
-        localStorage.setItem('connectedFolderName', newFolder.name)
+        const updatedFolders = [...folders, newFolder]
+        setFolders(updatedFolders)
+        
+        // Update localStorage with all folders
+        updateLocalStorageFolders(updatedFolders)
+        
+        // Set as connected folder if it's the first one
+        if (folders.length === 0) {
+          localStorage.setItem('connectedFolder', cleanedPath)
+          localStorage.setItem('connectedFolderName', newFolder.name)
+        }
         
         setInputValue("")
         setShowInput(false)
@@ -96,16 +120,52 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
     }
   }
 
-  const handleRemoveFolder = (folderId: string) => {
-    setFolders((prev) => prev.filter((folder) => folder.id !== folderId))
-    // Also remove from localStorage if it's the current connected folder
+  // Helper function to update localStorage with current folders list
+  const updateLocalStorageFolders = (currentFolders: FolderItem[]) => {
+    // Save all folder paths to localStorage as a list
+    const folderPaths = currentFolders.map(f => f.path)
+    localStorage.setItem('indexedFolders', JSON.stringify(folderPaths))
+    
+    // Also check if we need to update connectedFolder
+    const savedFolder = localStorage.getItem('connectedFolder')
+    if (savedFolder && !folderPaths.includes(savedFolder)) {
+      localStorage.removeItem('connectedFolder')
+      localStorage.removeItem('connectedFolderName')
+    }
+  }
+
+  const handleRemoveFolder = async (folderId: string) => {
     const removedFolder = folders.find(f => f.id === folderId)
-    if (removedFolder) {
-      const savedFolder = localStorage.getItem('connectedFolder')
-      if (savedFolder === removedFolder.path) {
-        localStorage.removeItem('connectedFolder')
-        localStorage.removeItem('connectedFolderName')
+    if (!removedFolder) return
+
+    try {
+      setIsLoading(true)
+      setIndexingStatus('')
+      
+      console.log('Deleting folder from backend:', removedFolder.path)
+      
+      // Call backend to delete folder embeddings
+      const result = await slideProcessingService.deleteFolder(removedFolder.path)
+      
+      if (result.success) {
+        // Remove from frontend state
+        setFolders((prev) => prev.filter((folder) => folder.id !== folderId))
+        
+        // Update localStorage - remove specific folder or update the list
+        updateLocalStorageFolders(folders.filter(f => f.id !== folderId))
+        
+        setIndexingStatus(`Successfully deleted folder: ${result.deleted_count} slides removed`)
+        console.log('Folder deleted successfully:', result)
+      } else {
+        setIndexingStatus('Failed to delete folder from database')
       }
+    } catch (error) {
+      console.error('Error deleting folder:', error)
+      setIndexingStatus(`Delete failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsLoading(false)
+      // Clear status after a delay
+      setTimeout(() => setIndexingStatus(''), 3000)
     }
   }
 
@@ -135,17 +195,42 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
     }
   }, [isLoading, indexingStatus])
 
-  // Load saved folder on component mount
+  // Load saved folders on component mount
   React.useEffect(() => {
-    const savedFolder = localStorage.getItem('connectedFolder')
-    const savedFolderName = localStorage.getItem('connectedFolderName')
-    if (savedFolder && savedFolderName) {
-      const existingFolder = {
-        name: savedFolderName,
-        id: 'saved-' + Date.now(),
-        path: savedFolder
+    // Try to load the list of indexed folders first
+    const indexedFoldersJson = localStorage.getItem('indexedFolders')
+    if (indexedFoldersJson) {
+      try {
+        const folderPaths: string[] = JSON.parse(indexedFoldersJson)
+        const loadedFolders: FolderItem[] = folderPaths.map((path, index) => ({
+          name: path.split(/[\\\\/]/).pop() || path,
+          id: 'saved-' + index + '-' + Date.now(),
+          path: path
+        }))
+        setFolders(loadedFolders)
+      } catch (error) {
+        console.error('Failed to parse indexed folders from localStorage:', error)
+        // Fallback to single folder method
+        loadSingleFolder()
       }
-      setFolders([existingFolder])
+    } else {
+      // Fallback to single folder method for backward compatibility
+      loadSingleFolder()
+    }
+    
+    function loadSingleFolder() {
+      const savedFolder = localStorage.getItem('connectedFolder')
+      const savedFolderName = localStorage.getItem('connectedFolderName')
+      if (savedFolder && savedFolderName) {
+        const existingFolder: FolderItem = {
+          name: savedFolderName,
+          id: 'saved-' + Date.now(),
+          path: savedFolder
+        }
+        setFolders([existingFolder])
+        // Convert to new format
+        updateLocalStorageFolders([existingFolder])
+      }
     }
   }, [])
 
@@ -233,11 +318,11 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
                 {folders.map((folder) => (
                   <div
                     key={folder.id}
-                    className="flex items-center justify-between gap-3 p-2 text-sm text-gray-700 hover:bg-white/50 rounded-lg cursor-pointer transition-colors group"
+                    className="flex items-start justify-between gap-3 p-2 text-sm text-gray-700 hover:bg-white/50 rounded-lg cursor-pointer transition-colors group"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Folder className="w-4 h-4 text-gray-400 group-hover:text-gray-500" />
-                      <span className="truncate" title={folder.path}>{folder.name}</span>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Folder className="w-4 h-4 text-gray-400 group-hover:text-gray-500 flex-shrink-0 mt-0.5" />
+                      <span className="break-words text-sm leading-5" title={folder.path}>{folder.name}</span>
                     </div>
                     <button
                       onClick={(e) => {

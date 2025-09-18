@@ -108,6 +108,37 @@ class SlideProcessingService {
       throw error;
     }
   }
+
+  async deleteFolder(folderPath: string): Promise<any> {
+    try {
+      console.log('Frontend: Deleting folder path:', folderPath);
+      
+      const requestBody = {
+        folder_path: folderPath
+      };
+      
+      const response = await fetch(`${this.baseUrl}/slides/delete-folder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Folder deletion result:', result);
+      return result;
+
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      throw error;
+    }
+  }
 }
 
 export const slideProcessingService = new SlideProcessingService();

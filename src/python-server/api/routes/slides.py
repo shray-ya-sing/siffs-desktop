@@ -15,6 +15,9 @@ router = APIRouter(prefix="/slides", tags=["slides"])
 class ProcessFolderRequest(BaseModel):
     folder_path: str
 
+class DeleteFolderRequest(BaseModel):
+    folder_path: str
+
 class ProcessFolderResponse(BaseModel):
     success: bool
     message: str
@@ -207,6 +210,39 @@ async def clear_all_slides():
             
     except Exception as e:
         logger.error(f"Error clearing slides: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/delete-folder")
+async def delete_folder_slides(request: DeleteFolderRequest):
+    """Delete all slides from a specific folder from the vector database"""
+    try:
+        # Clean and normalize the path (same logic as process_folder)
+        cleaned_path = request.folder_path.strip()
+        if (cleaned_path.startswith('"') and cleaned_path.endswith('"')) or \
+           (cleaned_path.startswith("'") and cleaned_path.endswith("'")):
+            cleaned_path = cleaned_path[1:-1]
+        
+        normalized_path = os.path.normpath(cleaned_path)
+        logger.info(f"Deleting slides from folder: '{normalized_path}'")
+        
+        slide_service = get_slide_processing_service()
+        deleted_count = slide_service.delete_folder_slides(normalized_path)
+        
+        if deleted_count > 0:
+            return {
+                "success": True, 
+                "message": f"Successfully deleted {deleted_count} slides from folder",
+                "deleted_count": deleted_count
+            }
+        else:
+            return {
+                "success": True,
+                "message": "No slides found for the specified folder",
+                "deleted_count": 0
+            }
+            
+    except Exception as e:
+        logger.error(f"Error deleting folder slides: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/search", response_model=SearchSlidesResponse)
