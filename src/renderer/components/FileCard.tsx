@@ -143,22 +143,16 @@ export function FileCard({
 
         {/* File metadata */}
         <div className="space-y-3 min-w-0">
-          {/* Versions indicator or score */}
+          {/* Versions indicator */}
           <div className="flex gap-1 flex-wrap">
-            {currentSlideData.score !== undefined ? (
-              <div className="px-2 py-1 text-xs rounded-full bg-blue-100/50 text-blue-600 border border-blue-200/30 whitespace-nowrap">
-                {(currentSlideData.score * 100).toFixed(1)}%
+            {versions.map((version, index) => (
+              <div
+                key={version}
+                className="px-2 py-1 text-xs rounded-full bg-gray-100/50 text-gray-500 border border-gray-200/30 whitespace-nowrap"
+              >
+                {version}
               </div>
-            ) : (
-              versions.map((version, index) => (
-                <div
-                  key={version}
-                  className="px-2 py-1 text-xs rounded-full bg-gray-100/50 text-gray-500 border border-gray-200/30 whitespace-nowrap"
-                >
-                  {version}
-                </div>
-              ))
-            )}
+            ))}
           </div>
 
           {/* Slide count */}
@@ -211,20 +205,14 @@ export function FileCard({
               {/* Navigation and metadata */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex gap-2">
-                  {currentSlideData.score !== undefined ? (
-                    <div className="px-3 py-1.5 text-sm rounded-full bg-blue-100/50 text-blue-600 border border-blue-200/30">
-                      Score: {(currentSlideData.score * 100).toFixed(1)}%
+                  {versions.map((version) => (
+                    <div
+                      key={version}
+                      className="px-3 py-1.5 text-sm rounded-full bg-gray-100/50 text-gray-600 border border-gray-200/30"
+                    >
+                      {version}
                     </div>
-                  ) : (
-                    versions.map((version) => (
-                      <div
-                        key={version}
-                        className="px-3 py-1.5 text-sm rounded-full bg-gray-100/50 text-gray-600 border border-gray-200/30"
-                      >
-                        {version}
-                      </div>
-                    ))
-                  )}
+                  ))}
                   
                   {/* Show filename for current slide in gallery mode */}
                   {slides && slides.length > 1 && currentSlideData.fileName && (
