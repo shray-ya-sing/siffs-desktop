@@ -1,7 +1,7 @@
 {
   "name": "Siffs",
   "productName": "Siffs",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Fast File Search",
   "main": ".webpack/main",
   "scripts": {
@@ -14,7 +14,8 @@
     "make:win": "npm run clean:dev-data && npm run build:python && electron-forge make --platform=win32",
     "make:mac": "npm run build:python && electron-forge make --platform=darwin",
     "make:linux": "npm run build:python && electron-forge make --platform=linux",
-    "publish": "npm run clean:dev-data && npm run build:python && electron-forge publish",
+    "publish": "npm run clean:dev-data && npm run build:python && electron-forge publish && npm run generate-metadata",
+    "publish-complete": "npm run publish && npm run upload-metadata",
     "lint": "eslint --ext .ts,.tsx .",
     "clean": "rimraf out",
     "clean:dev-data": "powershell -ExecutionPolicy Bypass -File src/scripts/clean-dev-data.ps1",
@@ -25,7 +26,10 @@
     "clean-build:package": "powershell -ExecutionPolicy Bypass -File src/scripts/clean-build.ps1 -Package",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
-    "version:major": "npm version major --no-git-tag-version"
+    "version:major": "npm version major --no-git-tag-version",
+    "generate-metadata": "node src/scripts/generate-updater-metadata.js",
+    "upload-metadata": "powershell -ExecutionPolicy Bypass -File src/scripts/generate-and-upload-metadata.ps1 -Upload",
+    "metadata": "powershell -ExecutionPolicy Bypass -File src/scripts/generate-and-upload-metadata.ps1"
   },
   "keywords": [],
   "author": {
@@ -41,6 +45,15 @@
     "provider": "github",
     "owner": "shray-ya-sing",
     "repo": "siffs-desktop"
+  },
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "shray-ya-sing",
+        "repo": "siffs-desktop"
+      }
+    ]
   },
   "dependencies": {
     "@electron-forge/maker-dmg": "^7.8.1",

@@ -21,6 +21,20 @@ import { autoUpdater } from 'electron-updater';
 import { BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
 
+// Configure auto-updater IMMEDIATELY on import, before any other operations
+autoUpdater.setFeedURL({
+  provider: 'github',
+  owner: 'shray-ya-sing',
+  repo: 'siffs-desktop',
+  private: false
+});
+
+// Set logging level immediately
+autoUpdater.logger = log;
+(autoUpdater.logger as typeof log).transports.file.level = 'info';
+
+log.info('🔧 Auto-updater feed URL configured on import:', autoUpdater.getFeedURL());
+
 /**
  * Auto-updater service for handling automatic updates from GitHub releases
  */
@@ -32,12 +46,20 @@ export class AutoUpdaterService {
       this.mainWindow = mainWindow;
     }
 
-    // Configure auto-updater logging
-    autoUpdater.logger = log;
-    (autoUpdater.logger as typeof log).transports.file.level = 'info';
-    
     // Allow pre-release updates
-    autoUpdater.allowPrerelease = true;
+    autoUpdater.allowPrerelease = false;
+    
+    // Add more detailed logging
+    log.info('Auto-updater service initialized');
+    log.info('Current app version (from package.json):', require('../../../package.json').version);
+    try {
+      log.info('App version (from app.getVersion()):', require('electron').app.getVersion());
+    } catch (e) {
+      log.warn('Could not get app version from electron.app.getVersion():', e.message);
+    }
+    log.info('Auto download enabled:', autoUpdater.autoDownload);
+    log.info('Allow prerelease:', autoUpdater.allowPrerelease);
+    log.info('Feed URL:', autoUpdater.getFeedURL());
     
     // Configure GitHub token for private repository access
     // Note: For public repos, this shouldn't be necessary, but some repos require auth
@@ -57,13 +79,17 @@ export class AutoUpdaterService {
   private setupEventHandlers(): void {
     // Checking for updates
     autoUpdater.on('checking-for-update', () => {
-      log.info('Checking for update...');
+      log.info('🔍 Checking for update...');
+      log.info('Feed URL:', autoUpdater.getFeedURL());
       this.sendStatusToWindow('Checking for update...');
     });
 
     // Update available
     autoUpdater.on('update-available', (info) => {
-      log.info('Update available.');
+      log.info('✅ Update available!');
+      log.info('Available version:', info.version);
+      log.info('Release date:', info.releaseDate);
+      log.info('Release notes:', info.releaseNotes);
       this.sendStatusToWindow('Update available.');
       
       // Optionally show a notification to the user
@@ -79,7 +105,8 @@ export class AutoUpdaterService {
 
     // No update available
     autoUpdater.on('update-not-available', (info) => {
-      log.info('Update not available.');
+      log.info('ℹ️ Update not available.');
+      log.info('Current version:', info.version);
       this.sendStatusToWindow('Update not available.');
     });
 
@@ -117,8 +144,16 @@ export class AutoUpdaterService {
 
     // Error handling
     autoUpdater.on('error', (err) => {
-      log.error('Error in auto-updater. ' + err);
-      this.sendStatusToWindow('Error in auto-updater: ' + err);
+      log.error('❌ Error in auto-updater:', err);
+      log.error('Error message:', err.message);
+      log.error('Error stack:', err.stack);
+      log.error('Feed URL being used:', autoUpdater.getFeedURL());
+      this.sendStatusToWindow('Error in auto-updater: ' + err.message);
+      
+      // Show error dialog in development
+      if (process.env.NODE_ENV === 'development' && this.mainWindow) {
+        dialog.showErrorBox('Auto-updater Error', `Failed to check for updates: ${err.message}`);
+      }
     });
   }
 
