@@ -1,23 +1,20 @@
 {
-  "name": "siffs",
+  "name": "Siffs",
   "productName": "Siffs",
-  "version": "0.1.7",
-  "description": "Smart Image File Finding System",
+  "version": "1.0.0",
+  "description": "Fast File Search",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
     "start:python": "cd src/python-server && python app.py",
     "build:python": "node src/scripts/build-py.js",
-    "compile-inits": "python src/scripts/compile_inits.py",
-    "clear-api-keys": "python src/scripts/clear_user_api_keys.py",
-    "clear-ppt-rules": "python src/scripts/clear_ppt_rules.py",
     "package": "npm run build:python && electron-forge package",
-    "make": "npm run build:python && electron-forge make",
+    "make": "npm run clean:dev-data && npm run build:python && electron-forge make",
     "make:electron": "electron-forge make",
-    "make:win": "npm run build:python && electron-forge make --platform=win32",
+    "make:win": "npm run clean:dev-data && npm run build:python && electron-forge make --platform=win32",
     "make:mac": "npm run build:python && electron-forge make --platform=darwin",
     "make:linux": "npm run build:python && electron-forge make --platform=linux",
-    "publish": "npm run build:python && electron-forge publish",
+    "publish": "npm run clean:dev-data && npm run build:python && electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "clean": "rimraf out",
     "clean:dev-data": "powershell -ExecutionPolicy Bypass -File src/scripts/clean-dev-data.ps1",
@@ -35,7 +32,7 @@
     "name": "Siffs",
     "email": "github.suggest277@passinbox.com"
   },
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "https://github.com/shray-ya-sing/siffs-desktop.git"

@@ -1,3 +1,22 @@
+/*
+ * Siffs - Fast File Search Desktop Application
+ * Copyright (C) 2025  Siffs
+ * 
+ * Contact: github.suggest277@passinbox.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 import React, { useState } from "react"
 import { Plus, Folder, ChevronRight, X, Menu, ChevronLeft, Loader } from "lucide-react"
 import { slideProcessingService } from '../services/slide-processing.service'
@@ -135,7 +154,7 @@ export function GlassSidebar({ className, children, collapsed = false, onToggle 
       <button
         onClick={onToggle}
         className={cn(
-          "fixed top-4 z-50 p-2 hover:bg-white/90 rounded-lg border transition-all duration-300 bg-transparent border-none border-transparent shadow-none",
+          "fixed top-12 z-50 p-2 hover:bg-white/90 rounded-lg border transition-all duration-300 bg-transparent border-none border-transparent shadow-none",
           collapsed ? "left-4" : "left-72",
         )}
       >

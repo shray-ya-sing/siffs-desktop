@@ -1,4 +1,23 @@
-import React, { useState } from "react"
+/*
+ * Siffs - Fast File Search Desktop Application
+ * Copyright (C) 2025  Siffs
+ * 
+ * Contact: github.suggest277@passinbox.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+import React, { useState, useEffect } from "react"
 import { ChevronRight, Expand, X } from "lucide-react"
 
 // Types for slide results (imported from MainContent)
@@ -22,6 +41,8 @@ interface FileCardProps {
   score?: number
   slides?: SlideResult[] // Array of slides for gallery mode
   onCopyPath?: (filePath: string, fileName: string) => void
+  isFocused?: boolean
+  onFocus?: () => void
 }
 
 function cn(...classes: (string | undefined)[]) {
@@ -38,7 +59,9 @@ export function FileCard({
   imageBase64,
   score,
   slides,
-  onCopyPath
+  onCopyPath,
+  isFocused = false,
+  onFocus
 }: FileCardProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -70,6 +93,16 @@ export function FileCard({
     setCurrentSlide((prev) => (prev + 1) % slideCount)
   }
 
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slideCount) % slideCount)
+  }
+
+  // Handle keyboard navigation within card
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Card-level keyboard navigation is now handled globally
+    // This function is kept for potential future card-specific shortcuts
+  }
+
   const openModal = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsModalOpen(true)
@@ -85,19 +118,44 @@ export function FileCard({
     }
   }
 
+  // Handle modal keyboard shortcuts
+  useEffect(() => {
+    if (!isModalOpen) return
+
+    const handleModalKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'a') {
+        e.preventDefault()
+        closeModal()
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        closeModal()
+      }
+    }
+
+    window.addEventListener('keydown', handleModalKeyDown)
+    return () => window.removeEventListener('keydown', handleModalKeyDown)
+  }, [isModalOpen])
+
   return (
     <>
       <div
         className={cn(
           "w-full aspect-square backdrop-blur-sm rounded-lg border border-gray-200/50 p-6 flex flex-col bg-transparent",
           "transition-all duration-300 ease-out hover:scale-105 hover:border-gray-300/60 hover:shadow-lg",
-          "cursor-pointer group min-w-0 relative", // added relative positioning
+          "cursor-pointer group min-w-0 relative",
+          "focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-300",
+          isFocused ? "ring-2 ring-gray-300 border-gray-300 scale-105" : "",
           className,
         )}
         onClick={handleCardClick}
+        onKeyDown={handleKeyDown}
+        onFocus={onFocus}
+        tabIndex={0}
       >
         <button
           onClick={openModal}
+          data-expand="true"
           className="absolute top-3 right-3 p-1.5 rounded-full backdrop-blur-sm border border-gray-200/50 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white shadow-sm z-10 bg-transparent"
         >
           <Expand className="w-3 h-3 text-gray-600" />

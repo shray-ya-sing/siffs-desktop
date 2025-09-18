@@ -1,3 +1,22 @@
+/*
+ * Siffs - Fast File Search Desktop Application
+ * Copyright (C) 2025  Siffs
+ * 
+ * Contact: github.suggest277@passinbox.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 import React from 'react';
 import { MinusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { NavIcons } from '../navigation/NavIcons';
@@ -74,11 +93,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       style={{
         // This is the key CSS property that makes the area draggable
         WebkitAppRegion: 'drag',
-        background: 'linear-gradient(135deg, #F8F9FA 0%, #F5F6F8 25%, #F2F4F6 50%, #EFF1F4 75%, #ECEEF2 100%)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.3)',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.4)',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        borderBottom: 'none',
+        boxShadow: 'none',
         position: 'relative',
         overflow: 'hidden'
       } as React.CSSProperties}

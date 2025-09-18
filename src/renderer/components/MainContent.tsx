@@ -1,3 +1,22 @@
+/*
+ * Siffs - Fast File Search Desktop Application
+ * Copyright (C) 2025  Siffs
+ * 
+ * Contact: github.suggest277@passinbox.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 import React, { useState, useRef, useEffect } from "react"
 import { Search } from "lucide-react"
 import { FileCard } from "./FileCard"
@@ -30,6 +49,24 @@ interface SearchResponse {
 
 function cn(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(' ')
+}
+
+// Utility functions for search result processing
+function deduplicateSlides(results: SlideResult[]): SlideResult[] {
+  const seen = new Map<string, SlideResult>()
+  
+  for (const result of results) {
+    // Create unique key based on file path and slide number
+    const key = `${result.file_path}:${result.slide_number}`
+    
+    // Keep the result with higher score if duplicate found
+    if (!seen.has(key) || (seen.get(key)!.score < result.score)) {
+      seen.set(key, result)
+    }
+  }
+  
+  // Return deduplicated results sorted by score
+  return Array.from(seen.values()).sort((a, b) => b.score - a.score)
 }
 
 // Utility functions for grouping presentations
@@ -165,7 +202,9 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searchStats, setSearchStats] = useState<{processing_time: number, total_found: number} | null>(null)
   const [copiedCardId, setCopiedCardId] = useState<string | null>(null)
+  const [focusedCardIndex, setFocusedCardIndex] = useState<number>(-1)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([])
 
   useEffect(() => {
     if (searchState === "searching") {
@@ -192,6 +231,74 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
     }
   }, [searchValue])
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+T to focus search
+      if (e.ctrlKey && e.key === 't') {
+        e.preventDefault()
+        if (textareaRef.current) {
+          textareaRef.current.focus()
+          textareaRef.current.select()
+          setFocusedCardIndex(-1) // Reset card focus when focusing search
+        }
+        return
+      }
+
+      // Only handle card navigation if we have search results and search bar is not focused
+      if (searchState === 'results' && groupedResults.length > 0 && document.activeElement !== textareaRef.current) {
+        switch (e.key) {
+          case 'Tab':
+            e.preventDefault()
+            if (e.shiftKey) {
+              // Shift+Tab - go to previous card
+              setFocusedCardIndex(prev => {
+                const newIndex = prev <= 0 ? groupedResults.length - 1 : prev - 1
+                setTimeout(() => cardRefs.current[newIndex]?.focus(), 0)
+                return newIndex
+              })
+            } else {
+              // Tab - go to next card
+              setFocusedCardIndex(prev => {
+                const newIndex = prev >= groupedResults.length - 1 ? 0 : prev + 1
+                setTimeout(() => cardRefs.current[newIndex]?.focus(), 0)
+                return newIndex
+              })
+            }
+            break
+
+          case 'a':
+            if (e.ctrlKey && focusedCardIndex >= 0) {
+              e.preventDefault()
+              // Trigger expand on focused card
+              const expandButton = cardRefs.current[focusedCardIndex]?.querySelector('button[data-expand]') as HTMLButtonElement
+              if (expandButton) {
+                expandButton.click()
+              }
+            }
+            break
+
+          case 'c':
+            if (e.ctrlKey && focusedCardIndex >= 0) {
+              e.preventDefault()
+              // Trigger copy path on focused card
+              const focusedGroup = groupedResults[focusedCardIndex]
+              if (focusedGroup && focusedGroup.slides.length > 0) {
+                const slide = focusedGroup.slides[0]
+                if (slide.file_path && handleCopyFilePath) {
+                  handleCopyFilePath(slide.file_path, slide.file_name)
+                }
+              }
+            }
+            break
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [searchState, groupedResults.length, focusedCardIndex])
 
   // Function to handle copying file path to clipboard (from SearchPage)
   const handleCopyFilePath = async (filePath: string, fileName: string) => {
@@ -268,8 +375,13 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
         
         if (data.success) {
           console.log('✅ Search results:', data)
+          
+          // First, deduplicate the results to remove same file/slide duplicates
+          const deduplicatedResults = deduplicateSlides(data.results)
+          console.log(`🔄 Deduplicated: ${data.results.length} → ${deduplicatedResults.length} results`)
+          
           // Sort results by score in descending order (highest score first)
-          const sortedResults = [...data.results].sort((a, b) => b.score - a.score)
+          const sortedResults = [...deduplicatedResults].sort((a, b) => b.score - a.score)
           setSearchResults(sortedResults)
           
           // Group results by presentation
@@ -294,14 +406,61 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
     }
   }
 
+  // Handle keyboard scrolling
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target === e.currentTarget) { // Only handle if main content is focused
+      const scrollAmount = 100 // pixels to scroll
+      const mainElement = e.currentTarget as HTMLElement
+      
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          mainElement.scrollTop += scrollAmount
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          mainElement.scrollTop -= scrollAmount
+          break
+        case 'PageDown':
+          e.preventDefault()
+          mainElement.scrollTop += mainElement.clientHeight * 0.8
+          break
+        case 'PageUp':
+          e.preventDefault()
+          mainElement.scrollTop -= mainElement.clientHeight * 0.8
+          break
+        case 'Home':
+          if (e.ctrlKey) {
+            e.preventDefault()
+            mainElement.scrollTop = 0
+          }
+          break
+        case 'End':
+          if (e.ctrlKey) {
+            e.preventDefault()
+            mainElement.scrollTop = mainElement.scrollHeight
+          }
+          break
+      }
+    }
+  }
+
   return (
     <main
       className={cn(
-        "min-h-screen transition-all duration-300",
+        "transition-all duration-300",
         sidebarCollapsed ? "ml-0" : "ml-64",
-        "flex flex-col",
+        "flex flex-col overflow-y-auto overflow-x-hidden",
+        "focus:outline-none", // Remove focus outline
         className,
       )}
+      style={{
+        height: 'calc(100vh - 32px)', // Account for 32px titlebar height
+        scrollBehavior: 'smooth', // Smooth scrolling
+        paddingTop: '8px' // Add small top padding
+      }}
+      tabIndex={0} // Make focusable for keyboard events
+      onKeyDown={handleKeyDown}
     >
       <div className="flex-1 p-8 text-transparent bg-transparent">
         {children || (
@@ -320,7 +479,12 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
                     searchState === "initial" ? "max-w-[75%]" : "max-w-2xl mx-auto",
                   )}
                 >
-                  <Search className="absolute left-4 top-4 text-gray-400 w-5 h-5" />
+                  {/* Hint text */}
+                  <div className="text-center mb-3">
+                    <span className="text-xs text-gray-400 font-medium tracking-wide">
+                      Hit Ctrl+T to search
+                    </span>
+                  </div>
                   <textarea
                     ref={textareaRef}
                     value={searchValue}
@@ -329,7 +493,7 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
                     placeholder="Search..."
                     rows={1}
                     className={cn(
-                      "w-full pl-12 pr-4 py-3 rounded-2xl resize-none border-transparent",
+                      "w-full px-4 py-3 rounded-2xl resize-none border-transparent",
                       "border outline-none",
                       "focus:border-gray-300 focus:ring-2 focus:ring-gray-100",
                       "transition-all duration-200 ease-in-out",
@@ -370,17 +534,38 @@ export function MainContent({ className, children, sidebarCollapsed = false }: M
                           Found {searchStats?.total_found || searchResults.length} slides in {groupedResults.length} presentation{groupedResults.length !== 1 ? 's' : ''}
                           {searchStats && ` in ${searchStats.processing_time.toFixed(1)}ms`}
                         </div>
+                        
+                        {/* Keyboard navigation instructions */}
+                        <div className="text-center mb-6">
+                          <div className="text-xs text-gray-400 font-medium tracking-wide space-y-1">
+                            <div>Use Tab to navigate between cards • Ctrl+A to expand • Ctrl+C to copy path</div>
+                          </div>
+                        </div>
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {groupedResults.map((group, index) => (
-                            <FileCard
-                              key={`${group.presentationName}-${index}`}
-                              fileName={group.presentationName}
-                              slideCount={group.slides.length}
-                              versions={group.versions}
-                              slides={group.slides} // Pass all slides for gallery
-                              onCopyPath={handleCopyFilePath}
-                            />
-                          ))}
+                          {groupedResults.map((group, index) => {
+                            // Initialize card refs array
+                            if (cardRefs.current.length !== groupedResults.length) {
+                              cardRefs.current = new Array(groupedResults.length).fill(null)
+                            }
+                            
+                            return (
+                              <div
+                                key={`${group.presentationName}-${index}`}
+                                ref={el => { cardRefs.current[index] = el }}
+                              >
+                                <FileCard
+                                  fileName={group.presentationName}
+                                  slideCount={group.slides.length}
+                                  versions={group.versions}
+                                  slides={group.slides}
+                                  onCopyPath={handleCopyFilePath}
+                                  isFocused={focusedCardIndex === index}
+                                  onFocus={() => setFocusedCardIndex(index)}
+                                />
+                              </div>
+                            )
+                          })}
                         </div>
                       </>
                     )}
