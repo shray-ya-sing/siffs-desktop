@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { TechHomeIcon, TechSettingsIcon, TechSignOutIcon } from '../tech-icons/TechIcons';
+import { TechHomeIcon, TechSignOutIcon } from '../tech-icons/TechIcons';
 import { useAuth } from '../../providers/AuthProvider';
 
 interface NavIconsProps {
@@ -30,14 +30,6 @@ export const NavIcons = ({ className = '' }: NavIconsProps) => {
         aria-label="Home"
       >
         <TechHomeIcon className="w-4 h-4 text-gray-600 hover:text-gray-800" />
-      </button>
-      <button
-        onClick={() => navigate('/settings')}
-        className="p-1.5 rounded hover:bg-gray-200/50 transition-all duration-200
-                 flex items-center justify-center"
-        aria-label="Settings"
-      >
-        <TechSettingsIcon className="w-4 h-4 text-gray-600 hover:text-gray-800" />
       </button>
       <button
         onClick={handleSignOut}

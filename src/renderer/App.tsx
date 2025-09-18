@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Location } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import { SearchPage } from './pages/SearchPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { HomePage } from './pages/HomePage';
 import { NotFound } from './pages/NotFound';
 import AppLoading from './components/loading/AppLoading';
 import LoginPage from './pages/auth/LoginPage';
@@ -103,15 +102,7 @@ function AppRouter() {
           <ProtectedRoute>
             <>
               <TitleBar />
-              <SearchPage />
-            </>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <>
-              <TitleBar />
-              <SettingsPage />
+              <HomePage />
             </>
           </ProtectedRoute>
         } />

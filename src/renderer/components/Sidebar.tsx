@@ -5,7 +5,6 @@ import {
   TechHistoryIcon,
   TechBookmarkIcon,
   TechHelpIcon,
-  TechSettingsIcon,
 } from '../components/tech-icons/TechIcons';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import { useState } from 'react';
@@ -171,13 +170,6 @@ export function Sidebar() {
       </div>
 
       <div className="mt-auto flex flex-col items-center gap-4">
-        <NavButton
-          icon={<TechSettingsIcon />}
-          label="Settings"
-          href="/settings"
-          isActive={location.pathname === '/settings'}
-          onClick={handleNavigation}
-        />
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
