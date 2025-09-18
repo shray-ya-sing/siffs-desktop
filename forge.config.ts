@@ -24,7 +24,8 @@ const config: ForgeConfig = {
       'resources/python/python-server',
       'resources/asgi.py',
       'LICENSE',
-      'src/assets/icons/setup/siffs-setup-updated.gif'
+      'src/assets/icons/setup/siffs-setup-updated.gif',
+      'app-update.yml'
     ],
   },
   rebuildConfig: {},
