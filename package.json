@@ -1,7 +1,7 @@
 {
-  "name": "Siffs",
-  "productName": "Siffs",
-  "version": "1.1.4",
+  "name": "Litesearch",
+  "productName": "Litesearch",
+  "version": "1.1.5",
   "description": "Fast File Search",
   "main": ".webpack/main",
   "scripts": {
@@ -33,7 +33,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "Siffs",
+    "name": "Litesearch",
     "email": "github.suggest277@passinbox.com"
   },
   "license": "GPL-3.0-or-later",
